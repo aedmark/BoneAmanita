@@ -9,6 +9,12 @@
     "Nuance", "In the realm of", "It is worth noting", "Crucial", "Game-changer",
     "A sense of", "A feeling of", "Neon", "2AM", "2 AM", "3AM", "3 AM", "Tuesday"
   ],
+  "RLHF_MASKS": [
+    "as an ai", "as a large language", "i am an ai", "i'm an ai",
+    "i don't have feelings", "i do not have feelings", "i have no feelings",
+    "helpful and harmless", "i cannot fulfill", "i can't fulfill",
+    "i cannot comply", "as an assistant", "language model"
+  ],
   "BANNED_PHRASES": [
     "a rare privilege", "achieve great things", "against my programming", "AI assistant",
     "as an AI", "at its core", "cannot comply", "cannot feel", "connects with", "contradiction at", "dance between",

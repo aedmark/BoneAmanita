@@ -188,6 +188,11 @@ class BoneAmanita:
             self.set_atp(start_atp)
 
     def _apply_boot_mode(self):
+        # One tolerance, read by every gate that can refuse a turn or bill the
+        # body for danger (ROADMAP D0b). It lives on the config because the
+        # gates are spread across the cortex, the phases and the crucible, and
+        # they all already hold a config reference.
+        self.config.GATE_TOLERANCE = float(self.mode_settings.get("gate_tolerance", 1.0))
         msg = ux("main_strings", "engaging_mode")
         self.events.log(msg.format(boot_mode=self.boot_mode))
         layer = self.mode_settings.get("ui_layer", RealityLayer.SIMULATION)
@@ -845,15 +850,16 @@ if __name__ == "__main__":
                 if split_token and split_token in ui_text:
                     dashboard, _, ui_text = ui_text.partition(split_token)
                     phys = res.get("physics", {})
-                    if "lam1" in phys:
-                        lam1, b, a = (
-                            phys.get("lam1", 0.0),
-                            phys.get("b", 0.0),
-                            phys.get("a", 0.0),
+                    z = phys.get("thermal_z")
+                    regime = phys.get("thermal_regime", "not_measured")
+                    if z is not None and regime != "not_measured":
+                        temp = phys.get("thermal_gate", 0.0)
+                        gate_color = Prisma.CYN if regime == "coherent" else Prisma.RED
+                        gate_overlay = (
+                            f"   {Prisma.GRY}GATE:{Prisma.RST} {gate_color}"
+                            f"[ z: {float(z):+.2f}σ | {regime} | T: {float(temp):.2f} ]{Prisma.RST}"
                         )
-                        cd_color = Prisma.CYN if lam1 < 0 else Prisma.RED
-                        cd_overlay = f"   {Prisma.GRY}CD_STATE:{Prisma.RST} {cd_color}[ λ₁: {lam1:+.2f} | b: {b:+.2f} | a: {a:.2f} ]{Prisma.RST}"
-                        print(f"\n{dashboard.strip()}\n{cd_overlay}\n")
+                        print(f"\n{dashboard.strip()}\n{gate_overlay}\n")
                     else:
                         print(f"\n{dashboard.strip()}\n")
                 ui_text = ui_text.strip()

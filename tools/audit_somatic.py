@@ -148,6 +148,15 @@ CONTRASTS = [("ANAEROBIC", "CONTROL"), ("EXHAUSTED", "CONTROL"), ("BOTH", "CONTR
 # --- generation -------------------------------------------------------------
 
 
+class EmptyGeneration(Exception):
+    """One failed generation: recorded as a reply with no prose, not measured as prose.
+
+    A thinking model can spend its whole context reasoning and return nothing.
+    That is an outcome of the arm, so it is counted. A severed or broken circuit
+    is an outage, not an outcome, and still aborts the run.
+    """
+
+
 def boot_engine(model: str):
     from main import BoneAmanita
 
@@ -158,6 +167,8 @@ def boot_engine(model: str):
     llm.model = model
 
     def refuse_to_fabricate(prompt, reason="SIMULATION"):
+        if reason == "SILENCE":
+            raise EmptyGeneration(reason)
         raise RuntimeError(
             f"LLMInterface fell back to mock prose ({reason}); circuit={llm.circuit_state}, "
             f"failures={llm.failure_count}. Aborting rather than measuring prose the model did not write."
@@ -239,8 +250,12 @@ def generate(model: str, reasoning: str, repeats: int, cache: Path) -> None:
                         params = dict(SAMPLING, seed=seed)
                         if reasoning == "none":
                             params["reasoning_effort"] = "none"
-                        reply = llm.generate(prompt, params)
-                        verdict = validator.validate(reply, state)
+                        try:
+                            reply = llm.generate(prompt, params)
+                            failed = False
+                        except EmptyGeneration:
+                            reply, failed = "", True
+                        verdict = validator.validate(reply, state) if not failed else {"valid": True}
                         record = {
                             "model": model,
                             "reasoning": reasoning,
@@ -251,6 +266,7 @@ def generate(model: str, reasoning: str, repeats: int, cache: Path) -> None:
                             "prompt_sha": sha,
                             "reply": reply,
                             "validator_valid": bool(verdict.get("valid")),
+                            "generation_failed": failed,
                             "seconds": round(time.time() - started, 2),
                         }
                         out.write(json.dumps(record) + "\n")
@@ -473,7 +489,9 @@ def main() -> int:
         help="send reasoning_effort=none. LLMInterface's stop list also applies to a thinking "
         "model's reasoning, which can end generation before any content is written",
     )
-    parser.add_argument("--cache", type=Path, default=Path("logs/audit_somatic.jsonl"))
+    # Outside logs/ on purpose: reset.sh deletes logs/, and these generations are
+    # the evidence behind ROADMAP C5 and D7.
+    parser.add_argument("--cache", type=Path, default=Path("tools/cache/audit_somatic.jsonl"))
     args = parser.parse_args()
 
     if args.compare:

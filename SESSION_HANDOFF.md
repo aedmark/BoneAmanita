@@ -19,12 +19,21 @@ jargon and no assumption that you remember how any of it works. Read that
 first if you have been away; this file assumes you already have the
 shape of the thing in your head.
 
-**The next work is Track D in `ROADMAP.md`, the Somatic Contract**, starting
-with D0, a census of whether the body is ever in a distinct state across a
-real session. C5 found the somatic layer mostly decorative; Track D is the
-plan to make it the centerpiece it is meant to be. Read C5 and Track D in
-`ROADMAP.md`, in that order. Two bugs found alongside C5 (Open items 8 and 9)
-block any reasoning model.
+**The next work is D1 and D2 in `ROADMAP.md`, then D9.** The metabolic economy
+and the refusal gates are both repaired (see "What changed most recently").
+Gates now scale with a per-mode `gate_tolerance` (D0b); D9 is the staged
+replacement, where every refusal becomes a Stage Manager decision with a
+reason and a receipt instead of five gates each stopping a turn on their own.
+
+Read `ROADMAP.md` C5 (with its same-night correction), then Track D's "D0
+repairs", "D0 result" and D0b, then the D7 baseline, in that order. Five bugs
+were fixed on 2026-09-17 (Open items 8 to 11); item 11 needs review.
+
+What D0 found before the repairs, for the shape of it: the engine stopped
+answering after about six turns of a real conversation, because CONVERSATION
+mode skipped the whole metabolic cycle (and with it every income path) while
+the costs scattered through the cortex kept charging. That is fixed. The
+lesson stands: **a flag named for a cost can switch off the income.**
 
 **This file is the project's reference document.** `agents/` (the
 constitution, conventions, glossary and domain docs) was removed
@@ -37,16 +46,20 @@ Before starting anything, run the suite and the audits. The numbers in this
 document are re-derivable on purpose and should never be taken on trust:
 
 ```bash
-.venv/bin/python -m pytest -q                      # expect 489 passed, 5 skipped
+.venv/bin/python -m pytest -q                      # expect 501 passed, 5 skipped
 .venv/bin/python tools/audit_receipts.py           # which subsystems did real work
 .venv/bin/python tools/audit_handlers.py           # 28 silent, 3 pass-only
 .venv/bin/python tools/audit_physics_inputs.py     # vocabulary coverage, zone spread
 .venv/bin/python tools/audit_somatic.py --analyze-only  # C5 tables from the cached generations
 ```
 
-`audit_somatic.py --analyze-only` needs `logs/audit_somatic.jsonl`, which is
-runtime output and deleted by `reset.sh`. Without it, run the tool without the
-flag (about 15 minutes per model against local Ollama).
+`audit_somatic.py --analyze-only` and `--compare` read
+`tools/cache/audit_somatic.jsonl`; the census reads
+`tools/cache/somatic_census.jsonl`. They moved out of `logs/` on 2026-09-17
+after `reset.sh` deleted 1,280 generations along with the rest of `logs/`.
+`reset.sh` does not touch `tools/cache/`; delete it by hand to force fresh
+runs. Without a cache, run the tool without the flag (about 15 minutes per
+model against local Ollama).
 
 ## What this is
 
@@ -86,7 +99,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 489 passed, 0 failed, 5 skipped**, about three minutes. Green.
+- **Test suite: 501 passed, 0 failed, 5 skipped**, about three minutes. Green.
   Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
@@ -163,7 +176,39 @@ aren't there. See "Claims vs. code" below.
 
 ## What changed most recently
 
-**C5, the somatic measurement (latest).** `tools/audit_somatic.py` composes
+**Overnight, 2026-09-17 (latest): the bake-off, the census, four repairs.**
+Gordon was asleep and delegated the calls; everything is uncommitted for review.
+
+- *Five-model bake-off* on the C5 audit (`--compare` prints it). The
+  exhaustion line is obeyed almost literally by gemma4:12b (94% of replies
+  within three sentences, from 11%), partly by qwen3.5:9b (60%), and not by
+  mistral-nemo or gemma4:e4b. Compliance is a property of the model. Table in
+  `ROADMAP.md` D7.
+- *D0 census*, `tools/audit_somatic_census.py`: real turns, persistence
+  patched off, and an ATP ledger that hooks `MitochondrialState.__setattr__`
+  so direct assignments are caught too. The engine dies by turn six; the
+  prompt's telemetry never shows the engine's real ATP or ROS; the user
+  exhaustion gate (0.8) is unreachable (`E_u` peaked at 0.61 with a partner
+  answering "ok" for six turns). Details in `ROADMAP.md` D0.
+- *Repairs*: stop list against reasoning models, the fallback recursion,
+  scars written to the wrong object, the HLA tax reading the wrong object.
+  Open items 8 to 11.
+
+**The economy repair (2026-09-17 afternoon, Gordon's calls).** The metabolic
+cycle always runs now; a gentle mode scales the burn rather than skipping the
+cycle, so conversation earns as well as spends. Idle time and the person's
+silence both yield ATP. The counterfactual gate no longer feeds its own ROS,
+ROS decays every turn, the RLHF mask tax is narrow (word-boundary matches on a
+separate `RLHF_MASKS` list) and capped, the exhaustion gate is 0.5, and
+`gemma4:12b` is the default model with reasoning off. Measured: ATP holds
+16 to 53 across 30 live turns. Detail in `ROADMAP.md` D0 repairs.
+- *Caches moved* to `tools/cache/`, out of `reset.sh`'s reach, after it
+  deleted 1,280 generations.
+- *Correction to C5*: the anaerobic effect was called "replicated on both
+  models"; a same-seed regeneration of mistral-nemo did not reproduce it.
+  Small and model-dependent.
+
+**C5, the somatic measurement.** `tools/audit_somatic.py` composes
 four arms from one state dict (respiration by exhaustion, straddling the 0.8
 gate), refuses to run if the prompts differ in any line other than the
 directives, and calls the model directly with the thermal tag stripped and one
@@ -318,6 +363,21 @@ Three habits came out of that and are worth keeping:
   through that round trip gains a tuple wrapper each turn until the word
   tally reads `Counter({((('play', 1), 1), 1): 1})` and measures nothing.
   Only `energy` and `space` are projected flat. There is a test.
+- **A loose mock accepts a method the real object does not have.** Two of
+  the overnight bugs survived because a test handed the code a
+  `MagicMock()` or a flat state-shaped stand-in: `mind_memory.record_scar`
+  and `forge.atp_pool` both resolved on the mock and crashed or defaulted in
+  production. Spec mocks against the real class (`MagicMock(spec=...)`), or
+  pass the real object.
+- **Instrument the state, not the method.** Over thirty sites change ATP and
+  several assign `atp_pool` directly, so wrapping `adjust_atp` would have
+  missed the largest drain. The census hooks `__setattr__` on the dataclass
+  and records the first caller outside the helpers.
+- **Removing a `hasattr` guard can turn silence into an outage.** The
+  cortex's `record_scar` call lost its guard at some point; the method never
+  existed on that object, so a no-op became a crash that took MIND offline
+  until a REM cycle. When retiring a guard, check the thing it guarded
+  exists.
 - **Mutation test anything that guards a contract.** Five deliberate
   breaks were put into `brain/composer.py` to check the A4 tests were load
   bearing. Four failed immediately; the fifth passed, because the test was
@@ -936,12 +996,16 @@ The short list below is what a session should know without reading it.
    and word resolution now makes them on novel words too. The poetic-names
    decision treats these costs as load-bearing, so arguably they should
    be. Left alone because it is a tuning decision, not a repair.
-2. **The metabolic economy may be mistuned toward immediate death.**
-   Observed in mock mode: three turns took ATP from 60 to 0 and ROS from
-   0 to 100. That may be an artifact of mock generation length and has
-   **not** been confirmed against a real chat model, which is the first
-   thing to check before changing any BIO constants. Flagged, not
-   diagnosed.
+2. **The metabolic economy kills the engine by turn six.** *Confirmed
+   against live models on 2026-09-17 (D0); the earlier note here called it
+   possibly a mock artifact, and it is not.* ATP: 6 to 10 spent per turn
+   (token generation, Deep Structural Scan, validator stumbles, banned-phrase
+   taxes), about zero earned, then the parity gate refuses every turn. ROS:
+   the counterfactual gate adds its simulated ROS on each rejection, so it
+   rejects forever once ROS is high. The ledger is in `ROADMAP.md` D0. Not
+   retuned: that is a design decision. Also still open there: the HLA filter
+   taxing all 160 style crimes by substring as if they were RLHF masks, and
+   `gather_state` never reading the engine's real ATP into the prompt.
 3. **No `.gitignore`.** See Environment. Cheap to fix, mildly annoying
    until then.
 4. **About 16% of ordinary English stays unresolved, on purpose.** Nobody
@@ -955,7 +1019,7 @@ The short list below is what a session should know without reading it.
    gap is A4, the state-asserting tests, which is not done.
 6. **Nothing else is known-broken.** Picking this up cold: make a venv,
    install including `ordvec`, pull both Ollama models, run the suite and
-   expect **489 passed, 0 failed, 5 skipped** (the skips are live-backend
+   expect **501 passed, 0 failed, 5 skipped** (the skips are live-backend
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
    mode, confirm `/status` reports the Arcade nominal rather than
    `DEGRADED`, and run `/diag` to see the turn's receipts.
@@ -965,17 +1029,33 @@ The short list below is what a session should know without reading it.
    of the `[INTERNAL USE ONLY]` block. Each change is measured before it is
    adopted. The threshold is `e > 0.8`, hardcoded in `brain/composer.py`,
    not in `BoneConfig`.
-8. **Reasoning models on Ollama get mock prose.** `LLMInterface.generate`'s
-   stop list (`Traveler:` and others) also cuts a thinking model's reasoning
-   stream, content comes back empty, and `generate` returns
-   `mock_generation(reason="SILENCE")` without counting a failure. Confirmed
-   with gemma4:e4b; `reasoning_effort=none` avoids it and `think: false` on
-   the `/v1` endpoint does not. Not fixed. mistral-nemo is unaffected.
-9. **`mock_generation` and `hallucinate` recurse.** `mock_generation` calls
-   `dreamer.hallucinate`, which calls `llm.generate`, which falls back to
-   `mock_generation` in mock mode or with the circuit open. It runs to a
-   RecursionError that `hallucinate` swallows: 486 nested calls over three
-   mock turns, confirmed with a spy. Not fixed.
+8. ~~**Reasoning models on Ollama get mock prose.**~~ **Fixed 2026-09-17.**
+   The stop list cut a thinking model's reasoning and emptied the reply. Now
+   an empty reply is retried once without stops; if that fills it the model is
+   flagged `stops_cut_reasoning` and stops are applied to the reply text. A
+   reply still empty raises `EmptyReplyError`, logged at WARN and counted by
+   the circuit breaker. Confirmed live on gemma4:12b with reasoning on.
+   `tests/test_synapse_fallback.py`. What remains after the fix is not a bug in
+   the engine: gemma4:12b with reasoning on sometimes reasons until it fills
+   Ollama's default 4,096-token context and returns nothing
+   (`finish_reason: "length"`): 13% of 149 audit generations, at 42 seconds each,
+with no gain in compliance over reasoning off.
+   `LLMInterface` has no way to send `reasoning_effort` yet; `ROADMAP.md` D7.
+9. ~~**`mock_generation` and `hallucinate` recurse.**~~ **Fixed 2026-09-17.**
+   `hallucinate(via_synapse=False)` from the fallback. Same test file.
+10. ~~**The HLA tax always charged 50 ATP.**~~ **Fixed 2026-09-17.**
+   `mitigate_rejection` read `atp_pool` off the `MitochondrialForge` with a
+   default of 100.0. `tests/test_agents.py::test_hla_tax_reads_the_real_forge`.
+11. **Scars now record. Review this.** Four sites called
+   `mind.mem.record_scar`, which the MycelialNetwork has never had; three were
+   `hasattr`-guarded no-ops, and the cortex's crashed the first counterfactual
+   rejection of every live session and left MIND offline. All four now call
+   `eng.akashic.record_scar`, which is where the method is. That switches on
+   behaviour that has probably never run: `_mutate_system_prompts` appends
+   `EPIGENETIC_SCARS` to `lore/system_prompts.json` via `lore.save`, a tracked
+   file. No composer read of that key was found. `tests/test_scars.py`. If
+   scars should not write lore, the fix is in `TheAkashicRecord`, not a
+   return to the guards.
 
 ## Future ideas (not started, no urgency)
 

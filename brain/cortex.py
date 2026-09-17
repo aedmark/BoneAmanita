@@ -19,7 +19,6 @@ from mechanics.dspycritic import DSPyCritic
 from mechanics.pragmatics import ThePragmatist
 from mechanics.projector import beautify_thoughts
 from mechanics.tools import LibraryGraph, RandomRetrievalNavigator
-from physics.models import principal_eigenvalue
 from presets import BoneConfig, BonePresets
 from struts import dump_state, safe_get, safe_set, ux
 
@@ -38,6 +37,7 @@ class CortexServices:
     host_stats: Any = None
     village: Any = None
     config_ref: Any = None
+    akashic: Any = None
 
 class TheCortex:
     LEXICAL_PURGE_PATTERN = re.compile(
@@ -121,6 +121,7 @@ class TheCortex:
             host_stats=engine_ref.host_stats,
             village=engine_ref.village,
             config_ref=target_cfg,
+            akashic=engine_ref.akashic,
         )
         instance = cls(services, llm_client)
         instance.active_mode = getattr(engine_ref, "boot_mode", "ADVENTURE").upper()
@@ -431,9 +432,12 @@ class TheCortex:
         f_drag = float(phys_state.get("narrative_drag", 0.0))
         chi_val = float(phys_state.get("chi", phys_state.get("entropy", 0.0)))
         m_a = float(phys_state.get("m_a", 0.0))
-        tolerance_mod = (
-            1.5 if getattr(self, "active_mode", "") in ["CREATIVE", "CATALYST"] else 1.0
-        )
+        # Per-mode, from `BonePresets.MODES[...]["gate_tolerance"]`. This used
+        # to be a hardcoded 1.5 for CREATIVE and 1.0 for everything else, which
+        # left CONVERSATION with ADVENTURE's thresholds. ROADMAP D0b.
+        tolerance_mod = float(safe_get(self.cfg, "GATE_TOLERANCE", 1.0))
+        if getattr(self, "active_mode", "") in ["CREATIVE", "CATALYST"]:
+            tolerance_mod = max(tolerance_mod, 1.5)
         # `chi` genuinely runs 0..1, so 0.8 is a sane "chaos is extreme" test.
         # `narrative_drag` does not: it runs from DRAG_FLOOR to DRAG_HALT (0..10
         # as shipped) and measures 1.4 to 7.0 on ordinary input. This limit was
@@ -478,7 +482,12 @@ class TheCortex:
             sim_result["type"] = "SYSTEM_HALT"
             return sim_result
         simulated_ros = (f_drag * 5.0) + (chi_val * 20.0) + (m_a * 30.0)
-        if simulated_ros > 35.0:
+        # Predicted, not measured: drag and chaos rise when a person goes quiet
+        # or blunt, so this gate refuses turns exactly when the partner is
+        # flagging. The threshold is config so it can be measured. ROADMAP D0.
+        if simulated_ros > (
+            float(safe_get(c_cfg, "COUNTERFACTUAL_ROS_GATE", 35.0)) * tolerance_mod
+        ):
             reject_msg = ux(
                 "brain_strings", "pinker_cf_gate", default="Structural rot critical."
             )
@@ -488,13 +497,21 @@ class TheCortex:
             if self.events:
                 self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
                 self.events.log(f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK")
-            self.svc.mind_memory.record_scar(
+            # Scars live on the Akashic Record. `mind_memory` is the
+            # MycelialNetwork, which has never had `record_scar`.
+            self.svc.akashic.record_scar(
                 "Cortex Counterfactual Toxicity", phys_state
             )
-            self.svc.bio.mito.state.ros_buildup = (
-                float(self.svc.bio.mito.state.ros_buildup) + simulated_ros
+            # The rejected generation never ran, so its simulated ROS is not
+            # a cost the body actually paid. Adding it made rejection feed
+            # rejection: ROS rose, the gate fired again, and it rose further,
+            # until every turn was refused. ROADMAP D0. The refusal itself
+            # still costs.
+            bio_cfg = safe_get(self.cfg, "BIO", {})
+            self.svc.bio.mito.adjust_atp(
+                -float(safe_get(bio_cfg, "COUNTERFACTUAL_ATP_COST", 4.0)),
+                "Cortex Counterfactual Toxicity",
             )
-            self.svc.bio.mito.adjust_atp(-10.0, "Cortex Counterfactual Toxicity")
             sim_result["ui"] = (
                 str(sim_result.get("ui", ""))
                 + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}"
@@ -1007,7 +1024,7 @@ class TheCortex:
 
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
         phys = sim_result.setdefault("physics", {})
-        self._attach_principal_eigenvalue(phys)
+        self._attach_thermal_gate(phys)
         self._attach_wing(phys)
         bio = sim_result.get("bio", {})
         if bio:
@@ -1136,50 +1153,37 @@ class TheCortex:
 
         phys["wing_id"] = MycelialNetwork.current_wing(phys)
 
-    def _attach_principal_eigenvalue(self, phys: Dict[str, Any]) -> None:
-        """Flatten the Creative Determinant eigenvalue onto the physics dict.
+    def _attach_thermal_gate(self, phys: Dict[str, Any]) -> None:
+        """Flatten the governor's sampling temperature onto the physics dict.
 
-        The composer emits this as <cd_lambda_1>, which LLMInterface.generate
-        reads to set the thermal lock: lambda_1 >= 0 collapses generation to
-        deterministic logic, lambda_1 < 0 opens heat.
+        The composer emits this as <thermal_gate>, which LLMInterface.generate
+        reads, strips, and applies. The number in the tag IS the temperature;
+        it is not a proxy for one.
 
-        Two eigenvalues exist and they are not equally good.
+        It used to be `<cd_lambda_1>`, carrying the Creative Determinant's
+        principal eigenvalue, and the naming outlived the truth. Measured on our
+        own code, the graph Laplacian contributed 1.53% of that eigenvalue and
+        the voltage input contributed nothing; what remained was the mean ordvec
+        similarity computed expensively. Calling a bitmap statistic `lambda_1`
+        would have been the same overclaim this codebase keeps having to walk
+        back, so the name went with the maths.
 
-        `energy.lam1` is the real one: a Rayleigh quotient
-        (Phi^T L Phi)/(Phi^T Phi) - b_mean taken over the Laplacian of the
-        memory subgraph, from CyberneticGovernor._graph_regulation solving the
-        nonlinear elliptic BVP by Picard iteration. Prefer it whenever a solve
-        has actually happened.
-
-        The scalar `-beta * (kappa*gamma - lambda*mu)` is the fallback. It states
-        Theorem 3.16's sign condition correctly but over three per-turn scalars
-        rather than a field on a manifold, so it cannot see memory structure at
-        all. It is what runs on a cold first turn, before there is enough
-        dialogue history for the governor to build a subgraph, and whenever the
-        solve declines to converge.
+        When the governor declined to measure (too few memories to have a corpus
+        null worth comparing against), nothing is attached at all and the model
+        samples at its configured default. A missing tag means "not measured",
+        which is a different statement from a temperature of zero.
         """
-        energy = phys.get("energy")
-        if not isinstance(energy, dict):
+        eng = getattr(self.svc.orchestrator, "eng", None)
+        governor = getattr(eng, "governor", None)
+        z = getattr(governor, "last_z", None)
+        # `isinstance` rather than a None check: under a mocked engine every
+        # attribute resolves to a truthy stand-in, and a gate built out of mocks
+        # would report a temperature nothing measured.
+        if not isinstance(z, (int, float)):
             return
-        cd_cfg = safe_get(self.cfg, "CD", {})
-        beta = float(safe_get(cd_cfg, "BETA", 1.0))
-
-        solved = float(energy.get("lam1", 0.0) or 0.0)
-        if solved != 0.0:
-            phys["cd_lambda_1"] = solved
-            phys["cd_lambda_1_source"] = "graph_laplacian"
-            return
-
-        phys["cd_lambda_1"] = principal_eigenvalue(
-            kappa=float(energy.get("kappa", 0.0)),
-            gamma=float(energy.get("gamma", 0.0)),
-            mu=float(energy.get("mu", 0.0)),
-            lambda_val=float(
-                energy.get("lambda_val", safe_get(cd_cfg, "LAMBDA", 0.5))
-            ),
-            beta=beta,
-        )
-        phys["cd_lambda_1_source"] = "scalar_fallback"
+        phys["thermal_gate"] = float(governor.gate_temperature())
+        phys["thermal_z"] = float(z)
+        phys["thermal_regime"] = str(getattr(governor, "last_sol", "not_measured"))
 
     @staticmethod
     def _label_shadow_node(node: Any) -> str:

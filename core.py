@@ -635,6 +635,16 @@ class RealityStack:
         self._stack = [layer]
 
 
+class InsufficientCorpus(ValueError):
+    """Not enough memory to measure a regime against. Not an error, a decline.
+
+    Named rather than bare so `regulate` can tell "the data will not support
+    this measurement" apart from "the measurement broke", and report them
+    differently. A bare ValueError would have collapsed both into the same
+    degraded receipt, which is the distinction this codebase keeps losing.
+    """
+
+
 class CyberneticGovernor:
     """
     Apex N-Dimensional Topological Manifold Governor.
@@ -653,10 +663,14 @@ class CyberneticGovernor:
         self.target_v = None
         self.target_d = None
         self.beth_index, self.order = 0.5, 1
-        self.last_lam1 = 0.0
+        # None means "not measured this session yet", which is distinct from a
+        # measured zero and is what the decline rule sets.
+        self.last_z = None
+        self.last_sharpness = 0.0
+        self.last_corpus = 0
         self.last_a = 0.0
         self.last_b = 0.0
-        self.last_sol = "trivial"
+        self.last_sol = "not_measured"
         self.memory_bitmap = None
         self.memory_rq = None
         self.cached_nodes = []
@@ -707,13 +721,13 @@ class CyberneticGovernor:
                 valid_nodes.append(node)
         if len(matrix) < 3:
             raise ValueError(
-                f"Memory holds {len(matrix)} vectorizable node(s); the Laplacian needs at least 3."
+                f"Memory holds {len(matrix)} vectorizable node(s); the bitmap needs at least 3."
             )
         fp32_matrix = np.ascontiguousarray(matrix, dtype=np.float32)
         # ordvec indexes are constructed with a DIMENSION and then fed vectors.
         # This passed the matrix straight to the constructor, where `dim` is
         # expected, and asked for 8-bit quantisation, which ordvec rejects (it
-        # accepts 1, 2 or 4). Both raised on every call, so _graph_regulation
+        # accepts 1, 2 or 4). Both raised on every call, so the governor
         # always fell back to PID and the Creative Determinant solve on the
         # memory Laplacian had never once run.
         dim = int(fp32_matrix.shape[1])
@@ -726,38 +740,15 @@ class CyberneticGovernor:
         self.cached_nodes = valid_nodes
         return True
 
-    def _solve_nd_picard(
-        self,
-        L: np.ndarray,
-        a: float,
-        beta_b: np.ndarray,
-        c=10.0,
-        max_iter=100,
-        tol=1e-4,
-    ) -> Tuple[np.ndarray, bool]:
-        N = L.shape[0]
-        b_mean = np.mean(beta_b)
-        phi_init = np.sqrt(max(0.01, a) / (b_mean + 1e-8)) if a > 0 else 0.1
-        Phi = np.ones(N) * phi_init
-        I = np.eye(N)
-        A = L + c * I
-        try:
-            A_inv = np.linalg.inv(A)
-        except np.linalg.LinAlgError:
-            A_inv = np.linalg.pinv(A)
-        converged = False
-        for _ in range(max_iter):
-            rhs = (c + a) * Phi - beta_b * (np.abs(Phi) * Phi)
-            Phi_new = A_inv @ rhs
-            if np.linalg.norm(Phi_new - Phi) < tol:
-                converged = True
-                Phi = Phi_new
-                break
-            Phi = Phi_new
-        return Phi, converged
-
     def get_policy_shift(self) -> str:
-        if self.order == 2 or self.last_lam1 < 0 or self.last_sol == "nontrivial":
+        """CO_REGULATION when the neighbourhood clears the corpus null.
+
+        This used to read `last_lam1 < 0`, which measured the mean ordvec
+        similarity by way of a Laplacian that contributed 1.5% of the answer.
+        `last_z` measures the same thing directly and says so.
+        """
+        pivot = self._gate_cfg("Z_PIVOT", 2.0)
+        if self.order == 2 or (self.last_z is not None and self.last_z >= pivot):
             return "CO_REGULATION"
         return "EFFICIENCY"
 
@@ -784,16 +775,32 @@ class CyberneticGovernor:
                         "user_text": bool(user_text),
                     },
                     detail=(
-                        "no utterance to anchor the subgraph on"
+                        "no utterance to score against the corpus"
                         if memory_core
-                        else "no memory core to build a Laplacian from"
+                        else "no memory core to read a bitmap from"
                     ),
                 )
             return self._pid_fallback(physics, dt, endocrine_state)
         try:
-            return self._graph_regulation(
+            return self._bitmap_regulation(
                 physics, dt, memory_core, user_text, endocrine_state
             )
+        except InsufficientCorpus as e:
+            # navi-fractal's rule, applied to the governor: when the data will
+            # not support the measurement, decline to make it rather than
+            # emitting a number nobody should trust. The turn runs the default
+            # temperature and the receipt says the regime was not measured.
+            self.last_z = None
+            self.last_sol = "not_measured"
+            issue_receipt(
+                "governor.bitmap_gate",
+                "declined to measure the regime",
+                result_count=0,
+                degraded=False,
+                inputs={"corpus": len(getattr(self, "cached_nodes", []) or [])},
+                detail=str(e),
+            )
+            return self._pid_fallback(physics, dt, endocrine_state)
         except Exception as e:
             # This is the handler that hid the Creative Determinant for the
             # life of the project: it swallowed a constructor TypeError every
@@ -810,12 +817,63 @@ class CyberneticGovernor:
             logger.warning(f"{Prisma.YEL}Graph regulation failed, falling back to PID: {e}{Prisma.RST}")
             return self._pid_fallback(physics, dt, endocrine_state)
 
-    def _graph_regulation(
+    def _gate_cfg(self, key: str, default: float) -> float:
+        return float(safe_get(safe_get(self.cfg, "GATE", {}), key, default))
+
+    @staticmethod
+    def _null_z(corpus: int, top_k: int = 10) -> float:
+        """What z_top10 a corpus of this size would produce from noise alone.
+
+        Fitted against 600 draws per size over pure Gaussian corpora:
+        A*sqrt(ln n) + B with A=1.8712, B=-2.2958. Residuals stay inside 0.07
+        across n from 32 to 20,000, which is well under the pivot, so the fit
+        is good enough to subtract and not good enough to pretend is exact.
+
+        Only calibrated for the shipped TOP_K of 10. A different k has a
+        different null, and this returns the k=10 curve regardless, so changing
+        TOP_K means refitting this.
+        """
+        if corpus < 2:
+            return 0.0
+        return 1.8712 * float(np.sqrt(np.log(corpus))) - 2.2958
+
+    def _bitmap_regulation(
         self, physics, dt, memory_core, user_text, endocrine_state
     ) -> Tuple[float, float]:
+        """Read the regime off the ordvec sign bitmap, in one pass over memory.
+
+        This replaced a graph Laplacian and a Picard iteration. The measurement
+        that retired them, run on our own code with the real 768d embedder and a
+        23-node subgraph seeded at 17% edge density (denser than a real
+        session):
+
+            Phi^T L Phi / Phi^T Phi : +0.006149
+            b_mean                  : +0.408239
+            reported lambda_1       : -0.402089
+            graph share of |lambda_1|: 1.53%
+
+        and lambda_1 came back byte-identical at voltage 15, 25, 30, 35, 45, 60
+        and 90, because the voltage scalar `a` saturates at 1.0 above the gate.
+        At the Picard fixed point the Laplacian energy cancels against the
+        saturation term, so the reported number was -b_mean plus a residual, and
+        b_mean was the mean ordvec similarity scaled by drag. The topology and
+        the voltage were decoration on a scalar.
+
+        Nelson Spence found the same thing at 207,695 nodes before we found it
+        at 23: a corpus-mass scalar reproduced his Laplacian routing signal at
+        Pearson 0.992 in a millisecond instead of seconds, and three scalars
+        read straight off the RankQuant bitmap popcounts beat the mass scalar at
+        zero added compute. The bitmap features are what survived. This is his
+        recommendation, implemented.
+
+        `z_top10` is how far the utterance's neighbourhood stands above the
+        corpus null, in standard deviations of the sign-agreement distribution.
+        For a 768-dim bitmap chance sits near 384 agreements with a spread near
+        14, so the scale is interpretable and stable across corpora.
+        """
         vectorizer = self._get_vectorizer()
         if not vectorizer:
-            raise ValueError("S.L.A.S.H. Intercept: Vectorizer unavailable. Aborting graph regulation to preserve structural tensegrity.")
+            raise ValueError("Vectorizer unavailable; cannot read the memory bitmap.")
 
         voltage = float(safe_get(physics, "voltage", 30.0))
         drag = float(safe_get(physics, "narrative_drag", 0.6))
@@ -824,69 +882,86 @@ class CyberneticGovernor:
         v_floor = float(getattr(p_cfg, "VOLTAGE_FLOOR", 0.0))
         v_base = v_floor + ((v_max - v_floor) * 0.3)
         v_range = v_max - v_base
-        a_scalar = float(
-            np.clip((voltage - v_base) / v_range, 0.0, 1.0) if v_range > 0 else 0.0
-        )
 
         self._sync_ordvec_indices(memory_core)
         u_vec = vectorizer(user_text)
         if u_vec is None:
             raise ValueError("Null vectorization payload.")
         u_fp32 = np.ascontiguousarray(u_vec, dtype=np.float32)
-        candidate_ids = self.memory_bitmap.top_m_candidates(u_fp32, m=self.PRUNE_SIZE)
-        scores, global_ids = self.memory_rq.search_asymmetric_subset(
-            u_fp32, candidate_ids, k=self.PRUNE_SIZE
+
+        scores = np.asarray(self.memory_bitmap.score_all(u_fp32), dtype=np.float64)
+        corpus = int(scores.size)
+        min_corpus = int(self._gate_cfg("MIN_CORPUS", 32))
+        if corpus < min_corpus:
+            raise InsufficientCorpus(
+                f"{corpus} memories is too few for a mean and a deviation "
+                f"(need {min_corpus}); declining to emit a regime signal."
+            )
+        deviation = float(scores.std())
+        if deviation <= 0.0:
+            raise InsufficientCorpus(
+                "every memory scores identically; the corpus has no null to "
+                "measure against."
+            )
+
+        top_k = max(1, min(int(self._gate_cfg("TOP_K", 10)), corpus))
+        top1 = float(scores.max())
+        top10 = float(np.partition(scores, -top_k)[-top_k:].mean())
+        z_top10 = (top10 - float(scores.mean())) / deviation
+        sharpness = top1 - top10
+
+        # Gate on the EXCESS over the null, not on z itself.
+        #
+        # The top-10 mean of n samples sits further above the mean the larger n
+        # gets, for no reason but order statistics. Measured on pure Gaussian
+        # corpora, E[z_top10] runs 1.13 at n=32, 2.05 at n=200, 2.65 at n=1000
+        # and 3.55 at n=20000. A fixed threshold on raw z would therefore be
+        # permanently shut on a young memory and permanently open on a mature
+        # one, and would drift open as the engine is used, which is the worst
+        # possible failure for a signal meant to detect coherence.
+        #
+        # `z_excess` is how far this neighbourhood stands above what a corpus of
+        # this size would produce from noise alone, so it is free of both the
+        # scale of the scores and the size of the memory.
+        z_excess = z_top10 - self._null_z(corpus, top_k)
+
+        self.last_z_raw = float(z_top10)
+        self.last_z = float(z_excess)
+        self.last_sharpness = float(sharpness)
+        self.last_corpus = corpus
+        self.last_b = float(top10)
+        self.last_sol = (
+            "coherent" if z_excess >= self._gate_cfg("Z_PIVOT", 0.5) else "diffuse"
         )
-        subset_nodes = [self.cached_nodes[i] for i in global_ids]
-        if len(subset_nodes) < 3:
-            raise ValueError("Insufficient subgraph density for Laplacian bounds.")
 
-        N_dim = len(subset_nodes)
-        node_indices = {str(node): i for i, node in enumerate(subset_nodes)}
-        W = np.zeros((N_dim, N_dim))
-        for i, node in enumerate(subset_nodes):
-            edges = memory_core.graph[node].get("edges", {})
-            for target, weight in edges.items():
-                if target in node_indices:
-                    W[i, node_indices[target]] = weight
-        W = np.maximum(W, W.T)
-        L_matrix = np.diag(np.sum(W, axis=1)) - W
-        b_field = np.maximum(0.01, scores)
-        beta_b = self.BETA_SCALE * self.BETA_STAR_UNIT * b_field * (1.0 + drag)
-
-        Phi, converged = self._solve_nd_picard(
-            L_matrix,
-            a_scalar,
-            beta_b,
-            c=self.PICARD_C,
-            max_iter=self.PICARD_MAX_ITER,
-            tol=self.PICARD_TOL,
-        )
-        if not converged:
-            raise ValueError("Picard algorithm failed to converge.")
-
-        b_mean = float(np.mean(beta_b))
-        phi_norm_sq = np.dot(Phi, Phi) + 1e-8
-        self.last_lam1 = float((Phi.T @ L_matrix @ Phi) / phi_norm_sq) - b_mean
         issue_receipt(
-            "governor.creative_determinant",
-            "solved the elliptic BVP on the memory subgraph",
-            result_count=N_dim,
+            "governor.bitmap_gate",
+            "read the regime off the sign bitmap",
+            result_count=corpus,
             degraded=False,
             inputs={
-                "subgraph_nodes": N_dim,
-                "edges": int(np.count_nonzero(W)),
-                "a": round(a_scalar, 4),
+                "corpus": corpus,
+                "z_excess": round(z_excess, 4),
+                "z_top10": round(z_top10, 4),
+                "z_null": round(self._null_z(corpus, top_k), 4),
+                "sharpness": round(sharpness, 2),
+                "top1": round(top1, 1),
+                "mean": round(float(scores.mean()), 1),
+                "std": round(deviation, 2),
             },
-            detail=f"lam1={self.last_lam1:+.4f} b={b_mean:+.4f}",
+            detail=f"regime={self.last_sol} temperature={self.gate_temperature():.3f}",
         )
-        self.last_b = b_mean
-        self.last_a = a_scalar
-        self.last_sol = "nontrivial" if b_mean > 0.1 else "trivial"
-        phi_mean = float(np.mean(np.abs(Phi)))
-        phi_std = float(np.std(np.abs(Phi)))
-        self.target_v = v_base + phi_mean * v_range
-        self.target_d = float(np.clip(phi_std * 2.0, 0.1, 1.0))
+
+        # z drives how much presence the memory field has, so it sets the
+        # voltage target. Sharpness says how peaked that neighbourhood is, so a
+        # sharp one is focused and wants less drag. These two mappings are ours,
+        # not Nelson's; he specified the regime signal and the temperature.
+        pivot = self._gate_cfg("Z_PIVOT", 0.5)
+        presence = float(np.clip(z_excess / max(1e-6, pivot * 2.0), 0.0, 1.0))
+        focus = float(np.clip(sharpness / max(1e-6, deviation * 3.0), 0.0, 1.0))
+        self.target_v = v_base + presence * v_range
+        self.target_d = float(np.clip(1.0 - focus, 0.1, 1.0))
+
         stress_mod = 1.0
         if endocrine_state:
             glimmers = float(getattr(endocrine_state, "glimmers", 0))
@@ -896,6 +971,22 @@ class CyberneticGovernor:
         return (self.target_v - voltage) * adjusted_dt, (
             self.target_d - drag
         ) * adjusted_dt
+
+    def gate_temperature(self) -> float:
+        """Sampling temperature from the regime signal.
+
+        Below the pivot the neighbourhood is indistinguishable from the corpus
+        null, so there is nothing coherent nearby and generation collapses to
+        deterministic logic. That is the decision the eigenvalue's sign used to
+        make, preserved; only its input changed.
+        """
+        pivot = self._gate_cfg("Z_PIVOT", 2.0)
+        if self.last_z is None or self.last_z < pivot:
+            return float(self._gate_cfg("T_LOCKED", 0.0))
+        heat = self._gate_cfg("T_OPEN_BASE", 0.7) + self._gate_cfg(
+            "T_GAIN", 0.15
+        ) * (self.last_z - pivot)
+        return float(min(self._gate_cfg("T_MAX", 1.2), heat))
 
     def _pid_fallback(
         self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None

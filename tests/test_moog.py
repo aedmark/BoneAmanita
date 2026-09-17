@@ -148,7 +148,7 @@ class TestMoogProtocol(BoneTestCase):
             0,
             "[FAIL] Uncontrollable worry was incorrectly made a mandate.",
         )
-        self.mock_eng.mind.mem.record_scar.assert_called_once()
+        self.mock_eng.akashic.record_scar.assert_called_once()
         self.assertEqual(
             self.mock_eng._mito_state.ros_buildup,
             35.0,

@@ -210,10 +210,21 @@ class SomaticLoop:
             )
         self.bio.apply_environmental_entropy(phys)
         modifier = self.regulator.get_metabolic_modifier(phys, logs)
+        ros_decay = float(safe_get(safe_get(self.cfg, "BIO", {}), "ROS_DECAY_PER_TURN", 3.0))
+        if ros_decay:
+            self.bio.mito.state.ros_buildup = max(
+                0.0, float(self.bio.mito.state.ros_buildup) - ros_decay
+            )
         delta_silence = float(safe_get(phys, "silence", 0.0))
         if delta_silence > 0.6:
             drag_relief = delta_silence * 2.0
             stamina_recovery = delta_silence * 5.0
+            # The person leaving space is the deliberate half of recovery: the
+            # engine earns ATP from silence, not only stamina.
+            silence_yield = delta_silence * float(
+                safe_get(safe_get(self.cfg, "BIO", {}), "ATP_SILENCE_YIELD", 6.0)
+            )
+            self.bio.mito.adjust_atp(silence_yield, "Silence Yield")
             current_drag = float(safe_get(phys, "narrative_drag", 0.0))
             safe_set(phys, "narrative_drag", max(0.0, current_drag - drag_relief))
             b.stamina = min(max_stamina, b.stamina + stamina_recovery)

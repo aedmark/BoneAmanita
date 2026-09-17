@@ -155,7 +155,11 @@ class TestContradictionDirectives(PhysicsToPromptCase):
 class TestExhaustionReachesThePrompt(PhysicsToPromptCase):
     """Spent energy has to shorten the output, or the metabolism is decorative."""
 
-    THRESHOLD = 0.8
+    @property
+    def THRESHOLD(self) -> float:
+        """Read from config: the gate moved from 0.8 to 0.5 after the census
+        showed a flagging partner never reaches 0.8 (ROADMAP D0)."""
+        return float(self.cortex_cfg.EXHAUSTION_GATE)
 
     def test_exhaustion_shortens_the_instruction(self):
         prompt = self.compose_with({"exhaustion": self.THRESHOLD + 0.15})
@@ -290,7 +294,7 @@ class TestExhaustionIsTheUsersNotTheEngines(PhysicsToPromptCase):
 
     def test_a_drained_engine_is_not_automatically_exhausted(self):
         prompt = self.compose_with(
-            {"voltage": 30.0, "exhaustion": 0.1},
+            {"voltage": 30.0, "exhaustion": 0.05},
             bio={"mito": {"atp_pool": 0.0, "ros_buildup": 100.0}},
         )
         self.assertIn("P:0.0", prompt)

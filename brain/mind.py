@@ -681,8 +681,17 @@ class DreamEngine:
         return None
 
     def hallucinate(
-        self, _vector: Dict[str, float], trauma_level: float = 0.0
+        self,
+        _vector: Dict[str, float],
+        trauma_level: float = 0.0,
+        via_synapse: bool = True,
     ) -> Tuple[str, float]:
+        """A surreal fragment, from the model when `via_synapse` and the lore otherwise.
+
+        `LLMInterface.mock_generation` passes `via_synapse=False`. It is the
+        synapse's own fallback, so asking the synapse from inside it re-enters
+        the fallback, which asks again, until the interpreter's recursion limit.
+        """
         category = "NIGHTMARES" if trauma_level > 0.5 else "SURREAL"
         templates = self.dream_lore.get(category, [])
         if isinstance(templates, dict):
@@ -698,7 +707,7 @@ class DreamEngine:
         active_chi = float(safe_get(v, "chi", safe_get(v, "entropy", 0.85)))
         active_v = float(safe_get(v, "voltage", 90.0))
         txt = None
-        if self.llm:
+        if self.llm and via_synapse:
             lore_sample = ", ".join(random.sample(templates, min(3, len(templates))))
             k_hash = getattr(self.eng, "kernel_hash", "UNKNOWN")
             prompt = (

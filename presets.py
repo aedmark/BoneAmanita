@@ -69,6 +69,7 @@ class BonePresets:
             "allow_metrics": False,
             "atp_drain_enabled": True,
             "chaos_tax_enabled": True,
+            "gate_tolerance": 1.0,
             "voltage_floor_override": None,
             "active_mods": [],
             "default_ui_depth": "WARM",
@@ -93,6 +94,14 @@ class BonePresets:
             "allow_metrics": False,
             "atp_drain_enabled": False,
             "chaos_tax_enabled": False,
+            # The refusal gates were sized for ADVENTURE, where high drag means a
+            # story coming apart. In conversation they read a person going terse:
+            # over 30 census turns the PINKER sum averaged 44 against a gate of
+            # 35, and voltage averaged 21.7 against a MELTDOWN at 18. Both sat
+            # below the mean of an ordinary conversation. 1.6 puts them above it
+            # and still refuses the genuine extremes (PINKER peaked at 62.5).
+            # ROADMAP D0b.
+            "gate_tolerance": 1.6,
             "voltage_floor_override": None,
             "active_mods": [],
             "default_ui_depth": "WARM",
@@ -108,6 +117,7 @@ class BonePresets:
             "show_vitals": False,
             "allow_loot": False,
             "allow_metrics": False,
+            "gate_tolerance": 1.5,
             "atp_drain_enabled": True,
             "chaos_tax_enabled": False,
             "voltage_floor_override": 70.0,
@@ -125,6 +135,7 @@ class BonePresets:
             "show_vitals": True,
             "allow_loot": False,
             "allow_metrics": True,
+            "gate_tolerance": 1.0,
             "atp_drain_enabled": True,
             "chaos_tax_enabled": True,
             "voltage_floor_override": None,
@@ -199,7 +210,13 @@ class BoneConfig:
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
-    MODEL = "mistral-nemo"
+    # gemma4:12b, chosen 2026-09-17 on the D7 bake-off: it obeys the somatic
+    # instructions (94% of replies inside a three-sentence cap against 11%
+    # uninstructed), trips the Lexical Firewall least (5%), narrates no body,
+    # and is the fastest of the capable models. Run it with reasoning off:
+    # with reasoning on it spends its whole context deliberating and returns
+    # nothing on about an eighth of turns. ROADMAP D7.
+    MODEL = "gemma4:12b"
     OLLAMA_FALLBACK = ""
 
     # Config constants the engine reads at boot and expects to resolve.
@@ -216,18 +233,34 @@ class BoneConfig:
             "LLM_FAILURE_THRESHOLD",
             "MAX_HISTORY_LENGTH",
             "MOOD_THRESHOLDS",
+            "EXHAUSTION_GATE",
+            "COUNTERFACTUAL_ROS_GATE",
+            "REASONING_EFFORT",
         ],
-        "MACHINE": ["PACEMAKER_BOREDOM_THRESHOLD"],
+        "MACHINE": ["PACEMAKER_BOREDOM_THRESHOLD", "CRUCIBLE_MELTDOWN_VOLTAGE"],
         "DRIVERS": [
             "LIMINAL_SCAR_RELIEF",
             "LIMINAL_TRAUMA_HEAL",
             "LIMINAL_TRAUMA_AGGRAVATE",
             "LIMINAL_STRESS_THRESH",
         ],
-        "BIO": ["GOVERNOR_THRESHOLDS", "PID_SETTINGS"],
+        "BIO": [
+            "GOVERNOR_THRESHOLDS",
+            "PID_SETTINGS",
+            "GENTLE_COST_SCALE",
+            "ATP_IDLE_RECOVERY_PER_MIN",
+            "ATP_IDLE_RECOVERY_CAP",
+            "ATP_SILENCE_YIELD",
+            "ROS_DECAY_PER_TURN",
+            "COUNTERFACTUAL_ATP_COST",
+            "HLA_MASK_TAX_MAX",
+            "GATEKEEPER_BANNED_TAX",
+            "GATEKEEPER_BANNED_ROS",
+        ],
         "PHYSICS": ["TASTE_CONFIDENCE_FLOOR", "ZONE_MARGIN"],
         "CD": ["LAMBDA", "BETA"],
         "EMBEDDINGS": ["BACKEND", "MODEL", "URL"],
+        "GATE": ["Z_PIVOT", "T_OPEN_BASE", "T_GAIN", "T_MAX", "MIN_CORPUS", "TOP_K"],
         "STAGE": [
             "TENSION_HOLD_MAGNITUDE",
             "SYNTHESIS_ATP_FLOOR",
@@ -309,6 +342,46 @@ class BoneConfig:
         "MAX_CONSECUTIVE_HOLDS": 2,
         # What negotiating a silence costs. Small, but not nothing.
         "SILENCE_COST": 2.0,
+    }
+
+    # The governor's regime gate, read off the ordvec sign bitmap.
+    #
+    # This replaced a graph Laplacian and a Picard solve, on Nelson Spence's
+    # recommendation and our own measurement. Instrumented on a 23-node subgraph
+    # seeded at 17% edge density (denser than a real session), the Laplacian
+    # contributed 1.53% of the reported eigenvalue and the voltage input
+    # contributed nothing at all: lambda_1 came back byte-identical at every
+    # voltage from 15 to 90. What was left after the graph and the voltage
+    # cancelled was the mean ordvec similarity, computed the expensive way.
+    #
+    # `z_top10` is how far the utterance's neighbourhood stands above the
+    # corpus null, in standard deviations of the sign-agreement distribution.
+    # For a 768-dim sign bitmap chance sits near 384 agreements with a spread
+    # near 14, so the scale is stable and reads the same across corpora.
+    GATE = {
+        # How far above the NULL a neighbourhood has to stand before it counts
+        # as coherent: opens heat and selects CO_REGULATION. This is an excess,
+        # not a raw z. The top-10 mean of n samples drifts upward with n for no
+        # reason but order statistics (1.13 sigma at n=32, 3.55 at n=20000), so
+        # a threshold on raw z would fall open as the memory grew. Calibrate
+        # this the way LAMBDA was calibrated, by sweeping it against how often
+        # the engine lands in the generative regime.
+        "Z_PIVOT": 0.5,
+        # Temperature when the gate opens, and how fast it climbs per z above
+        # the pivot.
+        "T_OPEN_BASE": 0.7,
+        "T_GAIN": 0.15,
+        "T_MAX": 1.2,
+        # Below the pivot generation collapses to deterministic logic, which is
+        # what the eigenvalue sign used to decide.
+        "T_LOCKED": 0.0,
+        # Fewer memories than this and we decline to emit a number at all: the
+        # mean and deviation are not meaningful yet. This is navi-fractal's own
+        # rule (refuse to return a dimension the data will not support) applied
+        # to the governor. A declined turn runs the default temperature and
+        # files a receipt saying it was not measured.
+        "MIN_CORPUS": 32,
+        "TOP_K": 10,
     }
 
     # Creative Determinant coupling (Project Navi, Apache 2.0).

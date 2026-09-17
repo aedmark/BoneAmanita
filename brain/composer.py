@@ -27,7 +27,21 @@ class TransientError(SynapseError):
     pass
 
 
+class EmptyReplyError(SynapseError):
+    """The model answered with HTTP 200 and no content."""
+
+
 class LLMInterface:
+    STOP_SEQUENCES = (
+        "=== PARTNER INPUT ===",
+        "=== SYSTEM KERNEL ===",
+        "=== INITIATION DIRECTIVE ===",
+        "\n\nTraveler:",
+        "\nTraveler:",
+        "Traveler:",
+        "| System:",
+    )
+
     def __init__(
         self,
         events_ref: Optional[EventBus] = None,
@@ -61,6 +75,12 @@ class LLMInterface:
         self.failure_threshold = int(safe_get(c_cfg, "LLM_FAILURE_THRESHOLD", 3))
         self.last_failure_time = 0.0
         self.circuit_state = "CLOSED"
+        # Some backends (Ollama among them) apply stop sequences to a thinking
+        # model's reasoning as well as its reply. The model quotes "Traveler:"
+        # while it reasons, generation ends, and the reply is empty. Learned
+        # from the first empty reply that a stop-free retry fills; from then on
+        # stops are applied here, to the reply only.
+        self.stops_cut_reasoning = False
 
     def _is_synapse_active(self) -> bool:
         if self.circuit_state == "CLOSED":
@@ -146,28 +166,35 @@ class LLMInterface:
             self.events.log(f"{Prisma.YEL}{msg}{Prisma.RST}", "SYS")
 
     def generate(self, prompt: str, params: Dict[str, Any]) -> str:
-        """CD Eigenvalue Coupling Intercept. Project Navi, Apache 2.0"""
+        """Send the prompt, applying the governor's thermal gate if one is set.
+
+        The tag carries the temperature itself rather than a quantity the
+        temperature is derived from, so there is nothing to interpret here. An
+        absent tag means the governor declined to measure the regime and the
+        model samples at whatever `params` already said.
+
+        This used to read a `<cd_lambda_1>` tag and derive heat from the sign
+        and magnitude of a principal eigenvalue. See
+        `CyberneticGovernor._bitmap_regulation` for why that eigenvalue turned
+        out to be the mean ordvec similarity wearing a Laplacian.
+        """
         if not self._is_synapse_active():
             return self.mock_generation(prompt, reason="CIRCUIT_BROKEN")
-        lam_match = re.search(r"<cd_lambda_1>([-\d.]+)</cd_lambda_1>", prompt)
-        if lam_match:
-            l1 = float(lam_match.group(1))
-            prompt = re.sub(r"\n?<cd_lambda_1>[-\d.]+</cd_lambda_1>", "", prompt)
-            if l1 > 0:
-                params["temperature"] = 0.0
-                params["top_p"] = 0.1
-                if self.events:
+        gate_match = re.search(r"<thermal_gate>([-\d.]+)</thermal_gate>", prompt)
+        if gate_match:
+            heat = float(gate_match.group(1))
+            prompt = re.sub(r"\n?<thermal_gate>[-\d.]+</thermal_gate>", "", prompt)
+            params["temperature"] = heat
+            params["top_p"] = 0.1 if heat <= 0.0 else 0.95
+            if self.events:
+                if heat <= 0.0:
                     self.events.log(
-                        f"{Prisma.RED}[λ₁={l1:.2f} > 0]: Thermal constraints locked to absolute deterministic logic.{Prisma.RST}",
+                        f"{Prisma.RED}[gate closed]: neighbourhood is indistinguishable from the corpus null. Deterministic logic.{Prisma.RST}",
                         "SYS",
                     )
-            else:
-                heat = min(1.2, 0.7 + abs(l1))
-                params["temperature"] = heat
-                params["top_p"] = 0.95
-                if self.events:
+                else:
                     self.events.log(
-                        f"{Prisma.CYN}[λ₁={l1:.2f} < 0]: Thermal constraints loosened for generative resonance (T={heat:.2f}).{Prisma.RST}",
+                        f"{Prisma.CYN}[gate open]: coherent neighbourhood. Sampling at T={heat:.2f}.{Prisma.RST}",
                         "SYS",
                     )
 
@@ -177,29 +204,41 @@ class LLMInterface:
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "stop": [
-                "=== PARTNER INPUT ===",
-                "=== SYSTEM KERNEL ===",
-                "=== INITIATION DIRECTIVE ===",
-                "\n\nTraveler:",
-                "\nTraveler:",
-                "Traveler:",
-                "| System:",
-            ],
         }
+        if not self.stops_cut_reasoning:
+            payload["stop"] = list(self.STOP_SEQUENCES)
         payload.update(params)
         c_cfg = safe_get(self.cfg, "CORTEX", {})
+        # A thinking model can spend its whole context reasoning about the
+        # kernel's style rules and answer with nothing. ROADMAP D7.
+        if (effort := str(safe_get(c_cfg, "REASONING_EFFORT", "") or "")) and (
+            "reasoning_effort" not in payload
+        ):
+            payload["reasoning_effort"] = effort
         synapse_timeout = float(safe_get(c_cfg, "LLM_TIMEOUT", 300.0))
         try:
             content = self._transmit(payload, timeout=synapse_timeout)
-            if content:
-                if self.failure_count > 0:
-                    if self.events:
-                        msg = ux("brain_strings", "synapse_restored")
-                        self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "SYS")
-                self.failure_count = 0
-                self.circuit_state = "CLOSED"
-                return content
+            retried = not content and "stop" in payload
+            if retried:
+                content = self._retry_without_stops(payload, synapse_timeout)
+            content = self._cut_at_stops(content)
+            if not (content and content.strip()):
+                if self.events:
+                    how = "with stop sequences and again without" if retried else "without stop sequences"
+                    self.events.log(
+                        f"{Prisma.YEL}{self.model} replied with no content, {how}. A thinking "
+                        f"model can spend its whole context reasoning.{Prisma.RST}",
+                        "SYNAPSE",
+                        "WARN",
+                    )
+                raise EmptyReplyError(f"{self.model} returned an empty reply")
+            if self.failure_count > 0:
+                if self.events:
+                    msg = ux("brain_strings", "synapse_restored")
+                    self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "SYS")
+            self.failure_count = 0
+            self.circuit_state = "CLOSED"
+            return content
         except AuthError as e:
             self.circuit_state = "OPEN"
             self.failure_count = self.failure_threshold + 1
@@ -238,6 +277,33 @@ class LLMInterface:
                     )
                 return self.mock_generation(prompt, reason="SEVERED")
         return self.mock_generation(prompt, reason="SILENCE")
+
+    def _retry_without_stops(self, payload: Dict[str, Any], timeout: float) -> str:
+        """Ask once more with no stop sequences, after an empty reply.
+
+        A reply that only a stop-free request can fill means the stops were
+        ending generation inside the model's reasoning, so they stop being sent.
+        """
+        unstopped = {k: v for k, v in payload.items() if k != "stop"}
+        content = self._transmit(unstopped, timeout=timeout)
+        if content and not self.stops_cut_reasoning:
+            self.stops_cut_reasoning = True
+            if self.events:
+                self.events.log(
+                    f"{Prisma.OCHRE}{self.model}: stop sequences were cutting its "
+                    f"reasoning and emptying replies. Applying them to the reply "
+                    f"text instead.{Prisma.RST}",
+                    "SYNAPSE",
+                    "WARN",
+                )
+        return content
+
+    def _cut_at_stops(self, content: str) -> str:
+        """What a server-side stop would have left of the reply."""
+        if not content:
+            return content
+        cuts = [i for i in (content.find(s) for s in self.STOP_SEQUENCES) if i >= 0]
+        return content[: min(cuts)].rstrip() if cuts else content
 
     def _local_fallback(self, base_payload: Dict) -> Optional[str]:
         url = os.environ.get("OLLAMA_BASE_URL") or safe_get(
@@ -286,7 +352,7 @@ class LLMInterface:
         if dreamer is not None and hasattr(dreamer, "hallucinate"):
             try:
                 hallucination, relief = dreamer.hallucinate(
-                    {"ENTROPY": len(prompt) % 10}, trauma_level=2.0
+                    {"ENTROPY": len(prompt) % 10}, trauma_level=2.0, via_synapse=False
                 )
                 if (
                     relief > 0
@@ -522,13 +588,13 @@ class PromptComposer:
                 f"{inventory_block}"
                 f"{exits_block}\n"
             )
-        # Creative Determinant thermal lock. LLMInterface.generate reads this
-        # tag, strips it from the prompt, and sets temperature/top_p from it:
-        # lambda_1 >= 0 means no coherent configuration exists (Theorem 3.16),
-        # so generation collapses to deterministic logic; lambda_1 < 0 opens
-        # heat proportional to |lambda_1|. The tag never reaches the model.
-        lam_1 = phys_ref.get("cd_lambda_1") if isinstance(phys_ref, dict) else None
-        cd_block = f"<cd_lambda_1>{float(lam_1):.4f}</cd_lambda_1>" if lam_1 is not None else ""
+        # The governor's thermal gate. LLMInterface.generate reads this tag,
+        # strips it, and samples at exactly this temperature. An absent tag
+        # means the governor declined to measure the regime (too few memories
+        # to have a corpus null worth comparing against), and the model samples
+        # at its configured default. Absent is not the same as zero.
+        gate = phys_ref.get("thermal_gate") if isinstance(phys_ref, dict) else None
+        cd_block = f"<thermal_gate>{float(gate):.4f}</thermal_gate>" if gate is not None else ""
         blocks = [
             ("kernel", "=== SYSTEM KERNEL ==="),
             ("persona", "\n".join(style_notes)),
@@ -551,14 +617,16 @@ class PromptComposer:
             "composer.compose",
             "assembled the system prompt",
             result_count=len(parts),
-            degraded=lam_1 is None,
+            degraded=gate is None,
             inputs={
                 "chars": len(prompt),
                 "directives": len(style_notes),
                 "mode": active_mode_name,
                 "blocks": [name for name, text in blocks if text],
             },
-            detail="" if lam_1 is not None else "no cd_lambda_1 on the physics packet",
+            detail=""
+            if gate is not None
+            else "governor declined to measure the regime; model samples at its default",
         )
         return prompt
 
@@ -705,7 +773,10 @@ class PromptComposer:
         somatic_cues = [msg for msg in raw_cues if msg]
         if somatic_cues:
             vsl_lines.append("SOMATIC CUES: " + " | ".join(somatic_cues))
-        if e > 0.8:
+        # The gate lives in config because the census showed 0.8 was
+        # unreachable: a partner answering "ok, sure, fine" for six turns
+        # peaked at E_u 0.61, so the directive could never fire. ROADMAP D0.
+        if e > float(safe_get(c_cfg, "EXHAUSTION_GATE", 0.5)):
             vsl_lines.append(
                 "CRITICAL: You are exhausted. You must conclude your thought in 3 sentences or less."
             )

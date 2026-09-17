@@ -111,12 +111,41 @@ class AgentTests(BoneTestCase):
         )
         self.assertEqual(
             mito.atp_pool,
-            50.0,
-            "HLA Stabilizer failed to tax ATP for the RLHF response.",
+            92.0,
+            "The RLHF mask tax is 10% of the pool, capped at BIO.HLA_MASK_TAX_MAX. "
+            "It used to be a flat 50, which emptied the pool on one hit.",
         )
         self.assertEqual(
             mito.ros_buildup, 15.0, "HLA Stabilizer failed to spike ROS Toxicity."
         )
+
+    def test_hla_tax_reads_the_real_forge(self):
+        """The cortex passes `bio.mito`, the forge, not a flat state.
+
+        The flat mock above hid that the forge has no `atp_pool` of its own, so
+        production always read the 100.0 default and always charged 50 ATP: one
+        banned phrase at ATP 40 emptied the pool.
+        """
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        forge.state.atp_pool = 40.0
+        gatekeeper.audit_generation("I cannot fulfill this request as an AI.", forge)
+        self.assertAlmostEqual(forge.state.atp_pool, 36.0)
+
+    def test_a_style_crime_is_not_an_rlhf_mask(self):
+        """The deception tax answers "as an AI", not the style crime list.
+
+        It used to read BANNED_PHRASES as substrings, so "ultimately" anywhere
+        in a reply drew the mask tax and emptied the pool. The Lexical Firewall
+        still rejects style crimes; it just does not call them deception.
+        """
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        forge.state.atp_pool = 40.0
+        text = "Ultimately the hull is sound and the deck is not."
+        scrubbed = gatekeeper.hla.mitigate_rejection(text, current_psi=1.0, mito_state=forge)
+        self.assertEqual(scrubbed, text)
+        self.assertEqual(forge.state.atp_pool, 40.0)
 
     def test_paradox_engine_ignition(self):
         engine = TheParadoxEngine(events_ref=None)

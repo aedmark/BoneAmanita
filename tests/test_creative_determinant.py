@@ -1,229 +1,276 @@
 """tests/test_creative_determinant.py
 
-The Creative Determinant coupling, end to end.
+The governor's regime gate, and what is left of the Creative Determinant.
 
-Project Navi's CD framework (Apache 2.0) already drove ATP/ROS through
-physics/observer.py, but the principal eigenvalue lambda_1 was computed only in
-a test and the <cd_lambda_1> thermal lock in LLMInterface.generate had no
-producer at all. These tests pin the whole chain: observer fields -> cycle ->
-physics dict -> composed prompt -> generation parameters.
+This file used to test a graph Laplacian and a Picard iteration. Both are gone.
+Instrumented on our own code with the real 768d embedder and a 23-node subgraph
+seeded at 17% edge density, denser than a real session:
+
+    Phi^T L Phi / Phi^T Phi  : +0.006149
+    b_mean                   : +0.408239
+    reported lambda_1        : -0.402089
+    graph share of |lambda_1|:  1.53%
+
+and lambda_1 came back byte-identical at voltage 15, 25, 30, 35, 45, 60 and 90.
+The topology contributed one and a half percent and the voltage contributed
+nothing; what remained was the mean ordvec similarity computed the expensive
+way. Nelson Spence predicted the magnitude before we measured it, having found
+the same collapse at 207,695 nodes, and recommended the replacement tested here.
+
+What survives of his mathematics is in `physics/maths.py`:
+`calculate_viability`, `update_coherence_debt` and `execute_metabolic_tick`
+still drive the ATP and ROS economy, and that is genuinely his equation with the
+debt closure attached.
 """
 
-import re
 import unittest
 from unittest.mock import MagicMock, patch
 
-from brain.composer import LLMInterface
-from physics.models import PhysicsPacket, principal_eigenvalue
+import numpy as np
+
+from brain.composer import LLMInterface, PromptComposer
+from core import CyberneticGovernor, InsufficientCorpus
+from presets import BoneConfig
 from tests.base import BoneTestCase
 
-TAG = re.compile(r"<cd_lambda_1>([-\d.]+)</cd_lambda_1>")
 
+class _FakeBitmap:
+    """Stands in for ordvec's SignBitmap so the gate is testable offline.
 
-class EigenvalueMath(unittest.TestCase):
-    """Theorem 3.16 reduced: coherent configurations exist iff b > 0."""
-
-    def test_lambda_1_is_negated_viability(self):
-        self.assertAlmostEqual(
-            principal_eigenvalue(kappa=0.8, gamma=0.8, mu=0.5, lambda_val=0.5),
-            -((0.8 * 0.8) - (0.5 * 0.5)),
-            places=6,
-        )
-
-    def test_sign_condition_matches_the_theorem(self):
-        """lambda_1 < 0 exactly when viability is positive."""
-        coherent = principal_eigenvalue(kappa=0.9, gamma=0.9, mu=0.2, lambda_val=0.5)
-        dissolving = principal_eigenvalue(kappa=0.2, gamma=0.3, mu=0.9, lambda_val=0.5)
-        self.assertLess(coherent, 0.0)
-        self.assertGreater(dissolving, 0.0)
-
-    def test_beta_scales_magnitude_not_sign(self):
-        args = dict(kappa=0.9, gamma=0.9, mu=0.2, lambda_val=0.5)
-        weak = principal_eigenvalue(beta=0.5, **args)
-        strong = principal_eigenvalue(beta=2.0, **args)
-        self.assertLess(strong, weak)
-        self.assertLess(strong, 0.0)
-        self.assertAlmostEqual(strong, 4.0 * weak, places=6)
-
-    def test_coherent_regime_is_reachable_at_the_shipped_lambda(self):
-        """Regression: the old (pi/L)^2 term with L=pi pinned lambda_1 >= 0 for
-        every state the engine could actually produce, so the generative branch
-        was dead under all inputs."""
-        packet = PhysicsPacket()
-        packet.kappa, packet.gamma, packet.mu = 0.6, 0.97, 0.88
-        packet.lambda_val = 0.5
-        self.assertGreater(packet.get_viability_potential(), 0.0)
-        self.assertLess(packet.get_principal_eigenvalue(), 0.0)
-
-    def test_lambda_val_is_used_as_given(self):
-        """Zero means contradiction is free. It must not be overridden with 1.0."""
-        packet = PhysicsPacket()
-        packet.kappa, packet.gamma, packet.mu = 0.5, 0.5, 1.0
-        packet.lambda_val = 0.0
-        self.assertAlmostEqual(packet.get_viability_potential(), 0.25, places=6)
-
-
-class ThermalLockProducer(BoneTestCase):
-    """The half that had no coverage: something must actually emit the tag."""
-
-    def test_cortex_attaches_lambda_from_nested_energy(self):
-        phys = {"energy": {"kappa": 0.9, "gamma": 0.9, "mu": 0.2, "lambda_val": 0.5}}
-        self.engine.cortex._attach_principal_eigenvalue(phys)
-        self.assertIn("cd_lambda_1", phys)
-        self.assertAlmostEqual(phys["cd_lambda_1"], -((0.81) - (0.1)), places=6)
-
-    def test_attach_is_inert_without_an_energy_block(self):
-        phys = {}
-        self.engine.cortex._attach_principal_eigenvalue(phys)
-        self.assertNotIn("cd_lambda_1", phys)
-
-    def test_composed_prompt_carries_the_tag(self):
-        composer = self.engine.cortex.composer
-        state = {
-            "meta": {"active_mode": "CONVERSATION", "mode_settings": {}},
-            "mind": {}, "bio": {}, "world": {}, "soul": {},
-            "physics": {"cd_lambda_1": -0.42},
-            "dialogue_history": [],
-        }
-        prompt = composer.compose(state, "a test utterance")
-        found = TAG.search(prompt)
-        self.assertIsNotNone(found, "[FAIL] compose() emitted no <cd_lambda_1> tag.")
-        self.assertAlmostEqual(float(found.group(1)), -0.42, places=4)
-
-    def test_no_tag_emitted_when_physics_is_absent(self):
-        composer = self.engine.cortex.composer
-        state = {
-            "meta": {"active_mode": "CONVERSATION", "mode_settings": {}},
-            "mind": {}, "bio": {}, "world": {}, "soul": {},
-            "physics": {},
-            "dialogue_history": [],
-        }
-        self.assertIsNone(TAG.search(composer.compose(state, "a test utterance")))
-
-
-class EigenvalueProvenance(BoneTestCase):
-    """Two eigenvalues exist and they are not equally good.
-
-    The governor solves the nonlinear elliptic BVP by Picard iteration over the
-    Laplacian of a memory subgraph and takes lambda_1 as a Rayleigh quotient.
-    That is the real one. The scalar -beta*(kappa*gamma - lambda*mu) states the
-    same sign condition over three per-turn scalars and cannot see memory
-    structure at all; it is the cold-start fallback.
+    The real one cannot be used here: `SignBitmap` requires a dimension that is
+    a multiple of 64 and the suite is pinned to the 8-dim hash backend, so the
+    whole ordvec path is unreachable under test. That is worth knowing on its
+    own, and it is why these tests drive the arithmetic directly.
     """
 
-    def test_solved_eigenvalue_is_preferred(self):
-        phys = {
-            "energy": {
-                "kappa": 0.6, "gamma": 0.97, "mu": 0.88,
-                "lambda_val": 0.5, "lam1": -0.4196,
-            }
-        }
-        self.engine.cortex._attach_principal_eigenvalue(phys)
-        self.assertAlmostEqual(phys["cd_lambda_1"], -0.4196, places=4)
-        self.assertEqual(phys["cd_lambda_1_source"], "graph_laplacian")
+    def __init__(self, scores):
+        self._scores = np.asarray(scores, dtype=np.float64)
 
-    def test_scalar_fallback_before_any_solve(self):
-        phys = {
-            "energy": {
-                "kappa": 0.6, "gamma": 0.97, "mu": 0.88,
-                "lambda_val": 0.5, "lam1": 0.0,
-            }
-        }
-        self.engine.cortex._attach_principal_eigenvalue(phys)
-        self.assertEqual(phys["cd_lambda_1_source"], "scalar_fallback")
-        self.assertNotEqual(phys["cd_lambda_1"], 0.0)
-
-    def test_the_two_can_disagree_and_the_solve_wins(self):
-        """Regression: the scalar shipped to the thermal lock while the governor
-        computed a better value that only ever reached the post-turn snapshot,
-        which is after the prompt has been composed."""
-        energy = {"kappa": 0.9, "gamma": 0.9, "mu": 0.1, "lambda_val": 0.5}
-        scalar_only = {"energy": dict(energy, lam1=0.0)}
-        solved = {"energy": dict(energy, lam1=0.25)}
-        self.engine.cortex._attach_principal_eigenvalue(scalar_only)
-        self.engine.cortex._attach_principal_eigenvalue(solved)
-        self.assertLess(scalar_only["cd_lambda_1"], 0.0)
-        self.assertGreater(solved["cd_lambda_1"], 0.0)
-
-    def test_packet_carries_the_field(self):
-        from physics.models import PhysicsPacket
-
-        packet = PhysicsPacket()
-        self.assertEqual(packet.lam1, 0.0)
-        packet.lam1 = -0.3
-        self.assertIn("lam1", packet.to_dict().get("energy", packet.to_dict()))
+    def score_all(self, _q):
+        return self._scores
 
 
-class ThermalLockConsumer(unittest.TestCase):
-    """generate() must act on the tag and must never forward it to the model."""
+def _governor_over(scores):
+    gov = CyberneticGovernor()
+    gov.memory_bitmap = _FakeBitmap(scores)
+    gov.cached_nodes = list(range(len(scores)))
+    gov._sync_ordvec_indices = lambda _core: True
+    gov._cached_vectorizer = lambda _text: [0.0] * 8
+    return gov
 
+
+class RegimeSignal(unittest.TestCase):
+    """z_top10 is how far the neighbourhood stands above the corpus null."""
+
+    PHYSICS = {"voltage": 30.0, "narrative_drag": 0.6}
+
+    def test_a_flat_corpus_has_no_regime_to_report(self):
+        """Every memory scoring alike means there is no null to measure against."""
+        gov = _governor_over([384.0] * 64)
+        with self.assertRaises(InsufficientCorpus):
+            gov._bitmap_regulation(self.PHYSICS, 1.0, object(), "anything", None)
+
+    def test_too_few_memories_declines_rather_than_guesses(self):
+        """navi-fractal's rule, applied to the governor."""
+        floor = int(BoneConfig().GATE.MIN_CORPUS)
+        gov = _governor_over(np.random.default_rng(0).normal(384, 14, floor - 1))
+        with self.assertRaises(InsufficientCorpus):
+            gov._bitmap_regulation(self.PHYSICS, 1.0, object(), "anything", None)
+
+    def test_a_standout_neighbourhood_reads_high(self):
+        scores = np.full(200, 384.0)
+        scores[:10] = 470.0          # ten memories far above the null
+        scores[10:] += np.random.default_rng(1).normal(0, 14, 190)
+        gov = _governor_over(scores)
+        gov._bitmap_regulation(self.PHYSICS, 1.0, object(), "anything", None)
+        self.assertGreater(gov.last_z, 0.5)
+        self.assertEqual(gov.last_sol, "coherent")
+
+    def test_a_random_corpus_reads_as_no_neighbourhood_at_any_size(self):
+        """The bug that gating on raw z would have shipped.
+
+        A pure-noise corpus has no neighbourhood by construction, but its
+        top-10 mean still drifts upward with size: 2.05 sigma at n=200, 2.65 at
+        n=1000, 3.55 at n=20000. A fixed threshold on raw z would have read
+        every one of these as coherent once the memory got big enough, and it
+        would have done so gradually, as the engine was used.
+        """
+        for n in (64, 200, 1000, 4000):
+            with self.subTest(corpus=n):
+                scores = np.random.default_rng(n).normal(384, 14, n)
+                gov = _governor_over(scores)
+                gov._bitmap_regulation(self.PHYSICS, 1.0, object(), "anything", None)
+                self.assertLess(
+                    gov.last_z, 0.5,
+                    f"a random corpus of {n} read as coherent "
+                    f"(raw z was {gov.last_z_raw:.2f})",
+                )
+                self.assertEqual(gov.last_sol, "diffuse")
+
+    def test_the_null_baseline_tracks_corpus_size(self):
+        from core import CyberneticGovernor as G
+
+        self.assertLess(G._null_z(32), G._null_z(1000))
+        self.assertLess(G._null_z(1000), G._null_z(20000))
+        self.assertAlmostEqual(G._null_z(1000), 2.62, delta=0.1)
+
+    def test_z_is_scale_free(self):
+        """The same shape at a different offset and spread reads the same.
+
+        This is the property that makes the pivot calibratable once rather than
+        per corpus, and it is why a sign-agreement z is a better signal than the
+        raw similarity it replaced.
+        """
+        base = np.concatenate([np.full(10, 3.0), np.zeros(190)])
+        a = _governor_over(384 + 14 * base)
+        b = _governor_over(100 + 3 * base)
+        for gov in (a, b):
+            gov._bitmap_regulation(self.PHYSICS, 1.0, object(), "x", None)
+        self.assertAlmostEqual(a.last_z, b.last_z, places=6)
+
+
+class GateTemperature(unittest.TestCase):
+    def setUp(self):
+        self.gov = CyberneticGovernor()
+        self.gate = BoneConfig().GATE
+
+    def test_never_measured_is_locked_not_hot(self):
+        self.assertIsNone(self.gov.last_z)
+        self.assertEqual(self.gov.gate_temperature(), float(self.gate.T_LOCKED))
+
+    def test_below_the_pivot_collapses_to_deterministic_logic(self):
+        self.gov.last_z = float(self.gate.Z_PIVOT) - 0.5
+        self.assertEqual(self.gov.gate_temperature(), float(self.gate.T_LOCKED))
+
+    def test_at_the_pivot_the_gate_opens(self):
+        self.gov.last_z = float(self.gate.Z_PIVOT)
+        self.assertAlmostEqual(
+            self.gov.gate_temperature(), float(self.gate.T_OPEN_BASE), places=6
+        )
+
+    def test_heat_climbs_with_z_and_is_capped(self):
+        self.gov.last_z = float(self.gate.Z_PIVOT) + 1.0
+        warm = self.gov.gate_temperature()
+        self.assertGreater(warm, float(self.gate.T_OPEN_BASE))
+        self.gov.last_z = float(self.gate.Z_PIVOT) + 500.0
+        self.assertEqual(self.gov.gate_temperature(), float(self.gate.T_MAX))
+
+    def test_policy_follows_the_same_threshold(self):
+        self.gov.last_z = float(self.gate.Z_PIVOT) + 0.1
+        self.assertEqual(self.gov.get_policy_shift(), "CO_REGULATION")
+        self.gov.last_z = float(self.gate.Z_PIVOT) - 0.1
+        self.assertEqual(self.gov.get_policy_shift(), "EFFICIENCY")
+
+    def test_an_unmeasured_regime_does_not_claim_co_regulation(self):
+        self.gov.last_z = None
+        self.gov.order = 1
+        self.assertEqual(self.gov.get_policy_shift(), "EFFICIENCY")
+
+
+class DeclineIsNotFailure(BoneTestCase):
+    """A declined measurement must read differently from a broken one."""
+
+    def test_declining_files_an_honest_receipt_and_falls_back(self):
+        from receipts import ReceiptLedger
+
+        gov = self.engine.governor
+        gov._sync_ordvec_indices = lambda _c: True
+        gov.memory_bitmap = _FakeBitmap([384.0] * 4)
+        gov._cached_vectorizer = lambda _t: [0.0] * 8
+        ledger = ReceiptLedger.get_instance()
+        gov.regulate(
+            {"voltage": 30.0, "narrative_drag": 0.6}, 1.0,
+            memory_core=object(), user_text="something",
+        )
+        receipts = ledger.for_subsystem("governor.bitmap_gate")
+        self.assertTrue(receipts, "the governor declined and said nothing")
+        latest = receipts[-1]
+        self.assertFalse(
+            latest.degraded,
+            "declining to measure is not a degraded path; it is the correct one",
+        )
+        self.assertIn("declined", latest.effect)
+        self.assertIsNone(gov.last_z, "a declined turn must not leave a stale z")
+        self.assertEqual(gov.last_sol, "not_measured")
+
+
+class ThermalGateReachesTheModel(BoneTestCase):
+    def test_the_prompt_carries_the_temperature_itself(self):
+        composer = PromptComposer(
+            {"system_prompts": self.engine.prompt_library, "lenses": {}}
+        )
+        state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
+        state["physics"]["thermal_gate"] = 0.93
+        prompt = composer.compose(state, "hello", modifiers={"include_inventory": False})
+        self.assertIn("<thermal_gate>0.9300</thermal_gate>", prompt)
+
+    def test_no_gate_no_tag(self):
+        """An absent tag means not measured, which is not a temperature of zero."""
+        composer = PromptComposer(
+            {"system_prompts": self.engine.prompt_library, "lenses": {}}
+        )
+        state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
+        state["physics"].pop("thermal_gate", None)
+        prompt = composer.compose(state, "hello", modifiers={"include_inventory": False})
+        self.assertNotIn("<thermal_gate>", prompt)
+
+
+class ThermalGateConsumer(unittest.TestCase):
     def setUp(self):
         self.llm = LLMInterface(events_ref=MagicMock(), provider="mock")
 
-    def test_tag_is_stripped_before_transmission(self):
-        sent = {}
+    def _generate(self, prompt, params):
+        with patch.object(self.llm, "mock_generation", return_value="ok") as mock:
+            self.llm.generate(prompt, params)
+        return mock.call_args[0][0]
 
-        def fake_transmit(payload, timeout=None):
-            sent["prompt"] = payload["messages"][0]["content"]
-            return "ok"
+    def test_the_tag_sets_the_temperature_verbatim(self):
+        params = {"temperature": 0.5}
+        self._generate("body\n<thermal_gate>1.1000</thermal_gate>", params)
+        self.assertAlmostEqual(params["temperature"], 1.1, places=6)
+        self.assertEqual(params["top_p"], 0.95)
 
-        llm = LLMInterface(events_ref=MagicMock(), provider="ollama")
-        with patch.object(llm, "_transmit", side_effect=fake_transmit):
-            llm.generate("Real content <cd_lambda_1>-0.3</cd_lambda_1>", {})
-        self.assertNotIn("cd_lambda_1", sent["prompt"])
-        self.assertIn("Real content", sent["prompt"])
+    def test_a_closed_gate_locks_sampling(self):
+        params = {"temperature": 0.9}
+        self._generate("body\n<thermal_gate>0.0000</thermal_gate>", params)
+        self.assertEqual(params["temperature"], 0.0)
+        self.assertEqual(params["top_p"], 0.1)
 
-    def test_coherent_state_opens_heat_proportional_to_magnitude(self):
-        near, far = {}, {}
-        self.llm.generate("p <cd_lambda_1>-0.1</cd_lambda_1>", near)
-        self.llm.generate("p <cd_lambda_1>-0.4</cd_lambda_1>", far)
-        self.assertGreater(far["temperature"], near["temperature"])
-        self.assertLessEqual(far["temperature"], 1.2)
+    def test_the_tag_never_reaches_the_model(self):
+        sent = self._generate("body\n<thermal_gate>0.8000</thermal_gate>", {})
+        self.assertNotIn("thermal_gate", sent)
+        self.assertIn("body", sent)
 
-    def test_dissolving_state_collapses_to_determinism(self):
-        params = {}
-        self.llm.generate("p <cd_lambda_1>0.25</cd_lambda_1>", params)
-        self.assertEqual(params.get("temperature"), 0.0)
-        self.assertEqual(params.get("top_p"), 0.1)
+    def test_an_absent_tag_leaves_sampling_alone(self):
+        params = {"temperature": 0.42}
+        self._generate("body with no tag at all", params)
+        self.assertEqual(params["temperature"], 0.42)
 
 
-class EndToEnd(BoneTestCase):
-    def test_a_real_turn_produces_a_tag_and_sets_temperature(self):
-        seen = []
-        original = LLMInterface.generate
+class WhatSurvivesOfTheDeterminant(unittest.TestCase):
+    """The metabolic economy is still solving Spence's equation."""
 
-        def spy(inner_self, prompt, params):
-            if match := TAG.search(prompt):
-                seen.append((float(match.group(1)), dict(params)))
-            return original(inner_self, prompt, params)
+    def test_viability_carries_the_debt_closure(self):
+        from physics.maths import CreativeDeterminantEngine
 
-        with patch.object(LLMInterface, "generate", spy):
-            self.engine.process_turn(
-                "the greenhouse smelled like warm tomatoes and rust"
-            )
-            self.engine.orchestrator.shutdown()
-
-        self.assertTrue(
-            seen, "[FAIL] A full turn emitted no <cd_lambda_1> tag; the lock is dead."
+        engine = CreativeDeterminantEngine()
+        rested = engine.calculate_viability(kappa=0.8, gamma=0.8, mu=0.4)
+        engine.coherence_debt = 2.0
+        indebted = engine.calculate_viability(kappa=0.8, gamma=0.8, mu=0.4)
+        self.assertLess(
+            indebted, rested, "lambda_eff = lambda_0 * (1 + D) is not being applied"
         )
-        lam, params = seen[0]
-        if lam < 0:
-            self.assertGreater(params.get("temperature", 0.0), 0.7)
-        else:
-            self.assertEqual(params.get("temperature"), 0.0)
 
-    def test_observer_populates_all_three_cd_fields(self):
-        """Regression: gamma and mu were computed and then dropped, because only
-        `kappa` was listed in ObservationPhase._SYNC_KEYS."""
-        packet = self.engine.phys.observer.gaze(
-            "the greenhouse smelled like warm tomatoes and rust",
-            self.engine.mind.mem.graph,
-        )["physics"]
-        self.assertGreater(packet.kappa, 0.0)
-        self.assertGreater(packet.gamma, 0.0)
-        self.assertGreater(packet.mu, 0.0)
-        self.assertGreater(packet.lambda_val, 0.0)
+    def test_positive_viability_feeds_the_organism(self):
+        from physics.maths import CreativeDeterminantEngine
 
+        atp, ros = CreativeDeterminantEngine().execute_metabolic_tick(0.5)
+        self.assertGreater(atp, 0.0)
+        self.assertLess(ros, 0.0)
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_negative_viability_costs_it(self):
+        from physics.maths import CreativeDeterminantEngine
+
+        atp, ros = CreativeDeterminantEngine().execute_metabolic_tick(-0.5)
+        self.assertLess(atp, 0.0)
+        self.assertGreater(ros, 0.0)

@@ -3,7 +3,9 @@
 import unittest
 from unittest.mock import MagicMock
 
+from brain.akashic import TheAkashicRecord
 from brain.cortex import CortexServices, TheCortex
+from spores.network import MycelialNetwork
 from presets import BoneConfig
 
 
@@ -45,9 +47,13 @@ class CortexArchitectTests(BoneTestCase):
             consultant=MagicMock(),
             orchestrator=MagicMock(),
             symbiosis=MagicMock(),
-            mind_memory=MagicMock(),
+            # Spec'd, so a call to a method the real class lacks fails here too.
+            # An unspecced mock accepted `mind_memory.record_scar` for as long
+            # as production crashed on it.
+            mind_memory=MagicMock(spec=MycelialNetwork),
             bio=MagicMock(),
             config_ref=self.config,
+            akashic=MagicMock(spec=TheAkashicRecord),
         )
 
         mock_eng = self.mock_services.orchestrator.eng
@@ -126,6 +132,7 @@ class CortexArchitectTests(BoneTestCase):
             halt_res.get("ui", ""),
             "[FAIL] Missing Pinker gate rejection log.",
         )
+        self.mock_services.akashic.record_scar.assert_called_once()
 
 
 if __name__ == "__main__":

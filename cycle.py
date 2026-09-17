@@ -556,7 +556,7 @@ class GeodesicOrchestrator:
                     "SYS",
                 )
                 safe_phys = getattr(self.eng, "active_physics", None) or {}
-                self.eng.mind.mem.record_scar(
+                self.eng.akashic.record_scar(
                     f"Moog Residue: {worry[:30]}...", safe_phys
                 )
                 if _mito_state := self.eng._mito_state:
@@ -767,11 +767,11 @@ class GeodesicOrchestrator:
             # composed the prompt, so the thermal lock could not see it and fell
             # back to a scalar approximation of the same quantity.
             if self.eng.governor is not None:
-                ctx.physics.lam1 = float(
-                    getattr(self.eng.governor, "last_lam1", 0.0) or 0.0
-                )
-                ctx.physics.lam1_solution = str(
-                    getattr(self.eng.governor, "last_sol", "") or ""
+                gov = self.eng.governor
+                z = getattr(gov, "last_z", None)
+                ctx.physics.thermal_z = float(z) if z is not None else 0.0
+                ctx.physics.thermal_regime = str(
+                    getattr(gov, "last_sol", "not_measured") or "not_measured"
                 )
             self._evaluate_systemic_feedback(
                 user_message if not is_system else "(Waiting)", ctx
@@ -786,7 +786,7 @@ class GeodesicOrchestrator:
                 metrics = self.eng.telemetry.active_crystal.leverage_metrics
                 metrics["b"] = getattr(self.eng.governor, "last_b", 0.0)
                 metrics["a"] = getattr(self.eng.governor, "last_a", 0.0)
-                metrics["lam1"] = getattr(self.eng.governor, "last_lam1", 0.0)
+                metrics["thermal_z"] = getattr(self.eng.governor, "last_z", None)
             return ctx
         except Exception as e:
             full_trace = traceback.format_exc()
@@ -1056,7 +1056,7 @@ class GeodesicOrchestrator:
             snapshot["physics"]["saturation_penalty"] = round(sat_penalty, 3)
         snapshot["physics"]["b"] = getattr(self.eng.governor, "last_b", 0.0)
         snapshot["physics"]["a"] = getattr(self.eng.governor, "last_a", 0.0)
-        snapshot["physics"]["lam1"] = getattr(self.eng.governor, "last_lam1", 0.0)
+        snapshot["physics"]["thermal_z"] = getattr(self.eng.governor, "last_z", None)
 
     @staticmethod
     def _generate_crash_report(e: Optional[Exception]) -> Dict[str, Any]:

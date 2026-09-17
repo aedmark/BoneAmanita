@@ -2,6 +2,7 @@
 
 import math
 import random
+import time
 from typing import Any
 
 from constants import Prisma
@@ -25,20 +26,23 @@ class MetabolismPhase(SimulationPhase):
         self.max_health = float(safe_get(cfg, "MAX_HEALTH", 100.0))
         self.max_atp = float(safe_get(cfg, "MAX_ATP", 100.0))
         self.starvation_thresh = float(safe_get(bio_cfg, "ATP_STARVATION", 5.0))
+        self.gentle_scale = float(safe_get(bio_cfg, "GENTLE_COST_SCALE", 0.35))
+        self.idle_recovery_per_min = float(
+            safe_get(bio_cfg, "ATP_IDLE_RECOVERY_PER_MIN", 6.0)
+        )
+        self.idle_recovery_cap = float(safe_get(bio_cfg, "ATP_IDLE_RECOVERY_CAP", 25.0))
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event:
             return ctx
         mode_settings = self.eng.mode_settings
-        if not mode_settings.get("atp_drain_enabled", True):
-            ctx.bio_result = {
-                "is_alive": True,
-                "logs": [],
-                "atp": self.eng.bio.mito.state.atp_pool,
-            }
-            ctx.is_alive = True
-            self._apply_healing(ctx)
-            return ctx
+        # A gentle mode scales the metabolic burn; it does not skip the cycle.
+        # Skipping it used to skip the income with it (vagus support, PID
+        # homeostasis, photosynthesis, digestion), while the costs scattered
+        # through the cortex still charged, so CONVERSATION spent without ever
+        # earning and stopped answering after about six turns. ROADMAP D0.
+        cost_scale = 1.0 if mode_settings.get("atp_drain_enabled", True) else self.gentle_scale
+        self._recover_while_idle()
         physics = ctx.physics
         self._apply_stress_blindness(ctx)
         self._apply_economic_stimulus(ctx, self.eng.host_stats.efficiency_index)
@@ -64,7 +68,7 @@ class MetabolismPhase(SimulationPhase):
             bio_feedback,
             metrics["health"],
             metrics["stamina"],
-            self.eng.bio.governor.get_stress_modifier(self.eng.tick_count),
+            self.eng.bio.governor.get_stress_modifier(self.eng.tick_count) * cost_scale,
             self.eng.tick_count,
             circadian_bias=self._check_circadian_rhythm(ctx),
         )
@@ -223,6 +227,20 @@ class MetabolismPhase(SimulationPhase):
             )
             self.eng.health = max(0.0, self.eng.health - damage)
 
+    def _recover_while_idle(self) -> None:
+        """Passive recovery: the body earns back what the clock gives it.
+
+        Thinking time between turns is the cheapest income the engine has, and
+        the only one that does not depend on what the person writes.
+        """
+        last = float(getattr(self.eng, "last_turn_end", 0.0) or 0.0)
+        if not last:
+            return
+        idle_minutes = max(0.0, (time.time() - last) / 60.0)
+        recovered = min(self.idle_recovery_cap, idle_minutes * self.idle_recovery_per_min)
+        if recovered > 0.1:
+            self.eng.bio.mito.adjust_atp(recovered, "Idle Recovery")
+
     def _apply_healing(self, ctx):
         qualia = self.eng.soma.synesthesia.get_current_qualia(ctx.last_impulse)
         current_stamina = self.eng.stamina
@@ -242,7 +260,7 @@ class MetabolismPhase(SimulationPhase):
                 )
                 if repair and repair["success"]:
                     ctx.log(repair["msg"])
-                    self.eng.mind.mem.record_scar(
+                    self.eng.akashic.record_scar(
                         kintsugi_ref.active_koan or "Healed Rupture", ctx.physics
                     )
                 self.eng.stamina = min(

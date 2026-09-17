@@ -237,7 +237,7 @@ codebase, and it is what most of the recent work was about.
 
 ## Project status
 
-Working and in active development. The test suite is **484 passing, 5 skipped**
+Working and in active development. The test suite is **501 passing, 5 skipped**
 (the five skips are live-embedding tests, run them with `BONE_EMBED_LIVE_TEST=1`).
 
 Recent work was almost entirely archaeology rather than features. Large parts of
@@ -269,6 +269,10 @@ the plan for what is next.
 - Receipts record what a subsystem did, not whether it was right. They make the
   engine auditable, not correct.
 - The metabolic economy has not been tuned against a real chat model end to end.
+- **On a live model the engine currently stops answering after about six
+  turns.** Its energy budget is spent faster than anything refills it during a
+  conversation, and once it is empty every turn is refused. Measured with
+  `tools/audit_somatic_census.py`; retuning it is the next piece of work.
 - The body changes the prose less than the names suggest. Measured on two local
   models (`tools/audit_somatic.py`), the low-energy instruction makes sentences
   about 10% shorter and no shorter overall, and one of the two models mostly
@@ -282,12 +286,13 @@ the plan for what is next.
 Run these rather than trusting the numbers in any document, including this one:
 
 ```bash
-.venv/bin/python -m pytest -q                      # 489 passed, 5 skipped
+.venv/bin/python -m pytest -q                      # 501 passed, 5 skipped
 .venv/bin/python tools/audit_physics_inputs.py     # how much vocabulary it knows
 .venv/bin/python tools/audit_receipts.py           # which subsystems did real work
 .venv/bin/python tools/audit_handlers.py           # silent exception handlers
 .venv/bin/python tools/audit_safe_get.py           # runtime default hit-rate
 .venv/bin/python tools/audit_somatic.py            # does the model obey its body (live, ~15 min)
+.venv/bin/python tools/audit_somatic_census.py     # a scripted conversation: where the energy goes (live)
 ```
 
 If replies ever start feeling generic, `audit_receipts.py` is the first thing to

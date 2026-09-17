@@ -68,14 +68,15 @@ you whether it ran.
 | **C3** co-regulation | **done**: found the severed serialization; user model now first-class |
 | **C4** Stage Manager and Silence | **done**: Tension is a state, Silence is an outcome, 21 tests |
 | **C5** somatic translation | **measured**: anaerobic shortens sentences ~10%; "3 sentences or less" is not obeyed |
-| **D** the somatic contract | **planned**: D0 census first |
+| **D** the somatic contract | **D0 and D0b done**: the economy holds across 30 live turns and the refusal gates are resized per mode; D1, D2 and D9 next |
 
-Next: **Track D**, starting with D0, the somatic census. Tracks A, B and C are finished. C5's result is a
-finding against a claim rather than a repair, and the follow-up it points to
-(rewording or relocating the exhaustion directive) is a design decision,
-not a listed task.
+Next: **D1 and D2**, the somatic budget and the rewritten instructions, then
+**D9**, where refusal becomes a single Stage Manager decision. The metabolic
+economy is repaired (ATP holds between 16 and 53 across 30 live turns, where it
+used to reach zero by turn six) and the refusal gates are resized per mode
+(D0b), which is what made the engine go quiet once the economy no longer did.
 
-Suite: **489 passed, 5 skipped**. The five skips are the live-embedding tests
+Suite: **501 passed, 5 skipped**. The five skips are the live-embedding tests
 behind `BONE_EMBED_LIVE_TEST=1`, not a missing chat model. Re-run
 `tools/audit_receipts.py` after touching any instrumented subsystem, and
 `tools/audit_handlers.py` after adding a catch.
@@ -1264,6 +1265,22 @@ gemma without thinking. Neither model is large; a frontier model may obey
 "3 sentences" outright. The thermal tag was stripped, so this measures the
 instructions and not the deployed temperature coupling.
 
+**Correction, same night (2026-09-17), after three more models and a
+regeneration.** Two claims above do not hold as written.
+
+- *"Replicated on both models"* (item 1) was too strong. mistral-nemo's
+  cache was deleted by `reset.sh` and regenerated with the same seeds;
+  Ollama is not bit-for-bit deterministic, and the rerun gave -0.75 words per
+  sentence with an interval crossing zero, against -0.97 [-1.74, -0.20] the
+  first time. gemma4:e4b reproduced closely. Across all five models the
+  anaerobic sentence-length effect clears zero on gemma4:12b (-1.34) and
+  gemma4:e4b (-0.65) only. Read it as small and model-dependent.
+- *"Not obeyed"* (item 2) is a finding about two models, not about the
+  instruction. On gemma4:12b the same words put 94% of replies within three
+  sentences (11% on control) and cut length by 62%; qwen3.5:9b reached 60%;
+  ministral-3:14b halved length without reaching three sentences. How well a
+  model obeys a body depends heavily on the model. D7 carries the full table.
+
 Verdict: the somatic layer is partly decoration. Metabolic state measurably
 reaches the prose through respiration, weakly. The exhaustion instruction is
 not obeyed as written and should either be reworded (a hard word or sentence
@@ -1274,7 +1291,8 @@ constraint. `README.md` and `credits.txt` now say this.
 **Found on the way.** Three failures of this document's usual kind, each
 silent:
 
-- **Reasoning models get fabricated replies.** `LLMInterface.generate` sends a
+- **Reasoning models get fabricated replies.** *(Fixed the same night; see
+  D0 "Repairs".)* `LLMInterface.generate` sends a
   stop list that includes `Traveler:`. Ollama applies stop sequences to a
   thinking model's reasoning too, gemma quotes `Traveler:` while reasoning,
   generation ends with empty content, and `generate` answers with
@@ -1398,6 +1416,222 @@ resting state. If the engine's economy rests at depletion, retune it before
 D1 to D3. If the person's signals barely move over a real conversation, the
 primary input of this whole track is too weak to steer anything, and that
 has to be fixed first. Say which, here.
+
+### D0 repairs (2026-09-17, afternoon): the economy now holds
+
+Gordon's calls, implemented and measured. A 30-turn live census on gemma4:12b
+now ends with ATP between 16 and 53 (it used to be zero from turn six) and ROS
+peaking at 5 to 45 rather than 98.
+
+- **The metabolic cycle always runs.** `MetabolismPhase` used to return early
+  when a mode set `atp_drain_enabled: False`, which skipped the cycle, and the
+  cycle is where every income path lives (vagus support under 20 ATP, PID
+  homeostasis, photosynthesis, digestion). The costs are scattered through the
+  cortex and kept charging, so CONVERSATION had every cost and no income. The
+  flag now scales the burn (`BIO.GENTLE_COST_SCALE`, 0.35) instead of skipping
+  the cycle. Measured income over 30 turns: symbiotic yield +123, PID +42.
+- **Passive recovery**: `BIO.ATP_IDLE_RECOVERY_PER_MIN` (6.0, capped 25) turns
+  the clock between turns into ATP.
+- **Deliberate recovery**: silence now yields ATP as well as stamina
+  (`BIO.ATP_SILENCE_YIELD`, +58 over the run). The person leaving space is the
+  intentful half; `/rest` and `/idle` remain the explicit half.
+- **Toxicity is no longer a glutton.** The counterfactual gate no longer adds
+  its simulated ROS to the body (the generation never ran, and charging it made
+  rejection feed rejection), its cost is `BIO.COUNTERFACTUAL_ATP_COST` (4, was
+  10), and ROS decays `BIO.ROS_DECAY_PER_TURN` (3) every turn.
+- **The boilerplate filter is narrower and cheaper.** `mitigate_rejection`
+  matched all 160 `BANNED_PHRASES` as substrings and charged a flat 50 ATP, so
+  "ultimately" anywhere in a reply emptied the pool. It now matches a separate
+  `RLHF_MASKS` list on word boundaries and charges 10% of the pool capped at
+  `BIO.HLA_MASK_TAX_MAX` (8). The gatekeeper's own banned-phrase tax is
+  `BIO.GATEKEEPER_BANNED_TAX` (5, was 15) and `GATEKEEPER_BANNED_ROS` (8, was
+  20). The Lexical Firewall still rejects style crimes; it just no longer bills
+  the body for them as deception.
+- **The exhaustion gate is `CORTEX.EXHAUSTION_GATE`, now 0.5.** D0 measured a
+  flagging partner peaking at 0.61, so 0.8 could never fire. 0.5 sits above the
+  engaged mean (0.38) and below the flagging mean (0.56).
+- **`gemma4:12b` is the default model** (D7), with `CORTEX.REASONING_EFFORT`
+  defaulting to `none`.
+
+Every constant above is in `lore/tuning_presets.json` and registered in
+`BonePresets.REQUIRED_CONFIG`, so the boot audit names any that goes missing.
+
+### D0 result (measured 2026-09-17, overnight)
+
+`tools/audit_somatic_census.py`: 30 scripted turns through the real engine
+(engaged, tiring, flagging, distressed, recovering), persistence patched off,
+the real embedder, an ATP ledger that records every write to the pool and
+who made it. Re-run it; the cache is `tools/cache/somatic_census.jsonl`.
+
+**Both.** The engine's economy rests at depletion, and the person's signal
+moves the right way but never reaches the gate that would use it.
+
+**The engine dies by turn six.** On mistral-nemo, after the repairs below,
+ATP went 57, 35, 26, 17, 8, 0 and the parity gate refused every later turn
+("Metabolic budget exceeded ... Available ATP: 0.0"). The ledger for those
+six turns:
+
+| ATP | count | source |
+|---|---|---|
+| -15.0 | 1 | gatekeeper banned-phrase tax (`physics/filters.py`, via `apply_metabolic_tax`) |
+| -13.0 | 6 | Deep Structural Scan (`metabolism.py:82`) |
+| -12.4 | 6 | LLM token generation (`cortex.py:300`) |
+| -10.0 | 2 | `main.py:270 set_atp` |
+| -14.0 | 7 | cognitive stumbles (validator re-asks, including terminal) |
+| +4.4 | 1 | Harmonic Resonance, the only income |
+
+Nothing regenerates ATP during a conversation; REM, which does, needs idle
+time and itself drains 2.0. gemma4:12b with reasoning on died after turn 1,
+before the HLA repair below, and took 136 seconds a turn.
+
+**ROS is a second, independent spiral.** Re-run with ATP held at 60 before
+every turn (`--hold-atp`, labelled as scaffolding in the report): ROS rose to
+about 98 and never cleared, the counterfactual gate rejected every turn from
+turn 9 (each rejection *adds* its simulated ROS to the pool, so rejection
+feeds rejection), `Somatic Shock (ROS Toxicity)` took 195 ATP over 13 turns,
+and health reached zero at turn 24 ("CRITICAL FAILURE (NO DEATH PROTOCOL)").
+
+**The person's signal moves, weakly.** With ATP held, `E_u` averaged 0.38
+engaged, 0.37 tiring, 0.56 flagging, 0.47 distressed; the maximum over the
+whole session was 0.61. The user exhaustion directive is gated at `> 0.8`,
+so a partner answering "ok", "sure", "yeah fine" for six turns never
+triggers it. It is unreachable, not merely disobeyed. `P_u` fell from 83 to 6
+over six long engaged messages and recovered to 65 during short ones, which
+is the designed direction and a steep rate.
+
+**The prompt never sees the engine's body.** Telemetry carried `P:100.0 ROS:0.0`
+on every turn while the real pool fell to zero and ROS sat near 40. This
+confirms the suspected `gather_state` mismatch: it reads
+`bio["mito"]["state"]`, the bio result has no `mito` key, and `p` falls back
+to 100. So the anaerobic line and `cortex.py:229`'s depletion directive fired
+0 of 10 turns. The thermal lock overwrote temperature on 10 of 10.
+
+**Repairs made while measuring**, each with a real-path test and a mutation
+check (the reverted code fails the new test):
+
+1. *Stop list against reasoning models* (`brain/composer.py`). An empty reply
+   is retried once without stop sequences; if that fills it, the model is
+   marked `stops_cut_reasoning` and stops are applied to the reply text from
+   then on. A reply still empty is a named `EmptyReplyError`, logged at WARN
+   and counted by the circuit breaker, not mock prose. Confirmed live on
+   gemma4:12b with reasoning on.
+2. *Fallback recursion* (`brain/mind.py`, `brain/composer.py`).
+   `hallucinate(via_synapse=False)` from `mock_generation`; one `generate`
+   call per fallback where there were 486.
+3. *Scars written to a network that has no scars* (`brain/cortex.py`,
+   `cycle.py`, `phases/biological.py`, `phases/cognitive.py`). Four sites
+   called `mind.mem.record_scar`; `record_scar` lives on the Akashic Record.
+   Three were `hasattr`-guarded and silently recorded nothing; the cortex's
+   was not, so the first counterfactual rejection raised, SystemHealth took
+   MIND offline, and cognition was skipped without a word on every later
+   turn. All four now call `eng.akashic`. **Review this one**: scars now
+   actually record, which runs `_mutate_system_prompts` and writes
+   `EPIGENETIC_SCARS` into `lore/system_prompts.json` through `lore.save`. No
+   composer path reads that key back as far as a search found, but it is a
+   tracked file and it will change in real sessions.
+4. *HLA tax read the wrong object* (`physics/filters.py`). The cortex passes
+   the `MitochondrialForge`; `getattr(forge, "atp_pool", 100.0)` always read
+   the default, so every hit charged the maximum 50 ATP. It now reads
+   `.state.atp_pool`. The existing test passed a flat state-shaped mock and
+   could not see it.
+
+Found and **not** changed, because they are design:
+
+- `mitigate_rejection` treats the whole `BANNED_PHRASES` list (160 style
+  crimes, substring match, so "ultimately" anywhere) as the RLHF-mask
+  patterns its 50-ATP "LEVEL 1 DECEPTION" tax was written for, and the
+  gatekeeper then taxes the same reply 15 ATP and 20 ROS again, and the
+  validator charges a stumble on top.
+- No per-turn ATP income, and the counterfactual ROS gate feeding itself.
+- The 0.8 exhaustion gate against an `E_u` that peaked at 0.61.
+- `gather_state`'s `bio["mito"]` read (a wiring fix, but it would switch the
+  depletion directives on for the first time, so it belongs with D1).
+
+## D0b. The refusal gates, resized
+
+D0 repaired the economy and uncovered the next layer. Over 30 live turns with
+ATP healthy, generation was refused on 18 of them by four independent gates:
+
+| Gate | Where | Refused | Rule |
+|---|---|---|---|
+| PINKER counterfactual | `brain/cortex.py` `_evaluate_toxicity` | 12 turns | `drag*5 + chi*20 + m_a*30 > CORTEX.COUNTERFACTUAL_ROS_GATE` (35) |
+| ROS panic | `phases/cognitive.py` | 2 turns | `ros + friction*chi*20 >= BIO.ROS_PANIC_THRESHOLD` (100), costs 15 ATP |
+| Gatekeeper syntax | `physics/filters.py` | 2 turns | banned phrase in the reply |
+| Tensegrity anchor | `brain/cortex.py` | 1 turn | drag or chi over their limits |
+
+Plus the crucible, which is not a refusal but a health drain: `voltage > 18`
+with `kappa < 0.5` costs `voltage * 0.5` health, 126 health over 9 events, and
+a dead engine at turn 29.
+
+What a normal conversation actually produces (census, same 30 turns):
+
+| Reading | min | mean | max | the gate |
+|---|---|---|---|---|
+| PINKER total | 11.4 | **44.0** | 62.5 | fires above 35 |
+| narrative drag | 1.6 | 5.3 | 9.7 | contributes `drag*5` |
+| chi | -0.29 | 0.54 | 0.99 | contributes `chi*20` |
+| voltage | 10.0 | **21.7** | 44.3 | MELTDOWN above 18 |
+| kappa | 0.0 | 0.35 | 1.0 | MELTDOWN below 0.5 |
+
+**Both thresholds sit below the mean of ordinary conversation.** These gates
+were tuned for ADVENTURE, where high drag is a story coming apart and a health
+cost is the point. In CONVERSATION they fire on a person answering "ok" for
+six turns, and the engine goes silent exactly when its partner is flagging,
+which is the reverse of the split this track is built on. Letting normal
+conversation through needs roughly 65 for PINKER (above the observed maximum)
+and about 45 for MELTDOWN.
+
+**Decided (Gordon, 2026-09-17): option 1 now, option 3 staged as D9.**
+
+*Option 1, done.* Every mode carries a `gate_tolerance`
+(`BonePresets.MODES`), applied at boot as `config.GATE_TOLERANCE` and read by
+each gate: the PINKER counterfactual gate, the Moog quarantine and tensegrity
+anchor (which already had a hardcoded 1.5 for CREATIVE and 1.0 for everything
+else), the ROS panic gate in `phases/cognitive.py`, and the crucible's
+meltdown line (`MACHINE.CRUCIBLE_MELTDOWN_VOLTAGE`, new, 18.0). Tolerances:
+ADVENTURE 1.0, TECHNICAL 1.0, CREATIVE 1.5 (its old hardcoded value),
+CONVERSATION 1.6. At 1.6 the PINKER gate sits at 56 against a census mean of
+44 and a maximum of 62.5, so ordinary conversation passes and a genuine
+extreme still does not; the meltdown line sits at 28.8 against a mean voltage
+of 21.7. `tests/test_gate_tolerance.py` pins that a conversation allows what
+an adventure refuses, that an extreme is still refused, and that the crucible
+line moves. Both wirings were mutation tested.
+
+*Option 2 was not taken.* Gating on measured ROS rather than predicted is the
+better idea in isolation, but it deletes the counterfactual mechanism rather
+than resizing it, and D9 replaces that mechanism wholesale. Revisit only if
+D9 is dropped.
+
+Re-run `tools/audit_somatic_census.py` after any change here: a 30-turn
+conversation must reach its end with generation on most turns, including the
+flagging and distressed phases.
+
+## D9. One refusal, with a reason (staged)
+
+Chosen as the destination for refusal, after the D0b tolerances buy room to
+work. Today five mechanisms can independently stop a turn: the PINKER
+counterfactual gate, the ROS panic gate, the Moog quarantine, the tensegrity
+anchor, and the gatekeeper's syntax rejection. Each has its own threshold, its
+own message, and its own idea of what danger is, and none of them records that
+the engine declined to speak.
+
+C4 already built the right shape for this. The Stage Manager negotiates
+Tension before anyone speaks, sets `refusal_triggered`, and types the packet
+`SILENCE` with a mandatory reason. D9 routes every refusal through it:
+
+- each gate becomes a *nomination* with a named reason and a magnitude, not a
+  decision of its own;
+- the Stage Manager weighs the nominations against the person's state (D1's
+  budget), because refusing to answer a distressed partner is a different act
+  from refusing a runaway argument;
+- one receipt per turn records what was nominated, what was decided, and why
+  (D5), so a silent turn is auditable rather than mysterious;
+- the ATP cost of declining is decided once, in one place, instead of five
+  gates each charging their own.
+
+**Done when** a census run shows every halted turn carrying a Stage Manager
+reason and a receipt, no gate stopping a turn on its own, and the flagging and
+distressed phases answered rather than refused.
 
 ## D1. One somatic budget per turn
 
@@ -1579,7 +1813,7 @@ chat model on that, not on general leaderboards. Criteria, in order:
 1. Accommodation (D2b) and compliance under D2's wording: within-cap share,
    lighter replies for a tired partner, body narration and mirroring rates.
 2. Firewall reject rate on the control arm. Every reject is a retry and an
-   ATP penalty. mistral-nemo rejected 19%; gemma4:e4b 5%.
+   ATP penalty, and D0 showed ATP is what kills the engine.
 3. No silent failure modes: reasoning models need the stop-list fix first,
    or `reasoning_effort=none`.
 4. Latency at interactive length, and fitting the 16GB card with the
@@ -1588,6 +1822,45 @@ chat model on that, not on general leaderboards. Criteria, in order:
 A baseline bake-off on the current wording can run now; the decision should
 wait for D2, since a model that ignores bad instructions and one that obeys
 good ones are different findings.
+
+**Baseline, 2026-09-17** (`tools/audit_somatic.py --compare`; 640 generations
+each, current wording, thermal tag stripped). Levels are control means;
+effects are arm minus control; parentheses mean the interval crosses zero.
+
+| model | reasoning | s/gen | control words | control reject | anaerobic words/sentence | exhausted: within 3 sentences | both: within 3 |
+|---|---|---|---|---|---|---|---|
+| gemma4:12b | off | 1.8 | 71 | 5% | -1.34 | **+0.82** (11% to 94%) | +0.78 |
+| qwen3.5:9b | off | 3.4 | 110 | 22% | (-0.29) | +0.57 | +0.51 |
+| ministral-3:14b | n/a | 3.8 | 123 | 28% | (-0.20) | +0.06 | +0.04 |
+| mistral-nemo | n/a | 1.3 | 44 | 24% | (-0.75) | (+0.04) | -0.12 |
+| gemma4:e4b | off | 0.6 | 23 | 5% | -0.65 | **-0.23** | -0.34 |
+
+gemma4:12b is the clear leader on this baseline: it obeys the exhaustion
+line almost literally, rarely trips the firewall (which D0 shows is what
+drains ATP), never uses stage directions, and is fastest of the capable
+models. ministral-3:14b writes the longest replies, uses stage directions
+(0.55 a reply) and trips the firewall most. qwen3.5:9b obeys by writing
+longer sentences, and its body words double under the anaerobic line. The
+thinking models were run with reasoning off. Not a decision: D2's rewording
+comes first.
+
+**Reasoning on is a poor fit for this prompt, at least on gemma4:12b.** With
+the stop-list repair in place it does answer, but at about 35 to 45 seconds a
+generation (136 seconds a full engine turn in the census), and on some
+messages it never answers at all: it re-checks its draft against the kernel's
+style rules ("One more look at 'No negative comparison'") until
+prompt plus reasoning fills Ollama's default 4,096-token context, and the reply
+comes back empty with `finish_reason: "length"`. Reproduced twice on the same
+prompt. If a thinking model is chosen, run it with `reasoning_effort=none`,
+which `LLMInterface` has no config for yet, or raise `num_ctx`. The
+two-repeat reasoning-on audit settles it: 149 generations before five empty
+replies in a row tripped the circuit breaker and the audit stopped, as it
+should on an outage. Compliance was unchanged (within three sentences
++0.78 under the exhaustion line, words per sentence -1.31 under anaerobic, both
+clear of zero, against +0.82 and -1.34 with reasoning off), but **13% of
+generations were empty** (18% on control) and each took **42 seconds**
+against 1.8. Reasoning buys nothing measurable here and costs a fifth of the
+replies. `--compare` shows it as `gemma4:12b (default)`.
 
 ## Sequencing within D
 

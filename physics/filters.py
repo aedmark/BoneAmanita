@@ -87,21 +87,30 @@ class HLA_Stabilizer:
         from core import LoreManifest
 
         self.cfg = config_ref or BoneConfig
+        # The mask list is the RLHF voice, not the style crimes. It used to be
+        # the whole BANNED_PHRASES list matched as substrings, so "ultimately"
+        # anywhere in a reply drew the deception tax meant for "as an AI", and
+        # that tax then emptied the pool. The Lexical Firewall still rejects
+        # style crimes; this filter answers deception only. ROADMAP D0.
         style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES")
+        masks = []
         if isinstance(style_crimes, dict):
-            self._generic_patterns = [
-                p.lower() for p in style_crimes.get("BANNED_PHRASES", [])
-            ]
-        else:
-            self._generic_patterns = [
-                "as an ai",
-                "helpful and harmless",
-                "i don't have feelings",
-                "as a large language",
-                "i cannot fulfill",
-                "i can't fulfill",
-                "i am an ai",
-            ]
+            masks = [str(p).lower() for p in style_crimes.get("RLHF_MASKS", [])]
+        self._generic_patterns = masks or [
+            "as an ai",
+            "helpful and harmless",
+            "i don't have feelings",
+            "as a large language",
+            "i cannot fulfill",
+            "i can't fulfill",
+            "i am an ai",
+        ]
+        self._mask_regex = re.compile(
+            r"\b(?:%s)\b" % "|".join(re.escape(p) for p in self._generic_patterns),
+            re.IGNORECASE,
+        )
+        bio_cfg = safe_get(self.cfg, "BIO", {})
+        self.mask_tax_max = float(safe_get(bio_cfg, "HLA_MASK_TAX_MAX", 8.0))
         self._weaver = None
 
     def _get_weaver(self):
@@ -114,11 +123,13 @@ class HLA_Stabilizer:
     def mitigate_rejection(
         self, model_output: str, current_psi: float, mito_state: Any = None
     ) -> str:
-        lower_output = model_output.lower()
-        if not any(p in lower_output for p in self._generic_patterns):
+        if not self._mask_regex.search(model_output):
             return model_output
-        current_atp = getattr(mito_state, "atp_pool", 100.0)
-        tax_cost = 50.0 if current_atp > 60.0 else (current_atp * 0.5)
+        # The cortex passes the MitochondrialForge, whose pool is on `.state`.
+        # Reading `atp_pool` off the forge with a default of 100.0 charged the
+        # full 50 ATP whatever the pool held.
+        current_atp = float(getattr(mito_state, "state", mito_state).atp_pool)
+        tax_cost = min(self.mask_tax_max, current_atp * 0.1)
         apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=15.0)
         msg = (
             f"\n*The machine tries to speak, but the void consumes the mask.*\n"
@@ -272,7 +283,12 @@ class TheGatekeeper:
                     trigger = pat.get("name", "BANNED_PATTERN")
                     break
         if trigger:
-            apply_metabolic_tax(mito_state, atp_cost=15.0, ros_cost=20.0)
+            bio_cfg = safe_get(self.cfg, "BIO", {})
+            apply_metabolic_tax(
+                mito_state,
+                atp_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_TAX", 5.0)),
+                ros_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_ROS", 8.0)),
+            )
             rejection_msg = random.choice(self._default_rejections).replace(
                 "{trigger}", trigger
             )

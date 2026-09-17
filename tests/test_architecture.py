@@ -5,6 +5,7 @@ import os
 from unittest.mock import patch
 
 from main import BoneAmanita
+from presets import BoneConfig
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
@@ -110,13 +111,21 @@ class ArchitectureTests(BoneTestCase):
             "[FAIL] Cortex failed to detect Counterfactual Toxicity.",
         )
         self.assertTrue(
-            mock_svc.mind_memory.record_scar.called,
+            mock_svc.akashic.record_scar.called,
             "[FAIL] Cortex failed to record a trauma scar upon toxicity rejection.",
         )
         self.assertEqual(
             mock_svc.bio.mito.adjust_atp.call_args[0][0],
-            -10.0,
-            "[FAIL] Toxicity did not accurately tax the ATP pool.",
+            -float(BoneConfig().BIO.COUNTERFACTUAL_ATP_COST),
+            "[FAIL] Toxicity did not tax the ATP pool by BIO.COUNTERFACTUAL_ATP_COST.",
+        )
+        self.assertFalse(
+            any(
+                "ros_buildup" in str(c)
+                for c in mock_svc.bio.mito.state.mock_calls
+            ),
+            "[FAIL] A refused generation added its simulated ROS to the body. The "
+            "generation never ran, and charging it made rejection feed rejection.",
         )
 
     def test_cortex_jester_false_cohesion_break(self):

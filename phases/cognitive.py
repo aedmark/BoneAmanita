@@ -749,7 +749,9 @@ class SimulationPreflightPhase(SimulationPhase):
             base_ros = mito.state.ros_buildup if mito else 0.0
             simulated_ros = base_ros + (friction * chaos * 20.0)
             bio_cfg = getattr(self.eng.config, "BIO", object())
-            ros_limit = float(getattr(bio_cfg, "ROS_PANIC_THRESHOLD", 100.0))
+            ros_limit = float(
+                getattr(bio_cfg, "ROS_PANIC_THRESHOLD", 100.0)
+            ) * float(safe_get(self.eng.config, "GATE_TOLERANCE", 1.0))
             if simulated_ros >= ros_limit:
                 msg = "Counterfactual simulation indicates fatal ROS toxicity. We are silently rejecting this generation path before it executes."
                 log_msg = f"{Prisma.RED}{msg}{Prisma.RST}"
@@ -766,12 +768,7 @@ class SimulationPreflightPhase(SimulationPhase):
                         getattr(self.eng.bio.somatic, "somatic_echo", 0.0)
                         + shock_value,
                     )
-                if hasattr(self.eng.mind, "mem") and hasattr(
-                    self.eng.mind.mem, "record_scar"
-                ):
-                    self.eng.mind.mem.record_scar(
-                        "Counterfactual ROS Toxicity", phys_obj
-                    )
+                self.eng.akashic.record_scar("Counterfactual ROS Toxicity", phys_obj)
                 ctx.refusal_triggered = True
                 ctx.refusal_packet = self._build_refusal(
                     ctx, phys_obj, "COUNTERFACTUAL_REJECTION", msg
