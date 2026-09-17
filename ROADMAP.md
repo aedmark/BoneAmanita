@@ -61,10 +61,14 @@ you whether it ran.
 | **B3** the manifold | **done**: was built and broken; PDE solves, 395 tests |
 | **B4** make the credits true | **done**: all three overclaims corrected |
 | **A2** retire the silent handlers | **done**: 72 -> 28, pass-only banned, 2 ratchet tests |
+| **A4** state-asserting tests | **done**: physics-to-prompt pinned end to end, 20 tests |
 
-Next: **A4**, tests that assert state rather than absence of crash.
+Next: Track C. **C3** (the user-state model as a first-class object) and
+**C4** (the Stage Manager, Tension, Silence) are the remaining work toward
+the stated goal; **C5** is a half-day experiment that settles a load-bearing
+claim. Track A is finished.
 
-Suite: **422 passed, 5 skipped**. The skips are the environmental ones (no
+Suite: **442 passed, 5 skipped**. The skips are the environmental ones (no
 chat model pulled in Ollama). Re-run `tools/audit_receipts.py` after touching
 any instrumented subsystem, and `tools/audit_handlers.py` after adding a catch.
 
@@ -464,19 +468,70 @@ a subsystem was handed and what it returned, both facts the subsystem can
 report mechanically about itself. That is a much smaller claim than
 "cannot fabricate", and it is one this codebase can actually keep.
 
-## A4. Tests that assert state, not absence of crash
+## A4. Tests that assert state, not absence of crash, **DONE**
 
-The current suite is good at "does it run" and weak at "did it do the
-thing." Every test in `tests/test_embeddings.py::IndexWiring` is the
-shape to copy: assert on retrieved content and dimensions, not on the
-call returning.
+`tests/test_physics_to_prompt.py`, 20 tests. The suite knew `compose()`
+returned a string; it did not know that a high contradiction put a paradox
+directive in it. That step is the contract of the entire engine, and
+everything upstream of it (the lexicon, the physics, the memory, the
+Creative Determinant) exists only to produce numbers that reach it.
 
-Golden-path assertions worth adding: after a high-contradiction turn,
-`beta_index` exceeds its threshold **and** the composed prompt contains
-the paradox directive. After a starvation turn, ATP is at floor **and**
-the prose-degradation instruction is present. These tie physics to
-prompt, which is the actual contract of the whole engine and is
-currently untested end to end.
+### What is pinned
+
+| State | Directive |
+|---|---|
+| `chi` and `contradiction` both over threshold | PARADOX REST |
+| `contradiction` over threshold, `chi` under | ORTHOGONAL ATTENTION |
+| Both conditions true | PARADOX REST only; they are mutually exclusive |
+| ADVENTURE mode | Neither, `system_injection` is blanked outright |
+| `exhaustion` over 0.8 | "conclude in 3 sentences or less" |
+| `respiration == ANAEROBIC` | "Raw, breathless, efficient prose" |
+| ANAEROBIC plus an explicit mood | The body wins; the mood is discarded |
+| psi / chi / contradiction / valence | Their own somatic cue, and no other |
+| `voltage` over 60 | A different directive block entirely |
+
+Two rules the tests follow, both worth keeping:
+
+**Thresholds come from `BoneConfig`, never hardcoded.** A test pinning 0.6
+would go green against a threshold nobody is using any more, which is the
+same illness as a subsystem wired to nothing.
+
+**Every positive assertion is paired with a negative one.** A directive
+that is always present tells you nothing and would satisfy a test that only
+checks for its presence under load.
+
+### Mutation tested, and it caught one of its own
+
+Five deliberate breaks were introduced into `brain/composer.py` to check
+the tests were load bearing rather than vacuous: the exhaustion gate turned
+off, the paradox `and` turned into an `or`, the somatic threshold
+comparison turned into `> 0.0`, the ANAEROBIC string made unmatchable, and
+the ADVENTURE suppression removed. All five failed the suite.
+
+The precedence test did NOT fail the first time, and the reason is worth
+recording. `mood_override` is an argument of `compose()`, not a key in the
+state dict, and the test helper had been passing it into the state where
+the composer never looks. The test passed against a deliberately broken
+composer because it was asserting on a value that never arrived. Fixed,
+and re-checked against the same mutation.
+
+That is the failure this whole document is about, reproduced inside the
+test written to prevent it. Mutation testing is the only thing that
+distinguishes a test that holds a contract from one that describes it.
+
+### A naming trap, now pinned
+
+`ctx.physics.exhaustion` is assigned in `cycle.py` from `ctx.user_state`.
+It is the engine's inference about how tired the PERSON is, not the
+engine's own ATP pool, despite sitting in the same metrics line as it and
+reading like a property of the machine. The engine's own depletion reaches
+the prompt by a different route: `raw_cost > BIO.ANAEROBIC_THRESHOLD` sets
+a respiration status that becomes a prose directive, through three modules
+with no single place where the whole path is visible.
+
+Both signals are real and both reach the prompt. They just mean different
+things, and `TestExhaustionIsTheUsersNotTheEngines` exists so the next
+reader does not have to work that out from the variable name.
 
 ---
 
@@ -1039,8 +1094,8 @@ shippable and each makes the next one verifiable.
     `PhysicsPacket`.
 11. **C4**: the Stage Manager, Tension as a named state, and Silence as
     a real outcome. Settle the ATP/telemetry design before building.
-12. **A4 / C5**: physics-to-prompt golden-path tests, and the somatic
-    translation measurement.
+12. ~~**A4**: physics-to-prompt golden-path tests~~, **done**. **C5**, the
+    somatic translation measurement, is still open.
 13. **B4**: rewrite the credits once they are true.
 
 # Things deliberately not on this list

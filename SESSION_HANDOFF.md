@@ -13,7 +13,7 @@ sync, those habits are not project-specific.
 
 ## Start here if you are cold
 
-`OVERVIEW.md` explains what BoneAmanita is in plain language, with no
+`README.md` explains what BoneAmanita is in plain language, with no
 jargon and no assumption that you remember how any of it works. Read that
 first if you have been away; this file assumes you already have the
 shape of the thing in your head.
@@ -56,7 +56,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 422 passed, 0 failed, 5 skipped**, about two minutes. Green.
+- **Test suite: 442 passed, 0 failed, 5 skipped**, about two minutes. Green.
   Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
@@ -91,6 +91,11 @@ aren't there. See "Claims vs. code" below.
   of those three named in an allowlist with a written reason. Background
   tasks on the async pool now report their own exceptions, which they
   previously discarded into an unread Future.
+- **Physics reaching the prompt is pinned end to end.**
+  `tests/test_physics_to_prompt.py` asserts that each measured state
+  produces its specific directive and, just as importantly, that a calm
+  state produces none of them. Thresholds are read from `BoneConfig` so
+  retuning a constant moves the tests with it.
 - **Subsystems issue receipts.** Seven of them record what they were
   handed and what came back, every turn, in their own voice. `/diag`
   prints the turn's receipts plus anything silent, chronically degraded
@@ -203,6 +208,20 @@ Three habits came out of that and are worth keeping:
   and the 80% recall assertion were all correct once and silently wrong
   later. When a mechanism is inert, suspect its constants before its
   wiring.
+- **Mutation test anything that guards a contract.** Five deliberate
+  breaks were put into `brain/composer.py` to check the A4 tests were load
+  bearing. Four failed immediately; the fifth passed, because the test was
+  asserting on a `mood_override` it had passed into the state dict when
+  `compose()` takes it as an argument. The test described the contract
+  without holding it, which is this document's own subject reproduced
+  inside the test written to prevent it. Break the code on purpose before
+  trusting a green test.
+- **`exhaustion` is the USER's, not the engine's.** `cycle.py` assigns
+  `ctx.physics.exhaustion` from `ctx.user_state`. The engine's own
+  depletion reaches the prompt through respiration
+  (`raw_cost > BIO.ANAEROBIC_THRESHOLD` becomes a prose directive), which
+  is a separate path across three modules. Both are real; the variable
+  name tells you the wrong one.
 - **A subsystem that declines to act must say so.** Silence cannot
   distinguish "correctly gated off" from "dead code", and the second one
   is what this whole document is about. `cortex.recall` now issues a
@@ -297,11 +316,13 @@ Cortisol clamping still bites (2 hits at 0.95 vs 3 at 0.0). The degraded
 path was separately confirmed to still boot and complete turns with the
 server unreachable.
 
-## Claims vs. code (read before trusting `readme.txt` or `credits.txt`)
+## Claims vs. code (read before trusting `credits.txt`)
 
-`readme.txt`'s memory section and the embeddings dependency notes were
-corrected as part of the work above. These remain overstated and a
-future session should not treat them as a specification:
+`readme.txt` is gone: it was the theatrical version, and `README.md` now
+carries the plain-language account instead. Its memory section and the
+embeddings dependency notes had been corrected before it was retired.
+These remain overstated elsewhere and a future session should not treat
+them as a specification:
 
 - **Verification belongs to Spence's libraries, not to us.** `ordvec` is
   Lean 4 verified ([ordvec-formalization](https://github.com/Project-Navi/ordvec-formalization),
@@ -619,7 +640,7 @@ The short list below is what a session should know without reading it.
    gap is A4, the state-asserting tests, which is not done.
 6. **Nothing else is known-broken.** Picking this up cold: make a venv,
    install including `ordvec`, pull both Ollama models, run the suite and
-   expect **422 passed, 0 failed, 5 skipped** (the skips are live-backend
+   expect **442 passed, 0 failed, 5 skipped** (the skips are live-backend
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
    mode, confirm `/status` reports the Arcade nominal rather than
    `DEGRADED`, and run `/diag` to see the turn's receipts.
