@@ -651,13 +651,6 @@ class CyberneticGovernor:
     Powered by natively bound AVX-512 Asymmetric Rank Transformations. Ordvec, Apache 2.0
     """
 
-    PICARD_C = 10.0
-    BETA_SCALE = 1.2
-    BETA_STAR_UNIT = 0.5
-    PRUNE_SIZE = 50
-    PICARD_MAX_ITER = 100
-    PICARD_TOL = 1e-4
-
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.target_v = None

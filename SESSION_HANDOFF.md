@@ -1,5 +1,140 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+## READ THIS FIRST: mid-thread state, 2026-09-17 evening
+
+Two streams ran in this repo at once tonight (this Claude session working a
+reply to Nelson Spence, and a second session doing Track D / C5 work) and
+briefly crossed. **Nothing was lost**: both streams' work landed in commits
+`d670053`/`7d87e07`/`0eb0d70` (all tagged `7.0.11.4`). This section is the
+accurate state to resume from or to answer Nelson from; do not trust anything
+earlier in this file about the governor's math without checking here first.
+
+### Committed and safe
+
+- **The governor no longer solves a graph Laplacian.** `CyberneticGovernor`
+  used to build a memory subgraph, form `L = D - W`, and solve a nonlinear
+  elliptic BVP by Picard iteration (`core.py`, old `_graph_regulation` /
+  `_solve_nd_picard`). Nelson Spence emailed unprompted with a falsifiable
+  prediction that this was mostly theatre; instrumented on our own code
+  (23-node subgraph, real 768d embeddings, deliberately denser than a real
+  session) the Laplacian term contributed **1.53%** of the reported
+  eigenvalue, and the eigenvalue was **byte-identical from voltage 15 to 90**
+  (the voltage input did nothing once `a` saturated at 1.0). Confirmed his
+  number to two decimal places before touching any code.
+- **Replaced with his recommendation**: `CyberneticGovernor._bitmap_regulation`
+  now reads `SignBitmap.score_all(q)` in one pass, computes `z_top10` (how far
+  the top-10 sign-agreement mean stands above the corpus mean, in standard
+  deviations), and gates temperature/policy on that.
+- **One correction of my own past that**: the raw `z_top10` null grows with
+  corpus size for pure order-statistics reasons (mean ~1.1 sigma at n=32,
+  ~3.5 at n=20000 on a synthetic Gaussian null I fit:
+  `z_null(n) = 1.8712*sqrt(ln n) - 2.2958`). A fixed threshold on raw z would
+  have silently opened as memory grew. Gate now runs on
+  `z_excess = z_top10 - z_null(n)`, config `GATE.Z_PIVOT` is `0.5` (an
+  excess, not a raw z) not `2.0`.
+- **navi-fractal's decline rule, applied to the governor**: too few memories
+  (`GATE.MIN_CORPUS`, default 32) or zero variance in scores raises
+  `InsufficientCorpus`; the governor falls back to PID and files a receipt
+  saying the regime was *not measured*, rather than emitting a number.
+- **Renamed the prompt tag** `<cd_lambda_1>` -> `<thermal_gate>`. The tag now
+  carries the actual sampling temperature (no more sign/magnitude
+  interpretation in `brain/composer.py`). All call sites, the composer, the
+  cortex attach method, `cycle.py`'s snapshot, and `main.py`'s status overlay
+  are updated. `core.py`'s dead Picard config constants
+  (`PICARD_C`/`BETA_SCALE`/`BETA_STAR_UNIT`/`PRUNE_SIZE`/`PICARD_MAX_ITER`/
+  `PICARD_TOL`) and the three dead `PhysicsPacket` methods
+  (`get_creative_drive`, `get_viability_potential`, `get_principal_eigenvalue`,
+  plus the module-level `principal_eigenvalue` helper) are removed.
+- **`credits.txt` rewritten** to credit Nelson accurately: the bitmap gate is
+  his recommendation (and his own finding, independently, at 207,695 nodes,
+  Pearson 0.992 against a corpus-mass scalar); the metabolic economy
+  (`calculate_viability`/`update_coherence_debt`/`execute_metabolic_tick`) is
+  still genuinely his Creative Determinant equations, running; the removed
+  Laplacian/Picard claim is explained and retracted with the 1.53% number in
+  it, not just deleted quietly.
+- **Fixed one real bug found while testing this**: `CyberneticGovernor()`
+  built with no `config_ref` set `self.cfg = None` (no `BoneConfig` fallback,
+  unlike every other class in this codebase), so `_gate_cfg` silently read
+  every default instead of the real tuning values. Never hit in production
+  (always constructed with a real config in `main.py`) but broke three tests
+  that construct it bare. Fixed: `self.cfg = config_ref or BoneConfig`.
+- `tests/test_creative_determinant.py` rewritten for the bitmap gate: 22
+  tests, all passing as of the last clean run of that file alone.
+
+### Uncommitted, in progress, NOT verified, do this first
+
+Working tree has further changes on top of `0eb0d70`, applying two more of
+Nelson's specific suggestions from his email. **These have not been tested.**
+
+- `physics/observer.py`: feeds `mu_viability = (1.0 - gamma_idx) / 2.0` into
+  `calculate_viability` instead of raw `beta`, per Nelson's "define
+  contradiction relative to support... kappa*gamma and lambda*mu live on the
+  same scale by construction and lambda=1 is natural." Also computes `r_base`
+  from a 4-sample finite-difference window on `geo.abstraction` (1st/2nd/3rd
+  differences summed) as a stand-in for the derivatives of psi Nelson
+  mentioned, per his "Add R_base from those derivatives and lambda_0=0.5
+  stops being a knob."
+- `physics/maths.py`: `calculate_viability` gained an `r_base` parameter,
+  dividing `lambda_eff` by it.
+- `presets.py`: `CD.LAMBDA` 0.5 -> **1.0** (now "natural" under the redefined
+  mu, per Nelson), `CD.BETA` 1.0 -> **0.4** (this constant may now be
+  vestigial; grep shows it is only referenced in the `REQUIRED_CONFIG`
+  manifest list, not consumed anywhere since the eigenvalue path that used to
+  take `beta=` was deleted; check before trusting it does anything).
+
+**Before doing anything else**: run the full suite. It has NOT been run clean
+since these changes landed. Two known landmines:
+
+1. There WAS a hang in `tests/test_architecture.py` that got fixed once (a
+   `getattr` chain in `brain/cortex.py`'s thermal-gate attach walked into a
+   `MagicMock`'s infinite attribute stand-ins; fixed with an `isinstance(z,
+   (int, float))` guard instead of a `None` check) but this session was
+   mid-way through confirming that fix still holds against the LATEST
+   uncommitted `observer.py`/`maths.py` changes when it ran out of budget and
+   was interrupted. Re-run `tests/test_architecture.py` alone first; if it
+   hangs again the cause is almost certainly the same shape of bug (a
+   `MagicMock` walked as if it were a real numeric value) somewhere in the
+   new `mu_viability`/`r_base` path.
+2. `physics/observer.py`'s `r_base` computation only activates once
+   `self.psi_history` has 4 entries (`deque(maxlen=4)`, lazily created via
+   `hasattr`), so the first three calls in any fresh session use `r_base=1.0`
+   (no-op). That is probably fine but is untested and worth a receipt or a
+   test asserting the ramp-up behaviour is intentional, not an oversight.
+
+### Not part of Nelson's thread, already done by the other session, solid
+
+Track D ("The Somatic Contract") and C5 (the somatic-translation measurement)
+are unrelated to the ordvec/governor conversation and were completed
+independently while this thread worked the Laplacian removal. Briefly, so
+nothing there gets second-guessed by mistake: C5 measured that the ANAEROBIC
+directive really does shorten sentences ~10% (an earlier 4-generation smoke
+test in this same conversation pointing the other way was noise, as flagged
+at the time); the "3 sentences or less" exhaustion directive is NOT reliably
+obeyed and is model-dependent; a real bug (deception-tax phrase matching was
+firing on ordinary style-crime phrases and draining ATP against the wrong
+pool attribute) was found and fixed as `ROADMAP.md` Track D item D0.
+`ROADMAP.md`'s Status table and Track D section are the source of truth for
+that thread; nothing there references the governor internals this thread
+rewrote, so the two are independent and both trustworthy.
+
+### Before emailing Nelson
+
+Do NOT send the reply yet. Needed first: (1) the suite passing clean with the
+uncommitted mu/r_base changes included or reverted; reverting them out of
+this diff and doing them as a separate follow-up is the lower-risk option if
+the suite is still red, (2) a decision on whether `CD.BETA` is dead config to
+remove or actually still needed somewhere, (3) `ROADMAP.md` Track B (B0-B3)
+still describes the OLD Laplacian/Picard design as current and has not been
+updated to point at the bitmap gate; only `credits.txt` and the code
+comments were updated, and Track B needs a short correction note (same
+pattern as B4's) so the roadmap doesn't contradict the code. The draft reply
+itself (numbers, the wheel request platform details: Linux/CachyOS, x86_64,
+Python 3.14.7, glibc 2.44) was never written this session; only the code
+changes needed to make the reply honest were done.
+
+---
+
+
 Paste this into a fresh context window to resume. Written at the point
 where `ROADMAP.md` is complete: every subsystem the document listed as
 disconnected is connected, and C5, the one measurement against a live model,
@@ -19,9 +154,29 @@ jargon and no assumption that you remember how any of it works. Read that
 first if you have been away; this file assumes you already have the
 shape of the thing in your head.
 
-**The next work is D1 and D2 in `ROADMAP.md`, then D9.** The metabolic economy
-and the refusal gates are both repaired (see "What changed most recently").
-Gates now scale with a per-mode `gate_tolerance` (D0b); D9 is the staged
+**Do these two first, before any new work.** Both are leftovers from the
+2026-09-17 session, which ran out of budget mid-verification.
+
+1. **Verify D0b against a live census.** The per-mode `gate_tolerance` is
+   implemented and unit tested (`tests/test_gate_tolerance.py`, both wirings
+   mutation tested), but the 30-turn census that proves it was interrupted
+   before its first turn, so **no live run has ever confirmed that a
+   conversation now reaches turn 30**. Run
+   `.venv/bin/python tools/audit_somatic_census.py --model gemma4:12b` and
+   require generation on most turns, including the flagging and distressed
+   phases. Until that passes, D0b is a plausible fix, not a measured one, and
+   `ROADMAP.md` D0b should be read with that caveat.
+2. **Run the full suite.** It has not been run since the gate-tolerance
+   changes (`presets.py`, `main.py`, `brain/cortex.py`,
+   `phases/cognitive.py`, `machine/crucible.py`,
+   `lore/tuning_presets.json`). The last green run, 501 passed and 5 skipped,
+   predates them; `tests/test_gate_tolerance.py` passes on its own, which is
+   not the same thing. Expect 505 passed, 5 skipped, and correct that number
+   here once it is real.
+
+**Then the next work is D1 and D2 in `ROADMAP.md`, then D9.** The metabolic economy is
+repaired and measured; the refusal gates are resized but unverified (item 1
+above). Gates now scale with a per-mode `gate_tolerance` (D0b); D9 is the staged
 replacement, where every refusal becomes a Stage Manager decision with a
 reason and a receipt instead of five gates each stopping a turn on their own.
 
@@ -175,6 +330,22 @@ aren't there. See "Claims vs. code" below.
   decision recorded without the alternative it rejected gets re-litigated.
 
 ## What changed most recently
+
+**2026-09-17, the somatic session (C5 through D0b).** One day, in order: the
+C5 measurement against five models; a five-model bake-off that made
+`gemma4:12b` the default; the D0 census, which found the engine silent after
+six live turns; the economy repair (the metabolic cycle always runs, a gentle
+mode scales the burn instead of skipping the cycle, idle time and the person's
+silence both yield ATP, toxicity stopped feeding itself); and D0b, which found
+that once ATP held, four refusal gates sized for ADVENTURE were stopping 18 of
+30 conversation turns, and resized them per mode. Five bugs were fixed on the
+way, each with a real-path test and a mutation check: the stop list emptying
+reasoning models, the fallback recursion, scars written to an object that has
+never had them, the HLA tax reading the wrong object, and the toxicity gate
+charging the body for a generation that never ran. Detail lives in
+`ROADMAP.md` C5 (with its same-night correction), D0 repairs, D0 result, D0b
+and the D7 baseline. **The last step of that chain is unverified; see the top
+of this file.**
 
 **Overnight, 2026-09-17 (latest): the bake-off, the census, four repairs.**
 Gordon was asleep and delegated the calls; everything is uncommitted for review.

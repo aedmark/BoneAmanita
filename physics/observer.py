@@ -189,8 +189,23 @@ class QuantumObserver:
         current_debt = self.cd_engine.update_coherence_debt(
             actual_coherence, sustainable_capacity
         )
+        mu_viability = (1.0 - gamma_idx) / 2.0
+        
+        # Calculate R_base from psi', psi'', psi'''
+        if not hasattr(self, 'psi_history'):
+            self.psi_history = deque(maxlen=4)
+        self.psi_history.append(geo.abstraction)
+        
+        r_base = 1.0
+        if len(self.psi_history) == 4:
+            p0, p1, p2, p3 = self.psi_history
+            d1_1, d1_2, d1_3 = p1 - p0, p2 - p1, p3 - p2
+            d2_1, d2_2 = d1_2 - d1_1, d1_3 - d1_2
+            d3_1 = d2_2 - d2_1
+            r_base = 1.0 + abs(d1_3) + abs(d2_2) + abs(d3_1)
+
         viability = self.cd_engine.calculate_viability(
-            kappa=resonance, gamma=gamma_idx, mu=beta
+            kappa=resonance, gamma=gamma_idx, mu=mu_viability, r_base=r_base
         )
         delta_atp, delta_ros = self.cd_engine.execute_metabolic_tick(viability)
         strong_coherence_ideal = resonance * gamma_idx * beta

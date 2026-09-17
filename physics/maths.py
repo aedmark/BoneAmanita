@@ -80,8 +80,8 @@ class CreativeDeterminantEngine:
         self.p = p
         self.c = c
 
-    def calculate_viability(self, kappa: float, gamma: float, mu: float) -> float:
-        lambda_eff = self.lambda_base * (1.0 + self.coherence_debt)
+    def calculate_viability(self, kappa: float, gamma: float, mu: float, r_base: float = 1.0) -> float:
+        lambda_eff = (self.lambda_base * (1.0 + self.coherence_debt)) / max(0.001, r_base)
         return (kappa * gamma) - (lambda_eff * mu)
 
     def update_coherence_debt(

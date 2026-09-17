@@ -386,13 +386,11 @@ class BoneConfig:
 
     # Creative Determinant coupling (Project Navi, Apache 2.0).
     # LAMBDA is the contradiction-cost weight in b = kappa*gamma - lambda*mu.
-    # BETA scales the principal eigenvalue lambda_1 = -BETA*b, which drives the
-    # thermal lock in LLMInterface.generate: lambda_1 >= 0 collapses generation
-    # to deterministic logic, lambda_1 < 0 opens generative heat proportional to
-    # |lambda_1|. See ROADMAP.md track B.
-    CD = {
-        "LAMBDA": 0.5,
-        "BETA": 1.0,
+    # The resting state sits on the phase boundary b=0, so lambda = E[k*g]/E[m].
+    # Under independent uniform inputs, E[k*g]/E[m] = 0.5.
+    CD: Dict[str, Any] = {
+        "LAMBDA": 1.0,
+        "BETA": 0.4,
     }
 
     # The Mnemonic Arcade's coordinate system. BACKEND "auto" probes the HTTP

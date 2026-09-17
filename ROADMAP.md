@@ -1583,6 +1583,12 @@ and about 45 for MELTDOWN.
 
 **Decided (Gordon, 2026-09-17): option 1 now, option 3 staged as D9.**
 
+**Unverified.** The tolerances below are sized from the census and pinned by
+unit tests, but the live 30-turn census that would prove a conversation now
+reaches its end was interrupted before its first turn. Run it before treating
+this section as measured; everything else in D0 was confirmed against a live
+model, and this is not.
+
 *Option 1, done.* Every mode carries a `gate_tolerance`
 (`BonePresets.MODES`), applied at boot as `config.GATE_TOLERANCE` and read by
 each gate: the PINKER counterfactual gate, the Moog quarantine and tensegrity
