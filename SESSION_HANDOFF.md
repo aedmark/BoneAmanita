@@ -19,15 +19,19 @@ jargon and no assumption that you remember how any of it works. Read that
 first if you have been away; this file assumes you already have the
 shape of the thing in your head.
 
-**C5 is done.** The result is in `ROADMAP.md` under C5, and the short form is
-in "What changed most recently" below. There is no queued task. The two open
-threads it left are the exhaustion directive, which the model does not obey
-as written, and a stop-list bug that serves mock prose to reasoning models
-(Open items 7 and 8).
+**The next work is Track D in `ROADMAP.md`, the Somatic Contract**, starting
+with D0, a census of whether the body is ever in a distinct state across a
+real session. C5 found the somatic layer mostly decorative; Track D is the
+plan to make it the centerpiece it is meant to be. Read C5 and Track D in
+`ROADMAP.md`, in that order. Two bugs found alongside C5 (Open items 8 and 9)
+block any reasoning model.
 
-Note: `agents/` was removed deliberately in `070d105`. References to
-`agents/*.md` below and in `README.md` describe documents that are no longer
-in the tree; do not go looking for them.
+**This file is the project's reference document.** `agents/` (the
+constitution, conventions, glossary and domain docs) was removed
+deliberately in `070d105` and is not coming back. Its binding rules live
+here now, under "Decisions already made" and "Style and working
+conventions". Where this file mentions an `agents/` document, it is
+recording history.
 
 Before starting anything, run the suite and the audits. The numbers in this
 document are re-derivable on purpose and should never be taken on trust:
@@ -153,11 +157,9 @@ aren't there. See "Claims vs. code" below.
   without booting the organism. `result_count` and `degraded` are set by
   the code that did the work, never by its caller and never inferred from
   whether an exception was raised.
-- **The `agents/` docs are unusually disciplined.** `constitution.md`
-  with explicit "WHY NOT" blocks is better design documentation than
-  most commercial codebases have. They are load-bearing: read them
-  before touching anything, in the order `agents/prompt.md` specifies
-  (constitution, conventions, glossary, then domain_*).
+- **Decisions carry their reasons.** The WHY / WHY NOT habit from the
+  retired `agents/` docs continues in "Decisions already made" below. A
+  decision recorded without the alternative it rejected gets re-litigated.
 
 ## What changed most recently
 
@@ -329,7 +331,17 @@ Three habits came out of that and are worth keeping:
   depletion reaches the prompt through respiration
   (`raw_cost > BIO.ANAEROBIC_THRESHOLD` becomes a prose directive), which
   is a separate path across three modules. Both are real; the variable
-  name tells you the wrong one.
+  name tells you the wrong one. **Correction (2026-09-17):** "only through
+  respiration" was wrong. `cortex.py:229` adds its own "under 3 sentences"
+  style directive when ATP `p < 20` or the modulator's `max_tokens < 300`,
+  so engine depletion reaches the prompt by two paths, and one of them uses
+  the wording C5 found the model ignores. `ROADMAP.md` Track D lists all
+  five somatic paths.
+- **The thermal lock overwrites the modulator.** `LLMInterface.generate`
+  replaces `temperature` and `top_p` whenever `<cd_lambda_1>` is in the
+  prompt, which is nearly every turn. Confirmed with a spy: the modulator
+  asked for 0.79 and 0.4, and 0.7 went out both times. Chemistry-driven
+  sampling has not reached a model since B1. Track D4.
 - **A subsystem that declines to act must say so.** Silence cannot
   distinguish "correctly gated off" from "dead code", and the second one
   is what this whole document is about. `cortex.recall` now issues a
@@ -423,7 +435,8 @@ Also: ingestion embedded `text[:50]`, making a memory retrievable only
 by a query sharing its exact opening 50 characters. Now embeds the
 passage. `CerebralIndex` sizes itself to the embedder instead of a
 hardcoded 8. Documented as `[DEC-09]` and `[DEC-10]` in
-`agents/domain_02_mind.md` in the project's own WHY / WHY NOT format.
+`agents/domain_02_mind.md` (since removed) in the project's WHY / WHY NOT
+format; the substance is in this section.
 
 **Verified end to end** against live Ollama, on queries with no lexical
 overlap with what was stored:
@@ -463,12 +476,24 @@ them as a specification:
 
 ## Decisions already made (don't re-litigate these)
 
-- **No orchestration frameworks.** Constitution Article 1. LangChain,
+- **The model never performs a body; the person's state shapes the reply.**
+  Decided with Gordon, 2026-09-17, after C5. The person's state (tiredness,
+  effort, disengagement, distress) is the primary input and shapes reply
+  length, demands, questions and pacing, to *accommodate* them. The engine's
+  own state (ATP, respiration, chemistry) sets what it can afford: budget,
+  retries, steadiness, sampling. Neither is narrated or mirrored. WHY: C5
+  showed that telling a model it is breathless or exhausted gets performance
+  ("my lungs burn") or a reversal, not a changed reply; and mirroring a
+  distressed person is the wrong response in the cases that matter most.
+  WHY NOT drop the engine's state entirely: co-regulation needs two parties,
+  and a partner with no state of its own can only mirror. The plan is
+  `ROADMAP.md` Track D, whose opening table is the canonical statement.
+- **No orchestration frameworks.** (Formerly Constitution Article 1.) LangChain,
   LlamaIndex, SemanticKernel, and vector-store libraries (Chroma,
   LanceDB) are all out, not because they're bad but because they take
   ownership of the control loop. This is why `spores/embeddings.py` is
   one HTTP POST and an LRU cache rather than a library.
-- **Poetic variable names are load-bearing.** Constitution Article 2.
+- **Poetic variable names are load-bearing.** (Formerly Constitution Article 2.)
   `godel_scars`, `narrative_drag`, `ATP`, `psi` do not get renamed to
   `error_count` / `slow_factor` / `energy`. This has bitten previous
   sessions.
@@ -696,8 +721,8 @@ These come from the T.R.S. handoff and apply the same way here.
   more than a missing one.
 - **Verify against the running system, not the docs.** This repo's own
   documentation overstates what the code does in several places (see
-  "Claims vs. code"). The same goes for `agents/domain_*.md`: they are
-  good, but they describe intent.
+  "Claims vs. code"). The same goes for this file: it describes what was
+  true when it was written.
 - **Comments keep what/how/why and drop the narrative.** No references
   to this handoff file in source, no "confirmed via the user's testing",
   no blow-by-blow of how a bug was found. That detail belongs here or in
@@ -788,7 +813,7 @@ biases whichever arm trips it more often.
 
 There is no POS tagger in the tree and none of the 35 lexicon categories is
 adjectival, so "adjective density" as the roadmap words it has no cheap
-exact implementation. Constitution Article 1 says do not add a framework for
+exact implementation. The no-frameworks decision says do not add one for
 this. Suggested approach: measure several coarse proxies rather than one
 fragile precise one, and report them separately.
 
@@ -908,8 +933,8 @@ The short list below is what a session should know without reading it.
 
 1. **Embedding calls are not metered into ATP.** Every other retrieval in
    the engine has a thermodynamic cost; `SemanticEmbedder` calls do not,
-   and word resolution now makes them on novel words too. Constitution
-   Article 2 says these costs are load-bearing, so arguably they should
+   and word resolution now makes them on novel words too. The poetic-names
+   decision treats these costs as load-bearing, so arguably they should
    be. Left alone because it is a tuning decision, not a repair.
 2. **The metabolic economy may be mistuned toward immediate death.**
    Observed in mock mode: three turns took ATP from 60 to 0 and ROS from
@@ -934,17 +959,23 @@ The short list below is what a session should know without reading it.
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
    mode, confirm `/status` reports the Arcade nominal rather than
    `DEGRADED`, and run `/diag` to see the turn's receipts.
-7. **The exhaustion directive is not obeyed as written** (C5). Either reword
-   it, most obviously as a hard budget stated outside the `[INTERNAL USE
-   ONLY]` block, and re-measure with `tools/audit_somatic.py`, or stop
-   describing it as a constraint anywhere. The threshold is `e > 0.8`,
-   hardcoded in `brain/composer.py`, not in `BoneConfig`.
+7. **The exhaustion directive is not obeyed as written** (C5). Decided in
+   `ROADMAP.md` D2: address the partner rather than the entity, state
+   numbers rather than adjectives, forbid body narration, and move it out
+   of the `[INTERNAL USE ONLY]` block. Each change is measured before it is
+   adopted. The threshold is `e > 0.8`, hardcoded in `brain/composer.py`,
+   not in `BoneConfig`.
 8. **Reasoning models on Ollama get mock prose.** `LLMInterface.generate`'s
    stop list (`Traveler:` and others) also cuts a thinking model's reasoning
    stream, content comes back empty, and `generate` returns
    `mock_generation(reason="SILENCE")` without counting a failure. Confirmed
    with gemma4:e4b; `reasoning_effort=none` avoids it and `think: false` on
    the `/v1` endpoint does not. Not fixed. mistral-nemo is unaffected.
+9. **`mock_generation` and `hallucinate` recurse.** `mock_generation` calls
+   `dreamer.hallucinate`, which calls `llm.generate`, which falls back to
+   `mock_generation` in mock mode or with the circuit open. It runs to a
+   RecursionError that `hallucinate` swallows: 486 nested calls over three
+   mock turns, confirmed with a spy. Not fixed.
 
 ## Future ideas (not started, no urgency)
 

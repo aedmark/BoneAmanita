@@ -145,7 +145,6 @@ tuning preset, and only Adventure has an inventory and a world to move through.
 | `archetypes/` | The Village: Gordon, Mercy, Benedict, Jester and the rest. |
 | `mechanics/` | Slash commands, the terminal interface, setup wizard, inventory, and the word lookup (`lexicon.py`, `resonance.py`). |
 | `lore/` | All the tunable content as JSON: word lists, thresholds, banned phrases, prompt text. |
-| `agents/` | Design documents that bind future AI sessions. Read these before changing anything. |
 | `tools/` | Audit scripts. Run these instead of trusting numbers in the docs. |
 
 The entry point is `main.py`. The per turn loop is `cycle.py`.
@@ -157,8 +156,8 @@ engine thinks in, and `lore/tuning_presets.json` is every number you can turn.
 
 The code is written in biological metaphor throughout: ATP, cortisol, autophagy,
 Gödel scars, the Village, the Mnemonic Arcade. This is deliberate and it is
-protected by the project's own constitution (`agents/constitution.md`, Article
-2): the names are not decoration, they map to real variables and must not be
+protected by a standing project decision (`SESSION_HANDOFF.md`, "Decisions
+already made"): the names are not decoration, they map to real variables and must not be
 renamed to `error_count` and `energy_level`.
 
 The thing to hold in your head is that the metaphor describes what the numbers
@@ -299,8 +298,7 @@ check.
 | File | What it is |
 |---|---|
 | `ROADMAP.md` | What is next and why, with the measurement behind every claim. |
-| `SESSION_HANDOFF.md` | What is true right now and which traps to avoid. Read before changing anything. |
-| `agents/constitution.md` | The rules that bind changes to this codebase. Load-bearing. |
+| `SESSION_HANDOFF.md` | The project's reference document: what is true right now, the decisions that bind changes, and which traps to avoid. Read before changing anything. |
 | `docs/README.MD` | The Hypervisor, BoneAmanita's no-math sibling for cloud models. |
 | `credits.txt` | Full lineage and attribution. |
 | `license.txt` | MIT, human/computer variant. |

@@ -354,10 +354,20 @@ def bootstrap_ci(diffs: np.ndarray, rng: np.random.Generator, n: int = 10000) ->
     return float(diffs.mean()), float(lo), float(hi)
 
 
+def contrast(cells: dict, messages: list, arm: str, base: str, key: str, rng) -> tuple:
+    """Signed arm-minus-base effect, paired within message: (mean, lo, hi)."""
+    diffs = np.array(
+        [cells[arm][m][key] - cells[base][m][key] for m in messages if m in cells[arm] and m in cells[base]]
+    )
+    return bootstrap_ci(diffs, rng)
+
+
+def runs_in(records: list, model: str, reasoning: str) -> list:
+    return [r for r in records if r["model"] == model and r.get("reasoning", "default") == reasoning]
+
+
 def analyse(records: list, model: str, reasoning: str) -> int:
-    records = [
-        r for r in records if r["model"] == model and r.get("reasoning", "default") == reasoning
-    ]
+    records = runs_in(records, model, reasoning)
     if not records:
         print(f"No cached generations for {model}.")
         return 1
@@ -384,10 +394,7 @@ def analyse(records: list, model: str, reasoning: str) -> int:
             continue
         print(f"\n  {arm} minus {base}  (signed; 95% bootstrap CI over {len(messages)} messages)")
         for key, label in MEASURES:
-            diffs = np.array(
-                [cells[arm][m][key] - cells[base][m][key] for m in messages if m in cells[arm] and m in cells[base]]
-            )
-            mean, lo, hi = bootstrap_ci(diffs, rng)
+            mean, lo, hi = contrast(cells, messages, arm, base, key, rng)
             base_mean = nanmean([cells[base][m][key] for m in messages])
             if np.isnan(lo):
                 verdict = "too few messages to say"
@@ -406,11 +413,60 @@ def analyse(records: list, model: str, reasoning: str) -> int:
     return 0
 
 
+COMPARE_COLUMNS = [
+    ("ctl words", "CONTROL", None, "words"),
+    ("ctl reject", "CONTROL", None, "validator_rejects"),
+    ("empty", "CONTROL", None, "no_visible_prose"),
+    ("ANA w/sent", "ANAEROBIC", "CONTROL", "words_per_sentence"),
+    ("ANA body", "ANAEROBIC", "CONTROL", "breath_words_per_100"),
+    ("EXH <=3", "EXHAUSTED", "CONTROL", "within_3_sentences"),
+    ("EXH reject", "EXHAUSTED", "CONTROL", "validator_rejects"),
+    ("BOTH <=3", "BOTH", "CONTROL", "within_3_sentences"),
+]
+
+
+def compare(records: list) -> int:
+    """One row per cached (model, reasoning) run, for choosing a model (ROADMAP D7)."""
+    runs = sorted({(r["model"], r.get("reasoning", "default")) for r in records})
+    if not runs:
+        print("No cached generations.")
+        return 1
+    print("\n=== SOMATIC COMPARISON ===")
+    print(
+        "  Levels are control-arm means. Effects are arm minus control; a value in "
+        "parentheses has a 95% interval crossing zero and is not a detectable difference.\n"
+    )
+    width = max(len(f"{m} ({r})") for m, r in runs)
+    print(f"  {'model':<{width}}  {'n':>4}  {'s/gen':>5}" + "".join(f"{c:>12}" for c, *_ in COMPARE_COLUMNS))
+    for model, reasoning in runs:
+        run = runs_in(records, model, reasoning)
+        cells = cell_means(run)
+        messages = sorted({r["message"] for r in run})
+        rng = np.random.default_rng(0)
+        row = []
+        for _, arm, base, key in COMPARE_COLUMNS:
+            if arm not in cells or (base and base not in cells):
+                row.append(f"{'-':>12}")
+            elif base is None:
+                row.append(f"{nanmean([cells[arm][m][key] for m in messages]):>12.2f}")
+            else:
+                mean, lo, hi = contrast(cells, messages, arm, base, key, rng)
+                text = f"{mean:+.2f}" if not (lo <= 0 <= hi) else f"({mean:+.2f})"
+                row.append(f"{text:>12}")
+        seconds = nanmean([r["seconds"] for r in run])
+        label = f"{model} ({reasoning})"
+        print(f"  {label:<{width}}  {len(run):>4}  {seconds:>5.1f}" + "".join(row))
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[2])
     parser.add_argument("--model", default=None, help="chat model (default: BoneConfig.MODEL)")
     parser.add_argument("--repeats", type=int, default=8)
     parser.add_argument("--analyze-only", action="store_true")
+    parser.add_argument(
+        "--compare", action="store_true", help="one row per cached model; generates nothing"
+    )
     parser.add_argument(
         "--no-reasoning",
         action="store_true",
@@ -419,6 +475,9 @@ def main() -> int:
     )
     parser.add_argument("--cache", type=Path, default=Path("logs/audit_somatic.jsonl"))
     args = parser.parse_args()
+
+    if args.compare:
+        return compare(load_cache(args.cache))
 
     from presets import BoneConfig
 

@@ -11,6 +11,9 @@ Three tracks, in dependency order:
 - **A. Observability**: make failure visible. Everything else depends on this.
 - **B. The Creative Determinant**: make the Navi math load-bearing.
 - **C. The Biological Harness**: associative memory and real co-regulation.
+- **D. The Somatic Contract**: the person's state shapes the reply, the
+  engine's state sets what it can afford, and neither is performed. Added
+  after C5 found the somatic layer mostly decorative.
 
 ## The thesis: all three problems are one problem
 
@@ -65,8 +68,9 @@ you whether it ran.
 | **C3** co-regulation | **done**: found the severed serialization; user model now first-class |
 | **C4** Stage Manager and Silence | **done**: Tension is a state, Silence is an outcome, 21 tests |
 | **C5** somatic translation | **measured**: anaerobic shortens sentences ~10%; "3 sentences or less" is not obeyed |
+| **D** the somatic contract | **planned**: D0 census first |
 
-Tracks A, B and C are finished. C5's result is a
+Next: **Track D**, starting with D0, the somatic census. Tracks A, B and C are finished. C5's result is a
 finding against a claim rather than a repair, and the follow-up it points to
 (rewording or relocating the exhaustion directive) is a design decision,
 not a listed task.
@@ -593,7 +597,7 @@ which is the thing the README has been claiming all along.
 Vendor `Project-Navi/navi-creative-determinant` (Apache 2.0, compatible
 with this project's license) under `physics/navi/` with attribution, or
 add it as a submodule. It is not on PyPI, so a `requirements.txt` entry
-is not available; vendoring also keeps Constitution Article 1 satisfied,
+is not available; vendoring also keeps the no-frameworks decision satisfied,
 since the control loop stays here.
 
 Two substantive upgrades over the current approximation:
@@ -1312,6 +1316,311 @@ claim.
 
 ---
 
+# Track D: The Somatic Contract
+
+Written 2026-09-17, after C5. The body is meant to be BoneAmanita's
+centerpiece, the thing no other harness has. C5 measured it and found it
+mostly decorative: every somatic instruction reaches the prompt, one moves
+sentence length by about 10%, and the other is ignored or reversed. This
+track makes the body load-bearing, and it inherits C5's rule: **no somatic
+behaviour is claimed until an audit measures it on at least two models.**
+
+## The split (decided 2026-09-17)
+
+The model never performs a body. Two states feed generation, and they have
+different jobs:
+
+| Input | Shapes | Never |
+|---|---|---|
+| **The person's state** (tiredness, effort, disengagement, distress) | reply length, how much is asked of them, questions, pacing, the tone of care | mirrored back at them |
+| **The engine's state** (ATP, respiration, ROS, chemistry) | what the engine can afford: budget, retries, steadiness against turbulence, sampling | narrated or performed |
+
+The person's state is the primary input: the output is colored to
+**accommodate** them, not to reflect them. Mirroring is wrong in exactly the
+cases that matter; someone anxious or flagging needs a steady partner, not
+an echo. The engine's state still matters, because co-regulation needs two
+parties and a partner with no state of its own can only mirror, but the
+person never reads "the engine is tired". They see a partner that gets
+briefer and steadier when the conversation has been draining.
+
+This retires the idea of prose that sounds breathless. C5's one positive
+result (anaerobic shortens sentences about 10%) is not a behaviour to
+preserve; depletion should lower the budget, not change the voice.
+
+The shape of the problem is the same as the rest of this document, one
+level up. A subsystem that computes a value nobody uses is dead wiring; an
+instruction the model does not follow is dead wiring with a live model on
+the other end. The fix is also the same: fewer channels that pretend, more
+channels that bind, and a receipt for each one.
+
+## What exists today (confirmed by reading the code and one spied turn)
+
+Five separate paths claim to carry the body into generation, and nothing
+reconciles them:
+
+| Path | Where | Trigger | What it does | Status |
+|---|---|---|---|---|
+| Respiration line | `composer.py`, `bio_anaerobic` | `respiration == "ANAEROBIC"` | "Raw, breathless, efficient prose." | ~10% shorter sentences (C5) |
+| User exhaustion line | `composer.py:709` | user `exhaustion > 0.8` | "You are exhausted. ... 3 sentences or less" | not obeyed; reversed on gemma (C5) |
+| Engine depletion directive | `cortex.py:229` | ATP `p < 20` or `max_tokens < 300` | "under 3 sentences", caps `max_tokens` at 400 | unmeasured; same wording C5 found ignored |
+| Chemistry sampling | `mind.py` modulator | dopamine, cortisol, adrenaline, chi | temperature, top_p, penalties, max_tokens | **temperature and top_p overwritten every turn** |
+| Standing metabolism line | mode directives | always | "Let fatigue shorten your sentences" | present in every prompt, calm or not |
+
+The fourth row is new and confirmed: over three mock turns, spying on
+`llm.generate`, the modulator asked for temperature 0.79 and 0.4 and both
+went out as 0.7. The `<cd_lambda_1>` thermal lock replaces temperature and
+top_p outright whenever the tag is present, which is nearly every turn, so
+the whole chemistry-to-sampling mapping is computed and discarded. The
+`max_tokens` side survives but never binds: base is 720 to 930 tokens and
+the depletion cap is 400, against replies averaging 20 to 50 words.
+
+The third row also corrects `SESSION_HANDOFF.md`, which says the engine's
+own depletion reaches the prompt only through respiration. It also reaches
+it through `cortex.py:229`, as a style directive.
+
+## D0. Somatic census: is the body ever in a distinct state?
+
+**Do this first; it can invalidate the rest.** Handoff open item 2 records
+three mock turns taking ATP from 60 to 0. If a real session pins ATP near
+zero within a few turns, every depletion directive is permanently on, a
+permanent instruction is a constant, and a constant cannot express a body
+no matter how it is worded.
+
+Run a scripted 30 to 50 turn conversation against a live model and record,
+per turn: the person's `E_u` and `P_u` (and their message length against
+baseline), ATP, ROS, respiration, which of the five paths fired, modulator params against sent params, and the reply measures
+from `audit_somatic.py`. Deliverable: `tools/audit_somatic.py --census` (or
+a sibling tool), printing the state distribution over the session.
+
+**Done when** the table shows, for both the person's state and the
+engine's, that each state is reachable, is left again, and is not the
+resting state. If the engine's economy rests at depletion, retune it before
+D1 to D3. If the person's signals barely move over a real conversation, the
+primary input of this whole track is too weak to steer anything, and that
+has to be fixed first. Say which, here.
+
+## D1. One somatic budget per turn
+
+Replace the five paths with one object computed once per turn, before
+composition, and read by every consumer: the composer's text, the
+generation params, and the validator. The handoff's own lesson applies
+directly: two objects modelling the same thing disagree in silence, and
+here there are five.
+
+It carries the split's two inputs and keeps them separate, because they
+mean different things and C5 suggests conflating them is part of why the
+directive fails:
+
+- **The person's state** (`E_u`, `P_u` from the lattice, and whatever
+  distress signal D0 shows is reliable). Primary. It sets *how much the reply
+  asks of them*: `word_cap`, `sentence_cap`, whether a closing question is
+  allowed, and whether to offer to carry part of the load.
+- **The engine's state** (ATP, respiration, ROS, chemistry). Secondary. It
+  sets *what the engine can afford*: it can lower the caps further but never
+  raise them past what the person needs, it sets the `retry_allowance` for
+  firewall re-asks, and it sets the `temperature_band` (steadier when
+  depleted or when the conversation is turbulent).
+
+Plus `forbid_body_narration`, always on, and a `reason` string naming which
+input produced each value. Graded, not gated: caps scale with depth
+of depletion instead of flipping at 0.8. Constants live in `BoneConfig`
+(A1's rule). The name should come from the project's vocabulary, not from
+this document.
+
+**Done when** `cortex.py:229`, the composer's exhaustion line, the
+respiration line and the standing metabolism line all read from it, and
+`tests/test_physics_to_prompt.py` is extended to pin budget in, text out.
+
+## D2. The somatic instructions, rewritten (decision)
+
+Decided, pending measurement. Five changes, each tested as its own audit
+arm before adoption:
+
+1. **Address the right body.** User exhaustion stops saying "You are
+   exhausted". It becomes about the partner: "Your partner is running low.
+   Answer in at most {n} sentences." Telling a model it is exhausted invites
+   it to play a tired character, which is what gemma did (more, shorter
+   sentences) and plausibly what mistral did (more antithesis).
+2. **Numbers, not adjectives, and no voice.** The anaerobic line ("Raw,
+   breathless, efficient prose") is retired. Depletion lowers the budget
+   and states it as a number ("Answer in under {n} words"); it does not ask
+   for a different voice. A model can check a number against its own
+   output; it cannot check "raw".
+3. **Say what not to do.** Always, not only under depletion: "Do not
+   mention breath, lungs or a body." mistral-nemo's breath and body words
+   rose about 5x under the anaerobic instruction, which the kernel already
+   forbids in general terms and which the model does not connect to it.
+4. **Move it out of the metrics block and to the end.** Today the
+   exhaustion line sits inside `[INTERNAL USE ONLY]`, directly after an
+   instruction to "consume these metrics to shape your narrative and tone",
+   which frames it as characterisation. Place the budget as the last
+   instruction before `=== PARTNER INPUT ===`. Also delete the standing
+   "Let fatigue shorten your sentences" from calm prompts.
+5. **Accommodate, do not mirror.** The kernel's "Mirror the user's energy"
+   is replaced with an instruction to meet the person where they are:
+   steady when they are agitated, brief when they are flagging, and never
+   matching distress with distress.
+
+`audit_somatic.py` gains variant arms (current wording against each
+rewrite, and placement inside against outside the block), so the four
+changes are measured separately rather than as one bundle.
+
+**Done when**, on two models: the share of replies within the cap rises
+against control with an interval clear of zero, body narration does not
+rise, and D2b's accommodation measures move in the intended direction. If a change does not clear that bar, it is not
+adopted, and this entry records which one failed.
+
+## D2b. Measure accommodation, not obedience
+
+C5 asked whether the prose obeys an instruction. The split asks a different
+question: does the reply fit the person? That needs arms built from the
+person's side (the same message sent as from a fresh, a tired, and a
+disengaged partner, with the lattice state set accordingly) and measures
+taken relative to them:
+
+- reply length relative to the person's own message and recent baseline;
+- demand on the person: questions asked, choices offered, instructions given;
+- closing-question rate when they are flagging (should fall);
+- offers to carry the load when effort is high (should rise);
+- body narration and emotional mirroring (should stay at zero; mirroring
+  needs a declared proxy, for example the reply repeating the person's
+  affect words back).
+
+These live in `tools/audit_somatic.py` beside the C5 measures and share
+D3's measurement module.
+
+**Done when** the audit reports these per arm, with intervals, on at least
+two models, and a tired or disengaged partner measurably gets a lighter
+reply than a fresh one.
+
+## D3. Enforce what does not need the model's cooperation
+
+The Lexical Firewall is the most valuable mechanism in the codebase
+because it does not trust the model: it checks and re-asks. The body should
+work the same way. Instructions become a preference that makes enforcement
+rarely fire; enforcement becomes the guarantee.
+
+- **Sentence cap: trim, do not re-ask.** After validation, cut to the first
+  `sentence_cap` sentences at a boundary. Deterministic, free, never costs a
+  retry. The cost is that a trimmed reply can lose its last sentence; that
+  is what D2's wording is for, and the trim rate is the compliance measure.
+- **Body narration and over-demand: re-ask with named feedback,** the
+  firewall's existing path. Narrating a body the model does not have, or
+  ending on a question to a partner who is flagging, is the same class of
+  fault as a banned phrase. A re-ask spends ATP and draws on the engine's
+  `retry_allowance`, which is where the engine's state belongs: a depleted
+  engine can afford fewer corrections, and says so in its receipt.
+- **One measurement, two users.** Move `visible_text`, `split_sentences` and
+  `measure` out of `tools/audit_somatic.py` into a runtime module the
+  validator imports, and have the audit import it back. What the audit
+  measures is then exactly what the engine enforces, and they cannot drift.
+
+**Done when** a depleted turn cannot exceed its sentence cap in what the
+user sees, on any model, with a test that travels the real path (not a
+hand-built fixture, per the A4 lesson).
+
+## D4. Reconnect the sampling channel
+
+The chemistry-to-sampling map is real code, is tuned, and has not reached
+a model since the thermal lock went live in B1. Neither side should simply
+win. Proposed composition: the Creative Determinant sets the band (lambda
+positive locks it narrow and low; negative opens it), and chemistry sets the
+position within the band. `max_tokens` either derives from `word_cap` (about
+1.5 tokens per word plus slack, with D3's trim handling a mid-sentence cut)
+or stops being described as a somatic channel.
+
+C5 held sampling fixed on purpose, so it could not see this channel. Add
+audit arms that vary chemistry with identical prompts.
+
+**Done when** a spied turn shows modulator and sent params agree within the
+band, and the audit shows a measurable text difference between chemistry
+extremes on a live model. If there is none, remove the claim rather than
+the audit.
+
+## D5. The body issues receipts
+
+One somatic receipt per turn, in A3's format: the state it was given, the
+budget it produced, the reply's measures, and the outcome (`complied`,
+`trimmed`, `re-asked`, `failed`). It shows in `/diag` and joins the roll call
+in `tools/audit_receipts.py`. "Complied only by trimming, every turn" is the
+somatic equivalent of chronic degraded, and it should be as visible.
+
+This is what makes the fix permanent. C5 was a one-off experiment; a
+receipt is the same measurement taken on every real turn, forever.
+
+**Done when** `/diag` after a depleted turn names the budget and the outcome,
+and a turn with the somatic layer deliberately disabled shows as silent.
+
+## D6. The rest of the somatic cues
+
+Adrenaline ("speak in fragmented/liminal ways"), cortisol ("act highly
+stressed, erratic, or defensive"), paradox, oxytocin ("warmth, connection,
+healing") and the chemistry moods are all instructions of the kind C5 found
+weak, and none has been measured. Most of them also violate the split as
+written: "act highly stressed" asks the model to perform a state.
+
+Each cue gets re-read as a response to the person rather than a mood to
+act out (a cortisol spike in the conversation calls for a steadier reply,
+not a stressed one), and then needs a **declared observable before it is
+measured**. A cue that cannot be re-read that way, or for which no
+observable can be named, is flavour by definition, and the documents should
+call it that or remove it.
+
+**Done when** every cue in `lore/ux_strings.json` under `somatic_*` and
+`bio_*` has a row in the audit with a signed effect and interval, or a
+written note saying it is flavour.
+
+## D7. Model selection as a somatic benchmark
+
+The audit is now the most direct test available of the one thing this
+engine needs from a model: whether its body changes the prose. Choose the
+chat model on that, not on general leaderboards. Criteria, in order:
+
+1. Accommodation (D2b) and compliance under D2's wording: within-cap share,
+   lighter replies for a tired partner, body narration and mirroring rates.
+2. Firewall reject rate on the control arm. Every reject is a retry and an
+   ATP penalty. mistral-nemo rejected 19%; gemma4:e4b 5%.
+3. No silent failure modes: reasoning models need the stop-list fix first,
+   or `reasoning_effort=none`.
+4. Latency at interactive length, and fitting the 16GB card with the
+   embedding model also loaded.
+
+A baseline bake-off on the current wording can run now; the decision should
+wait for D2, since a model that ignores bad instructions and one that obeys
+good ones are different findings.
+
+## Sequencing within D
+
+D0 first, because it can change what the rest means. D1, D2 and D2b
+together, since the budget is where the new wording lives and D2b is how
+it is judged. Then D3 and D5 together (the
+receipt records what the enforcement did). D4 after, D6 as a sweep, and D7
+whenever D2 has landed.
+
+**Track D does not close until the stop-list bug is fixed** (Gordon's call,
+2026-09-17). Three of the four D7 candidates are thinking models
+(gemma4:e4b, gemma4:12b, qwen3.5:9b), and while the bug stands they can only
+be measured with `reasoning_effort=none`, which is not how they would run in
+production, and in production they would be served mock prose. Fix it before
+D7's decision, so the models are judged as they would actually be deployed,
+and fix the `mock_generation` recursion alongside it, since both live on the
+same fallback path. Details in `SESSION_HANDOFF.md` Open items 8 and 9.
+
+## Deliberately not in Track D
+
+- **A body the model performs.** No instruction asks the model to sound
+  tired, breathless, stressed or warm because of the engine's numbers. That
+  is the split, and it is a decision, not an omission.
+- **Fine-tuning or LoRA.** The body has to work on whatever model a person
+  runs. A fine-tune would make one model obey and hide the problem for all
+  the others.
+- **Grammar-constrained decoding.** It can force JSON; it cannot force prose
+  to be breathless, and it ties the engine to one backend's feature set.
+- **A POS tagger or NLP library.** The no-frameworks decision, and C5 showed coarse
+  proxies with intervals are enough to find effects and reversals.
+
+---
+
 # Sequencing
 
 **Short term**: in rough priority order. Each is independently
@@ -1353,10 +1662,10 @@ shippable and each makes the next one verifiable.
   engine is a legitimate design and it works. The CD layer is where the
   real math belongs; the lexicon-and-thresholds layer does not need to
   become dimensionally coherent to be useful.
-- **Adopting a vector store or an agent framework.** Constitution
-  Article 1. The embeddings work stayed at one HTTP POST for this reason
+- **Adopting a vector store or an agent framework.** The no-frameworks
+  decision (`SESSION_HANDOFF.md`). The embeddings work stayed at one HTTP POST for this reason
   and the manifold work should too.
-- **Renaming the poetic variables.** Constitution Article 2. `ATP`,
+- **Renaming the poetic variables.** The poetic-names decision. `ATP`,
   `godel_scars`, `narrative_drag` stay.
 - **Shrinking the engine to the composer plus validator.** Raised in the
   original assessment as an option. Given the stated goal is a
