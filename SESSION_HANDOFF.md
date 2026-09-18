@@ -1,8 +1,178 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+<a id="refusal-tests-2026-09-18"></a>
+
+## Latest: seven refusal-test failures repaired, 2026-09-18
+
+The seven previously recorded failures now pass in the focused run. This round
+changes only five test files, not production refusal logic or thresholds.
+It preserves the uncommitted embedding and atomic quicksave repairs on top of
+`8069778`.
+
+### Causes and corrected contracts
+
+- Cortex and Moog fixtures used unspecced `MagicMock` physics objects. Their
+  fabricated `to_dict()` methods took precedence in `dump_state`, so assigned
+  dictionary fields never became the numeric input being tested. Real
+  `PhysicsPacket`, `EnergyState`, and `CycleContext` objects now exercise the
+  production serialization boundary. Numeric gate values no longer originate
+  in fabricated mock methods.
+- Gate-tolerance and scar tests referenced `MagicMock` without importing it.
+  They now use the same concrete packet/context types rather than adding an
+  import that would retain the faulty serialization fixture.
+- Tests of the adventure counterfactual and Moog gates explicitly set a 1.0
+  tolerance on a config instance. Conversation comparisons retain 1.6. This
+  fixes the test setup rather than retuning production thresholds.
+- The productive-worry test expected preflight to halt immediately. D9 moved
+  that decision to arbitration, and its original ROS fixture was also below
+  the widened conversation threshold. It now supplies maximum accumulated ROS
+  plus high friction at tolerance 1.6, verifies the ROS nomination and scar,
+  confirms preflight does not halt or spend ATP, then runs real arbitration.
+  It asserts final `SILENCE`, the winning reason in the packet and receipt,
+  and exactly one configured silence charge. The extreme-tolerance test also
+  verifies the final arbitration outcome, not just the nomination count.
+
+The original assertions about gate identity, toxic versus tolerated input,
+scar creation, and preserving MIND remain. Final refusal follows the documented
+Stage Manager contract; no production gate was weakened to make tests pass.
+This does not establish completion of every D9 route or live accommodation.
+
+### Verification and next work
+
+The first fixture correction run returned **32 passed, 1 failed**; the remaining
+failure was an attempted direct read of an optional ROS config key in the new
+fixture. The final focused run covered cortex, gate tolerance, Moog, random,
+scars, and Stage Manager: **54 passed, 4 subtests passed**, in 25.22 seconds.
+The complete suite test run (`python -m pytest -x -q`) successfully passed all tests:
+**525 passed, 5 skipped, 29 subtests passed** in 293.09 seconds. The test baseline
+is now completely green.
+
+Tests run in `/tmp/boneamanita-refusal.ws3uwms6`, a disposable copy of the
+working files, Git metadata, and the untracked quicksave tests, with Python
+3.14.7. Logs are `/tmp/boneamanita-refusal-focused.log`,
+`/tmp/boneamanita-refusal-focused2.log`, and `/tmp/boneamanita-refusal-full.log`.
+The user's live saves and lore are untouched.
+
+Next: audit D1/D2/D9 against their acceptance criteria and refresh the somatic
+audit arms before live census/accommodation measurements. Green regression
+checks alone do not certify model behavior.
+
+<a id="quicksave-repair-2026-09-18"></a>
+
+## Earlier: atomic quicksave repair, 2026-09-18
+
+R2 is repaired in `protocols/chronos.py`. The working tree started at `8069778`
+with the embedding repair and its documentation/tests still uncommitted. Those
+changes were preserved. R1/R1b and R3 are also repaired; the seven existing
+refusal-test failures are the next work package.
+
+### Checkpoint contract
+
+Quicksave writes a unique `.quicksave-*.tmp` file in the save directory,
+serializes the existing checkpoint schema, flushes and fsyncs the file, closes
+it, then publishes it with `os.replace`. Keeping both paths on the same
+filesystem permits atomic replacement. The previous checkpoint is never opened
+for writing. Serialization, partial-write, file-sync, and replacement failures
+leave it byte-for-byte intact and retain the existing failure message/log path.
+A failed first save leaves no checkpoint. Temporary files are removed after
+handled failures; cleanup errors are logged without hiding the original error.
+
+This is atomic file publication, not a broader checkpoint schema change or a
+power-loss durability guarantee. A hard process kill can leave an unpublished
+temporary file, and the containing directory is not fsynced. Concurrent saves
+use separate temporary files; the last successful replacement wins.
+
+### Verification
+
+Five new tests in `tests/test_quicksave.py` cover partial JSON writes, circular
+(nonserializable) history, fsync/replace failures, failed first save, and a
+successful replacement that publishes complete flushed JSON. The old code
+failed these regression scenarios. The focused selection of quicksave, macro,
+protocol, genesis-continuity, and shutdown tests passed: **21 passed,
+2 subtests passed**, in 21.20 seconds.
+
+The full run (`python -m pytest -q --tb=short`) finished with **518 passed,
+7 failed, 5 skipped, 29 subtests passed**, in 277.26 seconds. All five new
+quicksave tests passed, including both fsync/replace subcases. The seven failure
+nodes are unchanged from the baseline. This run covers `8069778` plus the
+embedding and atomic quicksave source/test changes; those files match the
+tested copy byte-for-byte. No live-model behavioral audit was run.
+
+Tests run in `/tmp/boneamanita-quicksave.sxd0lf19`, a disposable copy of the
+tracked working tree (including the embedding edits), Git metadata, and the
+new quicksave test file. The project Python 3.14.7 interpreter is used. Logs are
+`/tmp/boneamanita-quicksave-before.log`, `/tmp/boneamanita-quicksave-after.log`,
+and `/tmp/boneamanita-quicksave-full.log`. Tests use temporary save directories;
+the user's live saves and lore are untouched.
+
+Next: repair the seven refusal-test failures against the nomination/arbitration
+contract, without weakening behavioral assertions. Then validate D1/D2/D9 and
+run the current somatic measurement arms.
+
+<a id="embedding-repair-2026-09-18"></a>
+
+## Earlier: embedding fallback repair, 2026-09-18
+
+Starting state: clean `8069778` (`7.0.14.2`), including the committed shutdown
+repair. This follow-up repairs R1/R1b in `spores/embeddings.py`; R2 (atomic
+quicksave) and the seven existing refusal-test failures remain open.
+
+### Fallback contract
+
+- Vector width is fixed at backend resolution. Runtime degradation retains
+  that width so existing FAISS indexes and rank banks remain shape-compatible.
+  Booting directly into hash still uses the historical eight dimensions.
+- A transient failure marks the embedder degraded immediately and returns hash
+  coordinates for the entire sweep, including any semantic cache hits. The
+  receipt names hash/SHAKE-256 as the vector source and includes the failure.
+- Temporary hash results are never stored under semantic cache keys. Healthy
+  cached entries survive a transient outage; failed texts retry the backend on
+  their next request. Successful backend work clears the transient degraded
+  state and consecutive-failure counter. Cache-only requests do not prove
+  backend recovery and do not clear that state.
+- After three consecutive failed backend sweeps, the embedder switches to hash,
+  clears semantic cache entries, and caches only under the hash identity.
+  This terminal fallback still requires engine restart/reconfiguration to
+  restore a semantic backend; automatic recovery from that state is not added.
+- Each backend batch is validated for row count, width, numeric values, and
+  finite coordinates before any result enters the cache. Malformed output
+  follows the same failure path as a transport error.
+- An instance lock serializes backend calls, transitions, and cache updates
+  so concurrent callers cannot write fallback vectors under a changing identity.
+
+Hash remains non-semantic. Fixed dimensions prevent shape errors; they do not
+make old semantic vectors comparable to new hash vectors. This repair does not
+re-embed persisted memories or add per-vector provenance to downstream stores.
+
+### Verification
+
+The regression tests reproduced the old transient receipt/cache bug, the
+16-to-8-dimensional transition, and five malformed-vector cases. The first
+post-repair selection (`tests/test_embeddings.py tests/test_receipts.py
+ tests/test_resonance.py tests/test_memory.py tests/test_spores.py`) returned
+**81 passed, 5 skipped, 5 subtests passed** in 48.20 seconds. Two additional
+regressions then covered concurrent recovery and mixed cached/uncached sweeps.
+All transport failures and recoveries are mocked; no live outage was induced.
+
+The complete suite (`python -m pytest -q --tb=short`) finished with **513 passed,
+7 failed, 5 skipped, 27 subtests passed**, in 277.54 seconds. All five new
+embedding tests, including five malformed-vector subcases, passed. The seven
+failures match the baseline exactly. This result covers `8069778` plus
+`spores/embeddings.py` and `tests/test_embeddings.py`; both files were verified
+byte-for-byte against the tested copy. No live behavioral audit was run.
+
+Tests run in `/tmp/boneamanita-embedding.zjjoybcq`, a copy of tracked files with
+Git metadata and the changed source/tests, using the project Python 3.14.7.
+Temporary logs are `/tmp/boneamanita-embedding-before.log`,
+`/tmp/boneamanita-embedding-after.log`, and `/tmp/boneamanita-embedding-full.log`.
+The user's saves and lore are untouched.
+
+Next repair: preserve the last valid quicksave when serialization or writing
+fails. Then repair refusal fixtures/contracts and validate D1/D2/D9 behavior.
+
 <a id="stabilization-2026-09-18"></a>
 
-## Latest: baseline reproduction and shutdown repair, 2026-09-18
+## Earlier: baseline reproduction and shutdown repair, 2026-09-18
 
 This follow-up supersedes the review's R3 status. R1/R1b (embedding fallback)
 and R2 (quicksave) remain open, as do the seven refusal-related test failures.
@@ -112,9 +282,10 @@ Reproducible installation and CI also need attention: the reviewed tree has
 no tracked dependency lockfile or GitHub Actions workflow. These are engineering
 recommendations, not newly measured behavioral defects.
 
-### Reproduced runtime findings (R3 repaired in the follow-up above)
+### Reproduced runtime findings (all repaired in follow-ups above)
 
 **R1. Embedding fallback contaminates the cache and misreports its provenance.**
+**Fixed in the embedding follow-up above.** The following is the original reproduction.
 In `spores/embeddings.py`, `SemanticEmbedder.embed_batch()` catches a backend
 failure and generates hash vectors. Before the third consecutive failure,
 `_degrade()` leaves the backend/model identity and `degraded` flag unchanged.
@@ -130,7 +301,8 @@ text. Observed: receipt not degraded, recovered backend not called, original
 hash vector returned. This is an offline fault-injection probe, not an observed
 outage against a live server.
 
-**R1b. The transition to hash can break batch dimensionality.** Repeat the probe
+**R1b. The transition to hash can break batch dimensionality.**
+**Fixed in the embedding follow-up above.** The following is the original reproduction. Repeat the probe
 with a 16-dimensional pretend HTTP backend. Fail distinct texts `one` and `two`,
 then request `['one', 'three']` while the backend fails again. `one` is fetched
 from the old cache before the third failure switches the embedder to the
@@ -140,6 +312,7 @@ matrix/index operations. Both cache provenance and backend/index transitions
 need explicit contracts; a successful receipt alone cannot establish correctness.
 
 **R2. Failed quicksave writes destroy the previous valid checkpoint.**
+**Fixed in the atomic quicksave follow-up above.** The following is the original reproduction.
 `protocols/chronos.py:ChronosKeeper.save_checkpoint()` opens
 `saves/quicksave.json` with `"w"` before serializing. In a temporary directory
 with copied lore, construct an engine using `provider='mock'` and hash
@@ -197,7 +370,7 @@ warning, in 38.29 seconds. The selections overlap: **do not add these counts
 or publish them as one full-suite result**. The previously advertised
 501 passed / 5 skipped is historical, not the reviewed baseline.
 
-The seven failures are:
+The seven failures were (all repaired in the refusal-test follow-up above):
 
 | Test node | Observed failure |
 |---|---|

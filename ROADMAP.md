@@ -53,13 +53,44 @@ you whether it ran.
 
 ## Status — reconciled 2026-09-18
 
+**Refusal-test follow-up, 2026-09-18:** all seven known failures pass in the
+focused run (54 passed, 4 subtests passed). Concrete physics fixtures now reach
+the production serialization path, and refusal tests cover nomination followed
+by Stage Manager arbitration, including reason, receipt, scar, and one ATP
+charge. Production gate thresholds and routing are unchanged. See the
+[refusal-test handoff](SESSION_HANDOFF.md#refusal-tests-2026-09-18).
+The complete suite on the latest tree plus the refusal routing unification returned
+**525 passed, 5 skipped, 29 subtests passed**. All existing unit tests pass
+cleanly. This is the new full-suite baseline.
+
+**Atomic quicksave follow-up, 2026-09-18:** R2 is repaired. Quicksave now writes
+and syncs a same-directory temporary file before atomic replacement. Failure
+regressions verify preservation of the previous checkpoint and cleanup of
+unpublished temporary files. The next priority is the seven refusal-test
+failures. See the [quicksave handoff](SESSION_HANDOFF.md#quicksave-repair-2026-09-18).
+The complete suite on `8069778` plus the embedding and quicksave repairs returned
+**518 passed, 7 failed, 5 skipped, 29 subtests passed**. All five new quicksave
+tests passed; the seven failures are unchanged. This is the current full-suite
+baseline.
+
+**Embedding follow-up, 2026-09-18:** R1/R1b are repaired. Transient hash vectors
+are uncached, fallback receipts identify their actual source, recovery retries
+failed texts, and runtime degradation preserves the startup vector width.
+The terminal hash transition clears the semantic cache. Downstream stores are
+not automatically re-embedded; hash operation remains non-semantic. See the
+[embedding handoff](SESSION_HANDOFF.md#embedding-repair-2026-09-18).
+The complete suite on `8069778` plus the embedding repair returned **513 passed,
+7 failed, 5 skipped, 27 subtests passed**. The seven failures are unchanged;
+all five new embedding regressions passed. The quicksave run above supersedes
+this baseline.
+
 **Shutdown follow-up, 2026-09-18:** R3 is repaired. The cycle daemon and workers
 finish before persistence and telemetry teardown, and test fixtures clean up
 engines even after a subclass setup failure. A complete suite on `8bdd960`
 plus this repair returned **508 passed, 7 failed, 5 skipped, 22 subtests passed**.
 All four new shutdown regressions passed; the seven failures are the same
 ones reproduced before the repair. Embedding fallback and quicksave defects
-remain open. See the [latest handoff](SESSION_HANDOFF.md#stabilization-2026-09-18).
+were still open at that point; both are repaired in the follow-ups above. See the [latest handoff](SESSION_HANDOFF.md#stabilization-2026-09-18).
 This follow-up supersedes the review baseline below.
 
 The review covered `b0a096e` plus existing working-tree changes. No repairs were
@@ -73,7 +104,7 @@ test counts attached to older milestones describe those earlier checks.
 | **A1b** unmute severity logs | **done**: 25 sites fixed, 0 remain, lint test added |
 | **A1** strict config + boot manifest | **done**: 10 keys promoted, audit wired into genesis |
 | **C1** hippocampus | **done**: write path, graph contract, amputation, 11 tests |
-| **A3** receipts | **implemented, defect open**: nine registered subsystem names and `/diag`; transient embedding fallback can report healthy HTTP work |
+| **A3** receipts | **implemented, embedding receipt defect repaired**: nine registered subsystem names and `/diag`; fallback provenance now has failure/recovery regression coverage |
 | **C2** `wing_id` zones | **done**: tagged, scoped, doorway wired, 14 tests |
 | **A5** physics input balance | **done**: all four fixes, scorecard tool |
 | **A6** close the guessing gap | **done**: 13% -> 81% resolved, 37 tests |
@@ -84,12 +115,10 @@ test counts attached to older milestones describe those earlier checks.
 | **C3** co-regulation | **done**: found the severed serialization; user model now first-class |
 | **C4** Stage Manager and Silence | **done**: Tension is a state, Silence is an outcome, 21 tests |
 | **C5** somatic translation | **measured**: anaerobic shortens sentences ~10%; "3 sentences or less" is not obeyed |
-| **D** the somatic contract | **partly implemented, validation open**: D0 has historical live measurements; D0b awaits a confirming live census; D1/D2 budget and wording plus D9 nomination routing are present, with refusal-test failures |
+| **D** the somatic contract | **partly implemented, validation open**: D0 has historical live measurements; D0b awaits a confirming live census; D1/D2 budget and wording plus D9 nomination routing are present, with refusal regressions passing and live verification still open |
 
-Next proposed repair round: stabilize embedding fallback/cache identity and
-dimensions, checkpoint writes, and the failing regression
-baseline. Then audit the existing D1/D2/D9 implementation against the acceptance
-criteria below and rerun live measurements. The D0 census recorded ATP between
+Next round: checkpoint, embedding fallback, shutdown, and the seven failing
+regressions have been repaired as recorded above. Audit the existing D1/D2/D9 implementation against the acceptance criteria below and rerun live measurements. The D0 census recorded ATP between
 16 and 53 over 30 turns after the earlier six-turn starvation defect was
 addressed. That historical energy result does not validate the current refusal
 behavior; D0b's post-tolerance census was interrupted before its first turn.
@@ -1535,8 +1564,8 @@ flagging and distressed phases.
 **September 18 status:** nomination objects, Stage Manager arbitration, and
 refusal receipts are already present in the code. The design below remains an
 acceptance target, not proof that every refusal has migrated. Seven regression
-tests fail in the reviewed tree, several at this boundary, and no new live
-census established completion.
+tests failed in the reviewed tree, several at this boundary; all seven were
+repaired in the follow-up above. No new live census has established completion.
 
 Chosen as the destination for refusal, after the D0b tolerances buy room to
 work. Before nomination routing, five mechanisms could independently stop a

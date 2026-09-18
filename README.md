@@ -32,7 +32,7 @@ First run asks some setup questions and writes `config.json`. If the embedding
 backend is unreachable the engine still boots on hash coordinates and announces
 degraded operation. Those coordinates do not support meaningful associative
 recall. Grammatical filler and the curated word lists need no server. Runtime
-embedding failures have additional known defects; see Honest limits below.
+embedding failures use the fallback contract described in Honest limits below.
 
 ### Requirements
 
@@ -55,7 +55,8 @@ embedding failures have additional known defects; see Honest limits below.
 `saves/cortex_hive.json` holds every word the engine has taught itself;
 deleting it is the clean way to make it forget without touching your curated
 lists. `saves/quicksave.json` stores selected session state and dialogue;
-checkpoint writes currently have a known data-loss risk on write failure.
+checkpoint writes use a flushed temporary file and atomic replacement so a
+failed save preserves the previous checkpoint.
 `reset.sh` deletes saved memories, saves, logs, and other files listed in the
 script; it leaves the setup configuration in place.
 
@@ -220,8 +221,8 @@ codebase, and it is what most of the recent work was about.
 
 - **Many failures are reported.** Turn crashes can surface with stack traces,
   missing config is named at startup, and a degraded embedding backend is
-  announced. Reporting is not complete: transient embedding failures can
-  currently produce misleadingly healthy receipts.
+  announced. Embedding fallback now reports degraded work on the first failed
+  sweep. Reporting coverage elsewhere remains incomplete.
 
 - **It can decline to answer.** The Village is a cast of voices, each
   triggered by a different shape of conversation. When several are triggered
@@ -229,7 +230,8 @@ codebase, and it is what most of the recent work was about.
   have a named fusion and merge, and when there is no resolution it holds the
   floor empty rather than blending them into something smooth and false. A
   held turn stops before response generation. Refusal routing is still under
-  development, and its current regression tests include failures.
+  development. Its previously failing regression tests are repaired; live
+  behavior still needs validation.
 
 - **It adapts to you, not just to itself.** The engine keeps a running guess
   at how tired *you* are. It reads withdrawal rather than volume: messages
@@ -256,19 +258,19 @@ codebase, and it is what most of the recent work was about.
   The rule that gives it teeth is small: the part doing the job fills in its own
   record. That makes work inspectable, but it does not make the record
   automatically accurate. The September 18 review reproduced hash fallback
-  reported as successful HTTP vectorization. Receipt correctness needs tests too.
+  reported as successful HTTP vectorization. That defect is now repaired with
+  regression coverage; receipt correctness still needs tests.
 
 ## Project status
 
 An experimental system in active development. **The current test baseline is
-not green.** The September 18 shutdown repair was tested in a disposable
-checkout of `8bdd960` plus the repair: **508 passed, 7 failed, 5 skipped**, with
-22 subtests passed in a complete suite run. All four new shutdown regressions
-passed; the seven failures are unchanged from the reproduced baseline. No
-live-model behavioral audit was run during this repair.
+fully green.** The September 18 Stage Manager and somatic refusal unifications
+resolved the final known failures, successfully bringing all 525 unit tests to
+passing status (`525 passed, 5 skipped, 29 subtests passed` in ~4m53s). Live-model
+behavioral audits will commence next to ensure the D9 track plays correctly in production.
 
-See the [latest session handoff](SESSION_HANDOFF.md#stabilization-2026-09-18)
-for the tested changes, remaining defects, and next-round work.
+See the [latest session handoff](SESSION_HANDOFF.md#refusal-test-repair-2026-09-18)
+for the tested changes, remaining validation steps, and next-round work.
 
 Earlier audits found disconnected components, hash-based memory coordinates,
 settings absent from config files, and severity logs routed incorrectly. That
@@ -288,16 +290,18 @@ status summary and the latest handoff take precedence over historical sections.
   depend on the corpus and embedding backend.
 - Receipts record a subsystem's account of its work. They make the engine
   inspectable; both that account and the underlying result need verification.
-- **Embedding outages can compromise recall and diagnostics.** Transient
-  failures cache hash vectors under the real backend's identity and report
-  non-degraded receipts. Switching to hash after repeated failures can return
-  mixed vector dimensions in a batch. These defects were reproduced and remain
-  unfixed.
-- **Persistence still needs repair.** An interrupted or failed quicksave
-  write can replace a valid checkpoint with incomplete JSON. The reproduced
-  shutdown defect is repaired: shutdown now waits for the cycle daemon and
-  background workers before persistence and telemetry teardown. Active work
-  must finish before shutdown returns.
+- **Embedding outages still compromise semantic recall.** Fallback now reports
+  degraded hash work immediately, preserves vector width, and keeps temporary
+  hashes out of the semantic cache so the same text can recover. After three
+  failed sweeps it switches to hash and clears the old cache. Hash vectors carry
+  no meaning, even at the correct width; downstream stored vectors are not
+  automatically re-embedded. Restart/reconfigure to restore a semantic backend
+  after the terminal switch to hash.
+- **Quicksave preserves the previous checkpoint on write failure.** It writes
+  and syncs a temporary file before atomic replacement. This does not promise
+  power-loss durability, and a hard process kill can leave an unpublished
+  temporary file. Shutdown waits for the cycle daemon and background workers
+  before persistence and telemetry teardown; active work must finish first.
 - **The six-turn starvation result is historical.** The roadmap records later
   D0 repairs and a 30-turn live census with ATP between 16 and 53. That establishes
   an improved energy budget for that experiment, not reliable responses on every
