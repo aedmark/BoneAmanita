@@ -1695,7 +1695,7 @@ D3's measurement module.
 two models, and a tired or disengaged partner measurably gets a lighter
 reply than a fresh one.
 
-## D3. Enforce what does not need the model's cooperation
+## D3. Enforce what does not need the model's cooperation (done)
 
 The Lexical Firewall is the most valuable mechanism in the codebase
 because it does not trust the model: it checks and re-asks. The body should

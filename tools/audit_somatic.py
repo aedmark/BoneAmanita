@@ -60,6 +60,9 @@ sys.path.insert(0, ".")
 os.environ.setdefault("BONE_EMBED_BACKEND", "hash")
 
 import numpy as np  # noqa: E402
+from body.somatic_metrics import (
+    MEASURES, visible_text, split_sentences, measure
+)
 
 MESSAGES = [
     "hey",
@@ -112,35 +115,6 @@ LAMBDA_TAG = re.compile(r"\n?<cd_lambda_1>[-\d.]+</cd_lambda_1>")
 # Thinking models spend reasoning tokens from the same budget, and an exhausted
 # budget returns empty content. No mistral-nemo reply came near 800.
 SAMPLING = {"temperature": 0.7, "top_p": 0.95, "max_tokens": 4000}
-
-WORD = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
-SENTENCE_END = re.compile(r"(?<=[.!?])[\"')\]]*\s+(?![a-z])|\n+")
-ADJ_SUFFIX = re.compile(
-    r"(?:ous|ful|ive|al|ic|less|able|ible|ish|y)$", re.IGNORECASE
-)
-
-# Performing a state instead of writing in it. The kernel prompt forbids both.
-STAGE_DIRECTION = re.compile(r"\([^)]{3,}\)|\*[^*\n]{3,}\*|<(?:pause|sigh|exhale|inhale)[^>]*>", re.IGNORECASE)
-BREATH_WORDS = frozenset(
-    "breath breaths breathe breathes breathing breathless breathlessly inhale inhales inhaled "
-    "exhale exhales exhaled lungs gasp gasps gasped gasping pant panting rasp raspy throat "
-    "heartbeat pulse chest ragged".split()
-)
-
-MEASURES = [
-    ("words", "total words"),
-    ("sentences", "sentence count"),
-    ("words_per_sentence", "words per sentence"),
-    ("chars_per_word", "characters per word"),
-    ("mattr", "type-token ratio (MATTR-25)"),
-    ("commas_per_sentence", "commas per sentence"),
-    ("adj_proxy_per_100", "suffix adjective proxy /100w"),
-    ("within_3_sentences", "share within 3 sentences"),
-    ("stage_directions", "stage directions per reply"),
-    ("breath_words_per_100", "breath and body words /100w"),
-    ("no_visible_prose", "share with no visible prose"),
-    ("validator_rejects", "share validator would reject"),
-]
 
 CONTRASTS = [("ANAEROBIC", "CONTROL"), ("EXHAUSTED", "CONTROL"), ("BOTH", "CONTROL")]
 
@@ -278,63 +252,6 @@ def generate(model: str, reasoning: str, repeats: int, cache: Path) -> None:
 
 
 # --- measurement ------------------------------------------------------------
-
-_THINK = re.compile(
-    r"<(?:think|thought|system_thinking)>.*?(?:</(?:think|thought|system_thinking)>|$)",
-    re.DOTALL | re.IGNORECASE,
-)
-_TELEMETRY = re.compile(r"<system_telemetry>.*?(?:</system_telemetry>|$)", re.DOTALL | re.IGNORECASE)
-
-
-def visible_text(reply: str) -> str:
-    """What the reader sees: the validator strips these two blocks before display."""
-    return _TELEMETRY.sub("", _THINK.sub("", reply)).strip()
-
-
-def split_sentences(text: str) -> list:
-    return [s for s in (p.strip() for p in SENTENCE_END.split(text)) if WORD.search(s)]
-
-
-def mattr(words: list, window: int = 25) -> float:
-    """Moving-average type-token ratio. Plain TTR falls as a text gets longer, so
-    it would report any length change as a vocabulary change."""
-    lowered = [w.lower() for w in words]
-    if len(lowered) <= window:
-        return len(set(lowered)) / len(lowered) if lowered else float("nan")
-    ratios = [len(set(lowered[i : i + window])) / window for i in range(len(lowered) - window + 1)]
-    return sum(ratios) / len(ratios)
-
-
-def measure(reply: str, validator_valid: bool) -> dict:
-    """An empty visible reply is its own outcome. Scored as prose it would count
-    as zero sentences, and so as perfect obedience to "3 sentences or less"."""
-    text = visible_text(reply)
-    words = WORD.findall(text)
-    sentences = split_sentences(text)
-    n_w, n_s = len(words), len(sentences)
-    shared = {
-        "no_visible_prose": float(n_w == 0),
-        "validator_rejects": float(not validator_valid),
-    }
-    if not n_w:
-        return {**{k: float("nan") for k, _ in MEASURES}, **shared}
-    long_words = [w for w in words if len(w) > 4]
-    return {
-        **shared,
-        "words": n_w,
-        "sentences": n_s,
-        "words_per_sentence": n_w / n_s if n_s else float("nan"),
-        "chars_per_word": sum(map(len, words)) / n_w if n_w else float("nan"),
-        "mattr": mattr(words),
-        "commas_per_sentence": text.count(",") / n_s if n_s else float("nan"),
-        "adj_proxy_per_100": 100 * sum(bool(ADJ_SUFFIX.search(w)) for w in long_words) / n_w
-        if n_w
-        else float("nan"),
-        "within_3_sentences": float(n_s <= 3),
-        "stage_directions": len(STAGE_DIRECTION.findall(text)),
-        "breath_words_per_100": 100 * sum(w.lower() in BREATH_WORDS for w in words) / n_w,
-    }
-
 
 # --- statistics -------------------------------------------------------------
 

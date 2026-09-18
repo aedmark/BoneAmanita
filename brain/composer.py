@@ -13,6 +13,7 @@ from core import EventBus, JSONEncoder, Prisma
 from presets import BoneConfig
 from receipts import issue as issue_receipt
 from struts import safe_get, ux, ux_format
+from body.somatic_metrics import STAGE_DIRECTION, trim_to_sentence_cap
 
 
 class SynapseError(Exception):
@@ -1056,13 +1057,19 @@ class ResponseValidator:
                     primary_replacement = self._generate_dynamic_rejection(
                         "MARKDOWN_DETECTED"
                     )
-        phys_ref = _state.get("physics", {})
-        voltage = float(safe_get(phys_ref, "voltage", 30.0))
-        if voltage > 60 and "?" in sanitized_response[-15:]:
+        budget = _state.get("somatic_budget")
+        if budget and not budget.closing_question_allowed and "?" in sanitized_response[-15:]:
             if not primary_replacement:
                 primary_replacement = f"{self._generate_dynamic_rejection('QUESTION_ASKED')}{ux('brain_strings', 'val_gordon_question', '')}"
             errors_found.append(
-                "DO NOT END YOUR TURN WITH A QUESTION. Let the silence hang."
+                "DO NOT END YOUR TURN WITH A QUESTION. The user is flagging."
+            )
+            
+        if budget and budget.forbid_body_narration and STAGE_DIRECTION.search(sanitized_response):
+            if not primary_replacement:
+                primary_replacement = self._generate_dynamic_rejection('BODY_NARRATION')
+            errors_found.append(
+                "DO NOT NARRATE ACTIONS OR USE STAGE DIRECTIONS (e.g. *sighs*, *looks away*). Speak only the words."
             )
         for compiled_reg, p in self.compiled_patterns:
             if active_mode == "TECHNICAL" and p.get("name") in [
@@ -1131,9 +1138,14 @@ class ResponseValidator:
             }
             self.last_failed_attempt = None
             self.last_feedback = None
+        budget = _state.get("somatic_budget")
+        final_content = sanitized_response
+        if budget and budget.sentence_cap:
+            final_content = trim_to_sentence_cap(final_content, budget.sentence_cap)
+
         return {
             "valid": True,
-            "content": sanitized_response,
+            "content": final_content,
             "meta_logs": extracted_meta_logs,
             "learned_triplet": learned_triplet,
         }

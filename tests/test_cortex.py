@@ -94,13 +94,15 @@ class CortexArchitectTests(BoneTestCase):
         }
         sim_result = {"ui": "Standard interface output."}
 
-        ctx = MagicMock()
-        ctx.physics = MagicMock()
-        ctx.physics.get = phys_state.get
-        ctx.physics.__dict__.update(phys_state)
-        ctx.input_text = "test"
-        ctx.is_system_event = False
-        ctx.nominations = []
+        from core import CycleContext, PhysicsPacket
+        ctx = CycleContext(input_text="test", clean_words="test")
+        ctx.physics = PhysicsPacket()
+        ctx.physics.narrative_drag = phys_state.get("narrative_drag", 1.0)
+        ctx.physics.chi = phys_state.get("chi", 0.0)
+        ctx.physics.m_a = phys_state.get("m_a", 0.0)
+        ctx.physics.delta_atp = phys_state.get("delta_atp", 0.0)
+        ctx.physics.delta_ros = phys_state.get("delta_ros", 0.0)
+        self.mock_services.bio.mito.state.ros_buildup = 0.0
         self.cortex.nominate_toxicity(ctx)
         
         self.assertEqual(len(ctx.nominations), 1)
@@ -121,13 +123,15 @@ class CortexArchitectTests(BoneTestCase):
         sim_result = {"ui": ""}
         self.mock_services.bio.mito.state.ros_buildup = 0.0
 
-        ctx = MagicMock()
-        ctx.physics = MagicMock()
-        ctx.physics.get = phys_state.get
-        ctx.physics.__dict__.update(phys_state)
-        ctx.input_text = "test"
-        ctx.is_system_event = False
-        ctx.nominations = []
+        from core import CycleContext, PhysicsPacket
+        ctx = CycleContext(input_text="test", clean_words="test")
+        ctx.physics = PhysicsPacket()
+        ctx.physics.narrative_drag = phys_state.get("narrative_drag", 1.0)
+        ctx.physics.chi = phys_state.get("chi", 0.0)
+        ctx.physics.m_a = phys_state.get("m_a", 0.0)
+        ctx.physics.delta_atp = phys_state.get("delta_atp", 0.0)
+        ctx.physics.delta_ros = phys_state.get("delta_ros", 0.0)
+        self.mock_services.bio.mito.state.ros_buildup = 0.0
         self.cortex.nominate_toxicity(ctx)
         
         self.assertEqual(len(ctx.nominations), 1)
