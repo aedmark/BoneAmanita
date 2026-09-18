@@ -13,10 +13,15 @@ class SomaticBudget:
     reason: str
 
     @classmethod
-    def evaluate(cls, user_state: Dict[str, float], engine_state: Dict[str, Any]) -> "SomaticBudget":
+    def evaluate(
+        cls,
+        user_state: Dict[str, float],
+        engine_state: Dict[str, Any],
+        active_mode: str = "",
+    ) -> "SomaticBudget":
         """
         Evaluate the combined somatic budget from the user's state and the engine's state.
-        
+
         Primary constraints: user exhaustion (E_u) and effort (P_u).
         Secondary constraints: engine depletion (ATP).
         """
@@ -73,6 +78,11 @@ class SomaticBudget:
             offer_to_carry_load=offer_to_carry_load,
             retry_allowance=retry_allowance,
             temperature_band=temp_band,
-            forbid_body_narration=True,
+            # ADVENTURE's own room-description template requires "**Header**"
+            # markdown and "(via X)" exit clauses; the stage-direction ban
+            # (built for dialogue asides like "*sighs*") cannot tell those
+            # apart from real narration, so it rejected every compliant
+            # ADVENTURE reply. Scope the ban to modes it was written for.
+            forbid_body_narration=active_mode != "ADVENTURE",
             reason="; ".join(reason_parts)
         )

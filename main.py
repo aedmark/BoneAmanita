@@ -189,10 +189,6 @@ class BoneAmanita:
             self.set_atp(start_atp)
 
     def _apply_boot_mode(self):
-        # One tolerance, read by every gate that can refuse a turn or bill the
-        # body for danger (ROADMAP D0b). It lives on the config because the
-        # gates are spread across the cortex, the phases and the crucible, and
-        # they all already hold a config reference.
         self.config.GATE_TOLERANCE = float(self.mode_settings.get("gate_tolerance", 1.0))
         msg = ux("main_strings", "engaging_mode")
         self.events.log(msg.format(boot_mode=self.boot_mode))
@@ -829,6 +825,8 @@ if __name__ == "__main__":
         boot_packet = session.engage_cold_boot()
         if boot_packet and boot_packet.get("ui"):
             typewriter(boot_packet["ui"])
+        for log in session.events.flush():
+            print(f"{Prisma.GRY}   >>> {log['text']}{Prisma.RST}")
         prompt_ind = ux("main_strings", "prompt_indicator")
         term_div = ux("main_strings", "terminal_divider")
         split_token = ux("main_strings", "ui_split_token")

@@ -6,7 +6,10 @@ ADJ_SUFFIX = re.compile(
     r"(?:ous|ful|ive|al|ic|less|able|ible|ish|y)$", re.IGNORECASE
 )
 
-STAGE_DIRECTION = re.compile(r"\([^)]{3,}\)|\*[^*\n]{3,}\*|<(?:pause|sigh|exhale|inhale)[^>]*>", re.IGNORECASE)
+STAGE_DIRECTION = re.compile(
+    r"\([^)]{3,}\)|(?<!\*)\*(?!\*)[^*\n]{3,}\*(?!\*)|<(?:pause|sigh|exhale|inhale)[^>]*>",
+    re.IGNORECASE,
+)
 BREATH_WORDS = frozenset(
     "breath breaths breathe breathes breathing breathless breathlessly inhale inhales inhaled "
     "exhale exhales exhaled lungs gasp gasps gasped gasping pant panting rasp raspy throat "

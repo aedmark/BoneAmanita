@@ -223,6 +223,7 @@ class BoneConfig:
             "EXHAUSTION_GATE",
             "COUNTERFACTUAL_ROS_GATE",
             "REASONING_EFFORT",
+            "COGNITIVE_RETRY_LIMIT",
         ],
         "MACHINE": ["PACEMAKER_BOREDOM_THRESHOLD", "CRUCIBLE_MELTDOWN_VOLTAGE"],
         "DRIVERS": [
