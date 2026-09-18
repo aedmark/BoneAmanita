@@ -29,6 +29,7 @@ from genesis import BoneGenesis
 from mechanics.commands import CommandProcessor
 from mechanics.lexicon import LexiconService
 from mechanics.setup import ConfigWizard
+from mechanics.providers import environment_config
 from mechanics.terminal import SessionGuardian, typewriter
 from mechanics.tools import TheSubstrate
 from physics import NaviSADProtocol, ZoneInertia
@@ -822,7 +823,7 @@ if __name__ == "__main__":
             tel.shutdown()
 
     sys.excepthook = global_exception_handler
-    sys_config = ConfigWizard.load_or_create()
+    sys_config = environment_config(ConfigWizard.load_or_create())
     engine = BoneAmanita(config=sys_config)
     with SessionGuardian(engine) as session:
         boot_packet = session.engage_cold_boot()

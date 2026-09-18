@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 
 from core import EventBus, JSONEncoder, Prisma
 from presets import BoneConfig
+from mechanics.providers import CLOUD_ENDPOINTS, KEY_ENV, normalize_provider
 from receipts import issue as issue_receipt
 from struts import safe_get, ux, ux_format
 from body.somatic_metrics import STAGE_DIRECTION, trim_to_sentence_cap
@@ -57,15 +58,23 @@ class LLMInterface:
         self.events = events_ref
         env_url = os.environ.get("OLLAMA_BASE_URL")
         prov_val = safe_get(self.cfg, ["PROVIDER", "provider"], "ollama")
-        self.provider = (provider or prov_val).lower()
+        self.provider = normalize_provider(provider or prov_val)
+        if self.provider != "ollama":
+            env_url = None
+        self.strict_live = os.getenv("BONE_STRICT_LIVE") == "1"
+        self.live_successes = 0
+        self.live_failures = 0
         key_val = safe_get(self.cfg, ["API_KEY", "api_key"], "")
-        self.api_key = api_key or key_val
+        self.api_key = os.getenv(KEY_ENV.get(self.provider, ""), "") or api_key or key_val
+        if self.provider in CLOUD_ENDPOINTS and self.api_key in ("", "ollama"):
+            raise ValueError(f"Set {KEY_ENV[self.provider]} before using {self.provider}")
         mod_val = safe_get(self.cfg, ["MODEL", "model"], "")
         self.model = model or mod_val
         defaults = safe_get(self.cfg, "DEFAULT_LLM_ENDPOINTS", {})
         self.base_url = (
             env_url
             or base_url
+            or CLOUD_ENDPOINTS.get(self.provider)
             or safe_get(
                 defaults, self.provider, "https://api.openai.com/v1/chat/completions"
             )
@@ -114,6 +123,24 @@ class LLMInterface:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {target_key}",
         }
+        payload = dict(payload)
+        payload.pop("temperature_band", None)
+        if self.provider == "xai" and override_url is None:
+            allowed = {"model", "messages", "stream", "max_tokens", "temperature", "top_p", "reasoning_effort"}
+            payload = {k: v for k, v in payload.items() if k in allowed}
+            # Apply our long stop list client-side; local sampler controls are
+            # not part of the cloud API contract.
+        if self.provider == "anthropic" and override_url is None:
+            headers = {"Content-Type": "application/json", "x-api-key": target_key,
+                       "anthropic-version": "2023-06-01"}
+            allowed = {"model", "messages", "stream", "max_tokens", "temperature"}
+            translated = {k: v for k, v in payload.items() if k in allowed}
+            translated.setdefault("max_tokens", 1024)
+            if "temperature" in translated:
+                translated["temperature"] = max(0.0, min(1.0, translated["temperature"]))
+            if "stop" in payload:
+                translated["stop_sequences"] = payload["stop"]
+            payload = translated
         data = json.dumps(payload, cls=JSONEncoder).encode()
         for attempt in range(network_retries + 1):
             try:
@@ -146,6 +173,9 @@ class LLMInterface:
     def _parse_response(body: str) -> str:
         try:
             result = json.loads(body)
+            if isinstance(result.get("content"), list):
+                return "".join(block.get("text", "") for block in result["content"]
+                               if block.get("type") == "text")
             if "choices" in result and result["choices"]:
                 return result["choices"][0].get("message", {}).get("content", "")
             if "message" in result:
@@ -180,6 +210,9 @@ class LLMInterface:
         out to be the mean ordvec similarity wearing a Laplacian.
         """
         if not self._is_synapse_active():
+            if self.strict_live:
+                self.live_failures += 1
+                raise SynapseError("Live provider circuit is open")
             return self.mock_generation(prompt, reason="CIRCUIT_BROKEN")
         gate_match = re.search(r"<thermal_gate>([-\d.]+)</thermal_gate>", prompt)
         if gate_match:
@@ -241,8 +274,12 @@ class LLMInterface:
                     self.events.log(f"{Prisma.GRN}{msg}{Prisma.RST}", "SYS")
             self.failure_count = 0
             self.circuit_state = "CLOSED"
+            self.live_successes += 1
             return content
         except AuthError as e:
+            self.live_failures += 1
+            if self.strict_live:
+                raise
             self.circuit_state = "OPEN"
             self.failure_count = self.failure_threshold + 1
             self.last_failure_time = time.time()
@@ -252,6 +289,9 @@ class LLMInterface:
             auth_fail = ux("brain_strings", "synapse_auth_failure")
             return auth_fail.format(e=e)
         except Exception as e:
+            self.live_failures += 1
+            if self.strict_live:
+                raise
             if self.provider != "ollama":
                 try:
                     fallback = self._local_fallback(payload)

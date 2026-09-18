@@ -373,3 +373,44 @@ is ordinary Python and carries no proofs.
 
 MIT, in a human/computer variant that asks for transparency about how the code
 was made. See `license.txt`.
+
+### Live Grok / Claude runs
+
+Run these commands from the project terminal. Each asks for the API key with
+hidden input (paste it and press Enter); it is kept only in process memory.
+Existing `XAI_API_KEY` / `ANTHROPIC_API_KEY` environment variables also work.
+
+```bash
+.venv/bin/python tools/live_run.py --provider xai
+.venv/bin/python tools/live_run.py --provider anthropic
+```
+
+Defaults are `grok-4.3` and `claude-haiku-4-5`, economical current options checked
+September 18, 2026. Use `--model grok-4.6` for the newest Grok generation at a
+higher token price. Model availability depends on your account.
+
+The runner uses the actual `main.BoneAmanita` boot, turn pipeline, and shutdown,
+with two conversation turns. Use `--mode ADVENTURE` or repeat `--prompt "..."`
+for other scenarios. It copies authored inputs into a fresh `/tmp/bone-live-*`
+directory; existing saves and memories are not loaded or overwritten. The
+printed directory contains `live_report.json` and engine logs. Each run uses
+paid API calls, including internal cognition and DSPy calls; two user turns can
+cause several requests. This is not a spending cap.
+
+Strict live mode disables the main transport's local/mock fallback. The report
+requires successful cloud generation, zero recorded main-transport failures,
+and no terminal engine states. It is a smoke test, not an assertion that every
+subsystem (including embeddings and DSPy) is healthy; inspect logs and receipts
+for degraded components. Embeddings retain their independent local settings.
+
+For the ordinary interactive entry point, set the key in your shell with hidden
+input, then use environment overrides (your saved config stays unchanged):
+
+```bash
+read -rsp 'Claude API key: ' ANTHROPIC_API_KEY; echo
+export ANTHROPIC_API_KEY
+BONE_PROVIDER=anthropic BONE_MODEL=claude-haiku-4-5 BONE_STRICT_LIVE=1 .venv/bin/python main.py
+```
+
+For Grok, substitute `XAI_API_KEY`, `BONE_PROVIDER=xai`, and `BONE_MODEL=grok-4.3`.
+Interactive `main.py` uses your normal saved game and logs.

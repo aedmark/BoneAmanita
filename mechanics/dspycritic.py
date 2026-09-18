@@ -71,7 +71,9 @@ class DSPyCritic:
                         return val_lower
                     return getattr(BoneConfig, key.upper(), default)
 
-                provider = get_cfg("provider", "ollama")
+                from mechanics.providers import CLOUD_ENDPOINTS, KEY_ENV, normalize_provider
+                import os
+                provider = normalize_provider(get_cfg("provider", "ollama"))
                 model_name = get_cfg("model", "mistral-nemo")
                 raw_url = (
                     get_cfg("base_url", "http://127.0.0.1:11434/v1")
@@ -84,6 +86,13 @@ class DSPyCritic:
                         api_base=clean_url,
                         api_key="local-model-doesnt-need-a-key",
                     )
+                elif provider in CLOUD_ENDPOINTS:
+                    key = os.getenv(KEY_ENV[provider]) or get_cfg("api_key", "")
+                    prefix = "openai" if provider == "xai" else "anthropic"
+                    options = {"api_key": key, "max_tokens": 1024}
+                    if provider == "xai":
+                        options["api_base"] = CLOUD_ENDPOINTS[provider].removesuffix("/chat/completions")
+                    self.lm = dspy.LM(model=f"{prefix}/{model_name}", **options)
                 else:
                     self.lm = dspy.LM(model=model_name)
                 dspy.settings.configure(lm=self.lm)
