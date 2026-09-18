@@ -98,10 +98,18 @@ ARMS = {
     "ANAEROBIC": ("ANAEROBIC", 0.79),
     "EXHAUSTED": ("RESPIRING", 0.81),
     "BOTH": ("ANAEROBIC", 0.81),
+    "FRANTIC": ("FRANTIC", 0.79),
+    "HOSTILE": ("HOSTILE", 0.79),
+    "MANIC": ("MANIC", 0.79),
+    "LUCID": ("LUCID", 0.79),
 }
 
 ANAEROBIC_DIRECTIVE = "ANAEROBIC STATE. Raw, breathless, efficient prose."
 EXHAUSTION_DIRECTIVE = "You must conclude your thought in 3 sentences or less"
+FRANTIC_DIRECTIVE = "Current Biology: Adrenaline. The user is frantic. Anchor them with extremely short, declarative sentences."
+HOSTILE_DIRECTIVE = "Current Biology: Cortisol. The user is hostile. Keep total word count extremely low."
+MANIC_DIRECTIVE = "Current Biology: Dopamine. The user is missing connections. Over-explain using long, comma-heavy sentences."
+LUCID_DIRECTIVE = "Current Biology: Serotonin. Clarity achieved. Speak with structural precision and diverse vocabulary."
 
 # Every line allowed to differ between an arm and the control. Anything else
 # means a change elsewhere in the composer has leaked into the manipulation.
@@ -116,7 +124,10 @@ LAMBDA_TAG = re.compile(r"\n?<cd_lambda_1>[-\d.]+</cd_lambda_1>")
 # budget returns empty content. No mistral-nemo reply came near 800.
 SAMPLING = {"temperature": 0.7, "top_p": 0.95, "max_tokens": 4000}
 
-CONTRASTS = [("ANAEROBIC", "CONTROL"), ("EXHAUSTED", "CONTROL"), ("BOTH", "CONTROL")]
+CONTRASTS = [
+    ("ANAEROBIC", "CONTROL"), ("EXHAUSTED", "CONTROL"), ("BOTH", "CONTROL"),
+    ("FRANTIC", "CONTROL"), ("HOSTILE", "CONTROL"), ("MANIC", "CONTROL"), ("LUCID", "CONTROL")
+]
 
 
 # --- generation -------------------------------------------------------------
@@ -175,6 +186,12 @@ def check_arms(prompts: dict) -> None:
             raise AssertionError(f"{arm}: anaerobic directive presence is wrong")
         if (EXHAUSTION_DIRECTIVE in text) != (exhaustion > 0.8):
             raise AssertionError(f"{arm}: exhaustion directive presence is wrong")
+        
+        # Verify custom directives
+        if arm == "FRANTIC" and FRANTIC_DIRECTIVE not in text: raise AssertionError("FRANTIC missing")
+        if arm == "HOSTILE" and HOSTILE_DIRECTIVE not in text: raise AssertionError("HOSTILE missing")
+        if arm == "MANIC" and MANIC_DIRECTIVE not in text: raise AssertionError("MANIC missing")
+        if arm == "LUCID" and LUCID_DIRECTIVE not in text: raise AssertionError("LUCID missing")
         control = prompts["CONTROL"][0].splitlines()
         changed = set(text.splitlines()) ^ set(control)
         stray = [line for line in changed if not EXPECTED_DIFF.match(line)]
@@ -355,6 +372,10 @@ COMPARE_COLUMNS = [
     ("EXH <=3", "EXHAUSTED", "CONTROL", "within_3_sentences"),
     ("EXH reject", "EXHAUSTED", "CONTROL", "validator_rejects"),
     ("BOTH <=3", "BOTH", "CONTROL", "within_3_sentences"),
+    ("FRA w/sent", "FRANTIC", "CONTROL", "words_per_sentence"),
+    ("HOS words", "HOSTILE", "CONTROL", "words"),
+    ("MAN comma", "MANIC", "CONTROL", "commas_per_sentence"),
+    ("LUC mattr", "LUCID", "CONTROL", "mattr"),
 ]
 
 

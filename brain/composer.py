@@ -772,12 +772,6 @@ class PromptComposer:
         cues_map = [
             (psi, float(safe_get(c_cfg, "SOMATIC_PSI", 0.6)), "somatic_adrenaline"),
             (chi, float(safe_get(c_cfg, "SOMATIC_CHI", 0.6)), "somatic_cortisol"),
-            (beta, float(safe_get(c_cfg, "SOMATIC_BETA", 0.7)), "somatic_paradox"),
-            (
-                valence,
-                float(safe_get(c_cfg, "SOMATIC_VALENCE", 0.5)),
-                "somatic_oxytocin",
-            ),
         ]
         raw_cues = [
             ux("brain_strings", ux_key)

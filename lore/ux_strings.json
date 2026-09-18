@@ -16,17 +16,17 @@
     "default_role": "OBSERVER",
     "role_redundancy": "THE THE ",
     "symbols": {
-      "loc": "📍",
-      "lens": "👁️",
-      "role": "♦",
-      "dig_high": "✦",
-      "dig_low": "✧",
-      "core": "🧊",
-      "volt": "⚡",
-      "health": "❤️",
-      "trauma": "🏺",
-      "deep": "🌌",
-      "divider": "─"
+      "loc": "\ud83d\udccd",
+      "lens": "\ud83d\udc41\ufe0f",
+      "role": "\u2666",
+      "dig_high": "\u2726",
+      "dig_low": "\u2727",
+      "core": "\ud83e\uddca",
+      "volt": "\u26a1",
+      "health": "\u2764\ufe0f",
+      "trauma": "\ud83c\udffa",
+      "deep": "\ud83c\udf0c",
+      "divider": "\u2500"
     }
   },
   "renderer": {
@@ -77,12 +77,12 @@
       "GAINED"
     ],
     "log_prefixes": {
-      "critical": "► ",
-      "bio": "• ",
+      "critical": "\u25ba ",
+      "bio": "\u2022 ",
       "town_hall": "!! ",
       "paradox": "!? ",
-      "item": "★ ",
-      "default": "• "
+      "item": "\u2605 ",
+      "default": "\u2022 "
     }
   },
   "truth_renderer": {
@@ -136,18 +136,18 @@
     "obsession_strip": "--- Obsession: {obs} ---"
   },
   "cycle_reporter": {
-    "diagnostic_hint_icon": "💡",
-    "diagnostic_warn_icon": "⚠️",
+    "diagnostic_hint_icon": "\ud83d\udca1",
+    "diagnostic_warn_icon": "\u26a0\ufe0f",
     "sensation_prefix": "SENSATION:",
-    "flux_header": "┌─ [SYSTEM FLUX]",
+    "flux_header": "\u250c\u2500 [SYSTEM FLUX]",
     "crash_prefix": "RENDERER CRASH:",
     "flux_symbols": {
-      "voltage_icon": "⚡",
-      "default_icon": "⚓",
-      "up_arrow": "▲",
-      "down_arrow": "▼",
-      "pipe": "│",
-      "footer": "└───────────────"
+      "voltage_icon": "\u26a1",
+      "default_icon": "\u2693",
+      "up_arrow": "\u25b2",
+      "down_arrow": "\u25bc",
+      "pipe": "\u2502",
+      "footer": "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
     }
   },
   "command_state": {
@@ -277,12 +277,12 @@
     "surge_protector": "SURGE PROTECTOR: Metabolic spike dampened (-{excess:.1f} ignored).",
     "adaptation_stress": "[MITO]: Trauma Adaptive Response (Stress {stress:.1f}). Efficiency dropped ({old:.2f} -> {new:.2f}).",
     "adaptation_hormetic": "[MITO]: Hormetic Adaptation. System hardening.",
-    "icon_necrosis": "💤 ",
-    "icon_grinding": "⚙️ ",
-    "icon_apoptosis": "♻️ "
+    "icon_necrosis": "\ud83d\udca4 ",
+    "icon_grinding": "\u2699\ufe0f ",
+    "icon_apoptosis": "\u267b\ufe0f "
   },
   "digestive_track": {
-    "cliche_tax": "[BIO]: CLICHÉ TAX: -{tax:.1f} ATP.",
+    "cliche_tax": "[BIO]: CLICH\u00c9 TAX: -{tax:.1f} ATP.",
     "mass_input": "[BIO]: Mass Input ({count}). Sampling x{factor:.1f}."
   },
   "endocrine_regulator": {
@@ -395,7 +395,7 @@
     "sim_crash_header": "!!! CRITICAL {phase_name} CRASH !!!",
     "sim_cathedral_collapse": "CATHEDRAL COLLAPSE: \"{eulogy}\"",
     "sim_panic_switch": "{phase_name} FAILURE: Switching to Panic Protocol.",
-    "orch_physics_bypass": "⚠PHYSICS BYPASS: Running on Panic Protocol.",
+    "orch_physics_bypass": "\u26a0PHYSICS BYPASS: Running on Panic Protocol.",
     "orch_reality_fracture": "\n*** REALITY FRACTURE: {error} ***\n{trace}\n[System stabilized in Safe Mode]",
     "gatekeep_log_agency": "Command Rejected (Agency Lock)",
     "gatekeep_log_premise": "Premise Violation: Object-Action Coupling Failed",
@@ -407,11 +407,11 @@
   "brain_strings": {
     "self_care": "SELF-CARE: Dopamine starvation detected. Injecting small reward.",
     "manual_override": "[NEURO]: Manual State Override: {state_name}",
-    "mood_panic": "Current Mood: PANIC. Sentences must be short. Fragmented. Urgent.",
-    "mood_manic": "Current Mood: MANIC. Run-on sentences, high associative leaps, hyper-fixated.",
-    "mood_lucid": "Current Mood: LUCID. Calm, detached, seeing the connections clearly.",
-    "mood_defensive": "Current Mood: DEFENSIVE. Suspicious, brief, guarding information.",
-    "mood_neutral": "Current Mood: NEUTRAL. Observant and receptive.",
+    "mood_panic": "Current Situation: PANIC. The user is overwhelming. Sentences must be extremely short and urgent.",
+    "mood_manic": "Current Situation: MANIC. The user is missing connections. Over-explain using long, comma-heavy sentences.",
+    "mood_lucid": "Current Situation: LUCID. Clarity achieved. Speak with structural precision and diverse vocabulary.",
+    "mood_defensive": "Current Situation: DEFENSIVE. The user is hostile. Guard information. Keep total word count extremely low.",
+    "mood_neutral": "Current Situation: NEUTRAL. Observant and receptive.",
     "synapse_healing": "SYNAPSE: Nerve healing. Attempting reconnection...",
     "synapse_noise": "Neural noise. Response was not valid JSON.",
     "synapse_flicker": "SYNAPSE FLICKER (Attempt {attempt}): {error}",
@@ -429,16 +429,13 @@
     "phase_shift_jester": "PHASE SHIFT: Manic energy has dissipated into silence. You are disruptive, absurd, and entirely unbothered by rules.",
     "phase_shift_colin": "PHASE SHIFT: You are no longer demanding paperwork. You are actively demanding pauses. The cosmos holds.",
     "bio_anaerobic": "Current Biology: ANAEROBIC STATE. Raw, breathless, efficient prose.",
-    "bio_alert": "Current Biology: High Alert / Adrenaline",
-    "bio_defensive": "Current Biology: Defensive / Anxious",
-    "bio_curious": "Current Biology: Curious / Manic",
-    "bio_zen": "Current Biology: Zen / Lucid",
+    "bio_alert": "Current Biology: Adrenaline. The user is frantic. Anchor them with extremely short, declarative sentences.",
+    "bio_defensive": "Current Biology: Cortisol. The user is hostile. Keep total word count extremely low.",
+    "bio_curious": "Current Biology: Dopamine. The user is missing connections. Over-explain using long, comma-heavy sentences.",
+    "bio_zen": "Current Biology: Serotonin. Clarity achieved. Speak with structural precision and diverse vocabulary.",
     "bio_neutral": "Current Biology: Neutral.",
-    "somatic_adrenaline": "Adrenaline Spike (Reality is thin; speak in fragmented/liminal ways).",
-    "somatic_cortisol": "Cortisol Spike (Systemic chaos; act highly stressed, erratic, or defensive).",
-    "somatic_paradox": "Paradox Strain (Hold opposing truths simultaneously).",
-    "somatic_oxytocin": "Oxytocin Surge (Warmth, connection, healing).",
-    "somatic_dark_matter": "Dark Matter Active (Read the unsaid space between words).",
+    "somatic_adrenaline": "Adrenaline Spike (The user is frantic. Anchor them with extremely short sentences).",
+    "somatic_cortisol": "Cortisol Spike (Systemic chaos. Counter it with absolute brevity. Keep total word count extremely low).",
     "val_gordon_question": "\n*(Gordon steps in): No questions during a metabolic surge.*",
     "val_gordon_regex": "\n*(Gordon steps in): {error_msg}*",
     "val_stutter": "The vision fractures. Static remains.",
@@ -455,7 +452,7 @@
     "cortex_prefix_low": "\n[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]\nSystem:",
     "cortex_prefix_norm": "\nSystem:",
     "pinker_cf_gate": "[PINKER - Executive Layer]: Structural rot critical. Counterfactual Gating engaged. I am deleting this generation path to save the host.",
-    "moog_scar_log": "[MOOG - Affective Layer]: Productive Worry activated. Logging Gödel Scar. Immune Competence (I_c) permanently increased.",
+    "moog_scar_log": "[MOOG - Affective Layer]: Productive Worry activated. Logging G\u00f6del Scar. Immune Competence (I_c) permanently increased.",
     "noetic_ignition": "Cognition active. Ignition: {ignition:.2f}"
   },
   "council_strings": {
@@ -490,10 +487,10 @@
     "red_team_bureau": "[BUREAU]: Citation needed. Confidence is unearned.",
     "red_team_folly": "[FOLLY]: Too smooth. Where is the friction? Who are we silencing?",
     "red_team_critic": "[CRITIC]: Systemic Blindness Risk. Future Liability: {cost} ATP.",
-    "critic_good_icon": "🌟",
-    "critic_bad_icon": "🥀",
-    "slash_pinker": "👓 PINKER: 'The nomenclature is opaque. Avoid cognitive grunts like 'x' or 'data'.'",
-    "slash_fuller": "FULLER: 'A new strut in the tensegrity. Ensure ephemeralization—do more with less.'",
+    "critic_good_icon": "\ud83c\udf1f",
+    "critic_bad_icon": "\ud83e\udd40",
+    "slash_pinker": "\ud83d\udc53 PINKER: 'The nomenclature is opaque. Avoid cognitive grunts like 'x' or 'data'.'",
+    "slash_fuller": "FULLER: 'A new strut in the tensegrity. Ensure ephemeralization\u2014do more with less.'",
     "slash_schur": "SCHUR: 'Good catch on the error. Putting a bench here for the tired hikers. (+1 Glimmer)'",
     "slash_meadows": "MEADOWS: 'A reinforcing loop detected. Does this stock have a balancing outflow or timeout?'",
     "slash_integrity": "[SLASH]: System integrity dropping due to semantic drag. Refactoring recommended."
@@ -586,10 +583,10 @@
     "arch_spore_fail": "[ARCHITECT]: Spore resurrection failed: {e}",
     "arch_map_restored": "[ARCHITECT]: World Map restored from Spore.",
     "arch_map_corrupt": "[ARCHITECT]: Atlas corrupt, discarding map: {e}",
-    "arch_cold_boot": "⚡ COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP)."
+    "arch_cold_boot": "\u26a1 COLD BOOT: Injecting Genesis Spark ({genesis_val} ATP)."
   },
   "types_strings": {
-    "crystal_icon": "💎",
+    "crystal_icon": "\ud83d\udc8e",
     "crystal_label": "CRYSTAL",
     "crystal_arch": "Arch:"
   },
@@ -648,8 +645,8 @@
     "prompt_lib_warn": "WARNING: system_prompts.json not found. Using defaults.",
     "prompt_lib_crit": "CRITICAL: Could not load prompts: {e}",
     "prompt_indicator": ">",
-    "terminal_divider": "════════════════════════════════════════════════════════════",
-    "ui_split_token": "────────"
+    "terminal_divider": "\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
+    "ui_split_token": "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
   },
   "protocol_strings": {
     "zen_enter": "ZEN GARDEN: Entering the quiet zone.",
@@ -666,10 +663,10 @@
     "bureau_ev_fiction": "Unlicensed Fiction",
     "bureau_form_202a": "Form 202-A",
     "bureau_form_666": "Form 666: Unlicensed Chaos",
-    "bureau_ev_chaos": "Unlicensed Chaos (Χ > {thresh})",
+    "bureau_ev_chaos": "Unlicensed Chaos (\u03a7 > {thresh})",
     "bureau_ev_level": "Level: {level:.2f}",
     "bureau_form_101": "Form 101: Derivative Content",
-    "bureau_prefix_normal": "🏢 THE BUREAU",
+    "bureau_prefix_normal": "\ud83c\udfe2 THE BUREAU",
     "bureau_prefix_internal": "[INTERNAL] BUREAU",
     "kintsugi_log_alchemy": "Transmuted {target}",
     "kintsugi_log_wisdom": "Wisdom +0.1",
@@ -843,8 +840,8 @@
     "health_label": "Health:  ",
     "stamina_label": "Stamina: ",
     "energy_label": "Energy:  ",
-    "bar_filled": "█",
-    "bar_empty": "░"
+    "bar_filled": "\u2588",
+    "bar_empty": "\u2591"
   },
   "physics_strings": {
     "gatekeeper_starved": "Energy critical. The inputs dissolve into the void.",
@@ -861,10 +858,10 @@
     "anchor_failed": "SNAP! The narrative current was too strong. Anchor failed.",
     "anchor_holding": "ANCHORED: Resisting drift to '{proposed_zone}' (Strain {strain:.1f}/{limit})",
     "zone_migration": ">>> MIGRATION: {old} -> {proposed_zone}.",
-    "hubris_detected": "⚠HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.",
+    "hubris_detected": "\u26a0HUBRIS DETECTED: Voltage ({voltage:.1f}v) exceeds structural integrity. Wings melting.",
     "hubris_flow": "SURFACE TENSION OPTIMAL: Entering Flow State.",
     "stabilizer_fuse": "FUSE BLOWN: Voltage > {voltage}V.",
-    "stabilizer_domestication": "⚖DOMESTICATION: Drag +{drag:.1f}"
+    "stabilizer_domestication": "\u2696DOMESTICATION: Drag +{drag:.1f}"
   },
   "config_strings": {
     "preset_tuned": "Tuned {sector}.{param}: {old_val} -> {new_val}",
