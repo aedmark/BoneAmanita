@@ -210,7 +210,7 @@ class BoneConfig:
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
-    MODEL = "gemma4:e4b"
+    MODEL = "gemma4:12b"
     OLLAMA_FALLBACK = ""
     REQUIRED_CONFIG = {
         "CORTEX": [
