@@ -23,7 +23,7 @@ We would like to explicitly acknowledge the following individuals and architectu
 
     *What we removed, and why it is here:* until this revision the governor built a graph Laplacian over a memory subgraph and solved a nonlinear elliptic BVP by Picard iteration, and this file described that as the control loop. Instrumented on our own code with a subgraph seeded denser than a real session, the Laplacian contributed **1.53%** of the eigenvalue it produced, and the voltage input contributed nothing measurable: the reported number came back byte-identical at every voltage from 15 to 90. What remained after the topology and the voltage cancelled was the mean `ordvec` similarity, computed the expensive way. Spence predicted the magnitude from two numbers in an email before we measured it. The Laplacian and the Picard iteration are gone; the claim that they steered anything was ours, not his.
 
-    *On availability:* `ordvec` 0.5.0 is the last public build.
+    *On availability:* `ordvec` 0.5.0 is the last public build. We have added opportunistic support for 8-bit quantization arriving in a private `0.10.0` wheel (the upstream repo is currently locked at `0.5.0`).
 
     *On verification:* `ordvec` carries a Lean 4 formalisation, so the candidate selection underneath both the subconscious memory search and the governor's regime gate rests on machine-checked code, and the Creative Determinant has a formalisation of its own. What is *not* verified is BoneAmanita's own implementation, which is ordinary Python and carries no proofs.
 

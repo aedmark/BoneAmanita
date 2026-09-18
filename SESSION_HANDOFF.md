@@ -1210,7 +1210,7 @@ them as a specification:
   ```bash
   python3 -m venv .venv && .venv/bin/pip install pytest numpy faiss-cpu requests markdown
   ```
-  `ordvec` IS on PyPI and installs cleanly (`pip install 'ordvec>=0.5.0'` (we have opportunistically added try-catch readiness for `0.10.0` and its 8-bit quantization),
+  `ordvec` IS on PyPI and installs cleanly (`pip install 'ordvec>=0.5.0'` (we have opportunistically added try-catch readiness for an upcoming private `0.10.0` wheel with 8-bit quantization, as the upstream repo is locked at `0.5.0` for now),
   version 0.5.0): it is Nelson Spence's, still published, and ships as a
   compiled abi3 wheel that works on Python 3.14. Install it; the suite is
   not fully green without it. `dspy` is still not installed here, stays
