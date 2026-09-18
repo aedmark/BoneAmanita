@@ -366,6 +366,8 @@ class TheCortex:
                 effect=outcome,
                 result_count=int(w),
                 inputs={
+                    "e_u": round(getattr(self.svc.shared_lattice.u, "E", 0.0), 2) if self.svc.shared_lattice else 0.0,
+                    "atp": round(getattr(self.svc.bio.mito.state, "atp_pool", 0.0), 1) if self.svc.bio else 0.0,
                     "budget": f"w:{somatic_budget.word_cap} s:{somatic_budget.sentence_cap}",
                     "measured_w": int(w),
                     "measured_s": int(s)
