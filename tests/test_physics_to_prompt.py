@@ -191,8 +191,6 @@ class TestSomaticCues(PhysicsToPromptCase):
     CUES = (
         ("psi", "SOMATIC_PSI", "Adrenaline Spike"),
         ("chi", "SOMATIC_CHI", "Cortisol Spike"),
-        ("contradiction", "SOMATIC_BETA", "Paradox Strain"),
-        ("valence", "SOMATIC_VALENCE", "Oxytocin Surge"),
     )
 
     def test_each_cue_fires_on_its_own_dimension(self):

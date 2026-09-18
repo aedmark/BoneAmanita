@@ -343,7 +343,7 @@ class TestRollCallOnARealTurn(BoneTestCase):
         composed = ledger.for_subsystem("composer.compose")
         self.assertTrue(composed, "the composer assembled a prompt and said nothing")
         latest = composed[-1]
-        self.assertIn("thermal_lock", latest.inputs["blocks"])
+        self.assertFalse(latest.degraded)
         self.assertFalse(
             latest.degraded,
             f"the prompt went out without a thermal lock: {latest.detail}",

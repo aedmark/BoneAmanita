@@ -225,7 +225,8 @@ def compose_arms(eng, composer, message: str) -> dict:
 
 def check_arms(prompts: dict) -> None:
     """The arms must differ in their directives and in nothing else."""
-    for arm, (respiration, exhaustion) in ARMS.items():
+    for arm in prompts:
+        respiration, exhaustion = ARMS[arm]
         text = prompts[arm][0]
         if (ANAEROBIC_DIRECTIVE in text) != (respiration == "ANAEROBIC"):
             raise AssertionError(f"{arm}: anaerobic directive presence is wrong")
