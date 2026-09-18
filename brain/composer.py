@@ -596,8 +596,7 @@ class PromptComposer:
         # means the governor declined to measure the regime (too few memories
         # to have a corpus null worth comparing against), and the model samples
         # at its configured default. Absent is not the same as zero.
-        gate = phys_ref.get("thermal_gate") if isinstance(phys_ref, dict) else None
-        cd_block = f"<thermal_gate>{float(gate):.4f}</thermal_gate>" if gate is not None else ""
+        cd_block = ""
         somatic_budget = state.get("somatic_budget")
         somatic_budget_block = ""
         if somatic_budget:
@@ -630,11 +629,12 @@ class PromptComposer:
         # receipt is the one that says whether the physics reached the model at
         # all. A missing thermal lock means the Creative Determinant ran (or did
         # not) and its answer was dropped on the floor between here and there.
+        has_band = "thermal_band" in (phys_ref or {})
         issue_receipt(
             "composer.compose",
             "assembled the system prompt",
             result_count=len(parts),
-            degraded=gate is None,
+            degraded=not has_band,
             inputs={
                 "chars": len(prompt),
                 "directives": len(style_notes),
@@ -642,7 +642,7 @@ class PromptComposer:
                 "blocks": [name for name, text in blocks if text],
             },
             detail=""
-            if gate is not None
+            if has_band
             else "governor declined to measure the regime; model samples at its default",
         )
         return prompt

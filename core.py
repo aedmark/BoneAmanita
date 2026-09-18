@@ -984,7 +984,7 @@ class CyberneticGovernor:
                 "mean": round(float(scores.mean()), 1),
                 "std": round(deviation, 2),
             },
-            detail=f"regime={self.last_sol} temperature={self.gate_temperature():.3f}",
+            detail=f"regime={self.last_sol} temperature_band={self.gate_temperature_band()}",
         )
 
         # z drives how much presence the memory field has, so it sets the
@@ -1007,8 +1007,8 @@ class CyberneticGovernor:
             self.target_d - drag
         ) * adjusted_dt
 
-    def gate_temperature(self) -> float:
-        """Sampling temperature from the regime signal.
+    def gate_temperature_band(self) -> tuple:
+        """The sampling band set by the regime signal.
 
         Below the pivot the neighbourhood is indistinguishable from the corpus
         null, so there is nothing coherent nearby and generation collapses to
@@ -1017,11 +1017,13 @@ class CyberneticGovernor:
         """
         pivot = self._gate_cfg("Z_PIVOT", 2.0)
         if self.last_z is None or self.last_z < pivot:
-            return float(self._gate_cfg("T_LOCKED", 0.0))
+            locked_t = float(self._gate_cfg("T_LOCKED", 0.0))
+            return (locked_t, locked_t)
         heat = self._gate_cfg("T_OPEN_BASE", 0.7) + self._gate_cfg(
             "T_GAIN", 0.15
         ) * (self.last_z - pivot)
-        return float(min(self._gate_cfg("T_MAX", 1.2), heat))
+        ceiling = float(min(self._gate_cfg("T_MAX", 1.2), heat))
+        return (0.0, ceiling)
 
     def _pid_fallback(
         self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None

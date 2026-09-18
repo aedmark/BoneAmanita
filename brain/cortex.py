@@ -1174,35 +1174,18 @@ class TheCortex:
 
         phys["wing_id"] = MycelialNetwork.current_wing(phys)
 
-    def _attach_thermal_gate(self, phys: Dict[str, Any]) -> None:
-        """Flatten the governor's sampling temperature onto the physics dict.
-
-        The composer emits this as <thermal_gate>, which LLMInterface.generate
-        reads, strips, and applies. The number in the tag IS the temperature;
-        it is not a proxy for one.
-
-        It used to be `<cd_lambda_1>`, carrying the Creative Determinant's
-        principal eigenvalue, and the naming outlived the truth. Measured on our
-        own code, the graph Laplacian contributed 1.53% of that eigenvalue and
-        the voltage input contributed nothing; what remained was the mean ordvec
-        similarity computed expensively. Calling a bitmap statistic `lambda_1`
-        would have been the same overclaim this codebase keeps having to walk
-        back, so the name went with the maths.
-
-        When the governor declined to measure (too few memories to have a corpus
-        null worth comparing against), nothing is attached at all and the model
-        samples at its configured default. A missing tag means "not measured",
-        which is a different statement from a temperature of zero.
+    def _attach_thermal_gate(self, phys: dict) -> None:
+        """Flatten the governor's sampling band onto the physics dict.
+        
+        The CD sets the band (locking it low for incoherence, opening it for coherence),
+        and the chemistry sets the position within the band natively through the modulator.
         """
         eng = getattr(self.svc.orchestrator, "eng", None)
         governor = getattr(eng, "governor", None)
         z = getattr(governor, "last_z", None)
-        # `isinstance` rather than a None check: under a mocked engine every
-        # attribute resolves to a truthy stand-in, and a gate built out of mocks
-        # would report a temperature nothing measured.
         if not isinstance(z, (int, float)):
             return
-        phys["thermal_gate"] = float(governor.gate_temperature())
+        phys["thermal_band"] = governor.gate_temperature_band()
         phys["thermal_z"] = float(z)
         phys["thermal_regime"] = str(getattr(governor, "last_sol", "not_measured"))
 

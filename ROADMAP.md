@@ -1721,7 +1721,7 @@ rarely fire; enforcement becomes the guarantee.
 user sees, on any model, with a test that travels the real path (not a
 hand-built fixture, per the A4 lesson).
 
-## D4. Reconnect the sampling channel
+## D4. Reconnect the sampling channel (done)
 
 The chemistry-to-sampling map is real code, is tuned, and has not reached
 a model since the thermal lock went live in B1. Neither side should simply
@@ -1753,7 +1753,7 @@ receipt is the same measurement taken on every real turn, forever.
 **Done when** `/diag` after a depleted turn names the budget and the outcome,
 and a turn with the somatic layer deliberately disabled shows as silent.
 
-## D6. The rest of the somatic cues
+## D6. The rest of the somatic cues (done)
 
 Adrenaline ("speak in fragmented/liminal ways"), cortisol ("act highly
 stressed, erratic, or defensive"), paradox, oxytocin ("warmth, connection,

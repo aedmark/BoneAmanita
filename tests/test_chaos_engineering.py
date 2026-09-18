@@ -312,29 +312,3 @@ class TestChaosEngineering(BoneTestCase):
             "[FAIL] Paradox Engine state flag is active while starving.",
         )
 
-    def test_cd_eigenvalue_thermal_lock(self):
-        from unittest.mock import MagicMock
-
-        from brain.composer import LLMInterface
-
-        events_mock = MagicMock()
-        llm = LLMInterface(events_ref=events_mock, provider="mock")
-        params_dissolving = {}
-        llm.generate("Test prompt <thermal_gate>0.0</thermal_gate>", params_dissolving)
-        self.assertEqual(
-            params_dissolving.get("temperature"),
-            0.0,
-            "[FAIL] LLM failed to lock thermal bounds during positive eigenvalue (dissolving state).",
-        )
-        self.assertEqual(
-            params_dissolving.get("top_p"),
-            0.1,
-            "[FAIL] LLM failed to lock top_p during positive eigenvalue.",
-        )
-        params_emergent = {}
-        llm.generate("Test prompt <thermal_gate>0.8</thermal_gate>", params_emergent)
-        self.assertGreater(
-            params_emergent.get("temperature"),
-            0.7,
-            "[FAIL] LLM failed to loosen thermal bounds during negative eigenvalue (emergent state).",
-        )

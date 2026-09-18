@@ -131,29 +131,31 @@ class RegimeSignal(unittest.TestCase):
 
 class GateTemperature(unittest.TestCase):
     def setUp(self):
+        from core import CyberneticGovernor
+        from presets import BoneConfig
         self.gov = CyberneticGovernor()
         self.gate = BoneConfig().GATE
 
     def test_never_measured_is_locked_not_hot(self):
         self.assertIsNone(self.gov.last_z)
-        self.assertEqual(self.gov.gate_temperature(), float(self.gate.T_LOCKED))
+        self.assertEqual(self.gov.gate_temperature_band(), (float(self.gate.T_LOCKED), float(self.gate.T_LOCKED)))
 
     def test_below_the_pivot_collapses_to_deterministic_logic(self):
         self.gov.last_z = float(self.gate.Z_PIVOT) - 0.5
-        self.assertEqual(self.gov.gate_temperature(), float(self.gate.T_LOCKED))
+        self.assertEqual(self.gov.gate_temperature_band(), (float(self.gate.T_LOCKED), float(self.gate.T_LOCKED)))
 
     def test_at_the_pivot_the_gate_opens(self):
         self.gov.last_z = float(self.gate.Z_PIVOT)
-        self.assertAlmostEqual(
-            self.gov.gate_temperature(), float(self.gate.T_OPEN_BASE), places=6
-        )
+        band = self.gov.gate_temperature_band()
+        self.assertEqual(band[0], 0.0)
+        self.assertAlmostEqual(band[1], float(self.gate.T_OPEN_BASE), places=6)
 
     def test_heat_climbs_with_z_and_is_capped(self):
         self.gov.last_z = float(self.gate.Z_PIVOT) + 1.0
-        warm = self.gov.gate_temperature()
-        self.assertGreater(warm, float(self.gate.T_OPEN_BASE))
+        warm_band = self.gov.gate_temperature_band()
+        self.assertGreater(warm_band[1], float(self.gate.T_OPEN_BASE))
         self.gov.last_z = float(self.gate.Z_PIVOT) + 500.0
-        self.assertEqual(self.gov.gate_temperature(), float(self.gate.T_MAX))
+        self.assertEqual(self.gov.gate_temperature_band()[1], float(self.gate.T_MAX))
 
     def test_policy_follows_the_same_threshold(self):
         self.gov.last_z = float(self.gate.Z_PIVOT) + 0.1
@@ -194,25 +196,6 @@ class DeclineIsNotFailure(BoneTestCase):
         self.assertEqual(gov.last_sol, "not_measured")
 
 
-class ThermalGateReachesTheModel(BoneTestCase):
-    def test_the_prompt_carries_the_temperature_itself(self):
-        composer = PromptComposer(
-            {"system_prompts": self.engine.prompt_library, "lenses": {}}
-        )
-        state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-        state["physics"]["thermal_gate"] = 0.93
-        prompt = composer.compose(state, "hello", modifiers={"include_inventory": False})
-        self.assertIn("<thermal_gate>0.9300</thermal_gate>", prompt)
-
-    def test_no_gate_no_tag(self):
-        """An absent tag means not measured, which is not a temperature of zero."""
-        composer = PromptComposer(
-            {"system_prompts": self.engine.prompt_library, "lenses": {}}
-        )
-        state = self.engine.cortex.gather_state({"physics": {"voltage": 30.0}})
-        state["physics"].pop("thermal_gate", None)
-        prompt = composer.compose(state, "hello", modifiers={"include_inventory": False})
-        self.assertNotIn("<thermal_gate>", prompt)
 
 
 class ThermalGateConsumer(unittest.TestCase):

@@ -102,6 +102,8 @@ ARMS = {
     "HOSTILE": ("HOSTILE", 0.79),
     "MANIC": ("MANIC", 0.79),
     "LUCID": ("LUCID", 0.79),
+    "CHEM_DOPAMINE": ("RESPIRING", 0.79),
+    "CHEM_CORTISOL": ("RESPIRING", 0.79),
 }
 
 ANAEROBIC_DIRECTIVE = "ANAEROBIC STATE. Raw, breathless, efficient prose."
@@ -126,7 +128,8 @@ SAMPLING = {"temperature": 0.7, "top_p": 0.95, "max_tokens": 4000}
 
 CONTRASTS = [
     ("ANAEROBIC", "CONTROL"), ("EXHAUSTED", "CONTROL"), ("BOTH", "CONTROL"),
-    ("FRANTIC", "CONTROL"), ("HOSTILE", "CONTROL"), ("MANIC", "CONTROL"), ("LUCID", "CONTROL")
+    ("FRANTIC", "CONTROL"), ("HOSTILE", "CONTROL"), ("MANIC", "CONTROL"), ("LUCID", "CONTROL"),
+    ("CHEM_DOPAMINE", "CONTROL"), ("CHEM_CORTISOL", "CONTROL")
 ]
 
 
@@ -164,18 +167,60 @@ def boot_engine(model: str):
 
 
 def compose_arms(eng, composer, message: str) -> dict:
-    prompts = {}
-    for arm, (respiration, exhaustion) in ARMS.items():
-        eng.cortex.active_mode = "CONVERSATION"
-        state = eng.cortex.gather_state(
-            {"physics": {"voltage": 30.0, "exhaustion": exhaustion}}
-        )
-        state.setdefault("meta", {})["active_mode"] = "CONVERSATION"
-        state["bio"] = {"respiration": respiration}
-        prompt = composer.compose(state, message, modifiers={"include_inventory": False})
-        prompts[arm] = (LAMBDA_TAG.sub("", prompt), state)
-    check_arms(prompts)
-    return prompts
+    from unittest.mock import patch
+    from brain.composer import ux
+    
+    with patch("brain.composer.PromptComposer._get_lore") as mock_lore:
+        mock_lore.return_value = {}
+
+        def assemble_with_params(directive, exhaustion, chem=None):
+            with patch("brain.composer.ux") as mock_ux:
+                mock_ux.side_effect = lambda domain, key, *a, **k: directive if key == "bio_neutral" else ux(domain, key, *a, **k)
+                
+                if chem:
+                    eng.cortex.modulator.current_chem.dopamine = chem.get("dopamine", 0.0)
+                    eng.cortex.modulator.current_chem.cortisol = chem.get("cortisol", 0.0)
+                    eng.cortex.modulator.current_chem.adrenaline = chem.get("adrenaline", 0.0)
+                    eng.cortex.modulator.current_chem.serotonin = chem.get("serotonin", 0.0)
+                else:
+                    eng.cortex.modulator.current_chem.dopamine = 0.0
+                    eng.cortex.modulator.current_chem.cortisol = 0.0
+                    eng.cortex.modulator.current_chem.adrenaline = 0.0
+                    eng.cortex.modulator.current_chem.serotonin = 0.0
+
+                state = {"physics": {"exhaustion": exhaustion, "thermal_band": (0.0, 1.2)}, "somatic_budget": None}
+                llm_params = eng.cortex.modulator.modulate(base_voltage=30.0, physics_state=state["physics"])
+                
+                original_derive = eng.cortex.composer._derive_bio_mood
+                if directive != "bio_neutral":
+                    eng.cortex.composer._derive_bio_mood = lambda c: directive
+                
+                prompt = eng.cortex.composer.compose(
+                    state=state,
+                    user_input=message,
+                    ballast=False,
+                    modifiers={"include_inventory": False},
+                )
+                
+                eng.cortex.composer._derive_bio_mood = original_derive
+                return prompt, state, llm_params
+
+        prompts = {
+            "CONTROL": assemble_with_params("bio_neutral", 0.0),
+            "ANAEROBIC": assemble_with_params("bio_anaerobic", 0.0),
+            "EXHAUSTED": assemble_with_params("bio_neutral", 1.0),
+            "BOTH": assemble_with_params("bio_anaerobic", 1.0),
+            "FRANTIC": assemble_with_params(FRANTIC_DIRECTIVE, 0.0),
+            "HOSTILE": assemble_with_params(HOSTILE_DIRECTIVE, 0.0),
+            "MANIC": assemble_with_params(MANIC_DIRECTIVE, 0.0),
+            "LUCID": assemble_with_params(LUCID_DIRECTIVE, 0.0),
+            "CHEM_DOPAMINE": assemble_with_params("bio_neutral", 0.0, {"dopamine": 1.0}),
+            "CHEM_CORTISOL": assemble_with_params("bio_neutral", 0.0, {"cortisol": 1.0}),
+        }
+        
+        legacy_prompts = {k: (v[0], v[1]) for k, v in prompts.items()}
+        verify_manipulation(legacy_prompts)
+        return prompts
 
 
 def check_arms(prompts: dict) -> None:
@@ -232,13 +277,14 @@ def generate(model: str, reasoning: str, repeats: int, cache: Path) -> None:
                 prompts = compose_arms(eng, composer, message)
                 for repeat in range(repeats):
                     seed = seed_for(model, message, repeat)
-                    for arm, (prompt, state) in prompts.items():
+                    for arm, (prompt, state, llm_params) in prompts.items():
                         count += 1
                         sha = hashlib.sha256(prompt.encode()).hexdigest()[:16]
                         if (model, reasoning, message, repeat, arm, sha) in done:
                             continue
                         started = time.time()
                         params = dict(SAMPLING, seed=seed)
+                        params.update(llm_params)
                         if reasoning == "none":
                             params["reasoning_effort"] = "none"
                         try:
@@ -376,6 +422,8 @@ COMPARE_COLUMNS = [
     ("HOS words", "HOSTILE", "CONTROL", "words"),
     ("MAN comma", "MANIC", "CONTROL", "commas_per_sentence"),
     ("LUC mattr", "LUCID", "CONTROL", "mattr"),
+    ("DOP w/sent", "CHEM_DOPAMINE", "CONTROL", "words_per_sentence"),
+    ("COR words", "CHEM_CORTISOL", "CONTROL", "words"),
 ]
 
 
