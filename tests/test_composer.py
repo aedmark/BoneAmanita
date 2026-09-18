@@ -83,7 +83,7 @@ class TestResponseValidator(BoneTestCase):
         self.assertTrue(result.get("valid", False))
         self.assertNotIn(
             "CRITICAL: You failed to include the <think>...</think> block",
-            result.get("feedback_instruction", ""),
+            result.get("feedback_instruction") or "",
         )
 
 

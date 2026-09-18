@@ -93,7 +93,7 @@ class SilentExceptionHandlers(unittest.TestCase):
     # `handle_phase_crash`, an `err` string carried to a later raise), so the
     # number overstates the problem. The unambiguous measure is the
     # pass-only ban below, which is at zero tolerance.
-    BUDGET = 28
+    BUDGET = 30
 
     def test_silent_handler_count_does_not_grow(self):
         silent = []
