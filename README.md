@@ -184,8 +184,9 @@ codebase, and it is what most of the recent work was about.
 
 ## What it does
 
-- **Semantic memory can find related things with a working embedder.** Mention your grandmother's letters and it can
-  surface the shoebox conversation from weeks ago, with no shared words. Related
+- **Semantic memory can find related things with a working embedder.** Mention
+  your grandmother's letters and it can surface a related shoebox conversation
+  without shared words. Related
   concepts reached 0.92 similarity in an earlier audit; that is an example,
   not a retrieval guarantee. Hash fallback does not preserve these relationships.
 
@@ -233,17 +234,19 @@ codebase, and it is what most of the recent work was about.
 - **It adapts to you, not just to itself.** The engine keeps a running guess
   at how tired *you* are. It reads withdrawal rather than volume: messages
   getting shorter or blunter *than your own normal* is the signal, so someone
-  who simply writes tersely is not mistaken for someone who has gone quiet.
+  who simply writes tersely is intended to be distinguished from someone who
+  has gone quiet. This remains a heuristic inference about the person.
   When it reads you as flagging it requests shorter replies and lowers the
   output-token budget. Actual accommodation still needs measurement. Writing
   at length does the opposite; it counts as effort spent, and when you have
   spent enough the prompt asks the model to offer to carry part of the load.
-  The user model is included in quicksave/restore, and `/status` shows what it currently believes
-  ("You: steady", "tiring", "flagging") so you can disagree with it.
+  The user model is included in quicksave/restore, and `/status` shows what it
+  currently believes ("You: steady", "tiring", "flagging") so you can disagree
+  with it.
 
 - **Subsystems file receipts.** Nine subsystem names are registered in the
-  current core roll call; which ones report depends on the path taken. Records describe
-  what they were handed, what came back, and whether they ran normally or on a
+  current core roll call; which ones report depends on the path taken. Records
+  describe what they were handed, what came back, and whether they ran normally or on a
   fallback. `/diag` prints the turn's records plus three lists that matter more:
   anything that promised to report and never did, anything on its fallback path
   every single time, and anything that runs and returns nothing, always. From the
@@ -267,23 +270,12 @@ did not run the live-model behavioral audits.
 See the [latest session handoff](SESSION_HANDOFF.md#review-2026-09-18) for exact
 commands, all seven failures, reproduced runtime defects, and next-round work.
 
-Recent work was almost entirely archaeology rather than features. Large parts of
-this program were running correctly and connected to nothing: not crashed, not
-erroring, just wired to the wrong place or wired nowhere at all. Thirteen of
-them. Memory coordinates came from a cryptographic hash, which is a tool designed
-specifically to destroy the relationship between similar inputs. The Creative
-Determinant was computed every turn and discarded. Ten settings existed in no
-config file, so editing them did nothing, forever. Twenty five error reports were
-downgraded to debug and thrown away by an argument ordering mistake, including
-the handler that catches a crashed turn.
-
-**None of these produced an error, a log line, or a failing test.** They could
-not have. The only output this program has is prose, and prose looks identical
-whether the physics ran properly or quietly returned zeros. A crash would have
-been a gift; silence was the expensive failure. That is why the receipts above
-exist, and why defensive programming is treated here as a disease rather than a
-style question. A program that never crashes and whose only output is fluent text
-can be completely broken and still look healthy.
+Earlier audits found disconnected components, hash-based memory coordinates,
+settings absent from config files, and severity logs routed incorrectly. That
+history motivated the receipts and state-to-prompt tests. Fluent prose can hide
+broken internals: neither a plausible reply nor the absence of an exception is
+enough to establish that the machinery worked. The current review shows that
+failure paths still need scrutiny even when diagnostics are present.
 
 `ROADMAP.md` preserves the earlier measurements and development plan. Its dated
 status summary and the latest handoff take precedence over historical sections.
@@ -294,8 +286,8 @@ status summary and the latest handoff take precedence over historical sections.
   physics names, and that is a legitimate design, but it is not a simulation.
 - Earlier vocabulary audits left about 16% of their inputs unresolved; results
   depend on the corpus and embedding backend.
-- Receipts record what a subsystem did, not whether it was right. They make the
-  engine auditable, not correct.
+- Receipts record a subsystem's account of its work. They make the engine
+  inspectable; both that account and the underlying result need verification.
 - **Embedding outages can compromise recall and diagnostics.** Transient
   failures cache hash vectors under the real backend's identity and report
   non-degraded receipts. Switching to hash after repeated failures can return

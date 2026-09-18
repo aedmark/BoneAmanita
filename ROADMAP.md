@@ -362,9 +362,11 @@ have been unwritable without admitting the problem:
 | 10 missing config keys | `degraded=True, detail="CORTEX.BASE_TOKENS absent"` |
 | γ/μ dropped in `_SYNC_KEYS` | `inputs={gamma: 0.0, mu: 0.0}` on every turn |
 
-The point is not that receipts raise alarms. It is that a subsystem
-cannot produce a healthy-looking record of unhealthy work without
-someone writing a deliberate lie into the receipt line.
+**September 18 correction:** the original claim that a misleading receipt
+requires a deliberate lie was too strong. A transient embedding failure leaves
+the backend identity and degraded flag unchanged while serving hash vectors,
+so the worker accidentally reports healthy HTTP vectorization. Receipts make
+the claimed work inspectable; fault-injection tests must verify that claim.
 
 ### As built
 
@@ -1488,8 +1490,10 @@ and about 45 for MELTDOWN.
 
 **Decided (Gordon, 2026-09-17): option 1 now, option 3 staged as D9.**
 
-**Unverified.** The tolerances below are sized from the census and pinned by
-unit tests, but the live 30-turn census that would prove a conversation now
+**Unverified.** The tolerances below were sized from the census and had earlier
+unit checks; the September 18 review found two failures in
+`tests/test_gate_tolerance.py` caused by a missing `MagicMock` import. The live
+30-turn census that would prove a conversation now
 reaches its end was interrupted before its first turn. Run it before treating
 this section as measured; everything else in D0 was confirmed against a live
 model, and this is not.
@@ -1526,9 +1530,10 @@ tests fail in the reviewed tree, several at this boundary, and no new live
 census established completion.
 
 Chosen as the destination for refusal, after the D0b tolerances buy room to
-work. Before nomination routing, five mechanisms could independently stop a turn: the PINKER
+work. Before nomination routing, five mechanisms could independently stop a
+turn: the PINKER
 counterfactual gate, the ROS panic gate, the Moog quarantine, the tensegrity
-anchor, and the gatekeeper's syntax rejection. Each has its own threshold, its
+anchor, and the gatekeeper's syntax rejection. Each had its own threshold, its
 own message, and its own idea of what danger was, without a common record of
 why the engine declined to speak.
 
@@ -1824,7 +1829,12 @@ same fallback path. Details in `SESSION_HANDOFF.md` Open items 8 and 9.
 
 ---
 
-# Sequencing
+# Historical sequencing — superseded
+
+This original sequence is retained as development history. In particular, the
+Laplacian/PDE and solver-vendoring items below are no longer the plan, and the
+receipt guarantee was corrected in A3. Use the September 18 Status section and
+latest handoff to choose the next work.
 
 **Short term**: in rough priority order. Each is independently
 shippable and each makes the next one verifiable.
