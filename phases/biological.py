@@ -7,6 +7,7 @@ from typing import Any
 
 from constants import Prisma
 from core import CycleContext
+from body.somatic_budget import SomaticBudget
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict
 from physics import apply_somatic_feedback
@@ -98,6 +99,24 @@ class MetabolismPhase(SimulationPhase):
         self._check_narcolepsy(ctx)
         self._check_ros_toxicity(ctx)
         self._calculate_homeostasis_reward(ctx)
+        
+        # Evaluate Somatic Budget (D1)
+        user_state = {}
+        lattice = getattr(self.eng, "shared_lattice", None)
+        if lattice:
+            u_model = getattr(lattice, "u", None)
+            if u_model:
+                user_state["exhaustion"] = getattr(u_model, "E_u", 0.0)
+                user_state["effort"] = getattr(u_model, "P_u", 100.0)
+                
+        engine_state = {}
+        if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
+            mito_state = self.eng.bio.mito.state
+            engine_state["atp_pool"] = getattr(mito_state, "atp_pool", 100.0)
+            engine_state["ros"] = getattr(mito_state, "ros_buildup", 0.0)
+            
+        ctx.somatic_budget = SomaticBudget.evaluate(user_state, engine_state)
+        
         return ctx
 
     def _calculate_homeostasis_reward(self, ctx: CycleContext):

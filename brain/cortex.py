@@ -173,6 +173,7 @@ class TheCortex:
             "bio": getattr(ctx, "bio_result", {}),
             "mind": getattr(ctx, "mind_state", {}),
             "world": getattr(ctx, "world_state", {}),
+            "somatic_budget": getattr(ctx, "somatic_budget", None),
             "ui": getattr(ctx, "bureau_ui", ""),
             "logs": getattr(ctx, "logs", []),
             "council_mandates": getattr(ctx, "council_mandates", []),
@@ -219,19 +220,20 @@ class TheCortex:
         if is_boot_sequence:
             self._apply_boot_overlay(full_state, user_input)
         b_voltage = float(phys_state.get("voltage", 5.0))
+        somatic_budget = full_state.get("somatic_budget")
         llm_params = self.modulator.modulate(
             base_voltage=b_voltage,
             latency_penalty=getattr(self.svc.host_stats, "latency", 0.0),
             physics_state=phys_state,
+            somatic_budget=somatic_budget,
         )
         if is_boot_sequence:
             llm_params.update({"temperature": 0.7, "top_p": 0.95})
-        p_val = float(phys_state.get("p", 100.0))
-        if llm_params.get("max_tokens", 4096) < 300 or p_val < 20.0:
-            full_state["mind"].setdefault("style_directives", []).append(
-                "CRITICAL: You are exhausted. You must conclude your thought in under 3 sentences."
-            )
-            llm_params["max_tokens"] = min(400, llm_params.get("max_tokens", 4096))
+            
+        somatic_budget = full_state.get("somatic_budget")
+        if somatic_budget:
+            # Set max_tokens based on word_cap (roughly 1.5 tokens per word + slack)
+            llm_params["max_tokens"] = min(llm_params.get("max_tokens", 4096), somatic_budget.word_cap * 2 + 50)
 
         structural_ctx, cognitive_path, token_cost = self._route_dual_memory(user_input)
         if structural_ctx:
@@ -251,6 +253,8 @@ class TheCortex:
         start_time = time.time()
         c_cfg = safe_get(self.cfg, "CORTEX", {})
         cognitive_retries = int(safe_get(c_cfg, "COGNITIVE_RETRY_LIMIT", 2))
+        if somatic_budget:
+            cognitive_retries = min(cognitive_retries, somatic_budget.retry_allowance)
         final_output, inv_logs, extracted_logs = "", [], []
         raw_resp: str = ""
         val_res: Dict[str, Any] = {"valid": False}
@@ -1037,6 +1041,7 @@ class TheCortex:
         mind = sim_result.get("mind", {})
         world = sim_result.get("world", {})
         soul_data = sim_result.get("soul", {})
+        somatic_budget = sim_result.get("somatic_budget", None)
         village_data = {}
         if self.svc.village:
             tinkerer = getattr(self.svc.village, "tinkerer", None)
@@ -1061,6 +1066,7 @@ class TheCortex:
             "mind": mind,
             "soul": soul_data,
             "world": world,
+            "somatic_budget": somatic_budget,
             "village": village_data,
             "user_profile": {"name": "Traveler"},
             "vsl": self.consultant.state.__dict__

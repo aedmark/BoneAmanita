@@ -184,8 +184,10 @@ class LLMInterface:
         if gate_match:
             heat = float(gate_match.group(1))
             prompt = re.sub(r"\n?<thermal_gate>[-\d.]+</thermal_gate>", "", prompt)
-            params["temperature"] = heat
-            params["top_p"] = 0.1 if heat <= 0.0 else 0.95
+            band = params.get("temperature_band", (0.0, 2.0))
+            clamped_heat = max(band[0], min(band[1], heat))
+            params["temperature"] = clamped_heat
+            params["top_p"] = 0.1 if clamped_heat <= 0.0 else 0.95
             if self.events:
                 if heat <= 0.0:
                     self.events.log(
@@ -595,6 +597,19 @@ class PromptComposer:
         # at its configured default. Absent is not the same as zero.
         gate = phys_ref.get("thermal_gate") if isinstance(phys_ref, dict) else None
         cd_block = f"<thermal_gate>{float(gate):.4f}</thermal_gate>" if gate is not None else ""
+        somatic_budget = state.get("somatic_budget")
+        somatic_budget_block = ""
+        if somatic_budget:
+            budget_lines = ["=== SOMATIC CONTRACT ==="]
+            budget_lines.append(f"Your partner is running low. Answer in at most {somatic_budget.sentence_cap} sentences." if somatic_budget.sentence_cap <= 5 else f"Sentence cap: {somatic_budget.sentence_cap} sentences.")
+            if somatic_budget.forbid_body_narration:
+                budget_lines.append("CRITICAL: Do not narrate your body, breath, lungs, or physical exhaustion.")
+            if not somatic_budget.closing_question_allowed:
+                budget_lines.append("Do not ask a closing question.")
+            if somatic_budget.offer_to_carry_load:
+                budget_lines.append("Your partner is carrying a heavy load. Offer to carry part of the burden.")
+            somatic_budget_block = "\n".join(budget_lines) + "\n"
+
         blocks = [
             ("kernel", "=== SYSTEM KERNEL ==="),
             ("persona", "\n".join(style_notes)),
@@ -602,6 +617,7 @@ class PromptComposer:
             ("directives", system_injection),
             ("shared_reality", shared_reality_block),
             ("dialogue", dialogue_block),
+            ("somatic_budget", somatic_budget_block),
             ("mode_trigger", mode_trigger),
             ("input", input_block),
             ("entity_prefix", entity_prefix),
@@ -721,10 +737,7 @@ class PromptComposer:
             mode_directives = high_voltage_data.get("directives", [])
         else:
             mode_directives = mode_data.get("directives", [])
-        respiration = safe_get(bio, "respiration", "RESPIRING")
-        if respiration == "ANAEROBIC":
-            mood_note = ux("brain_strings", "bio_anaerobic")
-        elif mood_override:
+        if mood_override:
             mood_note = f"Current Biology: {mood_override}"
         else:
             mood_note = self._derive_bio_mood(safe_get(bio, "chem", {}))
@@ -773,13 +786,6 @@ class PromptComposer:
         somatic_cues = [msg for msg in raw_cues if msg]
         if somatic_cues:
             vsl_lines.append("SOMATIC CUES: " + " | ".join(somatic_cues))
-        # The gate lives in config because the census showed 0.8 was
-        # unreachable: a partner answering "ok, sure, fine" for six turns
-        # peaked at E_u 0.61, so the directive could never fire. ROADMAP D0.
-        if e > float(safe_get(c_cfg, "EXHAUSTION_GATE", 0.5)):
-            vsl_lines.append(
-                "CRITICAL: You are exhausted. You must conclude your thought in 3 sentences or less."
-            )
         persona_block.extend(vsl_lines)
         return persona_block
 

@@ -119,6 +119,7 @@ class NeurotransmitterModulator:
         latency_penalty: float = 0.0,
         physics_state: Dict[str, float] = None,
         simulate: bool = False,
+        somatic_budget: Any = None,
     ) -> Dict[str, Any]:
         if physics_state is None:
             physics_state = {}
@@ -200,6 +201,8 @@ class NeurotransmitterModulator:
         entropy_bonus = max(0.0, chi - b["E_OFF"]) * b["E_SCAL"]
         t_limits = b["T_LIMS"]
         raw_temp = b["B_TEMP"] + chemical_delta + voltage_heat + entropy_bonus
+        if somatic_budget:
+            t_limits = somatic_budget.temperature_band
         final_temp = round(max(t_limits[0], min(t_limits[1], raw_temp)), 2)
         final_top_p = min(1.0, b["B_TOP_P"] + (chi * b["TOP_CHI"]))
         base_penalty = min(1.2, 0.5 + (beta * b["PEN_BETA"]) + (chi * b["PEN_CHI"]))
@@ -212,6 +215,7 @@ class NeurotransmitterModulator:
         raw_tokens = b["BASE_TOKENS"] + token_delta
         max_t = int(max(b["MIN_TOK"], min(float(b["MAX_TOKENS"]), raw_tokens)))
         return {
+            "temperature_band": t_limits,
             "temperature": final_temp,
             "top_p": final_top_p,
             "frequency_penalty": round(base_penalty, 2),

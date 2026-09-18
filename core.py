@@ -179,6 +179,7 @@ class CycleContext:
     is_system_event: bool = False
     clean_words: List[str] = field(default_factory=list)
     physics: PhysicsPacket = field(default_factory=PhysicsPacket.void_state)
+    somatic_budget: Any = None
     logs: List[str] = field(default_factory=list)
     flux_log: List[Dict[str, Any]] = field(default_factory=list)
     is_alive: bool = True
@@ -684,6 +685,39 @@ class CyberneticGovernor:
     def _get_vectorizer(self):
         return self._cached_vectorizer
 
+    @staticmethod
+    def _calculate_coordinate_frustration(matrix: np.ndarray) -> float:
+        """Calculate real contradiction from geometric frustration.
+        
+        Takes the correlation graph over coordinates of the ordinal code, signed by 
+        whether two coordinates move together or against each other. Returns the ratio
+        of odd cycles (frustrated triangles) which survive the gauge symmetry.
+        """
+        import math
+        N, D = matrix.shape
+        if N < 3:
+            return 0.0
+            
+        # Rank transform each vector column-wise across memories
+        ranks = np.argsort(np.argsort(matrix, axis=0), axis=0)
+        # Add tiny noise to avoid division by zero correlation on identical ranks
+        ranks_noisy = ranks + np.random.normal(0, 1e-6, size=ranks.shape)
+        
+        # Correlate coordinates
+        C = np.corrcoef(ranks_noisy, rowvar=False)
+        A = np.sign(C)
+        np.fill_diagonal(A, 0)
+        
+        # Tr(A^3) counts triangles * 6 (+1 for balanced, -1 for frustrated)
+        A2 = np.dot(A, A)
+        A3 = np.dot(A2, A)
+        trace_A3 = np.trace(A3)
+        
+        T_total = math.comb(D, 3)
+        T_frust = 0.5 * (T_total - trace_A3 / 6.0)
+        
+        return float(T_frust / T_total)
+
     def _sync_ordvec_indices(self, memory_core: Any):
         """Build the ordvec indexes over the memory graph.
 
@@ -717,6 +751,10 @@ class CyberneticGovernor:
                 f"Memory holds {len(matrix)} vectorizable node(s); the bitmap needs at least 3."
             )
         fp32_matrix = np.ascontiguousarray(matrix, dtype=np.float32)
+        
+        # Calculate real contradiction from geometric frustration of the memory manifold
+        memory_core.last_frustration_ratio = self._calculate_coordinate_frustration(fp32_matrix)
+        
         # ordvec indexes are constructed with a DIMENSION and then fed vectors.
         # This passed the matrix straight to the constructor, where `dim` is
         # expected, and asked for 8-bit quantisation, which ordvec rejects (it

@@ -88,7 +88,7 @@ class QuantumObserver:
     def _on_q_matrix(self, payload):
         self.Q_n = payload.get("q_matrix")
 
-    def gaze(self, text: str, graph: Optional[Dict] = None) -> Dict:
+    def gaze(self, text: str, graph: Optional[Dict] = None, frustration_ratio: float = 0.0) -> Dict:
         import random
         if "SYSTEM_BOOT" in text:
             text = ""
@@ -189,7 +189,10 @@ class QuantumObserver:
         current_debt = self.cd_engine.update_coherence_debt(
             actual_coherence, sustainable_capacity
         )
-        mu_viability = (1.0 - gamma_idx) / 2.0
+        
+        # Real contradiction measured by the geometric frustration of the memory manifold
+        # Base frustration is ~0.02 (2%), so scaling by 10 maps 2% to 0.2 and 10% to 1.0
+        mu_viability = min(1.0, frustration_ratio * 10.0)
         
         # Calculate R_base from psi', psi'', psi'''
         if not hasattr(self, 'psi_history'):

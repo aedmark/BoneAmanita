@@ -553,7 +553,7 @@ reader does not have to work that out from the variable name.
 The Creative Determinant drives the engine's physics state via metabolic calculus:
 
 - `CreativeDeterminantEngine` (in `physics/maths.py`) calculates `viability` ($b = \kappa\gamma - \lambda_{eff}\mu$) and uses it to update ATP and ROS via `execute_metabolic_tick`.
-- $\mu_{viability}$ is derived from the conversation's entropy: $\mu = (1.0 - \gamma) / 2.0$.
+- $\mu_{viability}$ is measured by the real contradiction in the memory manifold. We count the odd cycles in the signed correlation graph of the ordinal memory vectors (the frustrated geometric residue) and map it to `mu` via static scaling.
 - $\lambda_{eff}$ is divided by $R_{base}$, which is derived using a 4-sample finite-difference window over $\psi_{history}$ (`geo.abstraction`). This provides momentum to the penalty term and stops the system from becoming too frantic or too sluggish too quickly.
 
 ## B1. The Thermal Gate
