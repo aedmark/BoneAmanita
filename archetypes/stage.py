@@ -69,6 +69,14 @@ class Tension:
 
 
 @dataclass(frozen=True)
+class Nomination:
+    """A vote to halt generation for a specific reason."""
+    gate: str
+    reason: str
+    magnitude: float
+    packet: Optional[Dict] = None
+
+@dataclass(frozen=True)
 class Verdict:
     """What the Stage Manager decided, and why.
 
@@ -131,8 +139,15 @@ class StageManager:
         physics: Any = None,
         atp: float = 100.0,
         default_voice: str = "NARRATOR",
+        nominations: Optional[list[Nomination]] = None,
+        somatic_budget: Any = None,
     ) -> Verdict:
         """Decide who speaks, or that nobody does.
+        
+        Nominations from refusal gates are evaluated here. If the user is distressed,
+        we drop all but the most fatal nominations (magnitude >= 100) because abandoning
+        a distressed partner is worse than speaking.
+        
 
         The order matters and is deliberate. Pairing is tried before holding,
         because a fusion is a resolution and silence is the admission that
@@ -140,6 +155,24 @@ class StageManager:
         to synthesise conflicting voices should say so rather than blend them
         into mush, which is the failure mode the whole design exists to avoid.
         """
+        nominations = nominations or []
+        if nominations:
+            winning_nom = max(nominations, key=lambda n: n.magnitude)
+            user_distressed = False
+            if somatic_budget and getattr(somatic_budget, "sentence_cap", 100) <= 3:
+                user_distressed = True
+                
+            if not user_distressed or winning_nom.magnitude >= 100.0:
+                self.consecutive_holds += 1
+                # We return HOLD, but we also include the packet so ArbitrationPhase can use it.
+                return Verdict(
+                    HOLD,
+                    "THE STAGE MANAGER",
+                    winning_nom.reason,
+                    tension,
+                    adjustments={"refusal_packet": winning_nom.packet} if winning_nom.packet else {}
+                )
+            
         if not tension.voices:
             return Verdict(SPEAK, default_voice, "no voice triggered", tension)
 

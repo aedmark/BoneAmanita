@@ -187,11 +187,21 @@ class TheGatekeeper:
     ) -> Tuple[bool, Optional[Dict]]:
 
         def reject(
-            type_str: str, msg_key: str, color: str = Prisma.RED
+            type_str: str, msg_key: str, color: str = Prisma.RED, magnitude: float = 100.0
         ) -> Tuple[bool, Dict]:
             msg = ux("physics_strings", msg_key)
             formatted_msg = f"{color}{msg}{Prisma.RST}" if color else msg
-            return False, self._pack_refusal(ctx, type_str, formatted_msg)
+            
+            from archetypes.stage import Nomination
+            ctx.nominations.append(
+                Nomination(
+                    gate="GATEKEEPER",
+                    reason=f"{type_str}: {msg}",
+                    magnitude=magnitude,
+                    packet=self._pack_refusal(ctx, type_str, formatted_msg)
+                )
+            )
+            return False, None
 
         bio_cfg = safe_get(self.cfg, "BIO", {})
         phys_cfg = safe_get(self.cfg, "PHYSICS", {})

@@ -127,11 +127,8 @@ class GatekeeperPhase(SimulationPhase):
                         "log": f"CRITICAL CONTEXT: The user attempted an impossible action ({coupling_error}). Do NOT fulfill the action. React to their failure in-character based on your current archetype.",
                     }
                 )
-        is_allowed, refusal_packet = self.gatekeeper.check_entry(ctx)
-        if not is_allowed:
-            ctx.refusal_triggered = True
-            ctx.refusal_packet = refusal_packet
-            return ctx
+        is_allowed, _ = self.gatekeeper.check_entry(ctx)
+        # We don't return early. The Stage Manager will handle the nomination later.
         bureau = getattr(self.eng.village, "bureau", None)
         if bureau:
             current_bio = self.eng.get_metrics()

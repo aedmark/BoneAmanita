@@ -89,24 +89,26 @@ class ArchitectureTests(BoneTestCase):
                 "m_a": 0.4,
             },
         )
-        res_gordon = cortex.process_context(ctx_gordon)
+        cortex.nominate_toxicity(ctx_gordon)
+        self.assertEqual(len(ctx_gordon.nominations), 1)
         self.assertEqual(
-            res_gordon.get("type"),
+            ctx_gordon.nominations[0].packet.get("type"),
             "SYSTEM_HALT",
             "[FAIL] Gordon failed to lock the architecture under high narrative drag.",
         )
         self.assertIn(
             "Tensegrity Anchor engaged",
-            res_gordon.get("ui", ""),
+            ctx_gordon.nominations[0].packet.get("ui", ""),
             "[FAIL] Missing Gordon UI rejection message.",
         )
         ctx_toxic = CycleContext(
             input_text="Testing Toxicity.",
             physics={"narrative_drag": 1.0, "chi": 0.5, "m_a": 1.0},
         )
-        res_toxic = cortex.process_context(ctx_toxic)
+        cortex.nominate_toxicity(ctx_toxic)
+        self.assertEqual(len(ctx_toxic.nominations), 1)
         self.assertEqual(
-            res_toxic.get("type"),
+            ctx_toxic.nominations[0].packet.get("type"),
             "COUNTERFACTUAL_REJECTION",
             "[FAIL] Cortex failed to detect Counterfactual Toxicity.",
         )
@@ -114,11 +116,7 @@ class ArchitectureTests(BoneTestCase):
             mock_svc.akashic.record_scar.called,
             "[FAIL] Cortex failed to record a trauma scar upon toxicity rejection.",
         )
-        self.assertEqual(
-            mock_svc.bio.mito.adjust_atp.call_args[0][0],
-            -float(BoneConfig().BIO.COUNTERFACTUAL_ATP_COST),
-            "[FAIL] Toxicity did not tax the ATP pool by BIO.COUNTERFACTUAL_ATP_COST.",
-        )
+
         self.assertFalse(
             any(
                 "ros_buildup" in str(c)

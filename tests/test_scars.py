@@ -22,10 +22,16 @@ class CounterfactualToxicityLeavesAScar(BoneTestCase):
     def test_the_cortex_rejection_records_a_scar_and_keeps_the_mind_online(self):
         akashic = self.engine.akashic
         before = len(akashic.scar_map)
-        result = self.engine.cortex._evaluate_toxicity(
-            dict(self.TOXIC), {"ui": ""}, is_system=False
-        )
-        self.assertEqual(result.get("type"), "COUNTERFACTUAL_REJECTION")
+        ctx = MagicMock()
+        ctx.physics = MagicMock()
+        ctx.physics.get = dict(self.TOXIC).get
+        ctx.physics.__dict__.update(self.TOXIC)
+        ctx.input_text = ""
+        ctx.is_system_event = False
+        ctx.nominations = []
+        self.engine.cortex.nominate_toxicity(ctx)
+        
+        self.assertEqual(ctx.nominations[0].packet.get("type"), "COUNTERFACTUAL_REJECTION")
         self.assertEqual(len(akashic.scar_map), before + 1)
         self.assertTrue(self.engine.system_health.components_online["mind"])
 

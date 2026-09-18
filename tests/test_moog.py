@@ -75,20 +75,30 @@ class TestMoogProtocol(BoneTestCase):
         cortex.dialogue_buffer.append("Previous turn")
         cortex.dialogue_buffer.append("Current panic")
 
-        result = cortex._evaluate_toxicity(phys_state, sim_result, is_system=False)
+        ctx = MagicMock()
+        ctx.physics = MagicMock()
+        ctx.physics.get = phys_state.get
+        # We need to simulate the exact phys_state
+        ctx.physics.__dict__.update(phys_state)
+        ctx.input_text = sim_result["mutated_input"]
+        ctx.is_system_event = False
+        ctx.nominations = []
+        cortex.nominate_toxicity(ctx)
 
+        self.assertEqual(len(ctx.nominations), 1)
+        nom = ctx.nominations[0]
         self.assertEqual(
-            result.get("type"),
+            nom.packet.get("type"),
             "MOOG_QUARANTINE",
             "[FAIL] Moog failed to intercept the unactionable worry.",
         )
         self.assertIn(
             "parameters of this concern are undefined",
-            result.get("ui", ""),
+            nom.packet.get("ui", ""),
             "[FAIL] UI string missing.",
         )
         self.assertEqual(
-            phys_state["narrative_drag"],
+            getattr(ctx.physics, "narrative_drag", None),
             0.0,
             "[FAIL] Narrative drag was not zeroed out.",
         )

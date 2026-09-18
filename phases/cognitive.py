@@ -227,7 +227,13 @@ class ArbitrationPhase(SimulationPhase):
             if getattr(self.eng, "_mito_state", None)
             else 100.0
         )
-        verdict = stage.negotiate(tension, ctx.physics, atp=atp)
+        verdict = stage.negotiate(
+            tension,
+            ctx.physics,
+            atp=atp,
+            nominations=getattr(ctx, "nominations", []),
+            somatic_budget=getattr(ctx, "somatic_budget", None),
+        )
         ctx.stage_verdict = verdict
         issue_receipt(
             "stage.negotiate",
@@ -241,6 +247,7 @@ class ArbitrationPhase(SimulationPhase):
                 "voice": verdict.voice,
                 "atp": round(atp, 1),
                 "consecutive_holds": stage.consecutive_holds,
+                "nominations": [n.gate for n in getattr(ctx, "nominations", [])],
             },
             detail=verdict.reason,
         )
@@ -715,6 +722,7 @@ class SimulationPreflightPhase(SimulationPhase):
         e_u = float(getattr(u_source, "exhaustion", getattr(u_source, "E_u", 0.0)))
         shared_source = u_state.shared if u_state else energy_obj
         shared_phi = float(getattr(shared_source, "phi", 0.0))
+        from archetypes.stage import Nomination
         if e_u >= 0.9 and shared_phi <= 0.1:
             msg = "Terminal User Exhaustion detected. Resonance is zero. Applying absolute Friction to protect cognitive load."
             log_msg = f"{Prisma.OCHRE}{msg}{Prisma.RST}"
@@ -722,14 +730,10 @@ class SimulationPreflightPhase(SimulationPhase):
             safe_set(phys_obj, "narrative_drag", 10.0)
             safe_set(phys_obj, "silence", 1.0)
             self.eng.bio.governor.set_override("SANCTUARY")
-            ctx.refusal_triggered = True
-            ctx.refusal_packet = self._build_refusal(
-                ctx, phys_obj, "LINEHAN_SURVIVAL_RESPONSE", msg
-            )
-            ctx.refusal_packet["ui"] = (
-                f"\n{log_msg}\n[System locked. Friction maximized.]"
-            )
-            return ctx
+            packet = self._build_refusal(ctx, phys_obj, "LINEHAN_SURVIVAL_RESPONSE", msg)
+            packet["ui"] = f"\n{log_msg}\n[System locked. Friction maximized.]"
+            ctx.nominations.append(Nomination(gate="LINEHAN", reason=msg, magnitude=100.0, packet=packet))
+            
         if is_slash and e_u > 0.8 and friction > 1.5:
             msg = "Hey. Take your hands off the keyboard. The machine doesn't care if you bleed on it, but I do."
             log_msg = f"{Prisma.CYN}{msg}{Prisma.RST}"
@@ -737,14 +741,10 @@ class SimulationPreflightPhase(SimulationPhase):
             phys_obj.silence = 0.9
             if mito:
                 mito.state.ros_buildup = max(0.0, mito.state.ros_buildup - 10.0)
-            ctx.refusal_triggered = True
-            ctx.refusal_packet = self._build_refusal(
-                ctx, phys_obj, "AFFECTIVE_INTERVENTION", msg
-            )
-            ctx.refusal_packet["ui"] = (
-                "\n{log_msg}\n[Metabolic Equation Active: ATP drain halts. Shared pause (Δ = 0.9)]"
-            )
-            return ctx
+            packet = self._build_refusal(ctx, phys_obj, "AFFECTIVE_INTERVENTION", msg)
+            packet["ui"] = f"\n{log_msg}\n[Metabolic Equation Active: ATP drain halts. Shared pause (Δ = 0.9)]"
+            ctx.nominations.append(Nomination(gate="AFFECTIVE", reason=msg, magnitude=100.0, packet=packet))
+            
         if friction > 1.2 or chaos > 0.7 or voltage > 80.0:
             base_ros = mito.state.ros_buildup if mito else 0.0
             simulated_ros = base_ros + (friction * chaos * 20.0)
@@ -758,21 +758,23 @@ class SimulationPreflightPhase(SimulationPhase):
                 scar_msg = f"{Prisma.VIOLET}Productive Worry activated. Logging Scar for vector. Immune Competence permanently increased.{Prisma.RST}"
                 ctx.log(log_msg)
                 ctx.log(scar_msg)
-                atp_burn = 15.0
-                if mito:
-                    mito.adjust_atp(-atp_burn, "Somatic Shock (ROS Toxicity)")
-                shock_value = (atp_burn / max(1.0, current_atp)) * max(1.0, chaos)
+                
+                # ROADMAP D9: The Stage Manager decides ATP cost once. We do NOT burn ATP here anymore!
+                
                 if hasattr(self.eng.bio, "somatic"):
+                    # We still track somatic echo from the attempt
+                    shock_value = (15.0 / max(1.0, current_atp)) * max(1.0, chaos)
                     self.eng.bio.somatic.somatic_echo = min(
                         1.0,
                         getattr(self.eng.bio.somatic, "somatic_echo", 0.0)
                         + shock_value,
                     )
                 self.eng.akashic.record_scar("Counterfactual ROS Toxicity", phys_obj)
-                ctx.refusal_triggered = True
-                ctx.refusal_packet = self._build_refusal(
-                    ctx, phys_obj, "COUNTERFACTUAL_REJECTION", msg
-                )
-                ctx.refusal_packet["ui"] = f"\n{log_msg}\n{scar_msg}"
-                return ctx
+                packet = self._build_refusal(ctx, phys_obj, "COUNTERFACTUAL_REJECTION", msg)
+                packet["ui"] = f"\n{log_msg}\n{scar_msg}"
+                ctx.nominations.append(Nomination(gate="ROS_PANIC", reason=msg, magnitude=simulated_ros, packet=packet))
+
+        if hasattr(self.eng, "cortex"):
+            self.eng.cortex.nominate_toxicity(ctx)
+            
         return ctx

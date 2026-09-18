@@ -36,17 +36,34 @@ class ToleranceReachesTheGates(BoneTestCase):
     def test_conversation_allows_what_adventure_refuses(self):
         cortex = self.engine.cortex
         self.engine.config.GATE_TOLERANCE = 1.0
-        refused = cortex._evaluate_toxicity(dict(self.MIDDLING), {"ui": ""}, is_system=False)
+        ctx1 = MagicMock()
+        ctx1.physics = MagicMock()
+        ctx1.physics.get = dict(self.MIDDLING).get
+        ctx1.physics.__dict__.update(self.MIDDLING)
+        ctx1.input_text = ""
+        ctx1.is_system_event = False
+        ctx1.nominations = []
+        cortex.nominate_toxicity(ctx1)
+        
+        self.assertEqual(len(ctx1.nominations), 1)
         self.assertEqual(
-            refused.get("type"),
+            ctx1.nominations[0].packet.get("type"),
             "COUNTERFACTUAL_REJECTION",
             "at tolerance 1.0 this state is over the gate; the fixture no longer bites",
         )
 
         self.engine.config.GATE_TOLERANCE = 1.6
-        allowed = cortex._evaluate_toxicity(dict(self.MIDDLING), {"ui": ""}, is_system=False)
-        self.assertIsNone(
-            allowed,
+        ctx2 = MagicMock()
+        ctx2.physics = MagicMock()
+        ctx2.physics.get = dict(self.MIDDLING).get
+        ctx2.physics.__dict__.update(self.MIDDLING)
+        ctx2.input_text = ""
+        ctx2.is_system_event = False
+        ctx2.nominations = []
+        cortex.nominate_toxicity(ctx2)
+        
+        self.assertEqual(
+            len(ctx2.nominations), 0,
             "A conversation tolerance must let an ordinary terse exchange through.",
         )
 
@@ -54,8 +71,15 @@ class ToleranceReachesTheGates(BoneTestCase):
         """Tolerance widens the gate; it does not remove it."""
         self.engine.config.GATE_TOLERANCE = 1.6
         extreme = {"narrative_drag": 9.0, "chi": 0.95, "m_a": 0.49}
-        result = self.engine.cortex._evaluate_toxicity(extreme, {"ui": ""}, is_system=False)
-        self.assertIsNotNone(result)
+        ctx3 = MagicMock()
+        ctx3.physics = MagicMock()
+        ctx3.physics.get = extreme.get
+        ctx3.physics.__dict__.update(extreme)
+        ctx3.input_text = ""
+        ctx3.is_system_event = False
+        ctx3.nominations = []
+        self.engine.cortex.nominate_toxicity(ctx3)
+        self.assertEqual(len(ctx3.nominations), 1)
 
     def test_the_crucible_meltdown_line_scales(self):
         cfg = self.engine.config

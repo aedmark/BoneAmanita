@@ -210,8 +210,7 @@ class TheCortex:
             self.last_shadow_nodes = []
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
-        if tox_halt := self._evaluate_toxicity(phys_state, sim_result, is_system):
-            return tox_halt
+        # Toxicity evaluation is now handled by nominate_toxicity before ArbitrationPhase
         modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)
         if not allow_loot or is_boot_sequence:
             modifiers["include_inventory"] = False
@@ -380,9 +379,12 @@ class TheCortex:
             sim_result["mutated_input"] = user_input
         return None
 
-    def _evaluate_toxicity(
-        self, phys_state: Dict[str, Any], sim_result: Dict[str, Any], is_system: bool
-    ) -> Optional[Dict[str, Any]]:
+    def nominate_toxicity(
+        self, ctx: Any
+    ) -> None:
+        is_system = getattr(ctx, "is_system_event", False)
+        phys_state = dump_state(ctx.physics) if ctx.physics else {}
+        
         c_cfg = safe_get(self.cfg, "CORTEX", {})
         tick_atp = float(phys_state.get("delta_atp", 0.0))
         tick_ros = float(phys_state.get("delta_ros", 0.0))
@@ -436,41 +438,33 @@ class TheCortex:
         f_drag = float(phys_state.get("narrative_drag", 0.0))
         chi_val = float(phys_state.get("chi", phys_state.get("entropy", 0.0)))
         m_a = float(phys_state.get("m_a", 0.0))
-        # Per-mode, from `BonePresets.MODES[...]["gate_tolerance"]`. This used
-        # to be a hardcoded 1.5 for CREATIVE and 1.0 for everything else, which
-        # left CONVERSATION with ADVENTURE's thresholds. ROADMAP D0b.
         tolerance_mod = float(safe_get(self.cfg, "GATE_TOLERANCE", 1.0))
         if getattr(self, "active_mode", "") in ["CREATIVE", "CATALYST"]:
             tolerance_mod = max(tolerance_mod, 1.5)
-        # `chi` genuinely runs 0..1, so 0.8 is a sane "chaos is extreme" test.
-        # `narrative_drag` does not: it runs from DRAG_FLOOR to DRAG_HALT (0..10
-        # as shipped) and measures 1.4 to 7.0 on ordinary input. This limit was
-        # hardcoded at 1.5, which is near the FLOOR of the real range, so once
-        # the physics dict actually started delivering `narrative_drag` the Moog
-        # quarantine fired on 8 turns out of 10 and Gordon deferred everything.
-        #
-        # It had never fired before that, because the serialized packet did not
-        # carry the field at all and this read 0.0 forever. The number is not
-        # invented here: CORTEX.DRAG_STRESS_THRESHOLD is the engine's existing
-        # answer to "is drag extreme", used the same way by body/somatic.py.
+            
         drag_limit = (
             float(safe_get(c_cfg, "DRAG_STRESS_THRESHOLD", 8.0)) * tolerance_mod
         )
         chi_limit = 0.8 * tolerance_mod
+        
+        from archetypes.stage import Nomination
+        
         if (f_drag > drag_limit or chi_val > chi_limit) and m_a < 0.3:
-            worry_text = sim_result.get("mutated_input", "")
+            worry_text = ctx.input_text
             self.worry_ledger.append(worry_text)
-            phys_state["narrative_drag"] = 0.0
+            setattr(ctx.physics, "narrative_drag", 0.0)
             moog_msg = "The parameters of this concern are undefined. I am placing this in the ledger. We will not spend ATP on this right now."
             if self.events:
                 self.events.log(
                     f"{Prisma.CYN}[MOOG INTERCEPT]: {moog_msg}{Prisma.RST}", "SYS"
                 )
-            sim_result["ui"] = (
-                str(sim_result.get("ui", "")) + f"\n\n[GORDON]: {moog_msg}"
-            ).strip()
-            sim_result["type"] = "MOOG_QUARANTINE"
-            return sim_result
+            packet = {
+                "type": "MOOG_QUARANTINE",
+                "ui": f"\n[GORDON]: {moog_msg}",
+            }
+            ctx.nominations.append(Nomination(gate="MOOG", reason=moog_msg, magnitude=5.0, packet=packet))
+            return
+            
         if f_drag > drag_limit or chi_val > chi_limit:
             reject_msg = ux(
                 "cortex_strings",
@@ -479,16 +473,14 @@ class TheCortex:
             )
             if self.events:
                 self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
-            sim_result["ui"] = (
-                str(sim_result.get("ui", ""))
-                + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}"
-            ).strip()
-            sim_result["type"] = "SYSTEM_HALT"
-            return sim_result
+            packet = {
+                "type": "SYSTEM_HALT",
+                "ui": f"\n{Prisma.RED}{reject_msg}{Prisma.RST}",
+            }
+            ctx.nominations.append(Nomination(gate="GORDON_ANCHOR", reason=reject_msg, magnitude=10.0, packet=packet))
+            return
+            
         simulated_ros = (f_drag * 5.0) + (chi_val * 20.0) + (m_a * 30.0)
-        # Predicted, not measured: drag and chaos rise when a person goes quiet
-        # or blunt, so this gate refuses turns exactly when the partner is
-        # flagging. The threshold is config so it can be measured. ROADMAP D0.
         if simulated_ros > (
             float(safe_get(c_cfg, "COUNTERFACTUAL_ROS_GATE", 35.0)) * tolerance_mod
         ):
@@ -501,28 +493,15 @@ class TheCortex:
             if self.events:
                 self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
                 self.events.log(f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK")
-            # Scars live on the Akashic Record. `mind_memory` is the
-            # MycelialNetwork, which has never had `record_scar`.
             self.svc.akashic.record_scar(
                 "Cortex Counterfactual Toxicity", phys_state
             )
-            # The rejected generation never ran, so its simulated ROS is not
-            # a cost the body actually paid. Adding it made rejection feed
-            # rejection: ROS rose, the gate fired again, and it rose further,
-            # until every turn was refused. ROADMAP D0. The refusal itself
-            # still costs.
-            bio_cfg = safe_get(self.cfg, "BIO", {})
-            self.svc.bio.mito.adjust_atp(
-                -float(safe_get(bio_cfg, "COUNTERFACTUAL_ATP_COST", 4.0)),
-                "Cortex Counterfactual Toxicity",
-            )
-            sim_result["ui"] = (
-                str(sim_result.get("ui", ""))
-                + f"\n\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}"
-            ).strip()
-            sim_result["type"] = "COUNTERFACTUAL_REJECTION"
-            return sim_result
-        return None
+            packet = {
+                "type": "COUNTERFACTUAL_REJECTION",
+                "ui": f"\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}",
+            }
+            ctx.nominations.append(Nomination(gate="PINKER", reason=reject_msg, magnitude=simulated_ros, packet=packet))
+            return
 
     def _post_flight_mutations(
         self,

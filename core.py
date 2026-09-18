@@ -180,6 +180,7 @@ class CycleContext:
     clean_words: List[str] = field(default_factory=list)
     physics: PhysicsPacket = field(default_factory=PhysicsPacket.void_state)
     somatic_budget: Any = None
+    nominations: List[Any] = field(default_factory=list)
     logs: List[str] = field(default_factory=list)
     flux_log: List[Dict[str, Any]] = field(default_factory=list)
     is_alive: bool = True

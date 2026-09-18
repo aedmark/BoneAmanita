@@ -94,21 +94,25 @@ class CortexArchitectTests(BoneTestCase):
         }
         sim_result = {"ui": "Standard interface output."}
 
-        halt_res = self.cortex._evaluate_toxicity(
-            phys_state, sim_result, is_system=False
-        )
-
-        self.assertIsNotNone(
-            halt_res, "[FAIL] Cortex failed to halt on toxic narrative parameters."
-        )
+        ctx = MagicMock()
+        ctx.physics = MagicMock()
+        ctx.physics.get = phys_state.get
+        ctx.physics.__dict__.update(phys_state)
+        ctx.input_text = "test"
+        ctx.is_system_event = False
+        ctx.nominations = []
+        self.cortex.nominate_toxicity(ctx)
+        
+        self.assertEqual(len(ctx.nominations), 1)
+        nom = ctx.nominations[0]
         self.assertEqual(
-            halt_res.get("type"),
+            nom.packet.get("type"),
             "SYSTEM_HALT",
             "[FAIL] Expected SYSTEM_HALT for high friction.",
         )
         self.assertIn(
             "Tensegrity Anchor engaged",
-            halt_res.get("ui", ""),
+            nom.packet.get("ui", ""),
             "[FAIL] Missing Gordon anchor warning.",
         )
 
@@ -117,19 +121,25 @@ class CortexArchitectTests(BoneTestCase):
         sim_result = {"ui": ""}
         self.mock_services.bio.mito.state.ros_buildup = 0.0
 
-        halt_res = self.cortex._evaluate_toxicity(
-            phys_state, sim_result, is_system=False
-        )
-
-        self.assertIsNotNone(halt_res)
+        ctx = MagicMock()
+        ctx.physics = MagicMock()
+        ctx.physics.get = phys_state.get
+        ctx.physics.__dict__.update(phys_state)
+        ctx.input_text = "test"
+        ctx.is_system_event = False
+        ctx.nominations = []
+        self.cortex.nominate_toxicity(ctx)
+        
+        self.assertEqual(len(ctx.nominations), 1)
+        nom = ctx.nominations[0]
         self.assertEqual(
-            halt_res.get("type"),
+            nom.packet.get("type"),
             "COUNTERFACTUAL_REJECTION",
             "[FAIL] Failed to trigger Counterfactual Rejection.",
         )
         self.assertIn(
             "Structural rot critical",
-            halt_res.get("ui", ""),
+            nom.packet.get("ui", ""),
             "[FAIL] Missing Pinker gate rejection log.",
         )
         self.mock_services.akashic.record_scar.assert_called_once()
