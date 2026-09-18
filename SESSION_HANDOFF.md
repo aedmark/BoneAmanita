@@ -1,8 +1,73 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+<a id="stabilization-2026-09-18"></a>
+
+## Latest: baseline reproduction and shutdown repair, 2026-09-18
+
+This follow-up supersedes the review's R3 status. R1/R1b (embedding fallback)
+and R2 (quicksave) remain open, as do the seven refusal-related test failures.
+The user authorized the proposed stabilization work; this first work package
+reproduces the baseline and repairs engine/fixture shutdown.
+
+Starting state: clean `8bdd960` (`7.0.14.1`). The formerly uncommitted review
+changes are now committed. Tests ran in a disposable copy of tracked files
+with `.git` metadata, using the project's Python 3.14.7 interpreter. The new
+shutdown tests and the two modified Python files were copied into that checkout
+for validation. No tests ran against the user's live saves or lore.
+
+### What changed
+
+- `GeodesicOrchestrator.shutdown()` clears `is_running`, joins the cycle daemon,
+  then waits for the background executor. The existing engine shutdown order
+  therefore reaches persistence and telemetry only after those producers finish.
+- An idle daemon checks the stop flag after its queue timeout so it does not
+  begin a REM tick while shutdown waits for it.
+- `BoneTestCase` registers cleanup with `unittest.addCleanup`: the captured
+  engine is shut down before its patches and shared resources are released,
+  including when a subclass raises after base setup. Fixture cleanup patches
+  `perform_shutdown` to avoid persisting test state.
+- Four regressions cover idle/repeated shutdown, a running background worker,
+  an active daemon turn, and a subclass setup failure. The first three authored
+  regressions (idle, worker, setup failure) all failed against the old code;
+  the active-turn case was added afterward.
+
+Shutdown waits for active work to return; it does not cancel an in-flight model
+request or promise a fixed shutdown deadline. Call shutdown from the owning
+thread, outside the daemon and its workers.
+
+### Baseline evidence and next work
+
+Before edits, running `tests/test_cortex.py tests/test_gate_tolerance.py
+ tests/test_moog.py tests/test_random.py tests/test_scars.py` with
+`python -m pytest -q --tb=short` reproduced the same seven failure nodes listed
+in the review: **26 passed, 7 failed**, in 17.38 seconds. After the first three
+shutdown tests and cleanup repair, adding `tests/test_shutdown.py`,
+`tests/test_cycle.py`, and `tests/test_architecture.py` returned **43 passed,
+7 failed**, in 23.94 seconds. These are overlapping selected runs.
+
+The complete post-repair run, `python -m pytest -q --tb=short`, finished with
+**508 passed, 7 failed, 5 skipped, 22 subtests passed**, in 277.51 seconds.
+All four shutdown regressions passed. The seven failure nodes are unchanged
+from the reproduced baseline; no additional failures appeared. This result
+covers `8bdd960` plus the changes to `cycle.py`, `tests/base.py`, and the new
+`tests/test_shutdown.py`. It supersedes the earlier selected-run baseline.
+The disposable checkout was `/tmp/boneamanita-stabilize.aul7jckc`; the full log
+was `/tmp/boneamanita-stabilize-full.log`. These temporary artifacts are not
+required to interpret the recorded result.
+
+The refusal tests have not been weakened or repaired. Inspection shows that
+unspecified `MagicMock.to_dict()` values enter `dump_state`, and that preflight
+nominates while arbitration decides the final refusal. Follow-up tests should
+use concrete physics state and assert both boundaries; missing `MagicMock`
+imports alone do not establish that the remaining fixtures are sound.
+
+Next: atomic quicksave preservation, embedding fallback/cache/index contracts,
+and refusal-fixture/contract repairs, followed by a fresh complete suite and
+D1/D2/D9 acceptance audit. Live somatic measurements remain outstanding.
+
 <a id="review-2026-09-18"></a>
 
-## READ THIS FIRST: repository review and documentation reconciliation, 2026-09-18
+## Earlier review and documentation reconciliation, 2026-09-18
 
 This section supersedes older present-tense status, test totals, and next-step
 instructions below. Older entries are retained as session history, not as a
@@ -47,7 +112,7 @@ Reproducible installation and CI also need attention: the reviewed tree has
 no tracked dependency lockfile or GitHub Actions workflow. These are engineering
 recommendations, not newly measured behavioral defects.
 
-### Reproduced runtime findings — all open
+### Reproduced runtime findings (R3 repaired in the follow-up above)
 
 **R1. Embedding fallback contaminates the cache and misreports its provenance.**
 In `spores/embeddings.py`, `SemanticEmbedder.embed_batch()` catches a backend
@@ -85,7 +150,8 @@ does not preserve the old checkpoint. `spores/io.py:LocalFileSporeLoader.save_sp
 already provides a temporary-file / fsync / replace pattern worth considering
 when repair work is authorized. This probe did not touch the user's saves.
 
-**R3. Engine shutdown does not stop the cycle daemon.**
+**R3. Engine shutdown does not stop the cycle daemon. Fixed in the follow-up above.**
+The following describes the pre-repair reproduction.
 `cycle.py:GeodesicOrchestrator.shutdown()` closes the background pool but never
 clears `is_running` or joins `daemon_thread`. On the isolated mock-provider
 engine, call `engine.shutdown()` and join the daemon with a 0.3-second timeout.

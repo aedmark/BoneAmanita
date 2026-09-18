@@ -58,6 +58,7 @@ class BoneTestCase(unittest.TestCase):
     def setUp(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         ReceiptLedger.reset_instance()
+        self.addCleanup(ReceiptLedger.reset_instance)
         # Pin the suite to the offline hash backend. The real embedding backends
         # need a reachable server or an optional package, and a test run must not
         # depend on either. `tests/test_embeddings.py` covers the live paths with
@@ -67,29 +68,35 @@ class BoneTestCase(unittest.TestCase):
         self.original_stdout = sys.stdout
         self.tee = TeeOutput(sys.stdout, "test_output_full.log")
         sys.stdout = self.tee
+        self.addCleanup(self._restore_stdout)
         print(f"\n{Prisma.CYN}>>> STARTING TEST: {self.id()}{Prisma.RST}")
         self.lore_logger = AppendLogger("test_saves.log")
         self.lore_patcher = patch("core.LoreManifest.save")
         self.mock_lore_save = self.lore_patcher.start()
+        self.addCleanup(self.lore_patcher.stop)
         self.mock_lore_save.side_effect = lambda *a, **k: self.lore_logger.log(
             self.id(), "LORE SAVE", *a, **k
         )
         self.chronos_patcher = patch("protocols.chronos.ChronosKeeper.save_checkpoint")
         self.mock_chronos_save = self.chronos_patcher.start()
+        self.addCleanup(self.chronos_patcher.stop)
         self.mock_chronos_save.side_effect = lambda history=None: self.lore_logger.log(
             self.id(), "CHRONOS QUICKSAVE", history=history
         )
         self.memory_logger = AppendLogger("test_memories.log")
         self.spore_patcher = patch("spores.io.LocalFileSporeLoader.save_spore")
         self.mock_spore_save = self.spore_patcher.start()
+        self.addCleanup(self.spore_patcher.stop)
         self.mock_spore_save.side_effect = lambda filename, data: (
             self.memory_logger.log(self.id(), f"SPORE SAVE: {filename}", data=data)
         )
         self.telemetry_logger = AppendLogger("test_telemetry.log")
         self.telemetry_patcher = patch("core.TelemetryService.get_instance")
         self.mock_telemetry_get = self.telemetry_patcher.start()
+        self.addCleanup(self.telemetry_patcher.stop)
         self.test_telemetry_dir = "test_telemetry_logs"
         self.real_telemetry = TelemetryService()
+        self.addCleanup(self.real_telemetry.shutdown)
         self.real_telemetry.log_dir = self.test_telemetry_dir
         self.real_telemetry.current_trace_file = os.path.join(
             self.test_telemetry_dir, f"trace_test_{int(time.time())}.jsonl"
@@ -115,8 +122,11 @@ class BoneTestCase(unittest.TestCase):
             "soul.oroboros.TheOroboros.LEGACY_FILE", self.oroboros_file
         )
         self.oroboros_patcher.start()
+        self.addCleanup(self.oroboros_patcher.stop)
+        self.addCleanup(LoreManifest.get_instance().flush_cache)
         try:
             self.engine = BoneAmanita(config=self.test_config)
+            self.addCleanup(self._shutdown_engine, self.engine)
         except Exception as e:
             print(
                 f"{Prisma.RED}Test Engine Initialization Failed! Captured Output is preserved in test_output_full.log{Prisma.RST}"
@@ -125,16 +135,12 @@ class BoneTestCase(unittest.TestCase):
 
     def tearDown(self):
         print(f"{Prisma.GRN}<<< COMPLETED TEST: {self.id()}{Prisma.RST}\n")
-        try:
-            if hasattr(self, "real_telemetry"):
-                self.real_telemetry.shutdown()
-            LoreManifest.get_instance().flush_cache()
-        finally:
-            sys.stdout = self.original_stdout
-            self.tee.close()
-        ReceiptLedger.reset_instance()
-        self.lore_patcher.stop()
-        self.chronos_patcher.stop()
-        self.spore_patcher.stop()
-        self.telemetry_patcher.stop()
-        self.oroboros_patcher.stop()
+
+    def _shutdown_engine(self, engine):
+        # Fixture cleanup stops execution without persisting test state.
+        with patch.object(engine.chronos, "perform_shutdown"):
+            engine.shutdown()
+
+    def _restore_stdout(self):
+        sys.stdout = self.original_stdout
+        self.tee.close()

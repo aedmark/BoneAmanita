@@ -53,6 +53,15 @@ you whether it ran.
 
 ## Status — reconciled 2026-09-18
 
+**Shutdown follow-up, 2026-09-18:** R3 is repaired. The cycle daemon and workers
+finish before persistence and telemetry teardown, and test fixtures clean up
+engines even after a subclass setup failure. A complete suite on `8bdd960`
+plus this repair returned **508 passed, 7 failed, 5 skipped, 22 subtests passed**.
+All four new shutdown regressions passed; the seven failures are the same
+ones reproduced before the repair. Embedding fallback and quicksave defects
+remain open. See the [latest handoff](SESSION_HANDOFF.md#stabilization-2026-09-18).
+This follow-up supersedes the review baseline below.
+
 The review covered `b0a096e` plus existing working-tree changes. No repairs were
 made in that review or the documentation reconciliation. The implementation
 milestones below do not imply a currently green suite or validated live behavior;
@@ -78,14 +87,14 @@ test counts attached to older milestones describe those earlier checks.
 | **D** the somatic contract | **partly implemented, validation open**: D0 has historical live measurements; D0b awaits a confirming live census; D1/D2 budget and wording plus D9 nomination routing are present, with refusal-test failures |
 
 Next proposed repair round: stabilize embedding fallback/cache identity and
-dimensions, checkpoint writes, engine shutdown, and the failing regression
+dimensions, checkpoint writes, and the failing regression
 baseline. Then audit the existing D1/D2/D9 implementation against the acceptance
 criteria below and rerun live measurements. The D0 census recorded ATP between
 16 and 53 over 30 turns after the earlier six-turn starvation defect was
 addressed. That historical energy result does not validate the current refusal
 behavior; D0b's post-tolerance census was interrupted before its first turn.
 
-**Current baseline: seven confirmed failing tests.** The corrected follow-up
+**Earlier review baseline: seven confirmed failing tests.** The corrected follow-up
 selection returned **129 passed, 7 failed, 4 skipped**; this is not a full-suite
 total. The initial broad run stopped at its failure cap and included four
 temporary-checkout Git-metadata failures, all resolved by correcting the review

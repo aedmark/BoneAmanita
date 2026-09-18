@@ -261,14 +261,14 @@ codebase, and it is what most of the recent work was about.
 ## Project status
 
 An experimental system in active development. **The current test baseline is
-not green.** A September 18, 2026 review of `b0a096e` plus the existing working
-tree changes found seven failing tests. Its follow-up selection finished with
-**129 passed, 7 failed, 4 skipped**; that is a selected run, not a full-suite
-total. The previously quoted 501 passed / 5 skipped is historical. The review
-did not run the live-model behavioral audits.
+not green.** The September 18 shutdown repair was tested in a disposable
+checkout of `8bdd960` plus the repair: **508 passed, 7 failed, 5 skipped**, with
+22 subtests passed in a complete suite run. All four new shutdown regressions
+passed; the seven failures are unchanged from the reproduced baseline. No
+live-model behavioral audit was run during this repair.
 
-See the [latest session handoff](SESSION_HANDOFF.md#review-2026-09-18) for exact
-commands, all seven failures, reproduced runtime defects, and next-round work.
+See the [latest session handoff](SESSION_HANDOFF.md#stabilization-2026-09-18)
+for the tested changes, remaining defects, and next-round work.
 
 Earlier audits found disconnected components, hash-based memory coordinates,
 settings absent from config files, and severity logs routed incorrectly. That
@@ -293,9 +293,11 @@ status summary and the latest handoff take precedence over historical sections.
   non-degraded receipts. Switching to hash after repeated failures can return
   mixed vector dimensions in a batch. These defects were reproduced and remain
   unfixed.
-- **Persistence and shutdown need repair.** An interrupted or failed quicksave
-  write can replace a valid checkpoint with incomplete JSON. Engine shutdown
-  leaves the cycle daemon running. Both were reproduced in isolated probes.
+- **Persistence still needs repair.** An interrupted or failed quicksave
+  write can replace a valid checkpoint with incomplete JSON. The reproduced
+  shutdown defect is repaired: shutdown now waits for the cycle daemon and
+  background workers before persistence and telemetry teardown. Active work
+  must finish before shutdown returns.
 - **The six-turn starvation result is historical.** The roadmap records later
   D0 repairs and a 30-turn live census with ATP between 16 and 53. That establishes
   an improved energy budget for that experiment, not reliable responses on every

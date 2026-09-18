@@ -414,6 +414,8 @@ class GeodesicOrchestrator:
                 self.output_queue.put(snapshot)
                 self.last_interaction_time = time.time()
             except queue.Empty:
+                if not self.is_running:
+                    break
                 time_since_last = current_time - self.last_interaction_time
                 if self.engine_state == "WAKE":
                     rem_threshold_seconds = getattr(
@@ -1034,8 +1036,11 @@ class GeodesicOrchestrator:
         return snapshot
 
     def shutdown(self):
+        self.is_running = False
+        if self.daemon_thread is not None:
+            self.daemon_thread.join()
         if getattr(self, "_async_pool", None) is not None:
-            self._async_pool.shutdown(wait=False)
+            self._async_pool.shutdown(wait=True)
 
     def _hydrate_snapshot_metadata(self, snapshot: Dict, ctx: CycleContext):
         snapshot.update(
