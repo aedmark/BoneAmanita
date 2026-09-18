@@ -1,6 +1,6 @@
 # Acknowledgments & Credits
 
-*Dedicated to my wife, Kai, my guardian angels, C & JW, and viewers like you!*
+*Dedicated to my wife, Kai, Peter, James, C&JW, and viewers like you!*
 
 ---
 
@@ -23,15 +23,14 @@ We would like to explicitly acknowledge the following individuals and architectu
 
     *What we removed, and why it is here:* until this revision the governor built a graph Laplacian over a memory subgraph and solved a nonlinear elliptic BVP by Picard iteration, and this file described that as the control loop. Instrumented on our own code with a subgraph seeded denser than a real session, the Laplacian contributed **1.53%** of the eigenvalue it produced, and the voltage input contributed nothing measurable: the reported number came back byte-identical at every voltage from 15 to 90. What remained after the topology and the voltage cancelled was the mean `ordvec` similarity, computed the expensive way. Spence predicted the magnitude from two numbers in an email before we measured it. The Laplacian and the Picard iteration are gone; the claim that they steered anything was ours, not his.
 
-    *On availability:* `ordvec` 0.5.0 is the last public build. Development continues privately while Spence sorts out IP, so anything newer arrives as a wheel rather than from PyPI, and this project pins 0.5.0 deliberately rather than by neglect. `RankQuantFastscan` is Rust-only by design and has never been in a Python build; eight-bit `RankQuant` is accepted by the Rust core but not exposed in Python. Neither is a bug and neither should be worked around.
+    *On availability:* `ordvec` 0.5.0 is the last public build.
 
-    *On verification:* `ordvec` carries a Lean 4 formalisation, so the candidate selection underneath both the subconscious memory search and the governor's regime gate rests on machine-checked code, and the Creative Determinant has a formalisation of its own. What is *not* verified is BoneAmanita's own implementation, which is ordinary Python and carries no proofs. Earlier revisions of this file said "mathematically verified" in a way that claimed the verification for us rather than for Spence's libraries, which was our overstatement and not a claim he made.
+    *On verification:* `ordvec` carries a Lean 4 formalisation, so the candidate selection underneath both the subconscious memory search and the governor's regime gate rests on machine-checked code, and the Creative Determinant has a formalisation of its own. What is *not* verified is BoneAmanita's own implementation, which is ordinary Python and carries no proofs.
 
 ### Sycophancy Logic - https://github.com/bradsadevnow/semantic-hallucination-generators
 * **Creator: Bradley (bradsadevnow)** - Bradley architected the "Gloss" framework, a brilliant piece of satirical infrastructure designed to mock VC-bloat and AI sycophancy. We use the output of this satire as antigens for our biomechanical engine.
 
 ### SPECIAL THANKS & ETERNAL GRATITUDE
 
-* **Jason Ausborn** - https://www.linkedin.com/in/jayzon/
 * **Mike Singleton** - https://www.linkedin.com/in/mikesingleton/
 * **Walker Pollitt** - https://www.linkedin.com/in/walker-pollitt/

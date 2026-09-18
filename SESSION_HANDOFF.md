@@ -1,6 +1,204 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
-## READ THIS FIRST: mid-thread state, 2026-09-17 evening
+<a id="review-2026-09-18"></a>
+
+## READ THIS FIRST: repository review and documentation reconciliation, 2026-09-18
+
+This section supersedes older present-tense status, test totals, and next-step
+instructions below. Older entries are retained as session history, not as a
+description of the current working tree. Standing project decisions, including
+preserving the biological vocabulary, still apply.
+
+### Scope and authorization
+
+Codex reviewed the repository, ran tests in a temporary copy, and reproduced
+three runtime failure areas with isolated probes. The user's follow-up was:
+"Do not attempt to repair anything; just prep the next round with the handoff
+and make sure our readme is being honest."
+
+This follow-up changes documentation only (`README.md`, this file, and the
+roadmap's current-status descriptions). **None of the defects below has been
+repaired, and no new regression tests have been added.** The next-round list is
+a proposed work plan, not authorization to begin repairs in this documentation
+session. No live-model behavioral audit was run in the review or this follow-up.
+
+### Reviewed state and existing user changes
+
+- HEAD at review: `b0a096e` (`7.0.14`). Findings apply to that commit **plus the
+  working tree as reviewed**, not to a pristine checkout of the commit.
+- Pre-existing modified files: `.idea/BoneAmanita.iml`, `credits.txt`, `presets.py`.
+- Pre-existing staged deletions: `tools/cache/audit_somatic.jsonl` and
+  `tools/cache/somatic_census.jsonl`.
+- Those edits and staged deletions were left intact. Do not restore old audit
+  caches, discard the preset edits, or rewrite the user's credits as part of
+  resuming this review.
+- Interpreter obtained from PyCharm: Python 3.14.7 at
+  `/home/gordonk/PycharmProjects/BoneAmanita/.venv/bin/python`.
+
+### Assessment
+
+The project has a useful experimental foundation: subsystem receipts,
+positive-and-negative state-to-prompt assertions, controlled somatic audits,
+and authored lore separated from much of the machinery. The main weaknesses
+are failure handling and distributed state ownership across large orchestrator
+modules, dictionaries, dataclasses, aliases, and dynamic attributes. Preserve
+the vocabulary; make boundaries and ownership more explicit incrementally.
+Reproducible installation and CI also need attention: the reviewed tree has
+no tracked dependency lockfile or GitHub Actions workflow. These are engineering
+recommendations, not newly measured behavioral defects.
+
+### Reproduced runtime findings — all open
+
+**R1. Embedding fallback contaminates the cache and misreports its provenance.**
+In `spores/embeddings.py`, `SemanticEmbedder.embed_batch()` catches a backend
+failure and generates hash vectors. Before the third consecutive failure,
+`_degrade()` leaves the backend/model identity and `degraded` flag unchanged.
+The fallback vectors are cached under that real backend's key, and the receipt
+says `vectorized via http`, `degraded=False`. Repeating that text after recovery
+hits the cache instead of obtaining a real embedding.
+
+Reproduction used an isolated embedder initialized with `BACKEND='hash'`, then
+assigned `backend='http'`, `model='review-model'`, `dimension=8`, and
+`degraded=False`. Mock `_raw_embed` to raise `TimeoutError` for one nonempty
+text, inspect the receipt, then mock a successful vector and request the same
+text. Observed: receipt not degraded, recovered backend not called, original
+hash vector returned. This is an offline fault-injection probe, not an observed
+outage against a live server.
+
+**R1b. The transition to hash can break batch dimensionality.** Repeat the probe
+with a 16-dimensional pretend HTTP backend. Fail distinct texts `one` and `two`,
+then request `['one', 'three']` while the backend fails again. `one` is fetched
+from the old cache before the third failure switches the embedder to the
+8-dimensional hash backend. Observed result lengths: **[16, 8]**. This violates
+the method's documented rectangular-batch contract and risks breaking downstream
+matrix/index operations. Both cache provenance and backend/index transitions
+need explicit contracts; a successful receipt alone cannot establish correctness.
+
+**R2. Failed quicksave writes destroy the previous valid checkpoint.**
+`protocols/chronos.py:ChronosKeeper.save_checkpoint()` opens
+`saves/quicksave.json` with `"w"` before serializing. In a temporary directory
+with copied lore, construct an engine using `provider='mock'` and hash
+embeddings, save once, then patch `protocols.chronos.json.dump` to write a
+partial JSON prefix and raise `OSError`. Observed: the first save parses, the
+file after the failed save does not. The exception path reports failure but
+does not preserve the old checkpoint. `spores/io.py:LocalFileSporeLoader.save_spore`
+already provides a temporary-file / fsync / replace pattern worth considering
+when repair work is authorized. This probe did not touch the user's saves.
+
+**R3. Engine shutdown does not stop the cycle daemon.**
+`cycle.py:GeodesicOrchestrator.shutdown()` closes the background pool but never
+clears `is_running` or joins `daemon_thread`. On the isolated mock-provider
+engine, call `engine.shutdown()` and join the daemon with a 0.3-second timeout.
+Observed: `is_running=True`, `daemon_thread.is_alive()=True`. The probe explicitly
+cleared the flag and joined afterward for its own cleanup. Production remains
+unchanged. Separately, `tests/base.py:BoneTestCase.tearDown()` shuts down telemetry
+but not the engine; background daemons can outlive fixtures and later wake into
+shared singleton state. Repair should establish shutdown ordering before
+persistence/telemetry teardown, and fixtures should clean up what they start.
+
+### Test evidence and its limits
+
+Tests ran on a temporary copy of tracked working files, using the configured
+interpreter above. The copy initially omitted Git metadata. Four observability
+checks therefore failed solely because they call `git ls-files`. Git metadata
+was subsequently copied, and **all 13 observability tests passed** on rerun.
+Those four failures are review-setup artifacts, not repository defects.
+
+The initial command was:
+
+```bash
+.venv/bin/python -m pytest -q --disable-warnings --maxfail=10
+```
+
+It stopped at its failure cap: **404 passed, 10 failed, 1 skipped**, with
+18 subtests passed, in 247.79 seconds. Four of the ten failures were the
+Git-metadata artifacts above. This was not a completed full-suite run.
+
+After correcting the temporary checkout, the follow-up selection reran the
+affected test files and covered the remaining files from the stopped run:
+
+```bash
+.venv/bin/python -m pytest -q --disable-warnings --tb=short \
+  tests/test_cortex.py tests/test_gate_tolerance.py tests/test_moog.py \
+  tests/test_observability.py tests/test_random.py tests/test_receipts.py \
+  tests/test_resonance.py tests/test_scars.py tests/test_soul.py \
+  tests/test_spatial_parser.py tests/test_spores.py tests/test_stage_manager.py \
+  tests/test_struts.py tests/test_synapse_fallback.py tests/test_zones.py
+```
+
+Result: **129 passed, 7 failed, 4 skipped**, with 4 subtests passed and one
+warning, in 38.29 seconds. The selections overlap: **do not add these counts
+or publish them as one full-suite result**. The previously advertised
+501 passed / 5 skipped is historical, not the reviewed baseline.
+
+The seven failures are:
+
+| Test node | Observed failure |
+|---|---|
+| `tests/test_cortex.py::CortexArchitectTests::test_evaluate_toxicity_counterfactual_rejection` | Expected `COUNTERFACTUAL_REJECTION`, received `SYSTEM_HALT`. |
+| `tests/test_cortex.py::CortexArchitectTests::test_evaluate_toxicity_system_halt` | `MagicMock` compared with a float in `nominate_toxicity()` ROS arithmetic. |
+| `tests/test_gate_tolerance.py::ToleranceReachesTheGates::test_a_genuine_extreme_is_still_refused` | `MagicMock` is not imported (`NameError`). |
+| `tests/test_gate_tolerance.py::ToleranceReachesTheGates::test_conversation_allows_what_adventure_refuses` | `MagicMock` is not imported (`NameError`). |
+| `tests/test_moog.py::TestMoogProtocol::test_moog_intercepts_unactionable_toxicity` | `MagicMock` compared with a float in `nominate_toxicity()` ROS arithmetic. |
+| `tests/test_random.py::RandomTest::test_productive_worry_godel_scar_math` | `refusal_triggered` remained false after `SimulationPreflightPhase.run()`. |
+| `tests/test_scars.py::CounterfactualToxicityLeavesAScar::test_the_cortex_rejection_records_a_scar_and_keeps_the_mind_online` | `MagicMock` is not imported (`NameError`). |
+
+These include broken fixtures and behavior/expectation disagreements; they are
+not evidence of seven distinct production defects. In particular, inspect the
+new nomination/arbitration boundary before deciding whether an old assertion
+or the implementation should change. Do not weaken assertions merely to go green.
+
+Temporary artifacts, if still present, are `/tmp/boneamanita-review.30v21P`
+and `/tmp/boneamanita-review-followup.log`. They are disposable, not durable
+project evidence; the commands and observations above are the handoff record.
+
+### Current implementation versus historical measurements
+
+- The governor uses `SignBitmap.score_all`, `z_top10`, and a corpus-size null
+  correction (`z_excess`), not a graph Laplacian/Picard solve. It proposes a
+  temperature carried through `<thermal_gate>`; `LLMInterface.generate()` strips
+  the tag and clamps the value to the supplied `temperature_band`. Therefore a
+  gate proposing zero does **not** guarantee deterministic sampling.
+- The older September 17 entry below describes an intermediate `mu_viability`
+  formula. Current `physics/observer.py` uses
+  `min(1.0, frustration_ratio * 10.0)`, and retains the four-sample `r_base`
+  calculation. Treat the older "uncommitted" descriptions as history.
+- `SomaticBudget`, budget-driven prompt text and generation limits, and
+  nomination-based Stage Manager routing already exist. D1/D2/D9 are not all
+  future work. Their presence does not establish completion of the roadmap's
+  acceptance criteria; refusal tests fail and current live behavior is unverified.
+- The six-turn starvation result predates D0 repairs. The roadmap records a
+  later live census with ATP between 16 and 53 across 30 turns. D0b's own section
+  explicitly says the post-tolerance census was interrupted before its first
+  turn. Stable ATP is not proof that the engine answers through the full script.
+- C5's roughly 10% shorter sentences and failure to obey a three-sentence cap
+  describe the earlier wording on two models. They are historical measurements,
+  not fresh results for the current somatic contract. The audit arms and their
+  measurement strings must be checked against current prompts before a new run.
+- Nine names are now in `CORE_SUBSYSTEMS`; not all paths issue all receipts.
+  Receipts are self-reports, and R1 demonstrates that inaccurate healthy reports
+  can arise accidentally. Remove claims that this requires a deliberate lie.
+
+### Proposed next round, when repair work is authorized
+
+1. Reproduce the seven failing tests in a disposable checkout with Git metadata
+   and the intended working changes. Establish the expected refusal contracts
+   before changing fixtures or production behavior.
+2. Address R1/R1b, R2, and R3 with focused failure-path regression tests: honest
+   fallback/cache identity and consistent dimensions; preservation of the last
+   good save; complete daemon/worker shutdown and fixture cleanup.
+3. Run one complete suite and record its exact commit/working-tree state and
+   result. Keep fixture defects separate from runtime defects in the report.
+4. Audit current D1/D2/D9 wiring against their acceptance criteria, then rerun
+   live somatic and 30-turn census experiments. Measure actual generated replies,
+   refusal reasons, and accommodation, not just ATP survival or prompt inclusion.
+5. Follow with incremental state-contract cleanup and reproducible dependencies/CI.
+   Avoid expanding the feature set before the failure boundaries are dependable.
+
+## Historical session: mid-thread state, 2026-09-17 evening
+
+The entry below is preserved as written. Its "do this first", uncommitted-file,
+and completion statements are superseded by the September 18 review above.
 
 Two streams ran in this repo at once tonight (this Claude session working a
 reply to Nelson Spence, and a second session doing Track D / C5 work) and

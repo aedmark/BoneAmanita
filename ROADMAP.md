@@ -2,11 +2,13 @@
 
 Written 2026-09-15, after the embeddings work (`7e90a74`). Companion to
 `SESSION_HANDOFF.md`, which describes what *is*; this describes what's
-next and why. Every claim here was measured against the running system,
-and the measurements are included so a future session can re-run them
-rather than trust them.
+next and why. This is a cumulative record of measurements, decisions, and
+implementation plans; older present-tense descriptions can be superseded.
+The September 18 status below and the latest `SESSION_HANDOFF.md` entry take
+precedence. Recorded experiments should be rerun before treating their results
+as evidence for a newer implementation.
 
-Three tracks, in dependency order:
+Four tracks, in dependency order:
 
 - **A. Observability**: make failure visible. Everything else depends on this.
 - **B. The Creative Determinant**: make the Navi math load-bearing.
@@ -49,37 +51,52 @@ preference, it is the precondition for the other two tracks. You cannot
 verify that a PDE is steering behaviour inside a system that cannot tell
 you whether it ran.
 
-## Status
+## Status — reconciled 2026-09-18
+
+The review covered `b0a096e` plus existing working-tree changes. No repairs were
+made in that review or the documentation reconciliation. The implementation
+milestones below do not imply a currently green suite or validated live behavior;
+test counts attached to older milestones describe those earlier checks.
 
 | Item | State |
 |---|---|
-| **B1** emit λ₁ | **done**: thermal lock live, 14 tests |
+| **B1** sampling gate | **replaced**: bitmap regime signal proposes `<thermal_gate>` temperature; the model interface clamps it to its temperature band |
 | **A1b** unmute severity logs | **done**: 25 sites fixed, 0 remain, lint test added |
 | **A1** strict config + boot manifest | **done**: 10 keys promoted, audit wired into genesis |
 | **C1** hippocampus | **done**: write path, graph contract, amputation, 11 tests |
-| **A3** receipts | **done**: ledger, roll call, 7 subsystems, `/diag`, 20 tests |
+| **A3** receipts | **implemented, defect open**: nine registered subsystem names and `/diag`; transient embedding fallback can report healthy HTTP work |
 | **C2** `wing_id` zones | **done**: tagged, scoped, doorway wired, 14 tests |
 | **A5** physics input balance | **done**: all four fixes, scorecard tool |
 | **A6** close the guessing gap | **done**: 13% -> 81% resolved, 37 tests |
-| **B3** the manifold | **done**: was built and broken; PDE solves, 395 tests |
+| **B3** governor validation | **PDE removed**: bitmap gate is current; previous green-suite claims are superseded by the September 18 failures |
 | **B4** make the credits true | **done**: all three overclaims corrected |
 | **A2** retire the silent handlers | **done**: 72 -> 28, pass-only banned, 2 ratchet tests |
 | **A4** state-asserting tests | **done**: physics-to-prompt pinned end to end, 20 tests |
 | **C3** co-regulation | **done**: found the severed serialization; user model now first-class |
 | **C4** Stage Manager and Silence | **done**: Tension is a state, Silence is an outcome, 21 tests |
 | **C5** somatic translation | **measured**: anaerobic shortens sentences ~10%; "3 sentences or less" is not obeyed |
-| **D** the somatic contract | **D0 and D0b done**: the economy holds across 30 live turns and the refusal gates are resized per mode; D1, D2 and D9 next |
+| **D** the somatic contract | **partly implemented, validation open**: D0 has historical live measurements; D0b awaits a confirming live census; D1/D2 budget and wording plus D9 nomination routing are present, with refusal-test failures |
 
-Next: **D1 and D2**, the somatic budget and the rewritten instructions, then
-**D9**, where refusal becomes a single Stage Manager decision. The metabolic
-economy is repaired (ATP holds between 16 and 53 across 30 live turns, where it
-used to reach zero by turn six) and the refusal gates are resized per mode
-(D0b), which is what made the engine go quiet once the economy no longer did.
+Next proposed repair round: stabilize embedding fallback/cache identity and
+dimensions, checkpoint writes, engine shutdown, and the failing regression
+baseline. Then audit the existing D1/D2/D9 implementation against the acceptance
+criteria below and rerun live measurements. The D0 census recorded ATP between
+16 and 53 over 30 turns after the earlier six-turn starvation defect was
+addressed. That historical energy result does not validate the current refusal
+behavior; D0b's post-tolerance census was interrupted before its first turn.
 
-Suite: **501 passed, 5 skipped**. The five skips are the live-embedding tests
-behind `BONE_EMBED_LIVE_TEST=1`, not a missing chat model. Re-run
-`tools/audit_receipts.py` after touching any instrumented subsystem, and
-`tools/audit_handlers.py` after adding a catch.
+**Current baseline: seven confirmed failing tests.** The corrected follow-up
+selection returned **129 passed, 7 failed, 4 skipped**; this is not a full-suite
+total. The initial broad run stopped at its failure cap and included four
+temporary-checkout Git-metadata failures, all resolved by correcting the review
+setup. The historical **501 passed, 5 skipped** must not be quoted as current.
+See [the September 18 handoff](SESSION_HANDOFF.md#review-2026-09-18) for exact
+commands, failure nodes, fault-injection reproductions, and scope limits.
+
+No live-model behavioral audit was run during this review. Before the next one,
+check that the audit arms describe the current somatic prompt text. Receipts
+remain useful evidence, but the reproduced embedding defect shows their
+accuracy also requires regression coverage.
 
 ---
 
@@ -553,25 +570,33 @@ reader does not have to work that out from the variable name.
 The Creative Determinant drives the engine's physics state via metabolic calculus:
 
 - `CreativeDeterminantEngine` (in `physics/maths.py`) calculates `viability` ($b = \kappa\gamma - \lambda_{eff}\mu$) and uses it to update ATP and ROS via `execute_metabolic_tick`.
-- $\mu_{viability}$ is measured by the real contradiction in the memory manifold. We count the odd cycles in the signed correlation graph of the ordinal memory vectors (the frustrated geometric residue) and map it to `mu` via static scaling.
+- `physics/observer.py` maps the supplied `frustration_ratio` to $\mu_{viability}$ with `min(1.0, frustration_ratio * 10.0)`. This is a scaled computational signal, not independently established evidence of semantic contradiction.
 - $\lambda_{eff}$ is divided by $R_{base}$, which is derived using a 4-sample finite-difference window over $\psi_{history}$ (`geo.abstraction`). This provides momentum to the penalty term and stops the system from becoming too frantic or too sluggish too quickly.
 
 ## B1. The Thermal Gate
 
 The engine directly controls the LLM generation temperature using the thermal gate mechanism. 
 
-- `brain/cortex.py` computes the `thermal_gate` value based on the base voltage and the state of the physics engine.
-- The `Composer` replaces the `<thermal_gate>` prompt tag with the actual sampling temperature. No eigenvalue sign testing is performed; the temperature floats dynamically based on the bitmap's standard deviation score.
+- `CyberneticGovernor` computes `z_excess` by subtracting a corpus-size null estimate from the standardized top-match score and proposes a temperature via `gate_temperature()`. Insufficient corpus evidence declines the measurement and falls back to PID regulation.
+- `brain/cortex.py` attaches that proposed temperature; `PromptComposer` emits the `<thermal_gate>` tag. `LLMInterface.generate()` strips the tag and clamps its value to the supplied `temperature_band`. A proposed zero can therefore become a nonzero sampling temperature. No eigenvalue sign testing is performed.
 
 ## B2. The Solver has been Removed
 
 Because the Laplacian and Picard solvers provided minimal mathematical signal while adding massive complexity, they were stripped out. 
 
-Instead of a nonlinear elliptic solve over a dynamically built manifold, the system uses `ordvec.SignBitmap` to score memories in one pass. The `CyberneticGovernor` calculates the coupling value by measuring the variance of semantic memory alignment over the corpus mean, setting the macro policy and target voltage directly.
+The system uses `ordvec.SignBitmap` to score memories in one pass. The governor
+uses the top-match excess over its estimated corpus null and the sharpness of
+those matches to influence sampling and regulation. These are similarity-based
+heuristics; they do not establish that an utterance is coherent or creative.
 
 ## B3. Tuning and Validation
 
-The implementation is verified against the test suite, with all tests passing locally without the need for mocked network connections to the `ollama` LLM backend. The system correctly evaluates the new finite difference models for $R_{base}$ and safely isolates calculations to prevent `MagicMock` explosions during offline testing.
+The earlier blanket claim that all tests pass is withdrawn. The September 18
+review confirmed seven failures across cortex, gate-tolerance, Moog, preflight,
+and scar tests, including `MagicMock` fixture/type errors. It also reproduced
+embedding fallback defects outside those tests. A new complete suite run and
+live validation are still needed; passing a governor-specific test does not
+validate the whole turn or the model's response.
 
 ## B4. Make the credits true, **DONE**
 
@@ -1494,12 +1519,18 @@ flagging and distressed phases.
 
 ## D9. One refusal, with a reason (staged)
 
+**September 18 status:** nomination objects, Stage Manager arbitration, and
+refusal receipts are already present in the code. The design below remains an
+acceptance target, not proof that every refusal has migrated. Seven regression
+tests fail in the reviewed tree, several at this boundary, and no new live
+census established completion.
+
 Chosen as the destination for refusal, after the D0b tolerances buy room to
-work. Today five mechanisms can independently stop a turn: the PINKER
+work. Before nomination routing, five mechanisms could independently stop a turn: the PINKER
 counterfactual gate, the ROS panic gate, the Moog quarantine, the tensegrity
 anchor, and the gatekeeper's syntax rejection. Each has its own threshold, its
-own message, and its own idea of what danger is, and none of them records that
-the engine declined to speak.
+own message, and its own idea of what danger was, without a common record of
+why the engine declined to speak.
 
 C4 already built the right shape for this. The Stage Manager negotiates
 Tension before anyone speaks, sets `refusal_triggered`, and types the packet
@@ -1520,6 +1551,11 @@ reason and a receipt, no gate stopping a turn on its own, and the flagging and
 distressed phases answered rather than refused.
 
 ## D1. One somatic budget per turn
+
+**September 18 status:** `body/somatic_budget.py:SomaticBudget` exists and is
+consumed by composition and generation controls. Its thresholds are currently
+inline, and the implementation's presence does not establish every requirement
+below. Review existing wiring and coverage before planning a new implementation.
 
 Replace the five paths with one object computed once per turn, before
 composition, and read by every consumer: the composer's text, the
@@ -1553,8 +1589,11 @@ respiration line and the standing metabolism line all read from it, and
 
 ## D2. The somatic instructions, rewritten (decision)
 
-Decided, pending measurement. Five changes, each tested as its own audit
-arm before adoption:
+**September 18 status:** partner-focused sentence caps and the prohibition on
+body narration already appear in the current composer's somatic contract.
+Their live effects were not measured in this review. The C5 results above are
+for earlier wording; they cannot certify this implementation. The following
+five decisions describe the intended changes and required measurement arms:
 
 1. **Address the right body.** User exhaustion stops saying "You are
    exhausted". It becomes about the partner: "Your partner is running low.
@@ -1749,6 +1788,11 @@ against 1.8. Reasoning buys nothing measurable here and costs a fifth of the
 replies. `--compare` shows it as `gemma4:12b (default)`.
 
 ## Sequencing within D
+
+**Historical feature sequence.** The current priority is the stabilization and
+validation work in the September 18 Status section. D1/D2/D9 code is already
+present; use this sequence to check dependencies and acceptance criteria, not
+to assume those features have yet to be started.
 
 D0 first, because it can change what the rest means. D1, D2 and D2b
 together, since the budget is where the new wording lives and D2b is how

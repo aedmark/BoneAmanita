@@ -210,21 +210,8 @@ class BoneConfig:
     PROVIDER = "ollama"
     BASE_URL = None
     API_KEY = "ollama"
-    # gemma4:12b, chosen 2026-09-17 on the D7 bake-off: it obeys the somatic
-    # instructions (94% of replies inside a three-sentence cap against 11%
-    # uninstructed), trips the Lexical Firewall least (5%), narrates no body,
-    # and is the fastest of the capable models. Run it with reasoning off:
-    # with reasoning on it spends its whole context deliberating and returns
-    # nothing on about an eighth of turns. ROADMAP D7.
-    MODEL = "gemma4:12b"
+    MODEL = "gemma4:e4b"
     OLLAMA_FALLBACK = ""
-
-    # Config constants the engine reads at boot and expects to resolve.
-    # BoneGenesis.ignite audits this once and reports every miss at once, so a
-    # key that quietly vanishes from tuning_presets.json surfaces immediately
-    # instead of leaving a subsystem on an inline fallback forever. Add a key
-    # here when you add a config read that has no sensible default.
-    # See ROADMAP.md track A1.
     REQUIRED_CONFIG = {
         "CORTEX": [
             "BASE_TOKENS",
