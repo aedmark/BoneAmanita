@@ -335,6 +335,8 @@ class ArchitectureTests(BoneTestCase):
 
     @patch("cycle.CongruenceValidator.__init__", return_value=None)
     def test_arch_hot_loop_validator_singleton(self, mock_validator_init):
+        if hasattr(self.engine, "cortex") and hasattr(self.engine.cortex, "dspy_critic"):
+            self.engine.cortex.dspy_critic.enabled = False
         self.engine.orchestrator.run_headless_turn("Testing the loop.")
         self.assertEqual(
             mock_validator_init.call_count,

@@ -30,12 +30,14 @@ class TestNavi(BoneTestCase):
         self.assertGreater(dd, 0.0, "PID failed to correct low narrative drag.")
 
     def test_policy_shift_coregulation(self):
-        self.governor.last_lam1 = -0.5
+        self.governor.order = 1
+        self.governor.last_z = 2.5
         self.governor.last_sol = "nontrivial"
         self.assertEqual(self.governor.get_policy_shift(), "CO_REGULATION")
 
     def test_policy_shift_efficiency(self):
-        self.governor.last_lam1 = 1.2
+        self.governor.order = 1
+        self.governor.last_z = -1.0
         self.governor.last_sol = "trivial"
         self.assertEqual(self.governor.get_policy_shift(), "EFFICIENCY")
 

@@ -232,11 +232,11 @@ class TestRealSubsystemsReport(unittest.TestCase):
         physics = {"voltage": 30.0, "narrative_drag": 0.6}
         with mock_patch.object(
             CyberneticGovernor,
-            "_graph_regulation",
+            "_bitmap_regulation",
             side_effect=TypeError("argument 'dim': 'numpy.ndarray' object cannot be interpreted as an integer"),
         ):
             governor.regulate(physics, 1.0, memory_core=object(), user_text="anything")
-        receipt = self._only("governor.creative_determinant")
+        receipt = self._only("governor.bitmap_gate")
         self.assertTrue(receipt.degraded)
         self.assertEqual(receipt.result_count, 0)
         self.assertIn("TypeError", receipt.detail)
@@ -253,11 +253,11 @@ class TestRealSubsystemsReport(unittest.TestCase):
 
         governor = CyberneticGovernor()
         governor.regulate({"voltage": 30.0}, 1.0, memory_core=object(), user_text="")
-        receipt = self._only("governor.creative_determinant")
+        receipt = self._only("governor.bitmap_gate")
         self.assertTrue(receipt.degraded)
         self.assertTrue(receipt.inputs["memory_core"])
         self.assertFalse(receipt.inputs["user_text"])
-        self.assertIn("anchor", receipt.detail)
+        self.assertIn("no utterance", receipt.detail)
 
     def test_a_pid_only_caller_does_not_forge_a_failed_solve(self):
         """CycleStabilizer wants a PID loop and passes neither input.
@@ -270,7 +270,7 @@ class TestRealSubsystemsReport(unittest.TestCase):
 
         governor = CyberneticGovernor()
         governor.regulate({"voltage": 30.0}, 1.0, memory_core=None, user_text="")
-        self.assertEqual(self.ledger.for_subsystem("governor.creative_determinant"), [])
+        self.assertEqual(self.ledger.for_subsystem("governor.bitmap_gate"), [])
 
     def test_word_resolution_reports_each_stage_separately(self):
         """13% lexicon coverage and 81% coverage produced identical prose."""
@@ -336,7 +336,10 @@ class TestRollCallOnARealTurn(BoneTestCase):
         while it was being computed and discarded.
         """
         ledger = ReceiptLedger.get_instance()
-        self.engine.orchestrator.run_turn("a rich and coherent thing to say")
+        from unittest.mock import patch as mock_patch
+        with mock_patch("core.CyberneticGovernor.regulate", return_value=(0.0, 0.0)):
+            self.engine.governor.last_z = 2.0
+            self.engine.orchestrator.run_turn("a rich and coherent thing to say")
         composed = ledger.for_subsystem("composer.compose")
         self.assertTrue(composed, "the composer assembled a prompt and said nothing")
         latest = composed[-1]

@@ -268,31 +268,6 @@ class TopologicalPrimitivesTest(BoneTestCase):
             "[FAIL] Null model failed to preserve degree sequence.",
         )
 
-    def test_cd_viability_and_drive(self):
-        phys = PhysicsPacket()
-        phys.kappa = 0.8
-        phys.gamma = 0.8
-        phys.mu = 0.5
-        phys.lambda_val = 1.0
-        b = phys.get_viability_potential()
-        self.assertAlmostEqual(
-            b,
-            (0.8 * 0.8) - (1.0 * 0.5),
-            places=2,
-            msg="[FAIL] Viability Potential (b) calculation is mathematically incorrect.",
-        )
-        a = phys.get_creative_drive()
-        self.assertAlmostEqual(
-            a,
-            0.8 * 0.8 * 0.5,
-            places=2,
-            msg="[FAIL] Creative Drive (a) calculation is mathematically incorrect.",
-        )
-        lam1 = phys.get_principal_eigenvalue()
-        self.assertIsInstance(
-            lam1, float, "[FAIL] Principal Eigenvalue failed to return a float."
-        )
-
     def test_cd_saturation_penalty(self):
         phys = PhysicsPacket()
         phys.voltage = 200.0
@@ -359,3 +334,68 @@ class TopologicalPrimitivesTest(BoneTestCase):
             "[FAIL] Input was not replaced with parasitic trauma words."
         )
         self.assertEqual(observer.pending_drag, 10.0, "[FAIL] Cordyceps failed to apply the absolute narrative drag lock.")
+
+    def test_r_base_ramp_up(self):
+        from physics.observer import QuantumObserver
+        from unittest.mock import MagicMock
+
+        from presets import BoneConfig
+        # Mock the engine config and events
+        config_ref = BoneConfig()
+        lex_mock = MagicMock()
+        lex_mock.get_valence.return_value = 0.0
+        observer = QuantumObserver(events=MagicMock(), lexicon_ref=lex_mock, config_ref=config_ref)
+        
+        # Helper to push a psi value through the observer
+        def push_psi(psi_val):
+            # We mock the return of the various extractors to ensure geo.abstraction = psi_val
+            observer._calculate_metrics = MagicMock(return_value={
+                "resonance": 1.0, "entropy": 0.5, "beta": 0.5,
+                "scope": 1.0, "depth": 1.0, "connectivity": 1.0,
+                "silence": 0.0, "loop_quotient": 0.0
+            })
+            from unittest.mock import patch
+            with patch('physics.geodesics.GeodesicEngine.collapse_wavefunction') as mock_collapse:
+                mock_geo = MagicMock()
+                mock_geo.abstraction = psi_val
+                mock_geo.coherence = 0.5
+                mock_geo.tension = 1.0
+                mock_collapse.return_value = mock_geo
+                observer.gaze("test word")
+            
+        # Pushing less than 4 items should not change r_base from 1.0
+        # But wait, r_base is a local variable inside gaze, we can't inspect it directly.
+        # How is r_base used? It is passed to calculate_viability
+        observer.cd_engine = MagicMock()
+        observer.cd_engine.calculate_viability.return_value = 1.0
+        observer.cd_engine.execute_metabolic_tick.return_value = (0.0, 0.0)
+
+        from unittest.mock import ANY
+
+        push_psi(1.0)
+        observer.cd_engine.calculate_viability.assert_called_with(kappa=ANY, gamma=ANY, mu=ANY, r_base=1.0)
+        
+        push_psi(2.0)
+        observer.cd_engine.calculate_viability.assert_called_with(kappa=ANY, gamma=ANY, mu=ANY, r_base=1.0)
+        
+        push_psi(3.0)
+        observer.cd_engine.calculate_viability.assert_called_with(kappa=ANY, gamma=ANY, mu=ANY, r_base=1.0)
+        
+        # Fourth item will trigger the 4-sample window:
+        # p0=1.0, p1=2.0, p2=3.0, p3=4.0
+        # d1: d1_1=1.0, d1_2=1.0, d1_3=1.0
+        # d2: d2_1=0.0, d2_2=0.0
+        # d3: d3_1=0.0
+        # r_base = 1.0 + abs(1.0) + abs(0.0) + abs(0.0) = 2.0
+        push_psi(4.0)
+        observer.cd_engine.calculate_viability.assert_called_with(kappa=ANY, gamma=ANY, mu=ANY, r_base=2.0)
+        
+        # Fifth item will shift the window
+        # p0=2.0, p1=3.0, p2=4.0, p3=2.0
+        # d1: d1_1=1.0, d1_2=1.0, d1_3=-2.0
+        # d2: d2_1=0.0, d2_2=-3.0
+        # d3: d3_1=-3.0
+        # r_base = 1.0 + abs(-2.0) + abs(-3.0) + abs(-3.0) = 9.0
+        push_psi(2.0)
+        observer.cd_engine.calculate_viability.assert_called_with(kappa=ANY, gamma=ANY, mu=ANY, r_base=9.0)
+

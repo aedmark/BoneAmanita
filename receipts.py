@@ -42,7 +42,7 @@ CORE_SUBSYSTEMS = (
     "cortex.query_neighborhood",
     "cortex.recall",
     "embeddings.embed_batch",
-    "governor.creative_determinant",
+    "governor.bitmap_gate",
     "lattice.infer_and_couple",
     "memory.retrieve_semantic",
     "physics.word_resolution",

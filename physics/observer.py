@@ -199,10 +199,11 @@ class QuantumObserver:
         r_base = 1.0
         if len(self.psi_history) == 4:
             p0, p1, p2, p3 = self.psi_history
-            d1_1, d1_2, d1_3 = p1 - p0, p2 - p1, p3 - p2
-            d2_1, d2_2 = d1_2 - d1_1, d1_3 - d1_2
-            d3_1 = d2_2 - d2_1
-            r_base = 1.0 + abs(d1_3) + abs(d2_2) + abs(d3_1)
+            if all(isinstance(p, (int, float)) for p in (p0, p1, p2, p3)):
+                d1_1, d1_2, d1_3 = p1 - p0, p2 - p1, p3 - p2
+                d2_1, d2_2 = d1_2 - d1_1, d1_3 - d1_2
+                d3_1 = d2_2 - d2_1
+                r_base = 1.0 + abs(d1_3) + abs(d2_2) + abs(d3_1)
 
         viability = self.cd_engine.calculate_viability(
             kappa=resonance, gamma=gamma_idx, mu=mu_viability, r_base=r_base

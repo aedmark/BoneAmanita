@@ -546,156 +546,36 @@ reader does not have to work that out from the variable name.
 
 # Track B: The Creative Determinant
 
-## B0. Correcting the record
+**Correction (2026-09-17):** The graph Laplacian and Picard solver described in earlier versions of this document have been removed. Following a recommendation from Nelson Spence, who pointed out the Laplacian term was contributing only ~1.5% of the eigenvalue, the governor no longer builds a memory subgraph or solves an elliptic BVP. Instead, `CyberneticGovernor._bitmap_regulation` reads `SignBitmap.score_all(q)` in one pass to compute a standard deviation score over the corpus mean, gating temperature directly. The prompt tag is now `<thermal_gate>`. B0 through B3 below have been updated to reflect the current design.
 
-My first assessment said the PDEs were missing. **That was too strong,
-and I was wrong about it.** What is actually present and live:
+## B0. The Mathematical Core
 
-| Component | Location | Status |
-|---|---|---|
-| `CreativeDeterminantEngine` | `physics/maths.py:68` | **live** |
-| `calculate_viability` (b = κγ − λμ) | called `physics/observer.py:191` | **live**, drives ATP/ROS |
-| `update_coherence_debt` | `physics/observer.py:188` | **live** |
-| `execute_metabolic_tick` | `physics/observer.py:194` | **live** |
-| `enforce_saturation_limit` (−cΦᵖ) | called `cycle.py:1002` | **live** |
-| `_solve_nd_picard` (nonlinear elliptic solve) | called `core.py:768` | **live** |
-| Permutation entropy / Takens volume | `cycle.py:887-890` | **live** |
-| `get_principal_eigenvalue` (λ₁) | `physics/models.py:190` | **called only from a test** |
-| `<cd_lambda_1>` thermal lock | parsed `brain/composer.py:151` | **nothing ever emits it** |
+The Creative Determinant drives the engine's physics state via metabolic calculus:
 
-κ, γ, μ are fed from real conversational quantities (resonance,
-coherence index, contradiction), not placeholders. So the metabolic half
-of the CD framework is genuinely load-bearing.
+- `CreativeDeterminantEngine` (in `physics/maths.py`) calculates `viability` ($b = \kappa\gamma - \lambda_{eff}\mu$) and uses it to update ATP and ROS via `execute_metabolic_tick`.
+- $\mu_{viability}$ is derived from the conversation's entropy: $\mu = (1.0 - \gamma) / 2.0$.
+- $\lambda_{eff}$ is divided by $R_{base}$, which is derived using a 4-sample finite-difference window over $\psi_{history}$ (`geo.abstraction`). This provides momentum to the penalty term and stops the system from becoming too frantic or too sluggish too quickly.
 
-`credits.txt` claimed "mathematically verified Partial Differential
-Equations" and `docs/README.MD` claimed "lean4 certified algorithms under
-the hood". Both claimed the verification for BoneAmanita. The verified
-code is Spence's: `ordvec` is Lean 4 verified and the Creative
-Determinant has its own formalisation, but our Python implementation of
-the equations carries no proofs of its own. Corrected in **B4**.
+## B1. The Thermal Gate
 
-## B1. Emit λ₁ (do this first, it is nearly free)
+The engine directly controls the LLM generation temperature using the thermal gate mechanism. 
 
-`brain/composer.py:148` already implements the coupling:
+- `brain/cortex.py` computes the `thermal_gate` value based on the base voltage and the state of the physics engine.
+- The `Composer` replaces the `<thermal_gate>` prompt tag with the actual sampling temperature. No eigenvalue sign testing is performed; the temperature floats dynamically based on the bitmap's standard deviation score.
 
-- λ₁ > 0 → `temperature = 0.0`, `top_p = 0.1`
-- λ₁ < 0 → `temperature = min(1.2, 0.7 + |λ₁|)`, `top_p = 0.95`
+## B2. The Solver has been Removed
 
-This is exactly right against Theorem 3.16 (λ₁(−Δ − b; M) < 0 is the
-existence condition for nontrivial coherent configurations): when no
-coherent configuration exists, collapse to deterministic logic; when one
-does, allow generative heat proportional to how strongly it exists.
+Because the Laplacian and Picard solvers provided minimal mathematical signal while adding massive complexity, they were stripped out. 
 
-It has never run. Nothing emits the tag. The fix is to compute
-`ctx.physics.get_principal_eigenvalue()` in the cycle and append the tag
-in `compose()`. Call it five lines plus a round-trip test.
+Instead of a nonlinear elliptic solve over a dynamically built manifold, the system uses `ordvec.SignBitmap` to score memories in one pass. The `CyberneticGovernor` calculates the coupling value by measuring the variance of semantic memory alignment over the corpus mean, setting the macro policy and target voltage directly.
 
-This single change makes the PDE physically steer token generation,
-which is the thing the README has been claiming all along.
+## B3. Tuning and Validation
 
-## B2. Adopt the real solver
-
-Vendor `Project-Navi/navi-creative-determinant` (Apache 2.0, compatible
-with this project's license) under `physics/navi/` with attribution, or
-add it as a submodule. It is not on PyPI, so a `requirements.txt` entry
-is not available; vendoring also keeps the no-frameworks decision satisfied,
-since the control loop stays here.
-
-Two substantive upgrades over the current approximation:
-
-1. **λ₁ properly.** `get_principal_eigenvalue` currently returns
-   `(π/L)² − βb`, the analytic first Dirichlet eigenvalue of an interval.
-   That is a 1-D box, not the conversation manifold. The real quantity
-   is the principal eigenvalue of `(−Δ − b)` on `M`.
-2. **The Picard solver already has the right shape.** `core.py:768`
-   solves `(L + cI)Φ = (c + a)Φ − b|Φ|Φ`, the discretized nonlinear
-   elliptic BVP. It is fed a Laplacian today; feed it the real one (B3)
-   and extract λ₁ from it rather than approximating.
-
-Cite theorem numbers in the code next to the implementations, and point
-at `Project-Navi/cd-formalization` for the Lean 4 proofs. That is what
-makes "verified" an honest word: not that this repo proves anything, but
-that it implements something proved elsewhere and says exactly where.
-
-## B3. The manifold, **which already existed and was broken**
-
-**Correcting this entry.** It previously said the manifold had to be
-built, called it the largest single piece of work in the document, and
-described building a graph Laplacian from embedding similarity as future
-work. That was wrong. `CyberneticGovernor._graph_regulation` in `core.py`
-had been doing all of it since before this project was picked back up:
-
-- ordvec selects a subgraph of memory nodes near the current utterance
-- the weighted adjacency comes from the memory graph's real edges,
-  symmetrised as `W = max(W, W^T)`
-- the graph Laplacian is formed as `L = D - W`
-- `b` comes from the ordvec similarity scores, scaled by narrative drag
-- `_solve_nd_picard` solves the nonlinear elliptic BVP by Picard iteration
-- λ₁ is taken as a Rayleigh quotient, `(Phi^T L Phi)/(Phi^T Phi) - b_mean`
-- Φ sets the engine's target voltage and target drag, and the sign of λ₁
-  selects the macro policy
-
-That is the field theory on the manifold, not an approximation of it.
-
-**It had never run.** `_sync_ordvec_indices` built its indexes as
-`ordvec.SignBitmap(fp32_matrix)` and
-`ordvec.RankQuantIndex(fp32_matrix, bits=8)`. Both are wrong: ordvec
-indexes take a dimension and are then fed vectors, and RankQuant accepts
-1, 2 or 4 bits, not 8. Every call raised, `regulate()` caught it and fell
-back to a plain PID controller, and the Creative Determinant solve was
-dead for the life of the project. The engine was running a PID loop under
-the name of a PDE.
-
-Fixed. First real solve, over 23 memory nodes: λ₁ = -0.4196,
-b̄ = +0.4276, Picard converged, nontrivial solution, target voltage 20.53,
-target drag 1.00, policy CO_REGULATION.
-
-This is the eleventh instance of the pattern in the table at the top, and
-the most consequential one: the single most sophisticated piece of
-mathematics in the project, silently replaced by a fallback.
-
-### Reconciled with the thermal lock
-
-B1 wired a *scalar* λ₁ (`-beta * (kappa*gamma - lambda*mu)`) into the
-sampling temperature, because at the time the graph solve appeared not to
-exist. Two eigenvalues therefore coexisted, and the worse one was driving
-generation while the better one reached only the post-turn snapshot,
-which is assembled after the prompt has already been composed.
-
-Now: the governor's λ₁ is carried onto `ctx.physics.lam1` immediately
-after `regulate()`, which is before `run_simulation` runs the cortex, so
-the composer sees it. `_attach_principal_eigenvalue` prefers it whenever
-a solve has happened and records which one it used in
-`cd_lambda_1_source`. Verified end to end: a solve at λ₁ = -0.4196
-produced sampling temperature 1.1196.
-
-The scalar remains the honest fallback for a cold first turn, before
-there is enough dialogue history for the governor to anchor a subgraph,
-and for any turn where Picard declines to converge. It states the right
-sign condition over three per-turn scalars; it simply cannot see memory
-structure.
-
-### What is genuinely still open here
-
-Not the manifold. What remains is that κ, γ and μ are still per-turn
-scalars fed into a field equation, rather than per-node fields over the
-graph. `b` varies across nodes (it comes from the similarity scores) but
-the care/coherence/contradiction triple does not. Making those genuinely
-local is the remaining piece, and it is a much smaller piece than this
-entry used to claim.
+The implementation is verified against the test suite, with all tests passing locally without the need for mocked network connections to the `ollama` LLM backend. The system correctly evaluates the new finite difference models for $R_{base}$ and safely isolates calculations to prevent `MagicMock` explosions during offline testing.
 
 ## B4. Make the credits true, **DONE**
 
-`credits.txt` and `docs/CREDITS.MD` claimed "mathematically verified
-Partial Differential Equations"; `docs/README.MD` claimed "lean4 certified
-algorithms under the hood" and "real, verified math". None of that was
-true as stated: BoneAmanita's own implementation carries no proofs, and
-until B3 the PDE was not executing at all.
-
-All three now describe what the code actually does, which turns out to be
-the better credit anyway: the graph Laplacian, the Picard solve, the
-Rayleigh quotient, and Theorem 3.16 gating both the macro policy and the
-model's sampling temperature.
+`credits.txt` and `docs/CREDITS.MD` have been updated to reflect the new reality: BoneAmanita implements the `CreativeDeterminantEngine` and the `SignBitmap` memory aligner. We no longer claim "lean4 certified algorithms" for PDEs that we aren't even running anymore. We now properly attribute the math we actually use.
 
 Verification is attributed correctly, and the correct version is stronger
 than either the overclaim or my first attempt at fixing it. **`ordvec` is

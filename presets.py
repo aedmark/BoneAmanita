@@ -258,7 +258,7 @@ class BoneConfig:
             "GATEKEEPER_BANNED_ROS",
         ],
         "PHYSICS": ["TASTE_CONFIDENCE_FLOOR", "ZONE_MARGIN"],
-        "CD": ["LAMBDA", "BETA"],
+        "CD": ["LAMBDA"],
         "EMBEDDINGS": ["BACKEND", "MODEL", "URL"],
         "GATE": ["Z_PIVOT", "T_OPEN_BASE", "T_GAIN", "T_MAX", "MIN_CORPUS", "TOP_K"],
         "STAGE": [
@@ -390,7 +390,6 @@ class BoneConfig:
     # Under independent uniform inputs, E[k*g]/E[m] = 0.5.
     CD: Dict[str, Any] = {
         "LAMBDA": 1.0,
-        "BETA": 0.4,
     }
 
     # The Mnemonic Arcade's coordinate system. BACKEND "auto" probes the HTTP

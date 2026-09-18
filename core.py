@@ -759,7 +759,7 @@ class CyberneticGovernor:
                 # Exactly one of the two arrived. That is a wiring fault at the
                 # call site, not a caller who wanted a PID loop.
                 issue_receipt(
-                    "governor.creative_determinant",
+                    "governor.bitmap_gate",
                     "PID fallback, incomplete inputs",
                     result_count=0,
                     degraded=True,
@@ -800,7 +800,7 @@ class CyberneticGovernor:
             # turn and served a PID loop wearing the PDE's skin. The receipt is
             # what makes that state impossible to hold silently again.
             issue_receipt(
-                "governor.creative_determinant",
+                "governor.bitmap_gate",
                 "PID fallback, graph solve raised",
                 result_count=0,
                 degraded=True,

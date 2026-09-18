@@ -320,7 +320,7 @@ class TestChaosEngineering(BoneTestCase):
         events_mock = MagicMock()
         llm = LLMInterface(events_ref=events_mock, provider="mock")
         params_dissolving = {}
-        llm.generate("Test prompt <cd_lambda_1>1.5</cd_lambda_1>", params_dissolving)
+        llm.generate("Test prompt <thermal_gate>0.0</thermal_gate>", params_dissolving)
         self.assertEqual(
             params_dissolving.get("temperature"),
             0.0,
@@ -332,7 +332,7 @@ class TestChaosEngineering(BoneTestCase):
             "[FAIL] LLM failed to lock top_p during positive eigenvalue.",
         )
         params_emergent = {}
-        llm.generate("Test prompt <cd_lambda_1>-0.3</cd_lambda_1>", params_emergent)
+        llm.generate("Test prompt <thermal_gate>0.8</thermal_gate>", params_emergent)
         self.assertGreater(
             params_emergent.get("temperature"),
             0.7,
