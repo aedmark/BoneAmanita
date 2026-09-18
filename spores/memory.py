@@ -75,7 +75,10 @@ class SubconsciousStrata:
             try:
                 dim = self.rank_bank.shape[1]
                 self.bitmap = SignBitmap(dim)
-                self.quantizer = RankQuant(dim, 4)
+                try:
+                    self.quantizer = RankQuant(dim, 8)
+                except Exception:
+                    self.quantizer = RankQuant(dim, 4)
                 self.bitmap.add(self.rank_bank)
                 self.quantizer.add(self.rank_bank)
             except Exception as e:

@@ -870,7 +870,7 @@ measurements; this is the shape of it.
    never set it, and the Doorway Effect had no caller.
 7. **B3, the CD solve.** `_sync_ordvec_indices` built its ordvec indexes
    with the wrong constructor (`SignBitmap(matrix)` where a dimension is
-   expected, and `bits=8` which ordvec rejects), so every call raised,
+   expected, and `bits=8` which ordvec 0.5.0 rejects), so every call raised,
    `regulate()` caught it, and the engine ran a plain PID controller
    under the name of a PDE for the life of the project. Fixed; first real
    solve gave lambda_1 = -0.4196 over 23 memory nodes. The thermal lock
@@ -1210,7 +1210,7 @@ them as a specification:
   ```bash
   python3 -m venv .venv && .venv/bin/pip install pytest numpy faiss-cpu requests markdown
   ```
-  `ordvec` IS on PyPI and installs cleanly (`pip install 'ordvec>=0.5.0'`,
+  `ordvec` IS on PyPI and installs cleanly (`pip install 'ordvec>=0.5.0'` (we have opportunistically added try-catch readiness for `0.10.0` and its 8-bit quantization),
   version 0.5.0): it is Nelson Spence's, still published, and ships as a
   compiled abi3 wheel that works on Python 3.14. Install it; the suite is
   not fully green without it. `dspy` is still not installed here, stays

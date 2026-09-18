@@ -758,14 +758,17 @@ class CyberneticGovernor:
         
         # ordvec indexes are constructed with a DIMENSION and then fed vectors.
         # This passed the matrix straight to the constructor, where `dim` is
-        # expected, and asked for 8-bit quantisation, which ordvec rejects (it
+        # expected, and asked for 8-bit quantisation, which ordvec 0.5.0 rejects (it
         # accepts 1, 2 or 4). Both raised on every call, so the governor
         # always fell back to PID and the Creative Determinant solve on the
         # memory Laplacian had never once run.
         dim = int(fp32_matrix.shape[1])
         bitmap = ordvec.SignBitmap(dim)
         bitmap.add(fp32_matrix)
-        quantizer = ordvec.RankQuant(dim, 4)
+        try:
+            quantizer = ordvec.RankQuant(dim, 8)
+        except Exception:
+            quantizer = ordvec.RankQuant(dim, 4)
         quantizer.add(fp32_matrix)
         self.memory_bitmap = bitmap
         self.memory_rq = quantizer

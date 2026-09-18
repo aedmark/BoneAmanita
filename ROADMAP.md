@@ -1739,7 +1739,7 @@ band, and the audit shows a measurable text difference between chemistry
 extremes on a live model. If there is none, remove the claim rather than
 the audit.
 
-## D5. The body issues receipts
+## D5. The body issues receipts (done)
 
 One somatic receipt per turn, in A3's format: the state it was given, the
 budget it produced, the reply's measures, and the outcome (`complied`,
