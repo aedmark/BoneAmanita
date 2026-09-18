@@ -41,6 +41,7 @@ CORE_SUBSYSTEMS = (
     "composer.compose",
     "cortex.query_neighborhood",
     "cortex.recall",
+    "cortex.somatic",
     "embeddings.embed_batch",
     "governor.bitmap_gate",
     "lattice.infer_and_couple",

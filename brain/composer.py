@@ -1140,12 +1140,18 @@ class ResponseValidator:
             self.last_feedback = None
         budget = _state.get("somatic_budget")
         final_content = sanitized_response
+        trimmed = False
         if budget and budget.sentence_cap:
-            final_content = trim_to_sentence_cap(final_content, budget.sentence_cap)
+            trimmed_content = trim_to_sentence_cap(final_content, budget.sentence_cap)
+            if len(trimmed_content) < len(final_content):
+                trimmed = True
+                final_content = trimmed_content
 
         return {
             "valid": True,
             "content": final_content,
             "meta_logs": extracted_meta_logs,
             "learned_triplet": learned_triplet,
+            "trimmed": trimmed,
+            "feedback_instruction": self.last_feedback,
         }

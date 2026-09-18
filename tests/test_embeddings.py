@@ -2,7 +2,9 @@
 
 import math
 import os
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock, patch
 
 from spores.embeddings import (
@@ -155,6 +157,111 @@ class HttpBackend(unittest.TestCase):
                 e.embed(token)
         self.assertEqual(e.backend, "hash")
         self.assertTrue(e.degraded)
+
+    def test_fallback_reports_hash_and_retries_same_text_after_recovery(self):
+        with patch("requests.post", return_value=_fake_response([[1.0, 0.0]])):
+            e = SemanticEmbedder.get_instance()
+        with patch("spores.embeddings.issue_receipt") as receipt:
+            with patch("requests.post", side_effect=TimeoutError("offline")):
+                failed = e.embed("recover me")
+            self.assertTrue(e.degraded)
+            self.assertEqual(receipt.call_args.args[1], "vectorized via hash")
+            self.assertTrue(receipt.call_args.kwargs["degraded"])
+            self.assertIn("TimeoutError", receipt.call_args.kwargs["detail"])
+            with patch("requests.post", return_value=_fake_response([[0.0, 1.0]])) as post:
+                recovered = e.embed("recover me")
+                self.assertEqual(e.embed("recover me"), recovered)
+            self.assertEqual(post.call_count, 1)
+            self.assertEqual(recovered, [0.0, 1.0])
+            self.assertNotEqual(failed, recovered)
+            self.assertFalse(e.degraded)
+            self.assertFalse(receipt.call_args.kwargs["degraded"])
+
+    def test_transition_keeps_index_width_and_discards_semantic_cache(self):
+        from brain.ann import CerebralIndex
+
+        real = [1.0] + [0.0] * 15
+        with patch("requests.post", return_value=_fake_response([real])):
+            e = SemanticEmbedder.get_instance()
+            index = CerebralIndex()
+            e.embed("cached")
+        with patch("requests.post", side_effect=OSError("offline")):
+            e.embed("one")
+            e.embed("two")
+            rows = e.embed_batch(["cached", "one", "three", "", "three"])
+        self.assertEqual(e.backend, "hash")
+        self.assertEqual(e.dimension, index.dimension)
+        self.assertEqual(e.dimension, 16)
+        self.assertEqual([len(row) for row in rows], [16] * 5)
+        self.assertEqual(rows[3], [0.0] * 16)
+        self.assertEqual(rows[2], rows[4])
+        self.assertEqual(rows[0], _l2_normalize(_hash_to_vector("cached", 16)))
+        self.assertNotEqual(rows[0], real)
+        self.assertTrue(all(key.startswith("hash:shake_256:") for key in e._cache))
+        index.add_memories(rows[:3], [{"id": str(i)} for i in range(3)])
+        self.assertEqual(index.total_nodes, 3)
+
+    def test_malformed_vectors_are_degraded_and_not_cached_as_semantic(self):
+        for bad in ([], [1.0], [float("nan"), 0.0], [float("inf"), 0.0], ["bad", 0.0]):
+            with self.subTest(vector=bad):
+                SemanticEmbedder.reset()
+                with patch("requests.post", return_value=_fake_response([[1.0, 0.0]])):
+                    e = SemanticEmbedder.get_instance()
+                with patch("requests.post", return_value=_fake_response([bad])):
+                    fallback = e.embed("invalid")
+                self.assertEqual(len(fallback), 2)
+                self.assertTrue(all(math.isfinite(v) for v in fallback))
+                self.assertTrue(e.degraded)
+                with patch("requests.post", return_value=_fake_response([[0.0, 1.0]])) as post:
+                    self.assertEqual(e.embed("invalid"), [0.0, 1.0])
+                self.assertEqual(post.call_count, 1)
+
+    def test_failed_sweep_is_all_hash_but_preserves_healthy_cache_for_recovery(self):
+        with patch("requests.post", return_value=_fake_response([[1.0, 0.0]])):
+            e = SemanticEmbedder.get_instance()
+            e.embed("healthy")
+        with patch("spores.embeddings.issue_receipt") as receipt:
+            with patch("requests.post", side_effect=OSError("offline")):
+                rows = e.embed_batch(["healthy", "new", "new", ""])
+            self.assertEqual(rows[0], _l2_normalize(_hash_to_vector("healthy", 2)))
+            self.assertEqual(rows[1], rows[2])
+            self.assertEqual(rows[3], [0.0, 0.0])
+            self.assertEqual(receipt.call_args.kwargs["inputs"]["cache_hits"], 0)
+            with patch("requests.post", return_value=_fake_response([[0.0, 1.0]])) as post:
+                self.assertEqual(e.embed_batch(["healthy", "new", "new", ""]),
+                                 [[1.0, 0.0], [0.0, 1.0], [0.0, 1.0], [0.0, 0.0]])
+            self.assertEqual(post.call_args.kwargs["json"]["input"], ["new"])
+            self.assertEqual(receipt.call_args.kwargs["inputs"]["cache_hits"], 1)
+            self.assertEqual(e._consecutive_failures, 0)
+
+    def test_concurrent_recovery_cannot_cache_fallback_as_semantic(self):
+        with patch("requests.post", return_value=_fake_response([[1.0, 0.0]])):
+            e = SemanticEmbedder.get_instance()
+        entered = threading.Event()
+        release = threading.Event()
+        second_entered = threading.Event()
+
+        def transport(texts):
+            if not entered.is_set():
+                entered.set()
+                release.wait(3)
+                raise OSError("offline")
+            second_entered.set()
+            return [[0.0, 1.0]]
+
+        with patch.object(e, "_raw_embed", side_effect=transport):
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                first = pool.submit(e.embed, "same text")
+                self.assertTrue(entered.wait(2))
+                second = pool.submit(e.embed, "same text")
+                try:
+                    self.assertFalse(second_entered.wait(0.1))
+                finally:
+                    release.set()
+                self.assertNotEqual(first.result(timeout=3), [0.0, 1.0])
+                self.assertEqual(second.result(timeout=3), [0.0, 1.0])
+        self.assertFalse(e.degraded)
+        self.assertEqual(e.embed("same text"), [0.0, 1.0])
 
     def test_failure_still_returns_usable_vectors(self):
         with patch("requests.post", return_value=_fake_response([[1.0, 0.0]])):

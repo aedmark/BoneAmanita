@@ -7,6 +7,8 @@ from unittest.mock import MagicMock
 from brain.cortex import CortexServices, TheCortex
 from cycle import GeodesicOrchestrator
 from presets import BoneConfig
+from core import CycleContext
+from physics.models import PhysicsPacket, EnergyState
 
 try:
     from tests.base import BoneTestCase
@@ -21,7 +23,8 @@ except ImportError:
 class TestMoogProtocol(BoneTestCase):
     def setUp(self):
         super().setUp()
-        self.config = BoneConfig
+        self.config = BoneConfig()
+        self.config.GATE_TOLERANCE = 1.0
 
         self.mock_svc = MagicMock()
         self.mock_svc.consultant = MagicMock()
@@ -75,15 +78,15 @@ class TestMoogProtocol(BoneTestCase):
         cortex.dialogue_buffer.append("Previous turn")
         cortex.dialogue_buffer.append("Current panic")
 
-        ctx = MagicMock()
-        ctx.physics = MagicMock()
-        ctx.physics.get = phys_state.get
-        # We need to simulate the exact phys_state
-        ctx.physics.__dict__.update(phys_state)
-        ctx.input_text = sim_result["mutated_input"]
-        ctx.is_system_event = False
-        ctx.nominations = []
+        ctx = CycleContext(
+            input_text=sim_result["mutated_input"],
+            physics=PhysicsPacket(
+                narrative_drag=phys_state["narrative_drag"],
+                energy=EnergyState(chi=phys_state["chi"], m_a=phys_state["m_a"]),
+            ),
+        )
         cortex.nominate_toxicity(ctx)
+        self.assertFalse(ctx.refusal_triggered)
 
         self.assertEqual(len(ctx.nominations), 1)
         nom = ctx.nominations[0]

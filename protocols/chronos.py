@@ -4,6 +4,7 @@ import dataclasses
 import json
 import logging
 import os
+import tempfile
 import time
 from typing import Any, Dict, Optional, Tuple
 
@@ -37,6 +38,7 @@ class ChronosKeeper:
         }
 
     def save_checkpoint(self, history: Optional[list] = None) -> str:
+        temp_path = None
         try:
             os.makedirs(self.SAVE_DIR, exist_ok=True)
             continuity_packet = self._build_continuity_packet()
@@ -55,8 +57,21 @@ class ChronosKeeper:
                 "chat_history": start_history,
             }
             path = os.path.join(self.SAVE_DIR, "quicksave.json")
-            with open(path, "w", encoding="utf-8") as f:
+            # Publish only a complete, flushed checkpoint on the same filesystem.
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.SAVE_DIR,
+                prefix=".quicksave-",
+                suffix=".tmp",
+                delete=False,
+            ) as f:
+                temp_path = f.name
                 json.dump(state_data, f, indent=2, default=str)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, path)
+            temp_path = None
             msg_save = ux("protocol_strings", "chronos_save_success")
             return msg_save.format(path=path)
         except Exception as e:
@@ -65,6 +80,14 @@ class ChronosKeeper:
                 "SYS_ERR",
             )
             return (ux("protocol_strings", "chronos_save_failed_msg")).format(e=e)
+        finally:
+            if temp_path is not None:
+                try:
+                    os.unlink(temp_path)
+                except OSError as e:
+                    logger.warning(
+                        "Could not remove checkpoint temporary file %s: %s", temp_path, e
+                    )
 
     def resume_checkpoint(self) -> Tuple[bool, list]:
         path = os.path.join(self.SAVE_DIR, "quicksave.json")

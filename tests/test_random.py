@@ -370,32 +370,44 @@ class RandomTest(BoneTestCase):
         )
 
     def test_productive_worry_godel_scar_math(self):
-        from core import CycleContext
-        from cycle import SimulationPreflightPhase
-        from physics.models import PhysicsPacket
+        from cycle import ArbitrationPhase
+        from receipts import ReceiptLedger
+        from struts import safe_get
 
         phase = SimulationPreflightPhase(self.engine)
         phys = PhysicsPacket()
         phys.narrative_drag = 6.0
         phys.entropy = 0.9
+        # Maximum accumulated ROS plus friction exceeds conversation tolerance.
+        self.engine.config.GATE_TOLERANCE = 1.6
+        self.engine.bio.mito.state.ros_buildup = 100.0
+        atp_before = self.engine.bio.mito.state.atp_pool
+        scars_before = len(self.engine.akashic.scar_map)
         ctx = CycleContext(
             input_text="Do a recursive search of the file system.", physics=phys
         )
         ctx = phase.run(ctx)
-        self.assertTrue(
-            ctx.refusal_triggered,
-            "Counterfactual Gating failed to mathematically reject the high-ROS prompt.",
+        self.assertFalse(ctx.refusal_triggered, "Preflight must nominate, not halt.")
+        ros = next(n for n in ctx.nominations if n.gate == "ROS_PANIC")
+        self.assertEqual(ros.packet["type"], "COUNTERFACTUAL_REJECTION")
+        self.assertIn("Productive Worry", ros.packet["ui"])
+        self.assertIn("simulation indicates fatal ROS toxicity", ros.reason)
+        self.assertGreater(len(self.engine.akashic.scar_map), scars_before)
+        self.assertEqual(self.engine.bio.mito.state.atp_pool, atp_before)
+
+        ctx = ArbitrationPhase(self.engine).run(ctx)
+        self.assertTrue(ctx.refusal_triggered)
+        self.assertEqual(ctx.refusal_packet["type"], "SILENCE")
+        self.assertEqual(ctx.stage_verdict.reason, ros.reason)
+        self.assertIn(ros.reason, ctx.refusal_packet["logs"])
+        self.assertAlmostEqual(
+            atp_before - self.engine.bio.mito.state.atp_pool,
+            safe_get(self.engine.config.STAGE, "SILENCE_COST"),
         )
-        self.assertIn(
-            "Productive Worry",
-            ctx.refusal_packet.get("ui", ""),
-            "Moog failed to log the Gödel Scar to the UI.",
-        )
-        self.assertIn(
-            "simulation indicates fatal ROS toxicity",
-            ctx.refusal_packet.get("ui", ""),
-            "Pinker failed to intervene in the counterfactual simulation.",
-        )
+        receipt = ReceiptLedger.get_instance().for_subsystem("stage.negotiate")[-1]
+        self.assertEqual(receipt.inputs["outcome"], "HOLD")
+        self.assertIn("ROS_PANIC", receipt.inputs["nominations"])
+        self.assertEqual(receipt.detail, ros.reason)
 
     def test_democratic_tie_breaker_gestalt(self):
         from core import CycleContext

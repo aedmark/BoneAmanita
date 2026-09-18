@@ -276,7 +276,7 @@ class TheCortex:
 
             gk = TheGatekeeper(self.svc.lexicon, config_ref=self.cfg)
         if cognitive_retries > 0:
-            final_output, raw_resp, extracted_logs, inv_logs, val_res, final_prompt = (
+            final_output, raw_resp, extracted_logs, inv_logs, val_res, final_prompt, attempt_count = (
                 self._execute_cognitive_loop(
                     user_input,
                     full_state,
@@ -339,6 +339,40 @@ class TheCortex:
             else:
                 for k, v in updated_phys.items():
                     setattr(ctx.physics, k, v)
+
+        if somatic_budget:
+            from body.somatic_metrics import measure
+            from receipts import issue
+            import math
+            
+            metrics = measure(final_output, val_res.get("valid", False))
+            
+            if not val_res.get("valid"):
+                outcome = "failed"
+            elif attempt_count > 0:
+                outcome = "re-asked"
+            elif val_res.get("trimmed"):
+                outcome = "trimmed"
+            else:
+                outcome = "complied"
+                
+            w = metrics.get("words", 0)
+            if math.isnan(w): w = 0
+            s = metrics.get("sentences", 0)
+            if math.isnan(s): s = 0
+            
+            issue(
+                "cortex.somatic",
+                effect=outcome,
+                result_count=int(w),
+                inputs={
+                    "budget": f"w:{somatic_budget.word_cap} s:{somatic_budget.sentence_cap}",
+                    "measured_w": int(w),
+                    "measured_s": int(s)
+                },
+                detail=f"Budget: {somatic_budget.reason}"
+            )
+
         return sim_result
 
     def _pre_flight_routing(
@@ -583,7 +617,7 @@ class TheCortex:
         firewall_active: bool,
         gk: Any,
         cognitive_retries: int,
-    ) -> Tuple[str, str, List[str], List[str], Dict[str, Any], str]:
+    ) -> Tuple[str, str, List[str], List[str], Dict[str, Any], str, int]:
         final_output, inv_logs, extracted_logs = "", [], []
         raw_resp = ""
         val_res = {"valid": False}
@@ -738,7 +772,7 @@ class TheCortex:
                 "Generate a NEW response specifically addressing the most recent PARTNER INPUT. DO NOT apologize or mention the fix. "
                 "Output ONLY the raw in-character response and nothing else."
             )
-        return final_output, raw_resp, extracted_logs, inv_logs, val_res, final_prompt
+        return final_output, raw_resp, extracted_logs, inv_logs, val_res, final_prompt, attempt
 
     def _flush_substrate_writes(
         self, extracted_logs: List[str], sim_result: Dict[str, Any]

@@ -18,10 +18,12 @@ import unittest
 from machine.crucible import TheCrucible
 from presets import BonePresets
 from tests.base import BoneTestCase
+from core import CycleContext
+from physics.models import PhysicsPacket, EnergyState
 
 
 class ToleranceReachesTheGates(BoneTestCase):
-    """The engine boots in CONVERSATION here (see tests/base.py config)."""
+    """Exercise mode tolerances through the real cortex and physics packets."""
 
     # PINKER reads drag*5 + chi*20 + m_a*30 against 35 * tolerance. This sums
     # to 45: refused at 1.0, allowed at 1.6, and inside the census range.
@@ -36,13 +38,13 @@ class ToleranceReachesTheGates(BoneTestCase):
     def test_conversation_allows_what_adventure_refuses(self):
         cortex = self.engine.cortex
         self.engine.config.GATE_TOLERANCE = 1.0
-        ctx1 = MagicMock()
-        ctx1.physics = MagicMock()
-        ctx1.physics.get = dict(self.MIDDLING).get
-        ctx1.physics.__dict__.update(self.MIDDLING)
-        ctx1.input_text = ""
-        ctx1.is_system_event = False
-        ctx1.nominations = []
+        ctx1 = CycleContext(
+            input_text="test",
+            physics=PhysicsPacket(
+                narrative_drag=self.MIDDLING["narrative_drag"],
+                energy=EnergyState(chi=self.MIDDLING["chi"], m_a=self.MIDDLING["m_a"]),
+            ),
+        )
         cortex.nominate_toxicity(ctx1)
         
         self.assertEqual(len(ctx1.nominations), 1)
@@ -53,13 +55,13 @@ class ToleranceReachesTheGates(BoneTestCase):
         )
 
         self.engine.config.GATE_TOLERANCE = 1.6
-        ctx2 = MagicMock()
-        ctx2.physics = MagicMock()
-        ctx2.physics.get = dict(self.MIDDLING).get
-        ctx2.physics.__dict__.update(self.MIDDLING)
-        ctx2.input_text = ""
-        ctx2.is_system_event = False
-        ctx2.nominations = []
+        ctx2 = CycleContext(
+            input_text="test",
+            physics=PhysicsPacket(
+                narrative_drag=self.MIDDLING["narrative_drag"],
+                energy=EnergyState(chi=self.MIDDLING["chi"], m_a=self.MIDDLING["m_a"]),
+            ),
+        )
         cortex.nominate_toxicity(ctx2)
         
         self.assertEqual(
@@ -71,15 +73,23 @@ class ToleranceReachesTheGates(BoneTestCase):
         """Tolerance widens the gate; it does not remove it."""
         self.engine.config.GATE_TOLERANCE = 1.6
         extreme = {"narrative_drag": 9.0, "chi": 0.95, "m_a": 0.49}
-        ctx3 = MagicMock()
-        ctx3.physics = MagicMock()
-        ctx3.physics.get = extreme.get
-        ctx3.physics.__dict__.update(extreme)
-        ctx3.input_text = ""
-        ctx3.is_system_event = False
-        ctx3.nominations = []
+        ctx3 = CycleContext(
+            input_text="test",
+            physics=PhysicsPacket(
+                narrative_drag=extreme["narrative_drag"],
+                energy=EnergyState(chi=extreme["chi"], m_a=extreme["m_a"]),
+            ),
+        )
         self.engine.cortex.nominate_toxicity(ctx3)
         self.assertEqual(len(ctx3.nominations), 1)
+        self.assertEqual(ctx3.nominations[0].gate, "PINKER")
+        self.assertFalse(ctx3.refusal_triggered)
+        from cycle import ArbitrationPhase
+
+        ctx3 = ArbitrationPhase(self.engine).run(ctx3)
+        self.assertTrue(ctx3.refusal_triggered)
+        self.assertEqual(ctx3.refusal_packet["type"], "SILENCE")
+        self.assertEqual(ctx3.stage_verdict.reason, ctx3.nominations[0].reason)
 
     def test_the_crucible_meltdown_line_scales(self):
         cfg = self.engine.config

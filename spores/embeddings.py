@@ -274,6 +274,7 @@ class SemanticEmbedder:
 
     def _degrade(self, error: Exception):
         """Latch to the hash only after repeated failure, so a blip is not fatal."""
+        self.degraded = True
         self._consecutive_failures += 1
         if self._consecutive_failures < _MAX_CONSECUTIVE_FAILURES:
             return
@@ -286,8 +287,9 @@ class SemanticEmbedder:
             )
         self.backend = "hash"
         self.model = "shake_256"
-        self.dimension = LEGACY_HASH_DIM
-        self.degraded = True
+        # Indexes and rank banks retain the width resolved at boot. Hash fallback
+        # changes the coordinate semantics, never the shape of existing stores.
+        self._cache.clear()
 
     # ------------------------------------------------------------------- API
 
@@ -321,72 +323,100 @@ class SemanticEmbedder:
         return self.embed_batch([text])[0]
 
     def embed_batch(self, texts: Sequence[Any]) -> List[List[float]]:
-        """Embed many strings, hitting the backend only for cache misses.
+        """Return a rectangular batch at the width resolved at boot.
 
-        Never raises: a failed backend yields hash vectors of the CURRENT
-        dimension so callers stacking these into a matrix always get a
-        rectangular result.
+        A failed sweep returns hash coordinates for the entire batch, including
+        cache hits. Transient fallbacks never enter the semantic cache. Backend
+        transitions and cache writes are serialized across concurrent callers.
+        Hash coordinates preserve shape, not semantic recall.
         """
+        with self._lock:
+            return self._embed_batch_locked(texts)
+
+    def _embed_batch_locked(self, texts: Sequence[Any]) -> List[List[float]]:
         cleaned = [self._clean(t) for t in texts]
-        results: List[Optional[List[float]]] = [None] * len(cleaned)
+        results = [[0.0] * self.dimension for _ in cleaned]
         pending: List[str] = []
         pending_slots: Dict[str, List[int]] = {}
+        cache_hits = 0
 
         for i, text in enumerate(cleaned):
             if not text:
-                results[i] = [0.0] * self.dimension
                 continue
-            key = self._cache_key(text)
-            if (hit := self._cache_get(key)) is not None:
+            if (hit := self._cache_get(self._cache_key(text))) is not None:
                 results[i] = hit
+                cache_hits += 1
                 continue
-            if text in pending_slots:
-                pending_slots[text].append(i)
-                continue
-            pending_slots[text] = [i]
-            pending.append(text)
+            if text not in pending_slots:
+                pending_slots[text] = []
+                pending.append(text)
+            pending_slots[text].append(i)
 
-        if pending:
-            try:
-                raw = self._raw_embed(pending)
-                self._consecutive_failures = 0
-            except Exception as e:
-                self.detail = f"{type(e).__name__}: {e}"
-                if "embed_failure" not in self._warned:
-                    self._warned.add("embed_failure")
-                    self._log(
-                        f"{Prisma.YEL}Vectorization failed ({self.detail}). "
-                        f"Serving hash coordinates for this sweep.{Prisma.RST}",
-                        "WARN",
-                    )
-                self._degrade(e)
-                raw = [_hash_to_vector(t, self.dimension) for t in pending]
+        if not pending:
+            return results
 
-            for text, vec in zip(pending, raw):
-                if not vec or len(vec) != self.dimension:
-                    vec = _hash_to_vector(text, self.dimension)
-                final = self._finalize(vec)
-                self._cache_put(self._cache_key(text), final)
+        vector_backend = self.backend
+        failure = ""
+        try:
+            raw = self._raw_embed(pending)
+            if len(raw) != len(pending):
+                raise ValueError("embedding batch row count mismatch")
+            finalized = []
+            for row in raw:
+                if len(row) != self.dimension:
+                    raise ValueError("embedding vector dimension mismatch")
+                vec = [float(v) for v in row]
+                if not all(math.isfinite(v) for v in vec):
+                    raise ValueError("embedding vector contains non-finite values")
+                finalized.append(self._finalize(vec))
+            self._consecutive_failures = 0
+            self.degraded = self.backend == "hash"
+            if not self.degraded:
+                self.detail = f"vectorized via {self.backend}"
+        except Exception as e:
+            failure = self.detail = f"{type(e).__name__}: {e}"
+            if "embed_failure" not in self._warned:
+                self._warned.add("embed_failure")
+                self._log(
+                    f"{Prisma.YEL}Vectorization failed ({self.detail}). "
+                    f"Serving hash coordinates for this sweep.{Prisma.RST}",
+                    "WARN",
+                )
+            self._degrade(e)
+            vector_backend = "hash"
+            # Do not mix healthy cached coordinates with fallback coordinates
+            # in one sweep, even though their dimensions agree.
+            pending = list(dict.fromkeys(t for t in cleaned if t))
+            finalized = [
+                self._finalize(_hash_to_vector(t, self.dimension)) for t in pending
+            ]
+            fallback = dict(zip(pending, finalized))
+            results = [fallback[t] if t else [0.0] * self.dimension for t in cleaned]
+            cache_hits = 0
+
+        for text, vec in zip(pending, finalized):
+            if not failure or self.backend == "hash":
+                self._cache_put(self._cache_key(text), vec)
+            if not failure:
                 for slot in pending_slots[text]:
-                    results[slot] = final
+                    results[slot] = vec
 
-        vectors = [r if r is not None else [0.0] * self.dimension for r in results]
-        if pending:
-            # Only backend-touching sweeps issue a receipt; a pure cache hit did
-            # no work and a receipt for it would drown the ones that matter.
-            issue_receipt(
-                "embeddings.embed_batch",
-                f"vectorized via {self.backend}",
-                result_count=len(pending),
-                degraded=self.degraded,
-                inputs={
-                    "requested": len(cleaned),
-                    "cache_hits": len(cleaned) - len(pending),
-                    "dimension": self.dimension,
-                },
-                detail=self.detail if self.degraded else "",
-            )
-        return vectors
+        issue_receipt(
+            "embeddings.embed_batch",
+            f"vectorized via {vector_backend}",
+            result_count=len(pending),
+            degraded=vector_backend == "hash",
+            inputs={
+                "requested": len(cleaned),
+                "cache_hits": cache_hits,
+                "dimension": self.dimension,
+                "active_backend": self.backend,
+                "vector_backend": vector_backend,
+                "vector_model": "shake_256" if vector_backend == "hash" else self.model,
+            },
+            detail=self.detail if vector_backend == "hash" else "",
+        )
+        return results
 
     def describe(self) -> str:
         state = "DEGRADED" if self.degraded else "NOMINAL"
