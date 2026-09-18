@@ -1772,7 +1772,7 @@ call it that or remove it.
 `bio_*` has a row in the audit with a signed effect and interval, or a
 written note saying it is flavour.
 
-## D7. Model selection as a somatic benchmark
+## D7. Model selection as a somatic benchmark (done)
 
 The audit is now the most direct test available of the one thing this
 engine needs from a model: whether its body changes the prose. Choose the
