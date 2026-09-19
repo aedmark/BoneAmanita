@@ -658,7 +658,7 @@ model against local Ollama).
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.0.
+year and 930 commits of solo development, v20.7.1.0
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.
@@ -1121,8 +1121,7 @@ server unreachable.
 
 ## Claims vs. code (read before trusting `credits.txt`)
 
-`readme.txt` is gone: it was the theatrical version, and `README.md` now
-carries the plain-language account instead. Its memory section and the
+`README.md`carries the plain-language account instead. Its memory section and the
 embeddings dependency notes had been corrected before it was retired.
 These remain overstated elsewhere and a future session should not treat
 them as a specification:
@@ -1185,24 +1184,7 @@ them as a specification:
 
 ## Environment / toolchain
 
-- **Repo**: `/home/gordonk/PycharmProjects/BoneAmanita`, branch `main`,
-  a PyCharm project. Remote is github.com/aedmark/BoneAmanita.
-  930 commits, 221 tracked files. Commit subjects are almost all bare
-  version numbers, and not monotonic ("20.7.0", then "7.0", then
-  "7.0.1"), so `git log --oneline` is close to useless for finding when
-  something changed, use `git log -S'<symbol>'` or `git log -p -- <path>`
-  instead. The embeddings work described above is commit `7e90a74`
-  ("7.0.1"), a useful anchor: it is the most recent change that altered
-  behaviour rather than tuning.
-- **There is no `.gitignore`.** This is why `git status` is permanently
-  full of untracked runtime output (`__pycache__/`, `logs/`, `memories/`,
-  `saves/`, `MagicMock/`, `test_*.log`, `test_telemetry_logs/`,
-  `tests_isolated_legacy_*.json`, `dummy.jsonl`, `fractal_adventure.json`).
-  `reset.sh` deletes all of it. Worth adding a `.gitignore` at some
-  point; until then, don't mistake that noise for uncommitted work.
-- **`.git` is 522MB** against ~525MB total, i.e. essentially the entire
-  repo size is history. Not a problem, just don't be alarmed by
-  `du -sh`.
+- **Repo**: Do not rely on git commits or logs or comments for repo information. That kind of information should be found in here.
 - **Python 3.14.7 is the system interpreter and there is no venv in the
   project.** None of the dependencies are installed against it, so
   `python -m pytest` fails with "No module named pytest" out of the box.
