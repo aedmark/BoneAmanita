@@ -1,10 +1,7 @@
-"""protocols/therapy.py"""
-
 from typing import Any, Dict
 
 from presets import BoneConfig
 from struts import safe_get
-
 
 class TherapyProtocol:
     def __init__(self, config_ref=None):

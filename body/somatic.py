@@ -1,5 +1,3 @@
-"""body/somatic.py"""
-
 import random
 from typing import Any, Dict, Optional
 
@@ -7,7 +5,6 @@ from body.models import BiologicalImpulse, Qualia
 from core import LoreManifest, Prisma
 from presets import BoneConfig
 from struts import safe_get
-
 
 class SynestheticCortex:
     def __init__(self, bio_ref, config_ref=None):

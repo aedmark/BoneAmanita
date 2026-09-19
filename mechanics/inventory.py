@@ -1,5 +1,3 @@
-"""mechanics/inventory.py"""
-
 import json
 import random
 import re
@@ -11,7 +9,6 @@ from core import LoreManifest
 from mechanics.tools import TheTclWeaver
 from presets import BoneConfig
 from struts import safe_get, safe_set, ux, ux_format
-
 
 @dataclass
 class Item:
@@ -176,7 +173,6 @@ class GordonKnot:
         must_not_be_owned: bool = False,
         must_be_owned: bool = False,
     ) -> str:
-        """Deterministically maps a pronoun to the most recently mentioned valid noun in the text context."""
         candidates = []
         for name in self.registry.keys():
             if must_not_be_owned and name in self.inventory:
@@ -577,26 +573,8 @@ class GordonKnot:
             if match:
                 raw_target = match.group(1).upper()
                 clean_extracted = self._clean_noun(match.group(1))
-                invalid_nouns = {
-                    "IT",
-                    "THIS",
-                    "THAT",
-                    "THEM",
-                    "HIM",
-                    "HER",
-                    "THERE",
-                    "ALL",
-                    "SOME",
-                    "MORE",
-                    "TAKE",
-                    "GET",
-                    "DROP",
-                    "LEAVE",
-                    "PICK",
-                    "PULL",
-                    "PUT",
-                    "USE",
-                }
+                invalid_nouns = {"IT", "THIS", "THAT", "THEM", "HIM", "HER", "THERE", "ALL", "SOME", "MORE", "TAKE",
+                                 "GET", "DROP", "LEAVE", "PICK", "PULL", "PUT", "USE", }
 
                 if not clean_extracted and any(
                     p in raw_target.split()
@@ -692,9 +670,6 @@ class GordonKnot:
         starting_room_id: str = "GENESIS_POINT",
         title="BoneAmanita Manifest",
     ) -> str:
-        """Rooms come from the cortex's `visited_rooms` - what the LLM actually
-        narrated - not the Cartographer's physics-vector-hashed graph, whose
-        procedurally invented room names never matched the real story."""
         fractal: Dict[str, Any] = {
             "title": title,
             "startingRoomId": starting_room_id,

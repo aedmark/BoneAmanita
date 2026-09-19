@@ -1,15 +1,7 @@
-"""constants.py"""
-
 import re
 from enum import Enum
 
-
 class Prisma:
-    """
-    Immutable color registry.
-    The engine speaks ANSI exclusively. Web consumers must translate at the boundary.
-    """
-
     RED = "\033[31m"
     GRN = "\033[32m"
     YEL = "\033[33m"
@@ -62,7 +54,6 @@ class Prisma:
 
     @classmethod
     def paint(cls, text: str, color_key: str = "0") -> str:
-        """Standard CLI painting."""
         k = str(color_key).strip()
         code = cls._ANSI_MAP.get(k[0].upper() if k else "0", cls.WHT)
         txt = "" if text is None else str(text)
@@ -72,16 +63,10 @@ class Prisma:
 
     @classmethod
     def strip(cls, text: str) -> str:
-        """Removes all ANSI and HTML tags."""
         return cls._STRIP_PATTERN.sub("", str(text)) if text else ""
 
     @classmethod
     def translate_to_web(cls, text: str) -> str:
-        """
-        [WEB BOUNDARY OVERRIDE]
-        Replaces ANSI codes with corresponding HTML span classes.
-        Call this in your Web API response formatter, NOT inside the engine.
-        """
         if not text:
             return ""
         result = text.replace(cls.RST, cls._ANSI_TO_HTML[cls.RST])
@@ -111,7 +96,6 @@ class RealityLayer:
 
     @classmethod
     def get_rules(cls, depth: int, boot_mode: str = "ADVENTURE") -> dict:
-        """Absolute source of truth for Grammar Policies."""
         rules = {
             "allow_narrative": depth in (cls.SIMULATION, cls.DEEP_CX, cls.DEBUG),
             "allow_commands": depth >= cls.SIMULATION,

@@ -1,5 +1,3 @@
-"""brian/cortex.py"""
-
 import os
 import random
 import re
@@ -22,7 +20,6 @@ from mechanics.tools import LibraryGraph, RandomRetrievalNavigator
 from presets import BoneConfig, BonePresets
 from struts import dump_state, safe_get, safe_set, ux
 
-
 _EXAMINE_VERBS = re.compile(
     r"\b(?:look(?:\s+closer)?\s+at|examine|inspect|check\s+out|study|observe)\b"
     r"\s+(?:the\s+|a\s+|an\s+)?(.+)",
@@ -32,18 +29,11 @@ _EXAMINE_STOPWORDS = frozenset(
     "the a an at closer to again once more please just now it that this".split()
 )
 
-
 def _room_slug(room_name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", room_name.lower()).strip("_") or "room"
 
 
 def _examine_target_key(user_input: str) -> Optional[str]:
-    """Normalize an "examine X" input into a stable cache key for X.
-
-    Different phrasings of the same target ("look at the server rack" vs.
-    "examine server rack again") should hit the same cache entry, so this
-    keys on the sorted set of content words rather than the raw phrase.
-    """
     match = _EXAMINE_VERBS.search(user_input)
     if not match:
         return None
@@ -172,21 +162,6 @@ class TheCortex:
         return self.room_examine_cache.get(target_key)
 
     def _record_examine_result(self, user_input: str, final_output: str) -> None:
-        """After a fresh, validated generation: cache it, and remember the room.
-
-        ADVENTURE's system prompt puts the full "**Room**/Points of
-        Interest/Exits" template on EVERY reply, not just room entries, so
-        the parser finding that shape can't tell "new room" from "still here,
-        examining something." Comparing the parsed room name against the one
-        already tracked can: an unchanged name means still in the same visit,
-        so an "examine X" turn gets cached for replay; a changed name means a
-        new room, so the last room's cache no longer applies.
-
-        Every room actually narrated by the LLM is kept in `visited_rooms`,
-        the real source for the world section of `fractal_adventure.json` -
-        unlike the Cartographer's physics-vector-hashed graph, this reflects
-        the rooms the player actually read about.
-        """
         parsed = parse_spatial_reality(final_output)
         room_name = parsed["room_name"]
         is_new_room = room_name != "Uncharted Zone" and room_name != self.current_room_name
@@ -212,7 +187,6 @@ class TheCortex:
     def restore_room_state(
         self, visited_rooms: Dict[str, Dict[str, Any]], current_room_id: str
     ) -> None:
-        """Repopulate room memory from a loaded fractal_adventure.json."""
         self.visited_rooms = dict(visited_rooms)
         current = self.visited_rooms.get(current_room_id, {})
         self.current_room_name = current.get("name", "")
@@ -277,11 +251,6 @@ class TheCortex:
             and not is_boot_sequence
             and self.current_room_description
         ):
-            # ctx.world_state is rebuilt empty every turn (core.py's
-            # CycleContext), so "loci_description" only ever survived from the
-            # one-time boot overlay. Carry the last parsed room description
-            # forward here so ENVIRONMENT ANCHOR reflects where the player
-            # actually is instead of permanently reading "Unknown."
             sim_result["world"].setdefault(
                 "loci_description", self.current_room_description
             )
@@ -313,7 +282,6 @@ class TheCortex:
             self.last_shadow_nodes = []
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
-        # Toxicity evaluation is now handled by nominate_toxicity before ArbitrationPhase
         modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)
         if not allow_loot or is_boot_sequence:
             modifiers["include_inventory"] = False
@@ -334,7 +302,6 @@ class TheCortex:
             
         somatic_budget = full_state.get("somatic_budget")
         if somatic_budget:
-            # Set max_tokens based on word_cap (roughly 1.5 tokens per word + slack)
             llm_params["max_tokens"] = min(llm_params.get("max_tokens", 4096), somatic_budget.word_cap * 2 + 50)
 
         structural_ctx, cognitive_path, token_cost = self._route_dual_memory(user_input)
@@ -976,10 +943,6 @@ class TheCortex:
     def _run_heuristic_audit(
         self, user_input: str, final_text: str, e_u: float, beta: float
     ) -> Tuple[bool, str]:
-        """
-        [S.L.A.S.H. Heuristic Guillotine]: Replaces expensive LLM affective check
-        with rapid heuristic validation. Measures cognitive load without burning TTFT.
-        """
         try:
             word_count = len(final_text.split())
             has_question = "?" in final_text
@@ -1231,7 +1194,6 @@ class TheCortex:
         omega_r: float,
         cortex_mem: Any,
     ) -> list:
-        """Exact + semantic recall for this turn, in one pass."""
         mem = self.svc.mind_memory
         resonance = max(0.2, 0.8 - omega_r)
         if not hasattr(mem, "retrieve_semantic"):
@@ -1258,8 +1220,6 @@ class TheCortex:
             scope=scope_val,
             resonance=resonance,
         )
-        # retrieve_semantic returns tagged wrappers of mixed shape. Unwrap the
-        # two that name a memory; cortex_radius is fractal geometry, not recall.
         nodes = []
         for hit in hits:
             source, data = hit.get("source"), hit.get("data")
@@ -1283,23 +1243,11 @@ class TheCortex:
         return nodes
 
     def _attach_wing(self, phys: Dict[str, Any]) -> None:
-        """Flatten the current zone onto the physics dict as `wing_id`.
-
-        CerebralIndex.query_neighborhood reads `physics_state["wing_id"]` to
-        scope retrieval to the zone the conversation is actually in. Nothing
-        ever set it, so it always defaulted to "GLOBAL" and the scoping was
-        inert in both directions.
-        """
         from spores.network import MycelialNetwork
 
         phys["wing_id"] = MycelialNetwork.current_wing(phys)
 
     def _attach_thermal_gate(self, phys: dict) -> None:
-        """Flatten the governor's sampling band onto the physics dict.
-        
-        The CD sets the band (locking it low for incoherence, opening it for coherence),
-        and the chemistry sets the position within the band natively through the modulator.
-        """
         eng = getattr(self.svc.orchestrator, "eng", None)
         governor = getattr(eng, "governor", None)
         z = getattr(governor, "last_z", None)
@@ -1311,7 +1259,6 @@ class TheCortex:
 
     @staticmethod
     def _label_shadow_node(node: Any) -> str:
-        """Render one retrieved memory as a short concept label for the prompt."""
         if not isinstance(node, dict):
             return str(node or "").strip()
         if node_id := str(node.get("id") or "").strip():
@@ -1381,8 +1328,6 @@ class TheCortex:
                     msg = directive_map.get(val)
                     if msg:
                         mind["style_directives"].append(msg)
-        # The long-term store hangs off MycelialNetwork as `cortex`; `ann` is kept
-        # as a fallback for duck-typed doubles that expose it under that name.
         cortex_mem = getattr(self.svc.mind_memory, "cortex", None) or getattr(
             self.svc.mind_memory, "ann", None
         )
@@ -1400,25 +1345,10 @@ class TheCortex:
                 and getattr(cortex_mem, "is_trained", False)
                 and query_text
             ):
-                # Route BOTH recall paths through MycelialNetwork.retrieve_semantic:
-                # exact recall from the hippocampus (have we stood in this room
-                # before) and semantic recall from the cortex. That method existed
-                # with no production caller, which left retrieve_exact reachable
-                # only through dead code.
-                #
-                # Query in the SAME space the index was built from. This formerly
-                # assembled a vector out of physics coordinates (STR/VEL/PSI/...)
-                # and searched an index of text vectors, which cannot return a
-                # meaningful neighbour under any conditions. Physics still steers
-                # retrieval, but through `physics_state` (cortisol clamping, wing
-                # scoping, lateral search) rather than by impersonating a vector.
                 shadow_nodes = self._recall(
                     query_text, phys, scope_val, omega_r, cortex_mem
                 )
             else:
-                # Silence from `cortex.recall` is otherwise ambiguous between
-                # "correctly declined" and "dead code", which is exactly the
-                # distinction the receipts exist to draw.
                 issue_receipt(
                     "cortex.recall",
                     "declined to recall",
@@ -1459,8 +1389,6 @@ class TheCortex:
                     else []
                 )
         if shadow_nodes:
-            # Cortex payloads carry `raw_verbatim_text`; graph fallbacks carry `id`.
-            # Reading only `id` labelled every recovered memory "Unknown".
             shadow_concepts = [
                 self._label_shadow_node(n) for n in shadow_nodes
             ]
@@ -1503,10 +1431,6 @@ class TheCortex:
             self.events.log(msg.format(count=len(self.dialogue_buffer)), "BRAIN")
 
     def _route_dual_memory(self, query: str) -> Tuple[str, str, int]:
-        """
-        The Corpus Callosum: Routes to Vector (ANN) or Linear Sweep (SubQ).
-        Returns: (sparse_context, cognitive_path, token_cost)
-        """
         if not query.strip():
             return "", "LINGUISTIC_DARK_MATTER", 0
 

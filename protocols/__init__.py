@@ -1,5 +1,3 @@
-"""protocols/__init__.py"""
-
 from .bureau import TheBureau
 from .chronos import ChronosKeeper
 from .critics import TheCriticsCircle

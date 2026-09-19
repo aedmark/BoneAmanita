@@ -1,4 +1,3 @@
-"""phases/biological.py"""
 
 import math
 import random
@@ -13,7 +12,6 @@ from phases.base import SimulationPhase, _safe_dict
 from physics import apply_somatic_feedback
 from presets import BoneConfig
 from struts import safe_get, safe_set, ux
-
 
 class MetabolismPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -37,11 +35,6 @@ class MetabolismPhase(SimulationPhase):
         if ctx.is_system_event:
             return ctx
         mode_settings = self.eng.mode_settings
-        # A gentle mode scales the metabolic burn; it does not skip the cycle.
-        # Skipping it used to skip the income with it (vagus support, PID
-        # homeostasis, photosynthesis, digestion), while the costs scattered
-        # through the cortex still charged, so CONVERSATION spent without ever
-        # earning and stopped answering after about six turns. ROADMAP D0.
         cost_scale = 1.0 if mode_settings.get("atp_drain_enabled", True) else self.gentle_scale
         self._recover_while_idle()
         physics = ctx.physics
@@ -99,8 +92,7 @@ class MetabolismPhase(SimulationPhase):
         self._check_narcolepsy(ctx)
         self._check_ros_toxicity(ctx)
         self._calculate_homeostasis_reward(ctx)
-        
-        # Evaluate Somatic Budget (D1)
+
         user_state = {}
         lattice = getattr(self.eng, "shared_lattice", None)
         if lattice:
@@ -121,7 +113,6 @@ class MetabolismPhase(SimulationPhase):
         return ctx
 
     def _calculate_homeostasis_reward(self, ctx: CycleContext):
-        """The Reward Signal"""
         try:
             resonance = getattr(ctx.physics, "resonance", 0.0)
             trauma_accum = getattr(self.eng, "trauma_accum", {})
@@ -194,14 +185,6 @@ class MetabolismPhase(SimulationPhase):
             ctx.log(f"{Prisma.GRN}{msg_wake.format(reboot_val=reboot_val)}{Prisma.RST}")
 
     def _apply_stress_blindness(self, ctx):
-        """Amputate short-term memory capacity under cortisol.
-
-        The Tunnel Vision Protocol in the README: past the biological threshold
-        the system sheds recent context to conserve ATP. HippocampalCache
-        implemented this and nothing ever called it, so the amputation never
-        happened on any turn. It is only meaningful now that the cache has a
-        writer (MycelialNetwork._encode_hippocampal).
-        """
         mem = getattr(self.eng.mind, "mem", None)
         hippocampus = getattr(mem, "hippocampus", None)
         if hippocampus is None:
@@ -248,11 +231,6 @@ class MetabolismPhase(SimulationPhase):
             self.eng.health = max(0.0, self.eng.health - damage)
 
     def _recover_while_idle(self) -> None:
-        """Passive recovery: the body earns back what the clock gives it.
-
-        Thinking time between turns is the cheapest income the engine has, and
-        the only one that does not depend on what the person writes.
-        """
         last = float(getattr(self.eng, "last_turn_end", 0.0) or 0.0)
         if not last:
             return
@@ -351,7 +329,6 @@ class SensationPhase(SimulationPhase):
                 0.0, min(self.max_stamina, current + float(impulse.stamina_impact))
             )
         return ctx
-
 
 class IntrusionPhase(SimulationPhase):
     def __init__(self, engine_ref):

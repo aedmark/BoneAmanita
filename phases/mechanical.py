@@ -1,5 +1,3 @@
-"""phases/mechanical.py"""
-
 from typing import Any
 
 from constants import Prisma
@@ -8,7 +6,6 @@ from mechanics.projector import SoulDashboard
 from phases.base import SimulationPhase, _deep_update, _safe_dict
 from physics import TheGatekeeper
 from struts import safe_get, ux
-
 
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -128,7 +125,6 @@ class GatekeeperPhase(SimulationPhase):
                     }
                 )
         is_allowed, _ = self.gatekeeper.check_entry(ctx)
-        # We don't return early. The Stage Manager will handle the nomination later.
         bureau = getattr(self.eng.village, "bureau", None)
         if bureau:
             current_bio = self.eng.get_metrics()

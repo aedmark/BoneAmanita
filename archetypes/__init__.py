@@ -1,5 +1,3 @@
-"""archetypes/__init__.py"""
-
 from .council import (
     CouncilChamber,
     TheOverseerCouncil,
@@ -7,7 +5,7 @@ from .council import (
     TheSlashCouncil,
     TheVillageCouncil,
 )
-from .symbiosis import SymbiontVoice
+from .symbiosis import SymbiontVoice, SymbiosisManager
 from .village import (
     DeathGen,
     GeniusLoci,

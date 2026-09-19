@@ -1,12 +1,3 @@
-"""
-cycle.py
-
-NAVI FRACTAL NATIVE PRIMITIVES (Authored by Nelson Spence, Project Navi, Apache 2.0)
-These functions represent the lowest-level mathematical substrate of the engine.
-They operate outside the standard object-oriented paradigm to provide raw, optimized graph
-calculations for the memory topology.
-"""
-
 import math
 import queue
 import random
@@ -55,11 +46,6 @@ _CRASH_COMPONENT_MAP = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": 
 def _native_wls(
     x: list[float], y: list[float], weights: list[float], r2_threshold: float = 0.85
 ) -> float:
-    """
-    [navi-fractal PROTOCOL]: Weighted Least Squares (WLS) regression with Quality Gates.
-    Calculates fractal dimension based on mass-radius scaling, but actively REFUSES
-    to return a dimension if the R^2 value indicates the structure is a hallucination.
-    """
     sum_w = sum(weights)
     if sum_w == 0.0:
         return 0.0
@@ -89,12 +75,6 @@ def _native_wls(
 
 
 def _native_rewire(adj_dict: dict, n_swaps: int) -> dict:
-    """
-    Maslov-Sneppen Graph Rewiring.
-    This generates a "null model" of the current memory network by randomly swapping edges
-    while preserving the exact degree of every node. If our actual memory network looks
-    exactly like this random null model, we know the system is experiencing a terminal hallucination.
-    """
     edges = [(u, v) for u in adj_dict for v in adj_dict[u] if u < v]
     if len(edges) < 2:
         return adj_dict
@@ -180,7 +160,6 @@ def _native_takens_volume(time_series: list[float], m: int = 3, tau: int = 1) ->
 
 
 def _native_configuration_model(adj_dict: dict, max_attempts: int = 25) -> dict:
-    """[navi-fractal]: Generates a random graph approx preserving degree sequence (Null Model)."""
     degrees = {node: len(neighbors) for node, neighbors in adj_dict.items()}
     stubs = []
     for node, deg in degrees.items():
@@ -204,7 +183,6 @@ def _native_configuration_model(adj_dict: dict, max_attempts: int = 25) -> dict:
 def _native_quality_gate(
     log_r: list, log_m: list, r2_threshold: float = 0.90
 ) -> tuple[bool, str]:
-    """[navi-fractal]: MFA Quality Gate. Checks dynamic range and R^2 linearity."""
     if not log_r or len(log_r) < 3:
         return False, "INSUFFICIENT_RANGE"
     n = len(log_r)
@@ -323,9 +301,6 @@ class CycleSimulator:
         if comp == "PHYSICS" or not ctx.physics:
             ctx.physics = PanicRoom.get_safe_physics()
             try:
-                # get_graph() returns the adjacency dict itself. This used to
-                # guard on `hasattr(mem_graph, "adj")`, which a dict never has,
-                # so the Godel scar was never frozen from real topology.
                 mem_graph = self.eng.mind.mem.hippocampus.get_graph()
                 if mem_graph:
                     ctx.physics.space.godel_scar = _native_freeze_graph(mem_graph)
@@ -460,7 +435,6 @@ class GeodesicOrchestrator:
                     self.input_queue.task_done()
 
     def _process_rem_tick(self):
-        """REM logic: Handles Autopoiesis, ATP drain, and Hallucinations."""
         bio_cfg = getattr(self.eng.config, "BIO", None)
         rem_atp_drain = float(getattr(bio_cfg, "REM_ATP_DRAIN", 2.0))
         self.eng.drain_atp(rem_atp_drain)
@@ -509,16 +483,6 @@ class GeodesicOrchestrator:
         self._submit_background(_bg_hallucinate, trauma_level, objects)
 
     def _submit_background(self, fn, *args):
-        """Run `fn` on the async pool and refuse to let its failure disappear.
-
-        `ThreadPoolExecutor.submit` captures any exception into the Future and
-        discards it if nobody calls `.result()`. Nobody here does, so every
-        background task in this file was a silent-failure sink: worse than a
-        bare `except: pass`, because there is no handler for an audit to find
-        and no line of code to point at. The done-callback is what makes it
-        safe to delete the defensive handlers inside these tasks.
-        """
-
         def _report(future):
             if future.cancelled():
                 return
@@ -540,7 +504,6 @@ class GeodesicOrchestrator:
         return future
 
     def _bg_process_moog_ledger(self, worries: list):
-        """Headless evaluation of the Moog Protocol worry ledger."""
         for worry in worries:
             w_lower = worry.lower()
             actionable = any(kw in w_lower for kw in ("fix", "do", "how"))
@@ -570,7 +533,6 @@ class GeodesicOrchestrator:
                 )
 
     def _verify_semantic_topology(self, ctx: CycleContext):
-        """Native Maslov-Sneppen rewiring (Project Navi, Apache 2.0)."""
         check_freq = int(getattr(self.eng.config.CORE, "TOPOLOGY_FREQ", 10))
         if self.eng.tick_count % check_freq != 0:
             return
@@ -722,24 +684,8 @@ class GeodesicOrchestrator:
             )
             mem_core = getattr(getattr(self.eng, "mind", None), "mem", None)
             cortex = getattr(self.eng, "cortex", None)
-            # The utterance the Creative Determinant anchors its subgraph on.
-            #
-            # This was scraped out of the cortex dialogue buffer, and the scrape
-            # could never see the current turn. The buffer is only written from
-            # inside the cortex response path, by
-            # `_update_history(user_input, final_output)`, which cannot run
-            # until the model has already replied. So the PDE solved around the
-            # PREVIOUS utterance on every turn, and fell back to PID entirely on
-            # the first turn of every session, one turn behind the conversation
-            # it was steering. Nothing said so: a PID loop and a solved manifold
-            # both return two floats.
-            #
-            # A receipt reporting `user_text=False` while `memory_core=True` is
-            # what surfaced it, which is the whole argument for A3 in one line.
             implicit_text = "" if ctx.is_system_event else (ctx.input_text or "").strip()
             if not implicit_text and cortex:
-                # A system-driven turn has no human utterance of its own, so the
-                # last real one in the buffer is the correct anchor for it.
                 d_buf = getattr(cortex, "dialogue_buffer", None)
                 if isinstance(d_buf, (list, deque)):
                     match_prefix = (f"{ctx.user_name}:", "User:", "Traveler:")
@@ -761,13 +707,6 @@ class GeodesicOrchestrator:
             cur_d = float(getattr(ctx.physics, "narrative_drag", 0.0))
             ctx.physics.voltage = max(0.0, cur_v + force_v)
             ctx.physics.narrative_drag = max(0.0, cur_d + force_d)
-            # Carry the governor's principal eigenvalue onto the packet while it
-            # is still fresh. This is the real one: a Rayleigh quotient over the
-            # graph Laplacian of the memory subgraph, from the Creative
-            # Determinant solve in _graph_regulation. It used to surface only in
-            # the post-turn snapshot, which is after the cortex has already
-            # composed the prompt, so the thermal lock could not see it and fell
-            # back to a scalar approximation of the same quantity.
             if self.eng.governor is not None:
                 gov = self.eng.governor
                 z = getattr(gov, "last_z", None)

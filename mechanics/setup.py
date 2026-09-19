@@ -1,4 +1,3 @@
-"""mechanics/setup.py"""
 
 import json
 import os
@@ -10,7 +9,6 @@ from core import Prisma
 from mechanics.terminal import typewriter
 from presets import BoneConfig
 from struts import ux
-
 
 class ConfigWizard:
     CONFIG_FILE = "config.json"

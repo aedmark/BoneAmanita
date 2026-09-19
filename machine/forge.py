@@ -1,5 +1,3 @@
-"""machine/forge.py"""
-
 import random
 from typing import Tuple, Optional, List
 from core import LoreManifest

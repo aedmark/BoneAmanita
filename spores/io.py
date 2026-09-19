@@ -1,5 +1,3 @@
-"""spores/io.py"""
-
 import json
 import logging
 import os
@@ -11,7 +9,6 @@ from core import JSONEncoder
 from struts import ux_format
 
 logger = logging.getLogger("bone")
-
 
 class LocalFileSporeLoader:
     def __init__(self, directory: str = "memories"):

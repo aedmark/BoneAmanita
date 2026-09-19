@@ -1,5 +1,3 @@
-"""mechanics/tools.py"""
-
 import math
 import os
 import random

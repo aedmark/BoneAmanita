@@ -1,5 +1,3 @@
-"""protocols/zen.py"""
-
 import random
 from typing import Any, Dict, Optional, Tuple
 
@@ -7,7 +5,6 @@ from constants import Prisma
 from core import LoreManifest
 from presets import BoneConfig
 from struts import safe_get, ux, ux_format
-
 
 class ZenGarden:
     def __init__(self, events_ref, config_ref=None):

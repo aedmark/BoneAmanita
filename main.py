@@ -1,5 +1,3 @@
-"""main.py"""
-
 import json
 import os
 import queue
@@ -42,10 +40,8 @@ from machine.pacemaker import ThePacemaker
 from protocols import ChronosKeeper, GriefProtocol
 from struts import dump_state, safe_get, safe_set, ux
 
-
 @dataclass
 class HostStats:
-    """Don't touch this unless you've got a plan to replace it with something better."""
     efficiency_index: float
 
 
@@ -81,10 +77,6 @@ class BoneAmanita:
             val = self.sys_config.get(key) or self.sys_config.get(key.upper())
             if val:
                 setattr(self.config, key.upper(), val)
-        # ConfigWizard's COMPUTE PROFILE step writes a CORTEX override (retry
-        # budget, topology/WLS frequency) tuned to the chosen hardware tier.
-        # This is the only place that override is applied; without it, every
-        # compute-profile choice silently did nothing past model/provider.
         if isinstance(cortex_overrides := self.sys_config.get("CORTEX"), dict):
             cortex_cfg = getattr(self.config, "CORTEX", None)
             if cortex_cfg is not None:
@@ -132,13 +124,6 @@ class BoneAmanita:
         self._apply_boot_mode()
 
     def _wire_receipts(self):
-        """Open the roll call and route receipts into the telemetry stream.
-
-        The ledger is deliberately ignorant of telemetry: `receipts.py` imports
-        no engine code so that any subsystem can report without risking an
-        import cycle. Delivery is installed here instead, which is also the only
-        place that knows telemetry exists yet.
-        """
         ledger = ReceiptLedger.get_instance()
         for name in CORE_SUBSYSTEMS:
             ledger.expect(name)
@@ -171,7 +156,6 @@ class BoneAmanita:
             self.prompt_library = {}
 
     def _initialize_cognition(self):
-        """Builds the Cortex first, then starts the Orchestrator daemon so it can safely bind to the Cortex"""
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.events)
         self.noetic = NoeticLoop(self.mind, self.bio, self.events)
         self.orchestrator = GeodesicOrchestrator(self)
@@ -284,14 +268,12 @@ class BoneAmanita:
 
     @property
     def active_physics(self) -> Any:
-        """Read-only evaluation of current physics state."""
         phys = getattr(self.observer, "last_physics_packet", None) or getattr(
             self.cortex, "last_physics", None
         )
         return phys if phys is not None else getattr(self, "physics_state", {})
 
     def _sync_physics_to_observer(self):
-        """Explicitly sync state when a turn resolves."""
         self.observer.last_physics_packet = self.active_physics
 
     def apply_absolute_friction(self, phys=None):
@@ -785,12 +767,6 @@ class BoneAmanita:
         return cold_result
 
     def _load_fractal_state(self) -> None:
-        """Restore visited-room memory from fractal_adventure.json, if present.
-
-        This is the only persisted copy of the LLM-narrated room history;
-        chronos's own checkpoint never carried it, so a resumed session used
-        to lose room/examine continuity even though it wrote this file out.
-        """
         if not os.path.exists("fractal_adventure.json"):
             return
         try:

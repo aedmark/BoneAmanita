@@ -1,5 +1,3 @@
-"""phases/__init__.py"""
-
 from .base import SimulationPhase, _safe_dict
 from .biological import IntrusionPhase, MetabolismPhase, SensationPhase
 from .cognitive import (

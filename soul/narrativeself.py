@@ -1,5 +1,3 @@
-"""/soul/narrativeself.py"""
-
 import logging
 import random
 import time
@@ -15,7 +13,6 @@ from soul.traitvector import TraitVector
 from struts import safe_get, safe_set, ux, ux_format
 
 logger = logging.getLogger("bone")
-
 
 @dataclass
 class CoreMemory:

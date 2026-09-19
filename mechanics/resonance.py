@@ -1,46 +1,6 @@
-"""mechanics/resonance.py
-
-Semantic classification of unknown words by embedding resonance.
-
-The engine computes its physics from word-category counts. Words it does not
-know fell through to a phonosemantic classifier that scores letter sounds, which
-is a guess about spelling rather than meaning. This resolves them by meaning
-instead, using the embedding backend the Mnemonic Arcade already runs.
-
-No new dependency: this is arithmetic over vectors from the existing
-SemanticEmbedder, which satisfies Constitution Article 1 the same way
-spores/embeddings.py does.
-
-The method: build one centroid per curated lexicon category from its member
-words, then assign an unknown word to the nearest centroid.
-
-Two details that are load-bearing, both measured rather than assumed:
-
-  * **Mean centring.** Raw centroids rank correctly and separate uselessly.
-    Measured over 16 probe words, the margin between the best and second-best
-    category averaged 0.03 and bottomed out at 0.001 ("afternoon" beat its
-    runner-up by 0.004). Single-word embeddings share a large common component,
-    so everything resembles everything. Subtracting the global mean of all
-    category vectors removes it and lifts the average margin to 0.109.
-
-  * **A margin gate, not a similarity gate.** After centring, confident cases
-    separate cleanly from ambiguous ones: glacier/cryo 0.471, night/photo 0.332,
-    cathedral/sacred 0.183, against letter 0.001, laughter 0.003, weeping 0.009.
-    Absolute similarity does not distinguish those; the margin does. A word that
-    is genuinely between two categories stays unresolved, which is correct:
-    "letter" really is poised between social and sacred.
-
-Learned words go to LexiconStore.teach(), NOT to lore/lexicon.json. The curated
-file stays hand-authored and auditable; machine guesses live in the separate,
-capped, LRU-evicted hive, and deleting that file reverts everything learned.
-"""
-
 import math
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-# Categories worth resolving into. Phrase lists, meta categories and the
-# sentiment/negator sets are excluded: they are either multi-word or closed
-# classes where a guess is worse than silence.
 RESONANT_CATEGORIES = (
     "heavy", "kinetic", "constructive", "abstract", "liminal", "harvest",
     "explosive", "meat", "social", "void", "thermal", "cryo", "photo", "play",
@@ -60,8 +20,6 @@ def _unit(vector: Sequence[float]) -> List[float]:
 
 
 class ResonanceClassifier:
-    """Assigns unknown words to lexicon categories by embedding proximity."""
-
     def __init__(self, margin: float = DEFAULT_MARGIN):
         self.margin = float(margin)
         self.centroids: Dict[str, List[float]] = {}
@@ -71,12 +29,6 @@ class ResonanceClassifier:
         self._warned = False
 
     def build(self, vocab: Dict[str, Sequence[str]], events: Any = None) -> bool:
-        """Embed every curated category once and cache its centred centroid.
-
-        One batched call for the whole lexicon. Never raises: a failure here
-        leaves `ready` False and the caller falls back to the phonosemantic
-        classifier, which needs no server.
-        """
         try:
             from spores.embeddings import SemanticEmbedder
 
@@ -142,7 +94,6 @@ class ResonanceClassifier:
             return False
 
     def classify(self, word: str) -> Tuple[Optional[str], float]:
-        """Return (category, margin) or (None, 0.0) if the word is ambiguous."""
         if not self.ready or not word:
             return None, 0.0
         try:
@@ -150,8 +101,6 @@ class ResonanceClassifier:
 
             raw = SemanticEmbedder.get_instance().embed(word)
         except Exception as e:
-            # Degrading to the phonosemantic guess is correct here, but doing it
-            # silently is how this class of fault survives. Say it once.
             if not self._warned:
                 self._warned = True
                 print(

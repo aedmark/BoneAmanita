@@ -1,10 +1,7 @@
-"""physics/models.py"""
-
 import dataclasses
 import math
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
-
 
 @dataclass
 class DragProfile:
@@ -56,12 +53,6 @@ class EnergyState:
     s_y: float = 0.5
     r_a: float = 0.0
 
-    # The governor's regime signal: how far this utterance's neighbourhood
-    # stands above the corpus null, in standard deviations of the ordvec
-    # sign-agreement distribution. Replaced `lam1`, which was a Rayleigh
-    # quotient over a memory subgraph Laplacian that contributed 1.53% of its
-    # own value. `thermal_regime` is "coherent", "diffuse", or "not_measured"
-    # when there was too little memory to compare against.
     thermal_z: float = 0.0
     thermal_regime: str = "not_measured"
 
@@ -73,11 +64,6 @@ class EnergyState:
     kappa: float = 0.0
     epsilon: float = 0.0
     xi: float = 0.0
-    # Contradiction-cost weight in b = kappa*gamma - lambda*mu. Set from
-    # BoneConfig.CD["LAMBDA"]. 0.5 is calibrated, not arbitrary: kappa*gamma is
-    # a product of two [0,1] fields and mu is a blend, so at lambda=1.0 the
-    # viability b is negative on essentially every turn and the coherent regime
-    # is unreachable. 0.0 is a legitimate setting meaning "contradiction is free".
     lambda_val: float = 0.5
     omega: float = 0.0
 
@@ -192,18 +178,7 @@ class PhysicsPacket:
             total = self.drag_profile.total()
             setattr(self, "narrative_drag", max(0.6, total))
 
-    # `get_creative_drive`, `get_viability_potential` and
-    # `get_principal_eigenvalue` used to live here, implementing a = kappa*gamma*mu,
-    # b = kappa*gamma - lambda*mu and lambda_1 = -beta*b. They had no production
-    # caller left once the governor stopped solving the Creative Determinant,
-    # and `CreativeDeterminantEngine.calculate_viability` in physics/maths.py is
-    # the live implementation of b and the better one: it carries the debt term
-    # lambda_eff = lambda_0 * (1 + D) that these did not. Dead methods naming
-    # someone else's theorem are exactly what made this codebase read as more
-    # than it was.
-
     def enforce_saturation_limit(self, c: float = 1.5, p: float = 2.0) -> float:
-        """Applies the Navi PDE saturation penalty: -c * Phi^p. Caps runaway voltage/drag."""
         phi = float(self.get("voltage", 0.0)) / 100.0
         penalty = c * (max(0.0, phi) ** p)
         self.energy.voltage = max(
@@ -222,44 +197,9 @@ class PhysicsPacket:
     def snapshot(self) -> "PhysicsPacket":
         return PhysicsPacket(**self.to_dict())
 
-    # Layers whose fields are also projected flat by to_dict(). No collisions
-    # between them and none shadowing a PhysicsPacket field, so the projection
-    # is unambiguous.
-    #
-    # `matter` is deliberately NOT projected. Its fields are mutable containers
-    # (`counts` is a Counter, `clean_words` a list, `vector` a dict), and
-    # `CognitivePhase` writes every key of this dict straight back onto a packet
-    # with `setattr(ctx.physics, k, v)`. Round-tripping a Counter through that
-    # rewraps its keys one tuple deeper on every turn, so the word tally that
-    # drives the whole physics layer degrades into
-    # `Counter({((('play', 1), 1), 1): 1})` and then measures nothing. Nothing
-    # flat reads a `matter` field anyway; the composer reaches them through the
-    # nested shape, which is preserved.
     _FLATTENED_LAYERS = ("energy", "space")
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize, with the nested layers ALSO projected to the top level.
-
-        Attribute access on the packet is alias-routed: `packet.exhaustion`
-        resolves through `_DOMAIN_MAP` to `energy.exhaustion`, and writes route
-        back the same way. `asdict` knows nothing about that routing, so the
-        serialized form kept only the nested shape.
-
-        Every consumer downstream reads the flat shape.
-        `PromptComposer.compose` asks `safe_get(phys_ref, "exhaustion", 0.2)`,
-        and `safe_get` on a dict does one flat `.get`. So sixteen measured
-        fields (exhaustion, contradiction, psi, chi, valence, narrative_drag,
-        scope, depth, connectivity, lq, gamma, sigma, eta, theta, upsilon,
-        beta_index) never reached the prompt and every directive gated on them
-        read a hardcoded default instead. A turn measuring contradiction 1.0
-        composed a prompt saying Contradiction=0.40.
-
-        Nothing caught it because attribute access always worked: any test
-        touching `packet.exhaustion` passed, and only the serialized dict was
-        broken. The nested shape is kept as well, so existing readers of
-        `data["energy"]["exhaustion"]` are unaffected, and `setdefault` means an
-        explicitly assigned top-level value still wins.
-        """
         data = asdict(self)
         for k, v in self.__dict__.items():
             if k not in data and not k.startswith("_"):

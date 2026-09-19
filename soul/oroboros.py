@@ -1,5 +1,3 @@
-"""/soul/oroboros.py"""
-
 import json
 import os
 import random
@@ -12,7 +10,6 @@ from core import LoreManifest
 from presets import BoneConfig
 from soul import NarrativeSelf
 from struts import safe_get, safe_set, ux, ux_format
-
 
 @dataclass
 class Scar:

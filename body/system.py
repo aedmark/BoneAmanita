@@ -1,5 +1,3 @@
-"""body/system.py"""
-
 import math
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -219,8 +217,6 @@ class SomaticLoop:
         if delta_silence > 0.6:
             drag_relief = delta_silence * 2.0
             stamina_recovery = delta_silence * 5.0
-            # The person leaving space is the deliberate half of recovery: the
-            # engine earns ATP from silence, not only stamina.
             silence_yield = delta_silence * float(
                 safe_get(safe_get(self.cfg, "BIO", {}), "ATP_SILENCE_YIELD", 6.0)
             )

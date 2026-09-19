@@ -1,5 +1,3 @@
-"""brain/akashic.py"""
-
 import logging
 import itertools
 import json

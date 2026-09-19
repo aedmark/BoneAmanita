@@ -1,5 +1,3 @@
-"""struts.py"""
-
 import logging
 from typing import Any
 from constants import Prisma
@@ -7,14 +5,6 @@ from constants import Prisma
 logger = logging.getLogger("bone")
 
 def _word_to_vector(word: str, dim: int = 0) -> list:
-    """Project a word or passage into the active semantic space.
-
-    Delegates to the single embedder in `spores.embeddings` so that `struts` and
-    `spores.spore_utils` can never drift into two different coordinate systems.
-    The import is deferred: `spores.embeddings` lives inside the `spores`
-    package, so importing it at module scope would execute `spores/__init__`,
-    which imports modules that import `struts`.
-    """
     from spores.embeddings import SemanticEmbedder, _hash_to_vector
 
     if dim:
@@ -22,22 +12,10 @@ def _word_to_vector(word: str, dim: int = 0) -> list:
     return SemanticEmbedder.get_instance().embed(word)
 
 class ConfigError(KeyError):
-    """A config constant the engine needs is absent. Always a bug, never state."""
+    """A config constant the engine needs is absent. Look into this..."""
 
 
 def require_cfg(obj: Any, key: str, *, where: str) -> Any:
-    """Read a config constant that MUST exist. Raises rather than defaulting.
-
-    `safe_get` conflates two different operations: reading a config constant,
-    where a miss means the config is wrong, and reading runtime state, where a
-    field may legitimately be absent mid-cycle. Only the second deserves a
-    default. Conflating them let ten constants sit absent from every config file
-    for the life of the project while their subsystems ran on inline fallbacks,
-    with no way for anyone tuning the engine to discover it.
-
-    Use this for constants read once at __init__ (which conventions.md requires
-    anyway), not inside hot loops.
-    """
     value = obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
     if value is None:
         raise ConfigError(f"{where}: missing required config key {key!r}")
@@ -45,11 +23,6 @@ def require_cfg(obj: Any, key: str, *, where: str) -> Any:
 
 
 def audit_cfg(manifest: dict, resolver) -> list:
-    """Check a {block: [keys]} manifest against config. Returns missing paths.
-
-    Reports every miss at once rather than failing on the first, so a bad config
-    takes one boot to diagnose instead of ten.
-    """
     missing = []
     for block, keys in manifest.items():
         scope = resolver(block)

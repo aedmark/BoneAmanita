@@ -1,5 +1,3 @@
-"""/mechanics/dspycritic.py"""
-
 from typing import Any
 
 from constants import Prisma
@@ -96,9 +94,9 @@ class DSPyCritic:
                 else:
                     self.lm = dspy.LM(model=model_name)
                 dspy.settings.configure(lm=self.lm)
-                self.judge = dspy.ChainOfThought(AssessFaithfulness)  # type: ignore
-                self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)  # type: ignore
-                self.compressor = dspy.ChainOfThought(CompressAxioms)  # type: ignore
+                self.judge = dspy.ChainOfThought(AssessFaithfulness)
+                self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)
+                self.compressor = dspy.ChainOfThought(CompressAxioms)
                 from physics.maths import NaviSADProtocol
 
                 self.navi_sad = NaviSADProtocol(history_size=5)

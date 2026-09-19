@@ -1,28 +1,3 @@
-"""spores/embeddings.py
-
-Semantic vectorization for the Mnemonic Arcade.
-
-The engine used to derive its "vectors" from SHAKE-256 digests of the source
-string. A cryptographic digest is built to destroy input correlation, so those
-coordinates carried no semantic signal whatsoever: `dog` and `canine` landed
-further apart than `dog` and `asphalt`. Every associative sweep over that space
-was noise wearing the costume of memory.
-
-This module resolves a real embedding backend once at boot and caches it.
-Backends are probed in descending order of fidelity; the legacy hash survives as
-the terminal fallback so the organism still boots with no server reachable and
-no optional packages installed. It is degraded in that state, and it says so.
-
-CONSTITUTIONAL NOTE (Article 1): this is a ~40-line HTTP call against an
-OpenAI-compatible /v1/embeddings endpoint plus an optional local transformer.
-No orchestration framework is introduced and the control loop stays ours.
-
-IMPORT DISCIPLINE: this module imports nothing from BoneAmanita except
-`constants` and `receipts`, both of which are leaves that import no engine code. Both `struts._word_to_vector` and `spores.spore_utils._word_to_vector`
-delegate here, and `struts` is imported by nearly every module in the tree, so a
-project-level import would close a cycle.
-"""
-
 import hashlib
 import math
 import os
@@ -61,32 +36,16 @@ _ENV_KEYS = {
 
 
 def _hash_to_vector(text: str, dim: int = LEGACY_HASH_DIM) -> List[float]:
-    """The original SHAKE-256 projection. Deterministic, offline, and semantically blind.
-
-    Retained verbatim so the engine degrades to its historical behaviour rather
-    than to a crash, and so tests have a backend that needs no server.
-    """
     h = hashlib.shake_256(text.encode("utf-8")).digest(dim)
     return [(b / 127.5) - 1.0 for b in h]
 
-
 def _l2_normalize(vec: Sequence[float]) -> List[float]:
-    """Unit-length projection.
-
-    FAISS IndexHNSWFlat scores by squared L2. On unit vectors that is a monotone
-    function of cosine similarity (d^2 = 2 - 2*cos), which is what makes the
-    `resonance_threshold` knobs in CerebralIndex mean anything consistent across
-    backends of differing dimensionality and scale.
-    """
     norm = math.sqrt(sum(float(v) * float(v) for v in vec))
     if norm <= 1e-12:
         return [float(v) for v in vec]
     return [float(v) / norm for v in vec]
 
-
 class SemanticEmbedder:
-    """Resolves and owns one embedding backend for the lifetime of the process."""
-
     _instance: Optional["SemanticEmbedder"] = None
     _instance_lock = threading.Lock()
 
@@ -110,14 +69,8 @@ class SemanticEmbedder:
             )
         self._resolve_backend()
 
-    # ------------------------------------------------------------------ setup
-
     @staticmethod
     def _resolve_settings(overrides: Dict[str, Any], faults: Optional[List[str]] = None) -> Dict[str, Any]:
-        # Precedence, lowest to highest: module defaults, then BoneConfig.EMBEDDINGS
-        # (passed in as overrides), then BONE_EMBED_* env vars. The env wins
-        # because it is the per-run knob: BoneConfig.EMBEDDINGS ships populated,
-        # so letting it outrank the environment would make BONE_EMBED_URL a no-op.
         settings = dict(_DEFAULTS)
         for key, val in (overrides or {}).items():
             if val not in (None, ""):
@@ -141,12 +94,6 @@ class SemanticEmbedder:
         return settings
 
     def _log(self, message: str, level: str = "INFO"):
-        """Emit through the EventBus when one is attached.
-
-        EventBus.log's signature is (message, source, level) - passing the level
-        positionally lands it in `source` and silently demotes every warning to
-        DEBUG, which is how a degraded Arcade would boot without saying so.
-        """
         if self.events is not None and hasattr(self.events, "log"):
             try:
                 self.events.log(message, "EMBED", level)
@@ -156,7 +103,6 @@ class SemanticEmbedder:
         print(message)
 
     def _resolve_backend(self):
-        """Probe backends in descending order of fidelity. Never raises."""
         requested = self._settings["BACKEND"]
         failures: List[str] = []
         order = (
@@ -166,7 +112,7 @@ class SemanticEmbedder:
         )
         for candidate in order:
             if candidate == "hash":
-                break  # A deliberate selection, not a failure. Fall through quietly.
+                break
             probe = getattr(self, f"_probe_{candidate}", None)
             if probe is None:
                 self._log(
@@ -206,7 +152,7 @@ class SemanticEmbedder:
 
     def _probe_http(self) -> bool:
         try:
-            import requests  # noqa: F401
+            import requests
         except ImportError:
             self.detail = "requests is not installed"
             return False
@@ -228,7 +174,6 @@ class SemanticEmbedder:
             return False
         name = str(self._settings["MODEL"])
         if name == _DEFAULTS["MODEL"]:
-            # The Ollama-flavoured default is not a valid HuggingFace repo id.
             name = "sentence-transformers/all-MiniLM-L6-v2"
         self._st_model = SentenceTransformer(name)
         probe = self._st_model.encode([_PROBE_TEXT])
@@ -236,8 +181,6 @@ class SemanticEmbedder:
         self.model = name
         self.dimension = int(len(probe[0]))
         return True
-
-    # -------------------------------------------------------------- transport
 
     def _http_embed(self, texts: List[str]) -> List[List[float]]:
         import requests
@@ -273,7 +216,6 @@ class SemanticEmbedder:
         return [_hash_to_vector(t, self.dimension) for t in texts]
 
     def _degrade(self, error: Exception):
-        """Latch to the hash only after repeated failure, so a blip is not fatal."""
         self.degraded = True
         self._consecutive_failures += 1
         if self._consecutive_failures < _MAX_CONSECUTIVE_FAILURES:
@@ -287,11 +229,7 @@ class SemanticEmbedder:
             )
         self.backend = "hash"
         self.model = "shake_256"
-        # Indexes and rank banks retain the width resolved at boot. Hash fallback
-        # changes the coordinate semantics, never the shape of existing stores.
         self._cache.clear()
-
-    # ------------------------------------------------------------------- API
 
     def _cache_key(self, text: str) -> str:
         return f"{self.backend}:{self.model}:{text}"
@@ -323,13 +261,6 @@ class SemanticEmbedder:
         return self.embed_batch([text])[0]
 
     def embed_batch(self, texts: Sequence[Any]) -> List[List[float]]:
-        """Return a rectangular batch at the width resolved at boot.
-
-        A failed sweep returns hash coordinates for the entire batch, including
-        cache hits. Transient fallbacks never enter the semantic cache. Backend
-        transitions and cache writes are serialized across concurrent callers.
-        Hash coordinates preserve shape, not semantic recall.
-        """
         with self._lock:
             return self._embed_batch_locked(texts)
 
@@ -384,8 +315,6 @@ class SemanticEmbedder:
                 )
             self._degrade(e)
             vector_backend = "hash"
-            # Do not mix healthy cached coordinates with fallback coordinates
-            # in one sweep, even though their dimensions agree.
             pending = list(dict.fromkeys(t for t in cleaned if t))
             finalized = [
                 self._finalize(_hash_to_vector(t, self.dimension)) for t in pending
@@ -434,8 +363,6 @@ class SemanticEmbedder:
             "detail": self.detail,
         }
 
-    # -------------------------------------------------------------- singleton
-
     @classmethod
     def get_instance(cls, events_ref=None, **overrides) -> "SemanticEmbedder":
         if cls._instance is None:
@@ -448,7 +375,6 @@ class SemanticEmbedder:
 
     @classmethod
     def configure(cls, events_ref=None, **overrides) -> "SemanticEmbedder":
-        """Rebuild the singleton against new settings. Called once from genesis."""
         with cls._instance_lock:
             cls._instance = cls(events_ref=events_ref, **overrides)
         return cls._instance

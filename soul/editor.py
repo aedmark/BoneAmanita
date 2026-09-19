@@ -1,11 +1,8 @@
-"""/soul/editor.py"""
-
 import random
 
 from constants import Prisma
 
 from core import LoreManifest
-
 
 class TheEditor:
     @staticmethod

@@ -1,10 +1,7 @@
-"""brian/cortex.py"""
-
 import math
 import re
 from collections import Counter
 from typing import Dict, List
-
 
 class LinearCortexRouter:
     def __init__(self, token_budget: int = 8000):

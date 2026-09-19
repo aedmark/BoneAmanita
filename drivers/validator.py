@@ -1,12 +1,9 @@
-"""drivers/validator.py"""
-
 import math
 from typing import Any
 
 from core import LoreManifest
 from presets import BoneConfig
 from struts import safe_get
-
 
 class CongruenceValidator:
     def __init__(self, config_ref=None):

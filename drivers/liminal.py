@@ -1,10 +1,7 @@
-"""drivers/liminal.py"""
-
 from typing import Dict
 
 from presets import BoneConfig
 from struts import safe_get
-
 
 class LiminalModule:
     _PHYS_SET = {"heavy", "kinetic"}
@@ -89,7 +86,6 @@ class LiminalModule:
         return min(1.0, self.lambda_val)
 
     def test_liminal_trauma_aggravation(self):
-        """Ensures that user psychoanalysis (high drag/stress) combined with high momentum aggressively opens the wound."""
         liminal = LiminalModule(
             config_ref=self.chaotic_config, lexicon_ref=self.mock_lexicon
         )
@@ -110,7 +106,6 @@ class LiminalModule:
         )
 
     def test_liminal_trauma_healing(self):
-        """Ensures that a flow state (low drag/stress) combined with high momentum mathematically washes away the trauma."""
         liminal = LiminalModule(
             config_ref=self.chaotic_config, lexicon_ref=self.mock_lexicon
         )
@@ -129,7 +124,6 @@ class LiminalModule:
         )
 
     def test_liminal_scar_permanence(self):
-        """Forces the engine past the reality-fracture threshold to ensure permanent scars are recorded."""
         liminal = LiminalModule(
             config_ref=self.chaotic_config, lexicon_ref=self.mock_lexicon
         )

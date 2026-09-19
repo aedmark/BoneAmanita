@@ -1,5 +1,3 @@
-"""soul/__init__.py"""
-
 from .editor import TheEditor
 from .humanity import SchurProtocol
 from .narrativeself import CoreMemory, NarrativeSelf

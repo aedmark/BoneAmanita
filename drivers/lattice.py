@@ -1,5 +1,3 @@
-"""drivers/lattice.py"""
-
 import time
 from collections import deque
 from typing import Any, Deque, List
@@ -11,7 +9,6 @@ from physics.models import PhysicsPacket, SharedDynamics, UserInferredState
 from receipts import issue as issue_receipt
 from struts import safe_get, ux
 
-
 class SharedLatticeDriver:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
@@ -19,10 +16,6 @@ class SharedLatticeDriver:
         self.shared = SharedDynamics()
         self.last_timestamp = time.time()
         window = int(self._user_cfg("BASELINE_WINDOW", 8))
-        # What "your normal message" looks like, for this person, recently.
-        # Disengagement is a change from your own baseline, not an absolute
-        # length: someone who always writes tersely is not tired, they just
-        # write that way.
         self._length_baseline: Deque[int] = deque(maxlen=window)
         self._recent_texts: Deque[str] = deque(maxlen=window)
         self._last_learned_turn = -1
@@ -31,36 +24,14 @@ class SharedLatticeDriver:
         return float(safe_get(safe_get(self.cfg, "USER", {}), key, default))
 
     def stamina_ceiling(self) -> float:
-        """The current ceiling on P_u, which breathes with the conversation.
-
-        A flat 100 would do, but the ceiling is the one number here that can
-        honestly say "this conversation is costing you more than usual". High
-        shared resonance buys headroom; accumulated trauma spends it. The floor
-        keeps it from collapsing to nothing however heavy things get.
-        """
         base = self._user_cfg("STAMINA_MAX", 100.0)
         headroom = self._user_cfg("STAMINA_RESONANCE_HEADROOM", 25.0)
-        # phi is 0..1 and sits near 0.5 in a neutral conversation, so only the
-        # half above neutral buys anything.
         resonance_gain = headroom * max(0.0, (float(self.shared.phi) - 0.5) * 2.0)
         trauma_cost = self._user_cfg("STAMINA_TRAUMA_COST", 4.0) * float(self.u.T_u)
         floor = base * self._user_cfg("STAMINA_FLOOR_FRACTION", 0.5)
         return max(floor, min(base + headroom, base + resonance_gain - trauma_cost))
 
     def read_disengagement(self, text: str) -> float:
-        """How much this message reads as withdrawal rather than engagement.
-
-        Two signals, whichever is stronger. Brevity relative to this person's
-        own recent baseline, and repetition (within the message, or the message
-        repeating a recent one).
-
-        Repetition is measured here rather than read from `m_a`, which measures
-        the same thing elsewhere. That is deliberate: `m_a` is written onto a
-        packet during pre-flight and reaches this code only if the ordering
-        happens to work out, and a signal that silently reads 0.0 when the
-        ordering changes is exactly the failure this whole codebase keeps
-        having. Six local lines with no ordering dependency is the cheaper bet.
-        """
         words = text.split()
         if not words:
             return 1.0
@@ -76,8 +47,6 @@ class SharedLatticeDriver:
         )
         brevity_floor = max(0.01, self._user_cfg("BREVITY_FLOOR", 0.5))
         ratio = len(words) / max(1.0, baseline)
-        # 1.0 when the message has collapsed to nothing, 0.0 once it is back at
-        # `brevity_floor` of your usual length or longer.
         brevity = max(0.0, min(1.0, 1.0 - (ratio / brevity_floor)))
         return max(brevity, repetition)
 
@@ -94,22 +63,11 @@ class SharedLatticeDriver:
         now = time.time()
         time_delta = now - self.last_timestamp
         self.last_timestamp = now
-        # `infer_and_couple` is called twice per turn, from
-        # `ObservationPhase.run` and again from `_execute_core_cycle`. Reading
-        # the state twice is harmless; LEARNING from it twice is not. The
-        # second pass drained P_u again for the same message, and found the
-        # text already in `_recent_texts` from the first pass, so every
-        # utterance scored as a repeat of itself and read as total
-        # disengagement. Learn once per turn, whoever asks.
         ledger_turn = ReceiptLedger.get_instance().turn
         first_pass_this_turn = ledger_turn != self._last_learned_turn
         if first_pass_this_turn:
             self._last_learned_turn = ledger_turn
 
-        # P_u is EFFORT SPENT: writing a lot drains it, resting returns it.
-        # Low P_u is what triggers the engine to carry part of the load further
-        # down this method, so a long hard message lowering it is the supportive
-        # path, not a penalty.
         word_count = len(text.split())
         if first_pass_this_turn:
             word_cost = word_count * self._user_cfg("STAMINA_WORD_COST", 0.5)
@@ -118,22 +76,6 @@ class SharedLatticeDriver:
                 self.stamina_ceiling(), max(0.0, self.u.P_u - word_cost + recovery)
             )
 
-        # E_u is DISENGAGEMENT, and it is a separate question from effort.
-        #
-        # It used to be neither: E_u rose only once P_u fell below 30, so
-        # writing long searching prose was the thing that made the engine read
-        # you as exhausted and start cutting its replies to three sentences,
-        # while "ok, sure, fine" restored you to full. That is backwards.
-        # Someone working hard on something difficult is who this engine is
-        # for. Withdrawal is what should make it drop its energy to match and
-        # hold space, which is what ROADMAP C3 asked for.
-        #
-        # Only a turn the PERSON drove may move this or teach the baseline. The
-        # boot sequence runs through here as a system turn carrying a prompt
-        # hundreds of words long, and it was being learned as "your normal
-        # message". Every real thing you then typed measured short against it,
-        # so the engine read a fully engaged user as withdrawing from the very
-        # first word.
         if is_user_turn and first_pass_this_turn:
             disengagement = self.read_disengagement(text)
             rate = (

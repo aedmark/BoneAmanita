@@ -1,5 +1,3 @@
-"""protocols/limbo.py"""
-
 import json
 import random
 from collections import deque

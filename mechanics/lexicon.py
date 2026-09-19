@@ -1,5 +1,3 @@
-"""mechanics/lexicon.py"""
-
 import functools
 import json
 import logging
@@ -16,7 +14,6 @@ from core import LoreManifest, Prisma
 from struts import safe_get, ux
 
 logger = logging.getLogger("bone")
-
 
 class LexiconStore:
     _PUNCTUATION = string.punctuation.replace("_", "")
@@ -53,9 +50,6 @@ class LexiconStore:
 
     def _index_word(self, word: str, category: str):
         self.REVERSE_INDEX[word.lower()].add(category)
-        # _morphological_lookup caches misses, so a word learned after a failed
-        # lookup would stay invisible until restart. Matters most for the
-        # self-growing lexicon path (register_word -> MYTHOLOGY_UPDATE).
         self._morphological_lookup.cache_clear()
 
     def _load_hive(self):
@@ -101,9 +95,6 @@ class LexiconStore:
         combined = base | learned
         return combined - self.USER_FLAGGED_BIAS
 
-    # Suffixes stripped when a word is not indexed directly, longest first so
-    # "ingly" is tried before "ly". Purely inflectional: no attempt at
-    # derivation, which changes meaning and would cross category boundaries.
     _SUFFIXES = ("ingly", "edly", "ing", "ers", "est", "ies", "ed", "es", "er", "ly", "s")
 
     def get_categories_for_word(self, word: str) -> Set[str]:
@@ -114,24 +105,12 @@ class LexiconStore:
 
     @functools.lru_cache(maxsize=20000)
     def _morphological_lookup(self, w: str) -> Set[str]:
-        """Resolve an inflection to its root's categories.
-
-        Every lexicon entry then covers its whole inflectional family, so
-        "forge" answers for "forging" and "forged" without either appearing in
-        the file. This multiplies the effective vocabulary without growing it,
-        and every root added later inherits the same reach.
-
-        Cached because this sits in the per-turn hot loop and the same words
-        recur constantly. Misses are cached too, which is the common case.
-        """
         for suffix in self._SUFFIXES:
             if not w.endswith(suffix):
                 continue
             base = w[: -len(suffix)]
             if len(base) < 3:
                 continue
-            # "forging" -> "forg" -> "forge"; "running" -> "runn" -> "run";
-            # "cries" -> "cri" -> "cry".
             candidates = [base, base + "e"]
             if len(base) > 1 and base[-1] == base[-2]:
                 candidates.append(base[:-1])
@@ -316,23 +295,6 @@ class LinguisticAnalyzer:
         final_vitality = (vitality_score / len(w)) * length_mod
         final_flow = flow_score / len(w)
 
-        # Score each category by how far ABOVE its threshold it sits, relative to
-        # that threshold, then take the strongest. Two bugs lived in the previous
-        # version (see ROADMAP A5):
-        #
-        #  1. It returned the raw score as the confidence. `apart` came back as
-        #     ("play", 1.2). Callers compared that against 0.5 as though it were
-        #     a probability, so anything above threshold at all read as highly
-        #     confident. English is vowel-dense, so vitality clears its threshold
-        #     for most words and 69% of all fallback verdicts were "play".
-        #  2. It returned the FIRST category over threshold, in a fixed order, so
-        #     a word comfortably over two thresholds was assigned by ordering
-        #     rather than by strength of signal.
-        #
-        # The margin is normalised into [0, 1]: 0.0 exactly at threshold, 1.0 at
-        # twice threshold. A caller's `>= 0.5` now means "half again above the
-        # threshold", which is a statement about this word rather than about the
-        # scale the score happens to use.
         candidates = (
             ("heavy", final_density, self.thresholds["heavy_density"] * self.biases["heavy"]),
             ("play", final_vitality, self.thresholds["play_vitality"] * self.biases["play"]),
@@ -460,17 +422,6 @@ class LexiconService:
         return self._RESONANCE.ready
 
     def resolve_unknown(self, word: str) -> Set[str]:
-        """Classify a word the lexicon does not know, by meaning, and remember it.
-
-        Consulted after the curated lexicon and its inflections, before the
-        phonosemantic fallback. A confident verdict is taught into the separate
-        LEARNED_VOCAB hive rather than written into lore/lexicon.json, so the
-        curated file stays hand-authored and every machine guess is capped,
-        evictable and revertable by deleting the hive.
-
-        Teaching also means the embedding cost is paid once per word for the
-        life of the hive: the next occurrence resolves through the normal index.
-        """
         if not word or not self.ensure_resonance():
             return set()
         category, _margin = self._RESONANCE.classify(word)
@@ -480,7 +431,6 @@ class LexiconService:
         return {category}
 
     def warm_resonance(self, words: List[str]) -> None:
-        """Embed a turn's unknown words in one round trip rather than N."""
         if not words or not self.ensure_resonance():
             return
         try:
@@ -488,8 +438,6 @@ class LexiconService:
 
             SemanticEmbedder.get_instance().embed_batch(words)
         except Exception as e:
-            # Warming is an optimisation, so a failure is survivable; the
-            # per-word path degrades on its own terms. It still gets said.
             logger.warning(
                 f"[RESONANCE] Batch warm failed ({type(e).__name__}: {e}); "
                 f"unknown words will resolve one at a time."

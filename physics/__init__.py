@@ -1,5 +1,3 @@
-"""physics/__init__.py"""
-
 from physics.dynamics import ChromaScope, CosmicDynamics, SurfaceTension, ZoneInertia
 from physics.filters import CerebrospinalFluidFilter, HLA_Stabilizer, TheGatekeeper
 from physics.geodesics import GeodesicEngine, GeodesicVector

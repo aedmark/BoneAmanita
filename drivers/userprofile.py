@@ -1,5 +1,3 @@
-"""drivers/userprofile.py"""
-
 import logging
 import json
 import os
@@ -8,7 +6,6 @@ from presets import BoneConfig
 from struts import safe_get
 
 logger = logging.getLogger("bone")
-
 
 class UserProfile:
     def __init__(self, name="USER", config_ref=None):

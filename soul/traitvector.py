@@ -1,8 +1,5 @@
-"""/soul/traitvector.py"""
-
 from dataclasses import dataclass
 from typing import ClassVar, Dict
-
 
 @dataclass
 class TraitVector:

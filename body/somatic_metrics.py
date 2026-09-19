@@ -35,15 +35,12 @@ MEASURES = [
 ]
 
 def visible_text(reply: str) -> str:
-    """What the reader sees: the validator strips these two blocks before display."""
     return _TELEMETRY.sub("", _THINK.sub("", reply)).strip()
 
 def split_sentences(text: str) -> list:
     return [s for s in (p.strip() for p in SENTENCE_END.split(text)) if WORD.search(s)]
 
 def mattr(words: list, window: int = 25) -> float:
-    """Moving-average type-token ratio. Plain TTR falls as a text gets longer, so
-    it would report any length change as a vocabulary change."""
     lowered = [w.lower() for w in words]
     if len(lowered) <= window:
         return len(set(lowered)) / len(lowered) if lowered else float("nan")
@@ -51,8 +48,6 @@ def mattr(words: list, window: int = 25) -> float:
     return sum(ratios) / len(ratios)
 
 def measure(reply: str, validator_valid: bool) -> dict:
-    """An empty visible reply is its own outcome. Scored as prose it would count
-    as zero sentences, and so as perfect obedience to "3 sentences or less"."""
     text = visible_text(reply)
     words = WORD.findall(text)
     sentences = split_sentences(text)
@@ -82,21 +77,11 @@ def measure(reply: str, validator_valid: bool) -> dict:
 
 
 def trim_to_sentence_cap(text: str, cap: int) -> str:
-    """Trim the text to the first `cap` sentences, preserving original whitespace and punctuation."""
     if cap <= 0:
         return ""
-    
-    # We find all boundaries using SENTENCE_END.
-    # SENTENCE_END splits the text into pieces. The delimiters are dropped by re.split, 
-    # unless we use capture groups, but SENTENCE_END has no capture groups around the whole delimiter.
-    # Actually, it's easier to find the end index of the cap-th sentence.
-    
-    # We can use SENTENCE_END.finditer(text).
+
     matches = list(SENTENCE_END.finditer(text))
-    # Wait, SENTENCE_END matches the boundary *between* sentences.
-    # A text with 3 sentences has 2 boundaries.
-    
-    # Let's count valid sentences manually to be exactly consistent with split_sentences.
+
     pieces = []
     last_idx = 0
     valid_count = 0
@@ -112,10 +97,8 @@ def trim_to_sentence_cap(text: str, cap: int) -> str:
             
         last_idx = end
 
-    # Check the last segment
     segment = text[last_idx:]
     if WORD.search(segment):
         valid_count += 1
-        
-    # If we haven't reached cap, return whole text
+
     return text.strip()

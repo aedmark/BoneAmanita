@@ -1,5 +1,3 @@
-"""physics/maths.py"""
-
 import math
 from collections import Counter, deque
 from typing import List, Tuple
@@ -66,12 +64,6 @@ def _native_coincidence_length(
 
 
 class CreativeDeterminantEngine:
-    """
-    Mathematical integration of the Creative Determinant (CD) framework.
-    Original CD equations and field theory authored by Nelson Spence (Project Navi LLC).
-    Licensed under Apache 2.0.
-    """
-
     def __init__(self, lambda_base=1.0, eta=0.1, rho=0.05, p=2.0, c=1.5):
         self.coherence_debt = 0.0
         self.lambda_base = lambda_base

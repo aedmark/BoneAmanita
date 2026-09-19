@@ -4,7 +4,6 @@ from typing import Dict, Union
 from core import LoreManifest
 from presets import BoneConfig
 
-
 class SoulDriver:
     def __init__(self, soul_ref, config_ref=None):
         self.cfg = config_ref or BoneConfig

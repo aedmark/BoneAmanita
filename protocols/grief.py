@@ -1,5 +1,3 @@
-"""protocols/grief.py"""
-
 from typing import Dict
 
 from constants import Prisma

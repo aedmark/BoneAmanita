@@ -1,5 +1,3 @@
-"""spores/genetics.py"""
-
 import json
 import logging
 import random

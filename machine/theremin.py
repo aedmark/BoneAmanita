@@ -1,11 +1,8 @@
-"""machine/theremin.py"""
-
 from typing import Optional, Tuple
 
 from core import LoreManifest
 from presets import BoneConfig
 from struts import safe_get, ux
-
 
 class TheTheremin:
     def __init__(self, config_ref=None):

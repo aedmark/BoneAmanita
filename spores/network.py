@@ -1,5 +1,3 @@
-"""spores/network.py"""
-
 import logging
 import random
 import time
@@ -19,7 +17,6 @@ from spores.memory import MemoryCore, SubconsciousStrata
 from struts import safe_get, safe_set, ux, ux_format
 
 logger = logging.getLogger("bone")
-
 
 class MycelialNetwork:
     def __init__(
@@ -91,7 +88,6 @@ class MycelialNetwork:
             return False
 
     def evaluate_system_state(self, stamina: float, trauma_vector: dict):
-        """The State Sensor & Policy Engine"""
         try:
             max_cap = int(safe_get(self.cfg, "MAX_MEMORY_CAPACITY", 100))
             saturation = min(1.0, len(self.graph) / max(1, max_cap))
@@ -217,9 +213,6 @@ class MycelialNetwork:
         total_v_shift = 0.0
         total_d_shift = 0.0
         haunted_words = []
-        # Warm the whole turn's vocabulary in one round trip before the loop.
-        # dredge_vibe() embeds per call, so an un-warmed loop costs one request
-        # per novel word on every single turn.
         if haunted := [w for w in clean_words if w in self.subconscious.index]:
             _words_to_matrix(haunted)
         for w in clean_words:
@@ -290,17 +283,6 @@ class MycelialNetwork:
 
     @staticmethod
     def current_wing(physics: Any) -> str:
-        """The zone this memory belongs to, used as its `wing_id`.
-
-        Reads the stabilized zone (ZoneInertia applies hysteresis, so this does
-        not flap turn to turn). This previously read a `scope_boundary` key that
-        is not defined anywhere in the project, so every memory ever written was
-        tagged "GLOBAL" and the zone filter in CerebralIndex.query_neighborhood
-        had nothing to filter on.
-
-        Falls back to "GLOBAL", which the filter treats as a wildcard, so an
-        unreadable physics packet degrades to unscoped rather than unreachable.
-        """
         space = safe_get(physics, "space", None)
         zone = safe_get(space, "zone", None) if space is not None else None
         if zone is None:
@@ -310,29 +292,9 @@ class MycelialNetwork:
 
     @staticmethod
     def room_key(clean_words: Optional[List[str]]) -> str:
-        """Exact-recall key for a turn.
-
-        encode() and retrieve_semantic() must derive this identically or the
-        hippocampus can be written and never hit: the cache is keyed by room,
-        so a lookup built any other way misses every time regardless of how
-        much is stored.
-        """
         return "_".join(clean_words[:2]) if clean_words else "GENERAL"
 
     def _encode_hippocampal(self, engram: Dict) -> None:
-        """Mirror a significant engram into the short-term cache.
-
-        HippocampalCache shipped with wired readers and no writer at all: REM
-        consolidation (brain/mind.py) drained it, the topology checks in
-        cycle.py graphed it, and apply_stress_blindness amputated it, but
-        nothing ever put a node in. extract_for_consolidation therefore always
-        returned [], get_graph always returned {}, and the cortisol amputation
-        described in the README was amputating an empty buffer.
-
-        This is the write half. Engrams land here first and REM promotes the
-        survivors into the CerebralIndex, which is the short-term to long-term
-        path the biology has always claimed to have.
-        """
         text = str(engram.get("raw_verbatim_text") or "").strip()
         if not text:
             text = " ".join(str(w) for w in (engram.get("trigger") or []))
@@ -346,7 +308,6 @@ class MycelialNetwork:
         )
 
     def apply_stress_blindness(self, cortisol: float) -> int:
-        """Shrink short-term capacity under cortisol. Returns nodes amputated."""
         before = len(self.hippocampus.nodes)
         self.hippocampus.apply_stress_blindness(cortisol)
         return before - len(self.hippocampus.nodes)

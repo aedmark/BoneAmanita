@@ -1,4 +1,3 @@
-"""archetypes/village.py"""
 
 import logging
 import heapq
@@ -17,7 +16,6 @@ from presets import BoneConfig
 
 logger = logging.getLogger("bone")
 
-
 def _cfg_val(cfg_ref, section: str, key: str, default: float) -> float:
     return float(safe_get(safe_get(cfg_ref or BoneConfig, section, {}), key, default))
 
@@ -33,18 +31,6 @@ class TheTinkerer:
         self._inventory_hash = 0
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize the learned tool resonance.
-
-        This did not exist, and its absence was silent in three separate places
-        at once. `TheCortex.gather_state` called `tinkerer.to_dict()` inside a
-        handler that caught AttributeError and substituted `{}`, so the
-        composer's HARMONIC RESONANCE block read an empty `tool_resonance` and
-        never once appeared in a prompt. `ChronosKeeper._gather_village_state`
-        filters on `hasattr(comp, "to_dict")`, so resonance was never saved
-        either, and `_restore_village_state` dispatches on `load_state`, so it
-        was never restored. One missing pair of methods, three dead paths, and
-        no error anywhere.
-        """
         return {"tool_resonance": dict(self.tool_resonance)}
 
     def load_state(self, data: Dict[str, Any]):

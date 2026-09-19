@@ -5,9 +5,7 @@ from math import comb
 def get_frustration(matrix):
     N, D = matrix.shape
     if N < 3: return 0.0
-    # Rank across memories for each coordinate
     ranks = np.argsort(np.argsort(matrix, axis=0), axis=0)
-    # Add noise to break ties if any (though floats rarely tie)
     ranks_noisy = ranks + np.random.normal(0, 1e-6, size=ranks.shape)
     C = np.corrcoef(ranks_noisy, rowvar=False)
     A = np.sign(C)

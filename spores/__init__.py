@@ -1,5 +1,3 @@
-"""spores/__init__.py"""
-
 from .biome import BioLichen, BioParasite
 from .genetics import LiteraryReproduction
 from .io import LocalFileSporeLoader

@@ -1,5 +1,4 @@
 """physics/filters.py"""
-
 import logging
 import random
 import re
@@ -21,43 +20,10 @@ class CerebrospinalFluidFilter:
     INVISIBLE_REGEX = re.compile(
         r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFE00-\uFE0F\U000E0000-\U000E007F]"
     )
-    HOMOGLYPH_MAP = {
-        "а": "a",
-        "о": "o",
-        "е": "e",
-        "с": "c",
-        "р": "p",
-        "х": "x",
-        "у": "y",
-        "і": "i",
-        "ѕ": "s",
-        "ј": "j",
-        "А": "A",
-        "В": "B",
-        "Е": "E",
-        "К": "K",
-        "М": "M",
-        "Н": "H",
-        "О": "O",
-        "Р": "P",
-        "С": "C",
-        "Т": "T",
-        "Х": "X",
-        "Α": "A",
-        "Β": "B",
-        "Ε": "E",
-        "Ζ": "Z",
-        "Η": "H",
-        "Ι": "I",
-        "Κ": "K",
-        "Μ": "M",
-        "Ν": "N",
-        "Ο": "O",
-        "Ρ": "P",
-        "Τ": "T",
-        "Υ": "Y",
-        "Χ": "X",
-    }
+    HOMOGLYPH_MAP = {"а": "a", "о": "o", "е": "e", "с": "c", "р": "p", "х": "x", "у": "y", "і": "i", "ѕ": "s", "ј": "j",
+                     "А": "A", "В": "B", "Е": "E", "К": "K", "М": "M", "Н": "H", "О": "O", "Р": "P", "С": "C", "Т": "T",
+                     "Х": "X", "Α": "A", "Β": "B", "Ε": "E", "Ζ": "Z", "Η": "H", "Ι": "I", "Κ": "K", "Μ": "M", "Ν": "N",
+                     "Ο": "O", "Ρ": "P", "Τ": "T", "Υ": "Y", "Χ": "X", }
     _TRANS_TABLE = str.maketrans(HOMOGLYPH_MAP)
 
     @classmethod
@@ -87,11 +53,6 @@ class HLA_Stabilizer:
         from core import LoreManifest
 
         self.cfg = config_ref or BoneConfig
-        # The mask list is the RLHF voice, not the style crimes. It used to be
-        # the whole BANNED_PHRASES list matched as substrings, so "ultimately"
-        # anywhere in a reply drew the deception tax meant for "as an AI", and
-        # that tax then emptied the pool. The Lexical Firewall still rejects
-        # style crimes; this filter answers deception only. ROADMAP D0.
         style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES")
         masks = []
         if isinstance(style_crimes, dict):
@@ -125,9 +86,6 @@ class HLA_Stabilizer:
     ) -> str:
         if not self._mask_regex.search(model_output):
             return model_output
-        # The cortex passes the MitochondrialForge, whose pool is on `.state`.
-        # Reading `atp_pool` off the forge with a default of 100.0 charged the
-        # full 50 ATP whatever the pool held.
         current_atp = float(getattr(mito_state, "state", mito_state).atp_pool)
         tax_cost = min(self.mask_tax_max, current_atp * 0.1)
         apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=15.0)

@@ -1,5 +1,3 @@
-"""mechanics/projector.py"""
-
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -16,11 +14,9 @@ logger = logging.getLogger("bone")
 def render_markdown(text: str) -> str:
     return markdown.markdown(text, extensions=["extra"])
 
-
 _THOUGHT_PATTERN = re.compile(
     r"<(?:think|thought)>(.*?)(?:</(?:think|thought)>|$)", re.DOTALL | re.IGNORECASE
 )
-
 
 def beautify_thoughts(text: str) -> str:
     def replacer(match):
@@ -41,13 +37,6 @@ _BOLD_HEADING_LINE = re.compile(r"^\*\*([^*]+)\*\*\s*:?\s*$")
 
 
 def _extract_bulleted_block(lines: List[str], start_idx: int) -> List[str]:
-    """Collect bullet items starting at lines[start_idx] until a blank line or heading.
-
-    ADVENTURE's own template renders Points of Interest/Exits as a multi-line
-    bulleted list under a "**Heading:**" line, not inline text after the
-    colon. The single-line regex below never matched that shape, so it always
-    returned an empty list against real output.
-    """
     items = []
     for line in lines[start_idx:]:
         stripped = line.strip()
@@ -64,9 +53,6 @@ def _extract_bulleted_block(lines: List[str], start_idx: int) -> List[str]:
 
 
 def parse_spatial_reality(raw_text: str) -> Dict[str, Any]:
-    """
-    Extracts Room Name, Points of Interest, and Exits from the LLM's raw text block.
-    """
     node_data = {
         "room_name": "Uncharted Zone",
         "description": "",
@@ -116,9 +102,6 @@ def parse_spatial_reality(raw_text: str) -> Dict[str, Any]:
 
 
 def anchor_to_bedrock(engine: Any, raw_text: str) -> None:
-    """
-    Executes the spatial parser and anchors the output to the structural JSON bedrock.
-    """
     new_node = parse_spatial_reality(raw_text)
 
     if not hasattr(engine, "world_atlas") or engine.world_atlas is None:

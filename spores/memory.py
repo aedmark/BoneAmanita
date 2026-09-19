@@ -1,7 +1,3 @@
-"""spores/memory.py
-ORDVEC math provided by Nelson Spence and Project Navi via Apache 2.0 Licensing
-"""
-
 import logging
 import heapq
 import itertools
@@ -22,9 +18,6 @@ from struts import safe_get, ux, ux_format
 
 logger = logging.getLogger("bone")
 
-# `core` already probed for ordvec and announced its absence. Probing again here
-# would be a second source of truth for the same question and a second silent
-# handler; read the answer instead.
 if ORDVEC_AVAILABLE:
     import ordvec
     from ordvec import RankQuant, SignBitmap
@@ -122,17 +115,6 @@ class SubconsciousStrata:
                 words.append(e["word"])
 
         if np is not None and words:
-            # Warm the embedder cache with one batched round trip, then resolve
-            # each word through _word_to_vector. Both steps matter:
-            #
-            #   - the warm avoids a request per buried word at every boot;
-            #   - going through _word_to_vector keeps this path in the SAME space
-            #     as bury(), which is the only guarantee that rank_bank rows stay
-            #     mutually comparable. Calling the batch helper directly here let
-            #     the two paths diverge in width.
-            #
-            # The warm is advisory, so a failure is not fatal: the per-word calls
-            # below degrade on their own terms.
             try:
                 _words_to_matrix(words)
             except Exception as e:
@@ -140,9 +122,6 @@ class SubconsciousStrata:
                     f"Batch vector warm failed for {len(words)} word(s) "
                     f"({type(e).__name__}: {e}); falling back to one call per word."
                 )
-            # One row per word, in order, so rank_bank stays index-aligned with
-            # metadata_log. Skipping a row would shift every later lookup onto
-            # the wrong memory.
             for word in words:
                 vec = np.array(_word_to_vector(word), dtype=np.float32)
                 remainder = vec.shape[0] % 64
@@ -270,12 +249,6 @@ class SubconsciousStrata:
         if ordvec is not None and self.quantizer is not None and self.bitmap is not None:
             coarse_k = min(effective_k * 8, total_memories)
             try:
-                # ordvec 0.5.0 API. This previously called bitmap.scan() and
-                # quantizer.rerank(), neither of which exists on SignBitmap or
-                # RankQuant; every call raised AttributeError straight into a
-                # bare `except: pass`, so the accelerated path had never once
-                # executed and every search silently fell back to exact numpy.
-                # Note the return order: (scores, indices), not (indices, scores).
                 candidates = np.ascontiguousarray(
                     self.bitmap.top_m_candidates(Q_arr, coarse_k).astype(np.uint32)
                 )
@@ -283,8 +256,6 @@ class SubconsciousStrata:
                     Q_arr, candidates, effective_k
                 )
             except Exception as e:
-                # Falling back to exact math is correct, but doing it silently is
-                # how the above went unnoticed. Say it once per process.
                 if not getattr(SubconsciousStrata, "_ordvec_warned", False):
                     SubconsciousStrata._ordvec_warned = True
                     print(
@@ -325,7 +296,6 @@ class SubconsciousStrata:
         return results
 
     def dredge_vibe(self, trigger_word: str, k: int = 3, cortisol: float = 0.0) -> list:
-        """True Asymmetric Rank-Cosine Search."""
         Q = _word_to_vector(trigger_word)
         return self.dredge_vibe_by_vector(Q, k, cortisol)
 
@@ -449,7 +419,6 @@ class MemoryCore:
     def hallucinate_from_subconscious(
         self, active_nodes: List[str], cortisol: float = 0.0
     ):
-        """Vector Centroid Hallucination (The Deep Dredge)."""
         if len(active_nodes) < 2 or np is None:
             return
         vectors = []
@@ -474,7 +443,6 @@ class MemoryCore:
                 self.graph[phantom_word]["edges"][node] = min(10.0, w_in + 0.5)
 
     def forge_diamond(self, node_a, node_b):
-        """Permanently crystallizes a high-resonance vector collision."""
         if node_a in self.graph and node_b in self.graph:
             self.graph[node_a].setdefault("diamond_edges", set()).add(node_b)
             self.graph[node_b].setdefault("diamond_edges", set()).add(node_a)

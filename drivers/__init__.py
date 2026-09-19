@@ -1,5 +1,3 @@
-"""drivers/__init__.py"""
-
 from .consultant import BoneConsultant
 from .enneagram import EnneagramDriver
 from .lattice import SharedLatticeDriver

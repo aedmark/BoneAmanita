@@ -1,5 +1,3 @@
-"""brain/composer.py"""
-
 import json
 import os
 import random
@@ -85,11 +83,6 @@ class LLMInterface:
         self.failure_threshold = int(safe_get(c_cfg, "LLM_FAILURE_THRESHOLD", 3))
         self.last_failure_time = 0.0
         self.circuit_state = "CLOSED"
-        # Some backends (Ollama among them) apply stop sequences to a thinking
-        # model's reasoning as well as its reply. The model quotes "Traveler:"
-        # while it reasons, generation ends, and the reply is empty. Learned
-        # from the first empty reply that a stop-free retry fills; from then on
-        # stops are applied here, to the reply only.
         self.stops_cut_reasoning = False
 
     def _is_synapse_active(self) -> bool:
@@ -128,8 +121,6 @@ class LLMInterface:
         if self.provider == "xai" and override_url is None:
             allowed = {"model", "messages", "stream", "max_tokens", "temperature", "top_p", "reasoning_effort"}
             payload = {k: v for k, v in payload.items() if k in allowed}
-            # Apply our long stop list client-side; local sampler controls are
-            # not part of the cloud API contract.
         if self.provider == "anthropic" and override_url is None:
             headers = {"Content-Type": "application/json", "x-api-key": target_key,
                        "anthropic-version": "2023-06-01"}
@@ -197,18 +188,6 @@ class LLMInterface:
             self.events.log(f"{Prisma.YEL}{msg}{Prisma.RST}", "SYS")
 
     def generate(self, prompt: str, params: Dict[str, Any]) -> str:
-        """Send the prompt, applying the governor's thermal gate if one is set.
-
-        The tag carries the temperature itself rather than a quantity the
-        temperature is derived from, so there is nothing to interpret here. An
-        absent tag means the governor declined to measure the regime and the
-        model samples at whatever `params` already said.
-
-        This used to read a `<cd_lambda_1>` tag and derive heat from the sign
-        and magnitude of a principal eigenvalue. See
-        `CyberneticGovernor._bitmap_regulation` for why that eigenvalue turned
-        out to be the mean ordvec similarity wearing a Laplacian.
-        """
         if not self._is_synapse_active():
             if self.strict_live:
                 self.live_failures += 1
@@ -245,8 +224,6 @@ class LLMInterface:
             payload["stop"] = list(self.STOP_SEQUENCES)
         payload.update(params)
         c_cfg = safe_get(self.cfg, "CORTEX", {})
-        # A thinking model can spend its whole context reasoning about the
-        # kernel's style rules and answer with nothing. ROADMAP D7.
         if (effort := str(safe_get(c_cfg, "REASONING_EFFORT", "") or "")) and (
             "reasoning_effort" not in payload
         ):
@@ -322,11 +299,6 @@ class LLMInterface:
         return self.mock_generation(prompt, reason="SILENCE")
 
     def _retry_without_stops(self, payload: Dict[str, Any], timeout: float) -> str:
-        """Ask once more with no stop sequences, after an empty reply.
-
-        A reply that only a stop-free request can fill means the stops were
-        ending generation inside the model's reasoning, so they stop being sent.
-        """
         unstopped = {k: v for k, v in payload.items() if k != "stop"}
         content = self._transmit(unstopped, timeout=timeout)
         if content and not self.stops_cut_reasoning:
@@ -342,7 +314,6 @@ class LLMInterface:
         return content
 
     def _cut_at_stops(self, content: str) -> str:
-        """What a server-side stop would have left of the reply."""
         if not content:
             return content
         cuts = [i for i in (content.find(s) for s in self.STOP_SEQUENCES) if i >= 0]
@@ -519,9 +490,6 @@ class PromptComposer:
             style_notes.extend(mode_data.get("inventory_rules", []))
         self._inject_resonances(style_notes, state, modifiers)
         orbit_raw = state.get("world", {}).get("orbit")
-        # orbit is a bare zone-label string in normal play (phases/environmental.py)
-        # but a list in a few other producers; indexing a string gave the
-        # location's first CHARACTER ("V" for "VOID") instead of its name.
         loc = (
             str(orbit_raw[0])
             if isinstance(orbit_raw, list) and orbit_raw
@@ -638,11 +606,6 @@ class PromptComposer:
                 f"{inventory_block}"
                 f"{exits_block}\n"
             )
-        # The governor's thermal gate. LLMInterface.generate reads this tag,
-        # strips it, and samples at exactly this temperature. An absent tag
-        # means the governor declined to measure the regime (too few memories
-        # to have a corpus null worth comparing against), and the model samples
-        # at its configured default. Absent is not the same as zero.
         cd_block = ""
         somatic_budget = state.get("somatic_budget")
         somatic_budget_block = ""
@@ -672,10 +635,6 @@ class PromptComposer:
         ]
         parts = [text for _, text in blocks if text]
         prompt = "\n".join(parts)
-        # The composer is the only place the whole turn converges, so its
-        # receipt is the one that says whether the physics reached the model at
-        # all. A missing thermal lock means the Creative Determinant ran (or did
-        # not) and its answer was dropped on the floor between here and there.
         has_band = "thermal_band" in (phys_ref or {})
         issue_receipt(
             "composer.compose",

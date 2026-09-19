@@ -1,12 +1,9 @@
-"""drivers/enneagram.py"""
-
 from typing import Any, Tuple
 
 from core import LoreManifest
 from drivers.souldriver import SoulDriver
 from presets import BoneConfig
 from struts import safe_get, ux
-
 
 class EnneagramDriver:
     def __init__(self, events_ref, config_ref=None):

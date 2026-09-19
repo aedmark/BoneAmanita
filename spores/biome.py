@@ -1,12 +1,9 @@
-"""spores/biome.py"""
-
 import random
 from typing import Tuple
 
 from constants import Prisma
 from presets import BoneConfig
 from struts import safe_get, ux, ux_format
-
 
 class BioParasite:
     def __init__(self, memory_ref, lexicon_ref, config_ref=None):

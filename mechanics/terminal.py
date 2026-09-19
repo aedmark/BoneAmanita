@@ -1,5 +1,3 @@
-"""mechanics/terminal.py"""
-
 import os
 import re
 import subprocess
@@ -13,7 +11,6 @@ from presets import BoneConfig
 from struts import ux
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
-
 
 def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
     if not text:

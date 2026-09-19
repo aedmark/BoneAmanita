@@ -1,4 +1,3 @@
-"""Cloud provider configuration; credentials stay in the process environment."""
 import os
 
 CLOUD_ENDPOINTS = {
@@ -14,7 +13,6 @@ def normalize_provider(provider):
 
 
 def environment_config(config):
-    """Override a saved local configuration without rewriting it."""
     result = dict(config)
     provider = os.getenv("BONE_PROVIDER")
     if provider:
@@ -22,7 +20,6 @@ def environment_config(config):
         if result["provider"] in CLOUD_ENDPOINTS:
             result["base_url"] = CLOUD_ENDPOINTS[result["provider"]]
             result["api_key"] = os.getenv(KEY_ENV[result["provider"]], "")
-            # Never accidentally send a saved local model ID to a cloud API.
             if not os.getenv("BONE_MODEL"):
                 raise ValueError("Set BONE_MODEL to a model ID available to your API key")
     for key in ("model", "base_url"):

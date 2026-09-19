@@ -1,5 +1,3 @@
-"""brain/ann.py"""
-
 import hashlib
 import heapq
 import math
@@ -14,17 +12,7 @@ import numpy as np
 from core import EventBus
 from receipts import issue as issue_receipt
 
-
 class HippocampalCache:
-    # Cosine above which two short-term memories are considered adjacent.
-    # 0.75 was calibrated for the SHAKE-256 hash vectors, where similarity was
-    # noise near zero and 0.75 meant "suspiciously identical". Real embeddings
-    # moved the distribution: measured over 4 topics x 4 memories with
-    # nomic-embed-text, within-topic cosine averages 0.48 and cross-topic 0.38,
-    # so 0.75 sat above every meaningful pair and the graph was always empty.
-    # 0.50 keeps ~33% of true topical links at ~3% false ones, and matches the
-    # resonance_threshold already used by CerebralIndex.query_neighborhood
-    # (resonance 0.5 <-> cosine 0.5 on unit vectors).
     DEFAULT_EDGE_THRESHOLD = 0.50
 
     def __init__(self, max_capacity: int = 500, edge_threshold: float = None):
@@ -36,7 +24,6 @@ class HippocampalCache:
         self.nodes: Dict[str, Any] = {}
 
     def apply_stress_blindness(self, cortisol: float):
-        """Actively dials down max_capacity based on cortisol to simulate biological stress blindness."""
         if cortisol > 0.8:
             self.current_capacity = max(1, int(self.base_capacity * (1.0 - cortisol)))
         else:
@@ -94,13 +81,6 @@ class HippocampalCache:
 
 class CerebralIndex:
     def __init__(self, dimension: Optional[int] = None):
-        """Long-term associative store.
-
-        `dimension` defaults to the active embedder's native width. Pass an
-        explicit value only to pin the index for a fixture or a test; a value
-        that disagrees with the embedder guarantees empty recall, because
-        `query_neighborhood` drops any query of the wrong length.
-        """
         from spores.embeddings import SemanticEmbedder
 
         self._embedder = SemanticEmbedder.get_instance()
@@ -112,13 +92,6 @@ class CerebralIndex:
         self._phantom_lookup: Dict[str, str] = {}
 
     def embed(self, text: str) -> List[float]:
-        """Project text into this index's coordinate system.
-
-        Anything queried against this index MUST come through here. The index is
-        populated from passage embeddings, so a query assembled from any other
-        space (physics coordinates, for instance) is not merely inaccurate, it is
-        meaningless.
-        """
         vec = self._embedder.embed(text)
         if len(vec) == self.dimension:
             return vec
@@ -175,8 +148,6 @@ class CerebralIndex:
             or self.total_nodes == 0
             or len(query_vector) != self.dimension
         ):
-            # Each of these is a different illness and they read identically
-            # from the outside: an empty list. The receipt separates them.
             issue_receipt(
                 "cortex.query_neighborhood",
                 "declined to search",
@@ -219,10 +190,6 @@ class CerebralIndex:
             payload = self._payloads[idx]
             if not isinstance(payload, dict):
                 continue
-            # GLOBAL is a wildcard on BOTH sides, not a zone name. A memory
-            # tagged GLOBAL is unscoped (or predates zoning) and stays reachable
-            # from anywhere; a query from GLOBAL sees every zone. Without this,
-            # switching zoning on would strand every memory written before it.
             payload_wing = payload.get("wing_id", "GLOBAL")
             if (
                 target_wing

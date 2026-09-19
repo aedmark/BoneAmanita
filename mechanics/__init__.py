@@ -1,5 +1,3 @@
-"""mechanics/__init__.py"""
-
 from mechanics.commands import CommandProcessor
 from mechanics.dspycritic import DSPyCritic
 from mechanics.inventory import GordonKnot, Item
@@ -14,5 +12,4 @@ __all__ = [
     "Item",
     "LexiconStore",
     "LexiconService",
-    "TheTclWeaverDSPyCritic",
 ]

@@ -1,5 +1,3 @@
-"""protocols/critics.py"""
-
 import random
 from typing import Any, Optional
 
@@ -7,7 +5,6 @@ from constants import Prisma
 from core import LoreManifest
 from presets import BoneConfig
 from struts import safe_get, ux
-
 
 class TheCriticsCircle:
     def __init__(self, events_ref, config_ref=None):

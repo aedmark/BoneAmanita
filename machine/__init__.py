@@ -1,5 +1,3 @@
-"""machine/__init__.py"""
-
 from .architect import BoneArchitect, SystemEmbryo
 from .consolidator import TheConsolidator
 from .crucible import TheCrucible

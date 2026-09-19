@@ -1,5 +1,3 @@
-"""/soul/humanity.py"""
-
 import random
 from typing import Any, List, Optional
 
@@ -7,7 +5,6 @@ from constants import Prisma
 from core import EventBus, LoreManifest
 from presets import BoneConfig
 from struts import safe_get, ux, ux_format
-
 
 class SchurProtocol:
     _LEXICAL_ANCHORS = ("sacred", "play", "social", "abstract")

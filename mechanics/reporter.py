@@ -1,5 +1,3 @@
-"""mechanics/reporter.py"""
-
 from typing import Any, Dict, List, Tuple
 
 from core import Prisma
@@ -7,7 +5,6 @@ from mechanics.projector import Projector, SoulDashboard
 from physics import ChromaScope
 from presets import BoneConfig
 from struts import safe_get, ux
-
 
 class PulseReader:
     _GUI_CFG_CACHE = None

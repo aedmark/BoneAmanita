@@ -1,5 +1,3 @@
-"""phases/environmental.py"""
-
 import random
 
 from constants import Prisma
@@ -10,10 +8,8 @@ from physics import QuantumObserver
 from presets import BonePresets
 from struts import safe_get, safe_set, ux
 
-
 class NavigationPhase(SimulationPhase):
     def _cross_doorway(self, ctx, stabilized_zone: str) -> None:
-        """Flush working memory when the conversation changes zone."""
         core = getattr(getattr(self.eng.mind, "mem", None), "memory_core", None)
         if core is None or not hasattr(core, "execute_doorway_flush"):
             return
@@ -114,12 +110,6 @@ class NavigationPhase(SimulationPhase):
         else:
             stabilized_zone = stabilization_result
         physics.zone = stabilized_zone
-        # The Doorway Effect. Crossing from one zone into another flushes
-        # working memory, which is what makes zones a boundary rather than a
-        # label. execute_doorway_flush existed with no production caller, so
-        # this had never once run. Keyed off the STABILIZED zone: the raw
-        # per-turn zone flaps, and flushing on every flap would just be
-        # amnesia.
         self._cross_doorway(ctx, stabilized_zone)
         adjusted_drag = self.eng.stabilizer.override_cosmic_drag(
             drag_pen, stabilized_zone
@@ -159,38 +149,8 @@ class RealityFilterPhase(SimulationPhase):
 
 
 class ObservationPhase(SimulationPhase):
-    _SYNC_KEYS = (
-        "clean_words",
-        "counts",
-        "vector",
-        "valence",
-        "entropy",
-        "beta",
-        "S",
-        "D",
-        "C",
-        "PHI_RES",
-        "DELTA",
-        "LQ",
-        "ROS",
-        "G",
-        "raw_text",
-        "antigens",
-        "psi",
-        # The Creative Determinant fields. The observer computes all three
-        # (observer.py builds EnergyState with kappa=geo.coherence,
-        # gamma=gamma_idx, mu=mu_friction), but only `kappa` used to be
-        # listed here, so gamma and mu were recomputed every turn and then
-        # dropped on the floor. That left b = kappa*gamma - lambda*mu
-        # identically 0 and lambda_1 pinned at its ceiling forever.
-        "kappa",
-        "gamma",
-        "mu",
-        "lambda_val",
-        "zone",
-        "flow_state",
-        "repetition",
-    )
+    _SYNC_KEYS = ("clean_words", "counts", "vector", "valence", "entropy", "beta", "S", "D", "C", "PHI_RES", "DELTA", "LQ", "ROS", "G",
+ "raw_text", "antigens", "psi", "kappa", "gamma", "mu", "lambda_val", "zone", "flow_state", "repetition",)
 
     def __init__(self, engine_ref):
         super().__init__(engine_ref)

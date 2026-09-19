@@ -1,5 +1,3 @@
-"""body/endocrine.py"""
-
 import math
 import time
 from collections import deque
@@ -10,7 +8,6 @@ from body.models import SemanticSignal
 from core import LoreManifest
 from presets import BoneConfig
 from struts import safe_get
-
 
 @dataclass
 class EndocrineSystem:

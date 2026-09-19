@@ -1,10 +1,7 @@
-"""phases/base.py"""
-
 from abc import ABC, abstractmethod
 from typing import Tuple
 
 from core import CycleContext
-
 
 def _safe_dict(obj):
     return (
@@ -12,7 +9,6 @@ def _safe_dict(obj):
         if hasattr(obj, "to_dict")
         else (obj if isinstance(obj, dict) else {})
     )
-
 
 def _deep_update(target_object, source_dict):
     for key, value in source_dict.items():
@@ -30,8 +26,6 @@ def _deep_update(target_object, source_dict):
 
 
 class SimulationPhase(ABC):
-    """Contract for all cycle phases."""
-
     required_context: Tuple[str, ...] = ()
 
     def __init__(self, engine_ref):
@@ -40,15 +34,9 @@ class SimulationPhase(ABC):
 
     @abstractmethod
     def run(self, ctx: CycleContext) -> CycleContext:
-        """Execute the phase logic. Must be implemented by subclasses."""
         pass
 
     def validate_context(self, ctx: CycleContext) -> bool:
-        """
-        Fail-fast intercept.
-        Call this at the beginning of a subclass run() method to catch missing requirements
-        before they cost ATP or mutate the active physics state.
-        """
         for attr in self.required_context:
             if getattr(ctx, attr, None) is None:
                 raise ValueError(

@@ -1,5 +1,3 @@
-"""physics/observer.py"""
-
 import math
 import time
 from collections import Counter, deque
@@ -18,7 +16,6 @@ from physics.models import EnergyState, MaterialState, PhysicsPacket, SpatialSta
 from presets import BoneConfig
 from receipts import issue as issue_receipt
 from struts import safe_get, safe_set, ux
-
 
 @dataclass
 class PhysicsDelta:
@@ -189,12 +186,9 @@ class QuantumObserver:
         current_debt = self.cd_engine.update_coherence_debt(
             actual_coherence, sustainable_capacity
         )
-        
-        # Real contradiction measured by the geometric frustration of the memory manifold
-        # Base frustration is ~0.02 (2%), so scaling by 10 maps 2% to 0.2 and 10% to 1.0
+
         mu_viability = min(1.0, frustration_ratio * 10.0)
-        
-        # Calculate R_base from psi', psi'', psi'''
+
         if not hasattr(self, 'psi_history'):
             self.psi_history = deque(maxlen=4)
         self.psi_history.append(geo.abstraction)
@@ -317,11 +311,6 @@ class QuantumObserver:
             )
         return None
 
-    # Minimum calibrated confidence before the phonosemantic fallback is allowed
-    # to assign a category. See ROADMAP A5: the fallback was classifying 82% of
-    # ordinary English, two thirds of it as "play", because the value it returns
-    # was a raw score rather than a confidence and the comparison here was made
-    # against an arbitrary scale.
     TASTE_CONFIDENCE_FLOOR = 0.5
 
     @staticmethod
@@ -330,18 +319,9 @@ class QuantumObserver:
     ) -> Counter:
         """Resolve words to lexicon categories. Shared with the A5 audit tool."""
         counts = Counter()
-        # LexiconStore deliberately keeps solvents OUT of the general category
-        # map, so lex.get("solvents") is empty by construction and this read
-        # always produced an empty set. counts["solvents"] could therefore never
-        # be non-zero, which made the E dimension structurally dead. The real set
-        # is exposed as LexiconService.SOLVENTS.
         solvents = getattr(lex, "SOLVENTS", None) or lex.get("solvents") or set()
         tally = Counter(clean_words)
 
-        # Resolution order, most trustworthy first: grammatical filler, the
-        # curated lexicon and its inflections, semantic resonance against the
-        # category centroids, then the phonosemantic guess. Unknown words are
-        # embedded as one batch rather than one call each.
         unknown = [
             w for w in tally if w not in solvents and not lex.get_categories_for_word(w)
         ]
@@ -372,9 +352,6 @@ class QuantumObserver:
 
         volume = sum(tally.values())
         resolved = volume - stages["unresolved"]
-        # `degraded` here means the phonosemantic guesser carried the turn. That
-        # is the state where the physics is real but its inputs are invented,
-        # which is what pinned every conversation to the same zone for a year.
         guessed = stages["taste"]
         issue_receipt(
             "physics.word_resolution",
@@ -515,19 +492,6 @@ class QuantumObserver:
 
     @staticmethod
     def _determine_zone(vector: Dict[str, float], margin: float = ZONE_MARGIN) -> str:
-        """Pick the zone from the dominant geodesic dimension.
-
-        This used to be a bare `max()`, which meant whichever dimension happened
-        to have the largest scale won regardless of whether it carried any real
-        signal. DEL was computed with the biggest amplifier of any dimension and
-        fed by an inflated play mass, so it saturated at 1.0 and every
-        conversation was AERIE (see ROADMAP A5).
-
-        The dominant dimension must now lead the runner-up by `margin` of its
-        own value. Otherwise there is no dominant character and we return
-        COURTYARD, which is what that zone is for: previously it was only
-        reachable from an empty vector, so it never occurred in practice.
-        """
         if not vector:
             return "COURTYARD"
         zone_map = {
@@ -538,11 +502,6 @@ class QuantumObserver:
             "ENT": "THE_MUD",
             "VEL": "THE_MUD",
         }
-        # Rank only dimensions that actually name a zone. E (solvent density)
-        # and BET have no mapping, so letting them win the argmax silently
-        # forced COURTYARD and conflated "no dominant character" with "the
-        # dominant dimension is not a zone dimension". E in particular is high
-        # for all natural English, so it would otherwise win constantly.
         ranked = sorted(
             ((k, float(v)) for k, v in vector.items() if k in zone_map),
             key=lambda kv: -kv[1],

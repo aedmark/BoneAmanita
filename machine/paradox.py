@@ -1,10 +1,7 @@
-"""machine/paradox.py"""
-
 import random
 from typing import List, Optional, Tuple
 
 from struts import ux
-
 
 class TheParadoxEngine:
     _DEFAULT_TEMPLATES = (

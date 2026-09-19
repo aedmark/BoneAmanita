@@ -1,5 +1,3 @@
-"""protocols/chronos.py"""
-
 import dataclasses
 import json
 import logging
@@ -57,7 +55,6 @@ class ChronosKeeper:
                 "chat_history": start_history,
             }
             path = os.path.join(self.SAVE_DIR, "quicksave.json")
-            # Publish only a complete, flushed checkpoint on the same filesystem.
             with tempfile.NamedTemporaryFile(
                 mode="w",
                 encoding="utf-8",
@@ -195,13 +192,6 @@ class ChronosKeeper:
         }
 
     def _gather_user_model(self) -> Dict[str, Any]:
-        """Persist what the engine has inferred about the PERSON.
-
-        ROADMAP C3. The body, the soul and the village all survived a session
-        boundary; the user model did not, so an engine that had spent an hour
-        learning you were running low woke up assuming you were fresh. That is
-        the one piece of state co-regulation is actually about.
-        """
         lattice = getattr(self.eng, "shared_lattice", None)
         u = getattr(lattice, "u", None)
         if u is None:

@@ -1,5 +1,3 @@
-"""body/__init__.py"""
-
 from body.endocrine import EndocrineSystem, SemanticEndocrinologist
 from body.models import (
     BiologicalImpulse,

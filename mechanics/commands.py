@@ -1,4 +1,3 @@
-"""mechanics/commands.py"""
 
 import shlex
 import time
@@ -8,7 +7,6 @@ from constants import RealityLayer
 from core import LoreManifest
 from presets import BoneConfig, BonePresets
 from struts import safe_get, safe_set, ux, ux_format
-
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):

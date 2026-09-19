@@ -1,5 +1,3 @@
-"""archetypes/symbiosis.py"""
-
 import math
 from collections import Counter, deque
 from dataclasses import dataclass
@@ -180,13 +178,6 @@ class SymbiosisManager:
         self.SLOP_THRESHOLD = thresh.get("SLOP_THRESHOLD", 3.5)
         raw_sigs = sym_config.get("REFUSAL_SIGNATURES", [])
         self.REFUSAL_SIGNATURES = [str(sig).lower() for sig in raw_sigs]
-        # Private until a lattice is attached. SymbiosisManager used to keep
-        # these for the life of the session, which meant the engine carried two
-        # independent models of the same person: this one and
-        # SharedLatticeDriver's. Only the lattice's reaches the prompt, so every
-        # reading made here was computed and discarded, while `beth`, `phi` and
-        # `beta_index` were written onto the physics packet from a model nothing
-        # else agreed with.
         self.u = UserInferredState()
         self.shared = SharedDynamics()
 
@@ -206,13 +197,6 @@ class SymbiosisManager:
         caps_ratio = caps / max(1, length)
         punct_count = sum(1 for c in safe_text if c in "!?")
         self.u.chi_u = min(1.0, (caps_ratio * 1.5) + (punct_count * 0.1))
-        # E_u is deliberately NOT written here any more. This read it straight
-        # off the character count (under 50 characters meant tired, over it
-        # meant fresh), which is the right direction but a cruder measure than
-        # SharedLatticeDriver's, and whichever ran last silently won. The
-        # lattice owns exhaustion now: it compares against this person's own
-        # recent baseline rather than an absolute length, so someone who simply
-        # writes tersely is not mistaken for someone who has gone quiet.
         self.u.F_u = min(2.0, self.u.chi_u * 2.0)
         sys_f = float(safe_get(physics, "narrative_drag", 0.0))
         f_diff = abs(sys_f - self.u.F_u)
@@ -315,11 +299,6 @@ class SymbiosisManager:
         return round(entropy, 3)
 
     def attach_lattice(self, lattice: Any) -> None:
-        """Share one model of the person with SharedLatticeDriver.
-
-        Without this the two hold separate `UserInferredState` objects and
-        disagree silently, with only the lattice's reaching the prompt.
-        """
         if lattice is None:
             return
         self.u = lattice.u

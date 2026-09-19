@@ -1,5 +1,3 @@
-"""drivers/syntax.py"""
-
 from presets import BoneConfig
 from struts import safe_get
 

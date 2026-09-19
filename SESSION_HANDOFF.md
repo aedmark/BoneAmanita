@@ -1181,6 +1181,18 @@ them as a specification:
   must never depend on a reachable embedding server. `tests/test_embeddings.py`
   overrides per-test against mocked transport, plus one opt-in live test
   behind `BONE_EMBED_LIVE_TEST=1`.
+- **Agents may commit, but only once Gordon says so, and the message is
+  a changelog entry, not a label.** Decided with Gordon, 2026-09-18. An
+  agent (Claude or otherwise) stages and drafts a commit whenever asked,
+  but never commits on its own initiative, one explicit go-ahead per
+  commit, not a standing blanket permission. The message itself should
+  read as a breadcrumb a future cold session can follow: what changed,
+  in which files, and why, not just a one-line title. WHY: this file is
+  still the authoritative narrative (see "Repo" below), but it is
+  necessarily selective; `git log` is the finer-grained trail of
+  individual changes between one handoff entry and the next, and it is
+  only useful for that if the messages carry real content instead of
+  terse titles.
 
 ## Environment / toolchain
 

@@ -1,5 +1,3 @@
-"""phases/cognitive.py"""
-
 import random
 import re
 from typing import Any, Dict, List
@@ -9,7 +7,6 @@ from core import ArchetypeArbiter, LoreManifest
 from phases.base import SimulationPhase, _deep_update, _safe_dict
 from receipts import issue as issue_receipt
 from struts import safe_get, safe_set, ux
-
 
 class CognitionPhase(SimulationPhase):
     def __init__(self, engine_ref):
@@ -152,12 +149,6 @@ class ArbitrationPhase(SimulationPhase):
         self.name = "ARBITRATION"
 
     def _stage_manager(self):
-        """Lazily held on the engine, because `consecutive_holds` is state.
-
-        A Stage Manager rebuilt each turn could never notice that it had
-        already held the last two, which is the one thing stopping Silence
-        from becoming a habit.
-        """
         existing = getattr(self.eng, "stage_manager", None)
         if existing is not None:
             return existing
@@ -172,18 +163,6 @@ class ArbitrationPhase(SimulationPhase):
         return manager
 
     def _hold_the_silence(self, ctx: Any, verdict: Any) -> None:
-        """Turn a HOLD verdict into an actual refusal to speak.
-
-        Silence used to be a label: `ArbitrationPhase` could name the lens THE
-        STAGE MANAGER, log that the cosmos was holding its breath, and then the
-        engine generated a paragraph anyway. Setting `refusal_triggered` here
-        breaks the phase loop before `CognitionPhase`, so no model call happens
-        at all.
-
-        It is deliberately NOT routed through `_build_refusal`. A refusal is
-        something being rejected; this is the engine declining to speak yet, and
-        the two must not be confused in the transcript or in telemetry.
-        """
         cost = float(
             safe_get(safe_get(self.eng.config, "STAGE", {}), "SILENCE_COST", 2.0)
         )
@@ -210,16 +189,12 @@ class ArbitrationPhase(SimulationPhase):
                 "context_msg": verdict.reason,
             },
             "world": getattr(ctx, "world_state", {}),
-            # Silence is a considered outcome, not a fault. Anything reading
-            # this packet must be able to tell it from a crash or a rejection.
             "is_alive": True,
             "is_silence": True,
             "tension": list(verdict.tension.voices),
         }
 
     def run(self, ctx: Any):
-        # The Stage Manager gets the room before anyone else does. If it holds,
-        # the turn ends here and the model is never called.
         stage = self._stage_manager()
         tension = stage.read_tension(ctx.physics, getattr(ctx, "bio_result", {}))
         atp = float(
@@ -758,11 +733,8 @@ class SimulationPreflightPhase(SimulationPhase):
                 scar_msg = f"{Prisma.VIOLET}Productive Worry activated. Logging Scar for vector. Immune Competence permanently increased.{Prisma.RST}"
                 ctx.log(log_msg)
                 ctx.log(scar_msg)
-                
-                # ROADMAP D9: The Stage Manager decides ATP cost once. We do NOT burn ATP here anymore!
-                
+
                 if hasattr(self.eng.bio, "somatic"):
-                    # We still track somatic echo from the attempt
                     shock_value = (15.0 / max(1.0, current_atp)) * max(1.0, chaos)
                     self.eng.bio.somatic.somatic_echo = min(
                         1.0,

@@ -1,11 +1,8 @@
-"""machine/crucible.py"""
-
 import math
 from typing import Optional, Tuple
 
 from presets import BoneConfig
 from struts import safe_get, ux, ux_format
-
 
 class TheCrucible:
     def __init__(self, config_ref=None):
@@ -91,9 +88,6 @@ class TheCrucible:
                 voltage=voltage,
             )
             return "SURGE", 0.0, msg
-        # The meltdown line scales with the mode's gate tolerance: at 18.0 it
-        # sat below the mean voltage of an ordinary conversation (21.7), so the
-        # engine burned its own health on most turns. ROADMAP D0b.
         meltdown_at = float(
             safe_get(safe_get(self.cfg, "MACHINE", {}), "CRUCIBLE_MELTDOWN_VOLTAGE", 18.0)
         ) * float(safe_get(self.cfg, "GATE_TOLERANCE", 1.0))

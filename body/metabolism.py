@@ -1,5 +1,3 @@
-"""body/metabolism.py"""
-
 import math
 import random
 from collections import Counter
@@ -55,7 +53,6 @@ class MitochondrialForge:
         self.adjust_atp(-cost, f"Substrate Forging [{filename}]")
 
     def _on_autophagy_event(self, payload: Dict):
-        """Catches the energy yielded from the Akashic record burning a memory."""
         if not payload:
             return
         yield_val = float(payload.get("atp_gained", 0.0))
@@ -88,9 +85,6 @@ class MitochondrialForge:
             self._trigger_exhaustion()
 
     def _trigger_exhaustion(self):
-        """
-        Fires when a massive query drains the organism's ATP to critical levels.
-        """
         if self.events:
             self.events.log(
                 "[GORDON INTERVENTION]: Your query forced a massive structural sweep. The organism's ATP is depleted. Narrow your scope.",

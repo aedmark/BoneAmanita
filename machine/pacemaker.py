@@ -1,7 +1,4 @@
-"""machine/pacemaker.py"""
-
 from presets import BoneConfig
-
 
 class ThePacemaker:
     def __init__(self, config_ref=None):

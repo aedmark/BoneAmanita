@@ -1,5 +1,3 @@
-"""brain/mind.py"""
-
 import hashlib
 import math
 import random
@@ -343,15 +341,6 @@ class DreamEngine:
         self._weaver = TheTclWeaver.get_instance()
 
     def _dream_failed(self, where: str, error: Exception) -> None:
-        """Report a dream that did not happen.
-
-        A model call failing is a genuinely expected transient (no model pulled,
-        the server moved, a timeout), so these handlers stay. What they must not
-        do is substitute a template or a line of flavour text and say nothing:
-        the engine then reports a dream it never had, and the difference between
-        "the model is unreachable" and "REM produced something bland" is exactly
-        the distinction the prose cannot carry.
-        """
         if self.events:
             self.events.log(
                 f"{Prisma.YEL}Dream generation failed in {where}: "
@@ -413,9 +402,6 @@ class DreamEngine:
             self.context_queue = []
             s_cost = min(available_atp * 0.4, len(raw_payloads) * 10.0)
             shift["atp_drain"] = s_cost
-            # Embed the passage itself, in one batched round trip. This used to
-            # hash text[:50], which made a memory retrievable only by a query
-            # sharing its exact opening 50 characters.
             vectors = self._embed_batch(raw_payloads)
             wing_id = str(
                 safe_get(safe_get(bio_state, "space", {}), "zone", "")
@@ -434,9 +420,6 @@ class DreamEngine:
                     {
                         "vector_hash": v_hash,
                         "raw_verbatim_text": text.replace("|||NEWLINE|||", "\n"),
-                        # Zone this passage belongs to. Hardcoding GLOBAL here
-                        # meant every consolidated memory landed unscoped even
-                        # once the rest of the pipeline knew its zone.
                         "wing_id": wing_id,
                     }
                 )
@@ -693,12 +676,6 @@ class DreamEngine:
         trauma_level: float = 0.0,
         via_synapse: bool = True,
     ) -> Tuple[str, float]:
-        """A surreal fragment, from the model when `via_synapse` and the lore otherwise.
-
-        `LLMInterface.mock_generation` passes `via_synapse=False`. It is the
-        synapse's own fallback, so asking the synapse from inside it re-enters
-        the fallback, which asks again, until the interpreter's recursion limit.
-        """
         category = "NIGHTMARES" if trauma_level > 0.5 else "SURREAL"
         templates = self.dream_lore.get(category, [])
         if isinstance(templates, dict):

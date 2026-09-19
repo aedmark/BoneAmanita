@@ -1,5 +1,3 @@
-"""mechanics/pragmatics.py"""
-
 import re
 from typing import Any, Dict, Tuple
 

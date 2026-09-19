@@ -1,6 +1,3 @@
-# ruff: noqa: E741
-"""core.py"""
-
 import glob
 import json
 import logging
@@ -29,10 +26,6 @@ if not logger.handlers:
     logger.addHandler(_sh)
     logger.setLevel(logging.INFO)
 
-# The one genuinely optional dependency. Everything else in the install line is
-# required, and guarding a required import only relocates its failure. This is
-# the single probe for the whole tree: spores.memory reads ORDVEC_AVAILABLE from
-# here rather than probing again, so "is ordvec present" has one answer.
 try:
     import ordvec
 
@@ -47,7 +40,6 @@ except ImportError:
 _LOCK_TYPES = (type(threading.Lock()), type(threading.RLock()), threading.Thread)
 
 def _redact_secrets(obj, memo=None):
-    """Walks safe standard collections to redact keys. Defers custom objects to default()."""
     if memo is None:
         memo = set()
     obj_id = id(obj)
@@ -186,8 +178,6 @@ class CycleContext:
     is_alive: bool = True
     refusal_triggered: bool = False
     refusal_packet: Optional[Dict] = None
-    # What the Stage Manager decided this turn: which voices were in the room,
-    # whether they were paired, and whether anyone got the floor at all.
     stage_verdict: Optional[Any] = None
     is_bureaucratic: bool = False
     bio_result: Dict = field(default_factory=dict)
@@ -322,17 +312,6 @@ class EventBus:
     }
 
     def log(self, message: str, source: str = "SYSTEM", level: str = "INFO"):
-        """Record an event. Signature is (message, source, level).
-
-        Guard: nearly every call site passes a *source* tag second ("BIO",
-        "CORTEX", "SYS"), which is correct. A number of sites historically
-        passed a severity there instead, which left `level` at its "INFO"
-        default and routed the line to logger.debug, below the handler
-        threshold. That silently muted 25 call sites including the daemon's own
-        crash handler, so a dying turn formatted a full traceback and then threw
-        it away. Accept the two-argument severity spelling rather than dropping
-        it on the floor.
-        """
         if level == "INFO" and source in self._SEVERITY_LEVELS:
             source, level = "SYSTEM", source
         event = {
@@ -346,8 +325,6 @@ class EventBus:
         self.publish(source, event)
         if self.telemetry:
             self.telemetry.record_event(event)
-        # Unknown levels stay at DEBUG: the TUI renders self.buffer, so routine
-        # lines must not also flood stderr. Only real severities escalate.
         log_lvl = self._SEVERITY_LEVELS.get(level, logging.DEBUG)
         if log_lvl >= logging.WARNING:
             color = Prisma.RED if log_lvl >= logging.ERROR else Prisma.YEL
@@ -638,28 +615,15 @@ class RealityStack:
 
 
 class InsufficientCorpus(ValueError):
-    """Not enough memory to measure a regime against. Not an error, a decline.
-
-    Named rather than bare so `regulate` can tell "the data will not support
-    this measurement" apart from "the measurement broke", and report them
-    differently. A bare ValueError would have collapsed both into the same
-    degraded receipt, which is the distinction this codebase keeps losing.
-    """
+    """Not enough memory to measure a regime against."""
 
 
 class CyberneticGovernor:
-    """
-    Apex N-Dimensional Topological Manifold Governor.
-    Powered by natively bound AVX-512 Asymmetric Rank Transformations. Ordvec, Apache 2.0
-    """
-
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.target_v = None
         self.target_d = None
         self.beth_index, self.order = 0.5, 1
-        # None means "not measured this session yet", which is distinct from a
-        # measured zero and is what the decline rule sets.
         self.last_z = None
         self.last_sharpness = 0.0
         self.last_corpus = 0
@@ -672,13 +636,6 @@ class CyberneticGovernor:
         self._cached_vectorizer = self._resolve_vectorizer()
 
     def _resolve_vectorizer(self):
-        """Abstracts the vectorization dependency at boot to avoid hot-path ROS.
-
-        Deliberately unguarded. `struts` is first-party and universally imported,
-        so an ImportError here is a real structural fault (most plausibly the
-        cycle its own docstring warns about) and must not be reported downstream
-        as "Vectorizer unavailable", which names a different illness entirely.
-        """
         from struts import _word_to_vector
 
         return _word_to_vector
@@ -688,28 +645,18 @@ class CyberneticGovernor:
 
     @staticmethod
     def _calculate_coordinate_frustration(matrix: np.ndarray) -> float:
-        """Calculate real contradiction from geometric frustration.
-        
-        Takes the correlation graph over coordinates of the ordinal code, signed by 
-        whether two coordinates move together or against each other. Returns the ratio
-        of odd cycles (frustrated triangles) which survive the gauge symmetry.
-        """
         import math
         N, D = matrix.shape
         if N < 3:
             return 0.0
-            
-        # Rank transform each vector column-wise across memories
+
         ranks = np.argsort(np.argsort(matrix, axis=0), axis=0)
-        # Add tiny noise to avoid division by zero correlation on identical ranks
         ranks_noisy = ranks + np.random.normal(0, 1e-6, size=ranks.shape)
-        
-        # Correlate coordinates
+
         C = np.corrcoef(ranks_noisy, rowvar=False)
         A = np.sign(C)
         np.fill_diagonal(A, 0)
-        
-        # Tr(A^3) counts triangles * 6 (+1 for balanced, -1 for frustrated)
+
         A2 = np.dot(A, A)
         A3 = np.dot(A2, A)
         trace_A3 = np.trace(A3)
@@ -720,14 +667,6 @@ class CyberneticGovernor:
         return float(T_frust / T_total)
 
     def _sync_ordvec_indices(self, memory_core: Any):
-        """Build the ordvec indexes over the memory graph.
-
-        Raises rather than returning False. Every reason this can fail is worth
-        telling apart (an optional dependency missing, a memory with nothing in
-        it yet, a dead vectorizer), and the only caller cannot act on a bare
-        boolean: it goes straight on to dereference the indexes this method was
-        supposed to have built.
-        """
         if not ORDVEC_AVAILABLE:
             raise ValueError("ordvec is not installed; the memory manifold cannot be indexed.")
         if not memory_core or not hasattr(memory_core, "graph"):
@@ -752,16 +691,9 @@ class CyberneticGovernor:
                 f"Memory holds {len(matrix)} vectorizable node(s); the bitmap needs at least 3."
             )
         fp32_matrix = np.ascontiguousarray(matrix, dtype=np.float32)
-        
-        # Calculate real contradiction from geometric frustration of the memory manifold
+
         memory_core.last_frustration_ratio = self._calculate_coordinate_frustration(fp32_matrix)
-        
-        # ordvec indexes are constructed with a DIMENSION and then fed vectors.
-        # This passed the matrix straight to the constructor, where `dim` is
-        # expected, and asked for 8-bit quantisation, which ordvec 0.5.0 rejects (it
-        # accepts 1, 2 or 4). Both raised on every call, so the governor
-        # always fell back to PID and the Creative Determinant solve on the
-        # memory Laplacian had never once run.
+
         dim = int(fp32_matrix.shape[1])
         bitmap = ordvec.SignBitmap(dim)
         bitmap.add(fp32_matrix)
@@ -776,12 +708,6 @@ class CyberneticGovernor:
         return True
 
     def get_policy_shift(self) -> str:
-        """CO_REGULATION when the neighbourhood clears the corpus null.
-
-        This used to read `last_lam1 < 0`, which measured the mean ordvec
-        similarity by way of a Laplacian that contributed 1.5% of the answer.
-        `last_z` measures the same thing directly and says so.
-        """
         pivot = self._gate_cfg("Z_PIVOT", 2.0)
         if self.order == 2 or (self.last_z is not None and self.last_z >= pivot):
             return "CO_REGULATION"
@@ -798,8 +724,6 @@ class CyberneticGovernor:
     ) -> Tuple[float, float]:
         if not memory_core or not user_text:
             if memory_core or user_text:
-                # Exactly one of the two arrived. That is a wiring fault at the
-                # call site, not a caller who wanted a PID loop.
                 issue_receipt(
                     "governor.bitmap_gate",
                     "PID fallback, incomplete inputs",
@@ -821,10 +745,6 @@ class CyberneticGovernor:
                 physics, dt, memory_core, user_text, endocrine_state
             )
         except InsufficientCorpus as e:
-            # navi-fractal's rule, applied to the governor: when the data will
-            # not support the measurement, decline to make it rather than
-            # emitting a number nobody should trust. The turn runs the default
-            # temperature and the receipt says the regime was not measured.
             self.last_z = None
             self.last_sol = "not_measured"
             issue_receipt(
@@ -837,10 +757,6 @@ class CyberneticGovernor:
             )
             return self._pid_fallback(physics, dt, endocrine_state)
         except Exception as e:
-            # This is the handler that hid the Creative Determinant for the
-            # life of the project: it swallowed a constructor TypeError every
-            # turn and served a PID loop wearing the PDE's skin. The receipt is
-            # what makes that state impossible to hold silently again.
             issue_receipt(
                 "governor.bitmap_gate",
                 "PID fallback, graph solve raised",
@@ -857,17 +773,6 @@ class CyberneticGovernor:
 
     @staticmethod
     def _null_z(corpus: int, top_k: int = 10) -> float:
-        """What z_top10 a corpus of this size would produce from noise alone.
-
-        Fitted against 600 draws per size over pure Gaussian corpora:
-        A*sqrt(ln n) + B with A=1.8712, B=-2.2958. Residuals stay inside 0.07
-        across n from 32 to 20,000, which is well under the pivot, so the fit
-        is good enough to subtract and not good enough to pretend is exact.
-
-        Only calibrated for the shipped TOP_K of 10. A different k has a
-        different null, and this returns the k=10 curve regardless, so changing
-        TOP_K means refitting this.
-        """
         if corpus < 2:
             return 0.0
         return 1.8712 * float(np.sqrt(np.log(corpus))) - 2.2958
@@ -875,37 +780,6 @@ class CyberneticGovernor:
     def _bitmap_regulation(
         self, physics, dt, memory_core, user_text, endocrine_state
     ) -> Tuple[float, float]:
-        """Read the regime off the ordvec sign bitmap, in one pass over memory.
-
-        This replaced a graph Laplacian and a Picard iteration. The measurement
-        that retired them, run on our own code with the real 768d embedder and a
-        23-node subgraph seeded at 17% edge density (denser than a real
-        session):
-
-            Phi^T L Phi / Phi^T Phi : +0.006149
-            b_mean                  : +0.408239
-            reported lambda_1       : -0.402089
-            graph share of |lambda_1|: 1.53%
-
-        and lambda_1 came back byte-identical at voltage 15, 25, 30, 35, 45, 60
-        and 90, because the voltage scalar `a` saturates at 1.0 above the gate.
-        At the Picard fixed point the Laplacian energy cancels against the
-        saturation term, so the reported number was -b_mean plus a residual, and
-        b_mean was the mean ordvec similarity scaled by drag. The topology and
-        the voltage were decoration on a scalar.
-
-        Nelson Spence found the same thing at 207,695 nodes before we found it
-        at 23: a corpus-mass scalar reproduced his Laplacian routing signal at
-        Pearson 0.992 in a millisecond instead of seconds, and three scalars
-        read straight off the RankQuant bitmap popcounts beat the mass scalar at
-        zero added compute. The bitmap features are what survived. This is his
-        recommendation, implemented.
-
-        `z_top10` is how far the utterance's neighbourhood stands above the
-        corpus null, in standard deviations of the sign-agreement distribution.
-        For a 768-dim bitmap chance sits near 384 agreements with a spread near
-        14, so the scale is interpretable and stable across corpora.
-        """
         vectorizer = self._get_vectorizer()
         if not vectorizer:
             raise ValueError("Vectorizer unavailable; cannot read the memory bitmap.")
@@ -945,19 +819,6 @@ class CyberneticGovernor:
         z_top10 = (top10 - float(scores.mean())) / deviation
         sharpness = top1 - top10
 
-        # Gate on the EXCESS over the null, not on z itself.
-        #
-        # The top-10 mean of n samples sits further above the mean the larger n
-        # gets, for no reason but order statistics. Measured on pure Gaussian
-        # corpora, E[z_top10] runs 1.13 at n=32, 2.05 at n=200, 2.65 at n=1000
-        # and 3.55 at n=20000. A fixed threshold on raw z would therefore be
-        # permanently shut on a young memory and permanently open on a mature
-        # one, and would drift open as the engine is used, which is the worst
-        # possible failure for a signal meant to detect coherence.
-        #
-        # `z_excess` is how far this neighbourhood stands above what a corpus of
-        # this size would produce from noise alone, so it is free of both the
-        # scale of the scores and the size of the memory.
         z_excess = z_top10 - self._null_z(corpus, top_k)
 
         self.last_z_raw = float(z_top10)
@@ -987,10 +848,6 @@ class CyberneticGovernor:
             detail=f"regime={self.last_sol} temperature_band={self.gate_temperature_band()}",
         )
 
-        # z drives how much presence the memory field has, so it sets the
-        # voltage target. Sharpness says how peaked that neighbourhood is, so a
-        # sharp one is focused and wants less drag. These two mappings are ours,
-        # not Nelson's; he specified the regime signal and the temperature.
         pivot = self._gate_cfg("Z_PIVOT", 0.5)
         presence = float(np.clip(z_excess / max(1e-6, pivot * 2.0), 0.0, 1.0))
         focus = float(np.clip(sharpness / max(1e-6, deviation * 3.0), 0.0, 1.0))
@@ -1008,13 +865,6 @@ class CyberneticGovernor:
         ) * adjusted_dt
 
     def gate_temperature_band(self) -> tuple:
-        """The sampling band set by the regime signal.
-
-        Below the pivot the neighbourhood is indistinguishable from the corpus
-        null, so there is nothing coherent nearby and generation collapses to
-        deterministic logic. That is the decision the eigenvalue's sign used to
-        make, preserved; only its input changed.
-        """
         pivot = self._gate_cfg("Z_PIVOT", 2.0)
         if self.last_z is None or self.last_z < pivot:
             locked_t = float(self._gate_cfg("T_LOCKED", 0.0))
@@ -1140,7 +990,6 @@ class ArchetypeArbiter:
             "SOUL",
             ux("core_strings", "arb_soul") or "The soul speaks.",
         )
-
 
 class TelemetryService:
     _tracer_instance = None

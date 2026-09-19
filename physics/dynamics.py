@@ -1,5 +1,3 @@
-"""physics/dynamics.py"""
-
 import heapq
 import math
 import random
