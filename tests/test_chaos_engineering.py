@@ -1,8 +1,36 @@
 """tests/test_chaos_engineering.py"""
 
+import unittest
+
 from main import BoneAmanita
 from physics.models import PhysicsPacket
+from spores.network import MycelialNetwork
 from tests.base import BoneTestCase
+
+
+class TestCalculateClustering(unittest.TestCase):
+    """`cycle.py`'s topology-collapse check called `mem.calculate_clustering`
+    against a method `MycelialNetwork` never defined; every real call raised
+    and was swallowed by the surrounding `except Exception`, logged as an
+    'Async Topology Error' and otherwise silent. The check has therefore never
+    once run for real. These pin the math directly; `TestChaosEngineering`
+    below pins the check that consumes it."""
+
+    def test_a_triangle_is_fully_clustered(self):
+        adj = {"a": {"b", "c"}, "b": {"a", "c"}, "c": {"a", "b"}}
+        self.assertEqual(MycelialNetwork.calculate_clustering(None, adj), 1.0)
+
+    def test_a_chain_has_no_triangles(self):
+        adj = {str(i): {str(i + 1)} for i in range(10)}
+        self.assertEqual(MycelialNetwork.calculate_clustering(None, adj), 0.0)
+
+    def test_a_star_has_no_triangles(self):
+        """Every leaf shares only the hub; leaves are never linked to each other."""
+        adj = {"hub": {"a", "b", "c"}, "a": {"hub"}, "b": {"hub"}, "c": {"hub"}}
+        self.assertEqual(MycelialNetwork.calculate_clustering(None, adj), 0.0)
+
+    def test_an_empty_graph_does_not_divide_by_zero(self):
+        self.assertEqual(MycelialNetwork.calculate_clustering(None, {}), 0.0)
 
 
 class TestChaosEngineering(BoneTestCase):
@@ -194,18 +222,51 @@ class TestChaosEngineering(BoneTestCase):
         # not what HippocampalCache has ever returned; the test passed because
         # production shared the same wrong assumption, so the real code path
         # was dead while the test exercised the mock's version of it.
+        #
+        # `calculate_clustering` itself used to be mocked too, for the same
+        # reason: the method did not exist on MycelialNetwork, so every real
+        # call raised into the topology check's `except Exception`. A chain
+        # has no triangles (clustering 0.0) and neither does a random rewiring
+        # of one, so the real implementation collapses this case correctly
+        # without needing a scripted return sequence.
         self.engine.mind.mem.hippocampus.get_graph.return_value = {
             str(i): {str(i + 1)} for i in range(10)
         }
-        self.engine.mind.mem.calculate_clustering = MagicMock(
-            side_effect=[0.1, 0.9, 0.9]
-        )
         self.engine.orchestrator._verify_semantic_topology(MagicMock())
         self.engine.orchestrator._async_pool.shutdown(wait=True)
         self.assertEqual(
             self.engine.health,
             0.0,
             "[FAIL] Engine failed to execute terminal shutdown upon topology collapse.",
+        )
+
+    def test_healthy_topology_does_not_trigger_shutdown(self):
+        """The negative case A4 asks for: two fully-connected cliques joined
+        by one bridge edge (clustering 0.875) have far more real structure
+        than a random rewiring of the same degree sequence can produce by
+        chance, so the collapse gate must not fire. Seeded: the null models
+        are randomized, and a coincidentally structured shuffle should not
+        make this test flaky."""
+        import random
+        from unittest.mock import MagicMock
+
+        random.seed(1234)
+        check_freq = int(getattr(self.engine.config.CORE, "TOPOLOGY_FREQ", 10))
+        self.engine.tick_count = check_freq
+        self.engine.mind.mem.hippocampus = MagicMock()
+        self.engine.mind.mem.hippocampus.get_graph.return_value = {
+            "0": {"1", "2", "3"}, "1": {"0", "2", "3"}, "2": {"0", "1", "3"},
+            "3": {"0", "1", "2", "4"},
+            "4": {"3", "5", "6", "7"},
+            "5": {"4", "6", "7"}, "6": {"4", "5", "7"}, "7": {"4", "5", "6"},
+        }
+        starting_health = self.engine.health
+        self.engine.orchestrator._verify_semantic_topology(MagicMock())
+        self.engine.orchestrator._async_pool.shutdown(wait=True)
+        self.assertEqual(
+            self.engine.health,
+            starting_health,
+            "[FAIL] A clustered, healthy memory graph triggered terminal shutdown.",
         )
 
     def test_telemetry_serialization_survival(self):
