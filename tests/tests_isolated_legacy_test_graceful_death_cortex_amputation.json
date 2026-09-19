@@ -1,0 +1,18 @@
+{
+  "generation": 2,
+  "scars": [
+    {
+      "name": "Gravity Sickness",
+      "stat_affected": "narrative_drag",
+      "value": 1.5,
+      "description": "There was no substance to hold you."
+    },
+    {
+      "name": "Gravity Sickness",
+      "stat_affected": "narrative_drag",
+      "value": 1.5,
+      "description": "There was no substance to hold you."
+    }
+  ],
+  "myths": []
+}

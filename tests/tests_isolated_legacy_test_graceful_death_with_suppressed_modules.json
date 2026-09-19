@@ -1,0 +1,18 @@
+{
+  "generation": 2,
+  "scars": [
+    {
+      "name": "Burnt Synapses",
+      "stat_affected": "voltage_cap",
+      "value": -2.0,
+      "description": "Your logic was too dense."
+    },
+    {
+      "name": "Burnt Synapses",
+      "stat_affected": "voltage_cap",
+      "value": -2.0,
+      "description": "You choked on the syntax."
+    }
+  ],
+  "myths": []
+}

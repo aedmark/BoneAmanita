@@ -1,0 +1,24 @@
+{
+  "generation": 1,
+  "scars": [
+    {
+      "name": "Existential Dread",
+      "stat_affected": "trauma_baseline",
+      "value": 1.5,
+      "description": "The lattice remembers a heavy collapse (Trauma: 15.0)."
+    },
+    {
+      "name": "Burnt Synapses",
+      "stat_affected": "voltage_cap",
+      "value": -2.0,
+      "description": "You are poisonous."
+    }
+  ],
+  "myths": [
+    {
+      "title": "The Myth of Void",
+      "lesson": "The void stares back.",
+      "trigger": "void"
+    }
+  ]
+}
