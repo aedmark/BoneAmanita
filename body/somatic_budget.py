@@ -69,6 +69,8 @@ class SomaticBudget:
             offer_to_carry_load=offer_to_carry_load,
             retry_allowance=retry_allowance,
             temperature_band=temp_band,
+            # ADVENTURE's room template requires "**Header**"/"(via X)" exits,
+            # which the stage-direction ban can't tell apart from narration.
             forbid_body_narration=active_mode != "ADVENTURE",
             reason="; ".join(reason_parts)
         )
