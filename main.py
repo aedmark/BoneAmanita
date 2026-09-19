@@ -1,6 +1,7 @@
 """main.py"""
 
 import json
+import os
 import queue
 import random
 import re
@@ -790,15 +791,21 @@ class BoneAmanita:
         chronos's own checkpoint never carried it, so a resumed session used
         to lose room/examine continuity even though it wrote this file out.
         """
+        if not os.path.exists("fractal_adventure.json"):
+            return
         try:
             with open("fractal_adventure.json", encoding="utf-8") as f:
                 fractal = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return
-        rooms = fractal.get("rooms")
-        if not isinstance(rooms, dict):
-            return
-        self.cortex.restore_room_state(rooms, fractal.get("startingRoomId", ""))
+            rooms = fractal.get("rooms")
+            if not isinstance(rooms, dict):
+                return
+            self.cortex.restore_room_state(rooms, fractal.get("startingRoomId", ""))
+        except (OSError, json.JSONDecodeError) as e:
+            self.events.log(
+                f"{Prisma.OCHRE}Could not restore fractal_adventure.json: {e}{Prisma.RST}",
+                "KERNEL",
+                "WARN",
+            )
 
     def save_checkpoint(self, history: Optional[list] = None) -> str:
         if gordon := getattr(self.village, "gordon", None):
