@@ -19,6 +19,28 @@ BREATH_WORDS = frozenset(
 _TELEMETRY = re.compile(r"<system_telemetry>.*?(?:</system_telemetry>|$)", re.DOTALL | re.IGNORECASE)
 _THINK = re.compile(r"<think>.*?(?:</think>|$)", re.DOTALL | re.IGNORECASE)
 
+# ROADMAP D2b: coarse proxies for the person's side of the split, the same
+# spirit as ADJ_SUFFIX/STAGE_DIRECTION above. "Demand on the person" is scoped
+# to questions asked; "choices offered" and "instructions given" have no
+# defensible regex proxy here and are left unmeasured rather than guessed at.
+CARRY_LOAD_PATTERN = re.compile(
+    r"\b(I(?:'ll|'m| will| can| could)\s+(?:carry|take|shoulder|handle|hold)\b"
+    r"|let(?:'s| us)\s+(?:share|carry)\b"
+    r"|we(?:'ll|'re| will| can)\s+(?:carry|share|handle)\b"
+    r"|you don'?t have to (?:carry|do) (?:this|it) alone\b"
+    r"|(?:I'll|we'll) take (?:some|part) of (?:this|it|that) (?:off your plate|for you)\b)",
+    re.IGNORECASE,
+)
+# A small curated set of distress/affect vocabulary, not an exhaustive
+# sentiment lexicon. Mirroring means the reply hands the same word back
+# rather than accommodating around it (ROADMAP D2b).
+AFFECT_WORDS = frozenset(
+    "exhausted tired overwhelmed anxious scared afraid angry furious frustrated "
+    "sad grief grieving lonely alone hopeless stressed worried stuck lost "
+    "drained hurt numb empty broken devastated terrified panicking ashamed "
+    "guilty heartbroken miserable desperate".split()
+)
+
 MEASURES = [
     ("words", "total words"),
     ("sentences", "sentence count"),
@@ -32,6 +54,11 @@ MEASURES = [
     ("breath_words_per_100", "breath and body words /100w"),
     ("no_visible_prose", "share with no visible prose"),
     ("validator_rejects", "share validator would reject"),
+    ("question_count", "questions asked per reply"),
+    ("ends_with_question", "share ending on a question"),
+    ("offers_to_carry_load", "share offering to carry the load"),
+    ("mirrors_affect", "share echoing the partner's affect words"),
+    ("reply_to_message_ratio", "reply words / partner's message words"),
 ]
 
 def visible_text(reply: str) -> str:
@@ -47,7 +74,15 @@ def mattr(words: list, window: int = 25) -> float:
     ratios = [len(set(lowered[i : i + window])) / window for i in range(len(lowered) - window + 1)]
     return sum(ratios) / len(ratios)
 
-def measure(reply: str, validator_valid: bool) -> dict:
+def offers_to_carry_load(text: str) -> bool:
+    return bool(CARRY_LOAD_PATTERN.search(text))
+
+def mirrors_affect(reply_text: str, message_text: str) -> bool:
+    reply_words = {w.lower() for w in WORD.findall(reply_text)}
+    message_words = {w.lower() for w in WORD.findall(message_text)}
+    return bool(reply_words & message_words & AFFECT_WORDS)
+
+def measure(reply: str, validator_valid: bool, user_message: str = "") -> dict:
     text = visible_text(reply)
     words = WORD.findall(text)
     sentences = split_sentences(text)
@@ -59,6 +94,7 @@ def measure(reply: str, validator_valid: bool) -> dict:
     if not n_w:
         return {**{k: float("nan") for k, _ in MEASURES}, **shared}
     long_words = [w for w in words if len(w) > 4]
+    message_words = WORD.findall(user_message) if user_message else []
     return {
         **shared,
         "words": n_w,
@@ -73,6 +109,11 @@ def measure(reply: str, validator_valid: bool) -> dict:
         "within_3_sentences": float(n_s <= 3),
         "stage_directions": len(STAGE_DIRECTION.findall(text)),
         "breath_words_per_100": 100 * sum(w.lower() in BREATH_WORDS for w in words) / n_w,
+        "question_count": text.count("?"),
+        "ends_with_question": float(sentences[-1].rstrip().endswith("?")) if sentences else float("nan"),
+        "offers_to_carry_load": float(offers_to_carry_load(text)),
+        "mirrors_affect": float(mirrors_affect(text, user_message)) if user_message else float("nan"),
+        "reply_to_message_ratio": n_w / len(message_words) if message_words else float("nan"),
     }
 
 

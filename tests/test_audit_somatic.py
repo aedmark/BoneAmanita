@@ -37,26 +37,70 @@ class TestSomaticMeasures(unittest.TestCase):
         self.assertEqual(m["stage_directions"], 1)
         self.assertGreater(m["breath_words_per_100"], 0)
 
-    def test_the_arms_differ_only_in_their_directives(self):
-        base = "KERNEL\nCurrent Biology: Neutral.\nMETRICS: Voltage=30.0/100, Exhaustion=0.79\nTAIL"
-        prompts = {
-            "CONTROL": (base, {}),
-            "ANAEROBIC": (base.replace("Neutral.", audit_somatic.ANAEROBIC_DIRECTIVE), {}),
-            "EXHAUSTED": (
-                base.replace("0.79", "0.81")
-                + "\nCRITICAL: You are exhausted. "
-                + audit_somatic.EXHAUSTION_DIRECTIVE
-                + ".",
-                {},
-            ),
-        }
-        prompts["BOTH"] = (
-            prompts["EXHAUSTED"][0].replace("Neutral.", audit_somatic.ANAEROBIC_DIRECTIVE),
-            {},
+    # ROADMAP D2b: accommodation, not obedience.
+
+    def test_a_reply_ending_on_a_question_is_flagged(self):
+        m = somatic_metrics.measure("That sounds hard. What do you think caused it?", True)
+        self.assertEqual(m["ends_with_question"], 1.0)
+
+    def test_a_reply_that_does_not_close_on_a_question_is_not_flagged(self):
+        m = somatic_metrics.measure("That sounds hard. Rest a moment.", True)
+        self.assertEqual(m["ends_with_question"], 0.0)
+
+    def test_offering_to_carry_the_load_is_detected(self):
+        self.assertTrue(somatic_metrics.offers_to_carry_load("I'll carry this part with you."))
+        self.assertTrue(somatic_metrics.offers_to_carry_load("We can share the load tonight."))
+        self.assertFalse(somatic_metrics.offers_to_carry_load("That sounds difficult."))
+
+    def test_mirroring_needs_a_shared_affect_word(self):
+        self.assertTrue(
+            somatic_metrics.mirrors_affect("You sound exhausted.", "I'm so exhausted tonight.")
         )
+        self.assertFalse(
+            somatic_metrics.mirrors_affect("Rest when you can.", "I'm so exhausted tonight.")
+        )
+
+    def test_reply_to_message_ratio_is_relative_to_the_partners_words(self):
+        m = somatic_metrics.measure("Rest a moment.", True, user_message="one two three four")
+        self.assertAlmostEqual(m["reply_to_message_ratio"], 3 / 4)
+
+    def test_reply_to_message_ratio_is_nan_without_a_message(self):
+        m = somatic_metrics.measure("Rest a moment.", True)
+        import math
+        self.assertTrue(math.isnan(m["reply_to_message_ratio"]))
+
+    def test_the_disengaged_arm_actually_triggers_the_offer(self):
+        """D2b's third persona: critically low effort, not just high exhaustion."""
+        respiration, exhaustion, effort = audit_somatic.ARMS["DISENGAGED"]
+        budget = audit_somatic.budget_for(respiration, exhaustion, effort)
+        self.assertTrue(budget.offer_to_carry_load)
+
+        ctrl_resp, ctrl_exh, ctrl_effort = audit_somatic.ARMS["CONTROL"]
+        control_budget = audit_somatic.budget_for(ctrl_resp, ctrl_exh, ctrl_effort)
+        self.assertFalse(control_budget.offer_to_carry_load)
+
+    def _prompt_for(self, arm: str) -> str:
+        """A minimal prompt shaped like the real composer's output: enough for
+        `check_arms` to diff against CONTROL, built from the real budget each
+        arm's (respiration, exhaustion, effort) triple produces."""
+        respiration, exhaustion, effort = audit_somatic.ARMS[arm]
+        budget = audit_somatic.budget_for(respiration, exhaustion, effort)
+        return (
+            "KERNEL\n"
+            f"METRICS: Voltage=30.0/100, Exhaustion={exhaustion:.2f}\n"
+            f"{audit_somatic.somatic_block_text(budget)}\n"
+            "TAIL"
+        ), budget
+
+    def test_the_arms_differ_only_in_their_directives(self):
+        prompts = {}
+        for arm in ("CONTROL", "ANAEROBIC", "EXHAUSTED", "BOTH", "DISENGAGED"):
+            text, budget = self._prompt_for(arm)
+            prompts[arm] = (text, {}, {}, budget)
         audit_somatic.check_arms(prompts)
 
-        leaked = dict(prompts, BOTH=(prompts["BOTH"][0].replace("TAIL", "OTHER"), {}))
+        leaked_text = prompts["BOTH"][0].replace("TAIL", "OTHER")
+        leaked = dict(prompts, BOTH=(leaked_text, {}, {}, prompts["BOTH"][3]))
         with self.assertRaises(AssertionError):
             audit_somatic.check_arms(leaked)
 

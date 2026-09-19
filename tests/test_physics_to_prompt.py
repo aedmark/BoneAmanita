@@ -28,7 +28,8 @@ from tests.base import BoneTestCase
 
 PARADOX_REST = "SYSTEM OVERRIDE: PARADOX REST"
 ORTHOGONAL = "SYSTEM OVERRIDE: ORTHOGONAL ATTENTION"
-EXHAUSTION = "Your partner is running low. Answer in at most 3 sentences."
+_FLAGGING_CAP = int(BoneConfig().SOMATIC_BUDGET.SENTENCE_CAP_FLAGGING)
+EXHAUSTION = f"Your partner is running low. Answer in at most {_FLAGGING_CAP} sentences."
 
 
 class PhysicsToPromptCase(BoneTestCase):
@@ -37,6 +38,7 @@ class PhysicsToPromptCase(BoneTestCase):
     def setUp(self):
         super().setUp()
         self.cortex_cfg = BoneConfig().CORTEX
+        self.somatic_cfg = BoneConfig().SOMATIC_BUDGET
         self.composer = PromptComposer(
             {"system_prompts": self.engine.prompt_library, "lenses": {}}
         )
@@ -69,11 +71,9 @@ class PhysicsToPromptCase(BoneTestCase):
             atp = physics.get("p", 100.0)
             ros = physics.get("ros", 0.0)
             respiration = state.get("bio", {}).get("respiration", "RESPIRING")
-            if respiration == "ANAEROBIC":
-                atp = 10.0 # Force depleted state
             state["somatic_budget"] = SomaticBudget.evaluate(
                 {"exhaustion": e_u, "effort": 100.0},
-                {"atp_pool": atp, "ros": ros}
+                {"atp_pool": atp, "ros": ros, "respiration": respiration}
             )
             
         return self.composer.compose(
@@ -258,7 +258,10 @@ class TestMetabolicStateReachesThePrompt(PhysicsToPromptCase):
     is asserted end to end here rather than trusted.
     """
 
-    ANAEROBIC = "Your partner is running low. Answer in at most 3 sentences."
+    @property
+    def ANAEROBIC(self) -> str:
+        cap = int(self.somatic_cfg.SENTENCE_CAP_ANAEROBIC)
+        return f"Your partner is running low. Answer in at most {cap} sentences."
 
     def test_anaerobic_respiration_degrades_the_prose_instruction(self):
         prompt = self.compose_with({"voltage": 30.0}, bio={"respiration": "ANAEROBIC"})
@@ -314,6 +317,85 @@ class TestExhaustionIsTheUsersNotTheEngines(PhysicsToPromptCase):
         )
         self.assertIn("P:100.0", prompt)
         self.assertIn(EXHAUSTION, prompt)
+
+
+class TestSomaticBudgetReachesThePrompt(PhysicsToPromptCase):
+    """ROADMAP D1: one budget object, read by the composer's text.
+
+    The tests above exercise the budget indirectly, through the helper's own
+    translation of raw physics into a budget. These construct a `SomaticBudget`
+    directly and pass it through `state_over`, so each field's effect on the
+    rendered text is pinned on its own rather than through that translation.
+    """
+
+    def _budget(self, **overrides) -> "SomaticBudget":
+        from body.somatic_budget import SomaticBudget
+
+        defaults = dict(
+            word_cap=200,
+            sentence_cap=10,
+            closing_question_allowed=True,
+            offer_to_carry_load=False,
+            retry_allowance=3,
+            temperature_band=(0.6, 0.9),
+            forbid_body_narration=True,
+            reason="Nominal",
+        )
+        defaults.update(overrides)
+        return SomaticBudget(**defaults)
+
+    def test_a_low_sentence_cap_asks_the_partner_directly(self):
+        prompt = self.compose_with({}, somatic_budget=self._budget(sentence_cap=3))
+        self.assertIn("Your partner is running low. Answer in at most 3 sentences.", prompt)
+
+    def test_a_generous_sentence_cap_is_stated_as_a_number_only(self):
+        prompt = self.compose_with({}, somatic_budget=self._budget(sentence_cap=10))
+        self.assertIn("Sentence cap: 10 sentences.", prompt)
+        self.assertNotIn("running low", prompt)
+
+    def test_forbidding_narration_states_it(self):
+        prompt = self.compose_with(
+            {}, somatic_budget=self._budget(forbid_body_narration=True)
+        )
+        self.assertIn(
+            "CRITICAL: Do not narrate your body, breath, lungs, or physical exhaustion.",
+            prompt,
+        )
+
+    def test_adventure_mode_permits_narration(self):
+        """ADVENTURE's room template needs `**Header**`/`(via X)` exits, which the
+        ban can't tell apart from narration (body/somatic_budget.py)."""
+        prompt = self.compose_with(
+            {}, mode="ADVENTURE", somatic_budget=self._budget(forbid_body_narration=False)
+        )
+        self.assertNotIn("Do not narrate your body", prompt)
+
+    def test_no_closing_question_is_stated_when_disallowed(self):
+        prompt = self.compose_with(
+            {}, somatic_budget=self._budget(closing_question_allowed=False)
+        )
+        self.assertIn("Do not ask a closing question.", prompt)
+
+    def test_a_closing_question_is_not_forbidden_by_default(self):
+        prompt = self.compose_with(
+            {}, somatic_budget=self._budget(closing_question_allowed=True)
+        )
+        self.assertNotIn("Do not ask a closing question.", prompt)
+
+    def test_offering_to_carry_the_load_is_stated_when_flagged(self):
+        prompt = self.compose_with(
+            {}, somatic_budget=self._budget(offer_to_carry_load=True)
+        )
+        self.assertIn(
+            "Your partner is carrying a heavy load. Offer to carry part of the burden.",
+            prompt,
+        )
+
+    def test_no_offer_is_made_when_effort_is_not_critical(self):
+        prompt = self.compose_with(
+            {}, somatic_budget=self._budget(offer_to_carry_load=False)
+        )
+        self.assertNotIn("Offer to carry part of the burden.", prompt)
 
 
 class TestVoltageSwitchesTheDirectiveSet(PhysicsToPromptCase):

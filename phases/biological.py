@@ -106,9 +106,12 @@ class MetabolismPhase(SimulationPhase):
             mito_state = self.eng.bio.mito.state
             engine_state["atp_pool"] = getattr(mito_state, "atp_pool", 100.0)
             engine_state["ros"] = getattr(mito_state, "ros_buildup", 0.0)
-            
+        engine_state["respiration"] = ctx.bio_result.get("respiration", "")
+
         active_mode = getattr(self.eng.cortex, "active_mode", "") if hasattr(self.eng, "cortex") else ""
-        ctx.somatic_budget = SomaticBudget.evaluate(user_state, engine_state, active_mode)
+        ctx.somatic_budget = SomaticBudget.evaluate(
+            user_state, engine_state, active_mode, config_ref=getattr(self.eng, "config", None)
+        )
         
         return ctx
 

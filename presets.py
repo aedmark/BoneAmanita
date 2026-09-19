@@ -202,6 +202,10 @@ class BoneConfig:
     BASE_URL = None
     API_KEY = "ollama"
     MODEL = "gemma4:12b"
+    # DSPyCritic is a fast boilerplate/faithfulness filter, not the answering
+    # model D7 tuned for somatic compliance. It gets its own knob so tuning
+    # one never silently retunes the other.
+    DSPY_MODEL = "gemma4:e4b"
     OLLAMA_FALLBACK = ""
     REQUIRED_CONFIG = {
         "CORTEX": [
@@ -246,6 +250,29 @@ class BoneConfig:
             "MAX_CONSECUTIVE_HOLDS",
             "SILENCE_COST",
         ],
+        "SOMATIC_BUDGET": [
+            "WORD_CAP_DEFAULT",
+            "SENTENCE_CAP_DEFAULT",
+            "RETRY_ALLOWANCE_DEFAULT",
+            "TEMP_BAND_DEFAULT",
+            "E_U_FLAGGING",
+            "E_U_TIRING",
+            "SENTENCE_CAP_FLAGGING",
+            "WORD_CAP_FLAGGING",
+            "SENTENCE_CAP_TIRING",
+            "P_U_CRITICAL",
+            "ATP_DEPLETED",
+            "ATP_MODERATE",
+            "SENTENCE_CAP_ATP_DEPLETED",
+            "RETRY_ALLOWANCE_ATP_DEPLETED",
+            "TEMP_BAND_ATP_DEPLETED",
+            "SENTENCE_CAP_ATP_MODERATE",
+            "RETRY_ALLOWANCE_ATP_MODERATE",
+            "ROS_TURBULENT",
+            "TEMP_BAND_ROS_TURBULENT",
+            "SENTENCE_CAP_ANAEROBIC",
+            "RETRY_ALLOWANCE_ANAEROBIC",
+        ],
         "USER": [
             "STAMINA_MAX",
             "STAMINA_RESONANCE_HEADROOM",
@@ -286,6 +313,30 @@ class BoneConfig:
         "T_LOCKED": 0.0,
         "MIN_CORPUS": 32,
         "TOP_K": 10,
+    }
+
+    SOMATIC_BUDGET = {
+        "WORD_CAP_DEFAULT": 200,
+        "SENTENCE_CAP_DEFAULT": 10,
+        "RETRY_ALLOWANCE_DEFAULT": 3,
+        "TEMP_BAND_DEFAULT": (0.6, 0.9),
+        "E_U_FLAGGING": 0.6,
+        "E_U_TIRING": 0.4,
+        "SENTENCE_CAP_FLAGGING": 3,
+        "WORD_CAP_FLAGGING": 60,
+        "SENTENCE_CAP_TIRING": 5,
+        "P_U_CRITICAL": 30.0,
+        "ATP_DEPLETED": 20.0,
+        "ATP_MODERATE": 40.0,
+        "SENTENCE_CAP_ATP_DEPLETED": 3,
+        "RETRY_ALLOWANCE_ATP_DEPLETED": 1,
+        "TEMP_BAND_ATP_DEPLETED": (0.4, 0.6),
+        "SENTENCE_CAP_ATP_MODERATE": 5,
+        "RETRY_ALLOWANCE_ATP_MODERATE": 2,
+        "ROS_TURBULENT": 50.0,
+        "TEMP_BAND_ROS_TURBULENT": (0.3, 0.5),
+        "SENTENCE_CAP_ANAEROBIC": 5,
+        "RETRY_ALLOWANCE_ANAEROBIC": 2,
     }
 
     CD: Dict[str, Any] = {

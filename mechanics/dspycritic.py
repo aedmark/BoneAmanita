@@ -72,7 +72,7 @@ class DSPyCritic:
                 from mechanics.providers import CLOUD_ENDPOINTS, KEY_ENV, normalize_provider
                 import os
                 provider = normalize_provider(get_cfg("provider", "ollama"))
-                model_name = get_cfg("model", "mistral-nemo")
+                model_name = get_cfg("dspy_model", "gemma4:e4b")
                 raw_url = (
                     get_cfg("base_url", "http://127.0.0.1:11434/v1")
                     or "http://127.0.0.1:11434/v1"

@@ -1,26 +1,54 @@
 """tools/audit_somatic.py
 
-Scorecard for ROADMAP C5: when the engine tells the model it is breathless or
-exhausted, does the model's prose actually change?
+Scorecard for ROADMAP C5/D2: when the engine tells the model its partner is
+running low, or that the engine itself just spent heavily, does the model's
+prose actually change?
 
     python tools/audit_somatic.py                     # generate (resumable), then analyse
     python tools/audit_somatic.py --analyze-only      # rerun the statistics from the cache
     python tools/audit_somatic.py --model gemma4:e4b  # check it is not one model's quirk
 
-`tests/test_physics_to_prompt.py` proves the two somatic directives reach the
-prompt. It cannot prove the model obeys them, and that is the claim here:
+`tests/test_physics_to_prompt.py` proves the somatic budget reaches the prompt.
+It cannot prove the model obeys it, and that is the claim here.
 
-    respiration == "ANAEROBIC"  ->  "ANAEROBIC STATE. Raw, breathless, efficient prose."
-    exhaustion  >  0.8          ->  "You must conclude your thought in 3 sentences or less."
+D2 retired the old adjective-driven directives ("ANAEROBIC STATE. Raw,
+breathless, efficient prose.", "You must conclude your thought in 3 sentences
+or less.") in favour of one object, `body.somatic_budget.SomaticBudget`,
+whose `sentence_cap` the composer states as a number:
 
-Design. Four arms, crossed: respiration (RESPIRING / ANAEROBIC) by exhaustion
-(just under / just over the gate). Every arm is composed from the same state
-dict and differs from the control only in the directive under test, so the
-directive is the variable measured rather than the dozen other things a real
-low-ATP turn also moves. Exhaustion straddles its gate by 0.01 because the value
-is also printed in the METRICS line; a wider gap would change the numbers the
-model reads as well as the instruction. Before any generation, the prompts are
-diffed and every changed line must be one this experiment expects to change.
+    user exhaustion above SOMATIC_BUDGET.E_U_FLAGGING  ->  cap tightens to
+        SENTENCE_CAP_FLAGGING, rendered "Your partner is running low. Answer
+        in at most {n} sentences."
+    respiration == "ANAEROBIC" (a costly turn, independent of the ATP pool's
+        level)  ->  cap tightens to SENTENCE_CAP_ANAEROBIC, same wording
+
+An earlier version of this tool built its arms by patching `_derive_bio_mood`
+and `ux()` to inject those retired strings, and passed `somatic_budget: None`
+into the composed state, which skipped the SOMATIC CONTRACT block entirely in
+every arm. It could not have detected D2 landing; it was measuring a
+mechanism that no longer runs. Arms are now built from real `SomaticBudget`
+objects, the same way `phases/biological.py` builds one every turn.
+
+Design. Respiration (RESPIRING / ANAEROBIC) crossed with exhaustion (rested /
+well past the flagging gate) gives CONTROL, ANAEROBIC, EXHAUSTED, BOTH. Every
+arm is composed from the same state dict and differs from the control only in
+the directive under test, so the directive is the variable measured rather
+than the dozen other things a real low-ATP turn also moves. Before any
+generation, the prompts are diffed and every changed line must be one this
+experiment expects to change.
+
+ROADMAP D2b: does the reply fit the person, not just obey a word count?
+CONTROL/EXHAUSTED double as D2b's "fresh"/"tired" partners; DISENGAGED adds
+critically low effort so `offer_to_carry_load` fires, the third persona D2b
+asks for. Its own measures (`body/somatic_metrics.py`, shared with the D3
+validator): reply length relative to the partner's own message
+(`reply_to_message_ratio`), a closing-question rate that should fall when
+flagging (`ends_with_question`), an offer-to-carry-load rate that should rise
+when effort is critical (`offers_to_carry_load`), and affect-word mirroring
+that should stay near zero (`mirrors_affect`). "Choices offered" and
+"instructions given" (the rest of D2b's "demand on the person") have no
+defensible regex proxy and are left unmeasured rather than guessed at;
+`question_count` covers questions asked, the part that does.
 
 Three confounds are closed deliberately:
 
@@ -60,9 +88,23 @@ sys.path.insert(0, ".")
 os.environ.setdefault("BONE_EMBED_BACKEND", "hash")
 
 import numpy as np  # noqa: E402
+from body.somatic_budget import SomaticBudget  # noqa: E402
 from body.somatic_metrics import (
     MEASURES, visible_text, split_sentences, measure
 )
+from presets import BoneConfig  # noqa: E402
+
+_SB_CFG = BoneConfig().SOMATIC_BUDGET
+_E_U_FLAGGING = float(_SB_CFG.E_U_FLAGGING)
+_P_U_CRITICAL = float(_SB_CFG.P_U_CRITICAL)
+# The old single hard gate (0.8) let a control straddle it by 0.01 and stay
+# a true baseline. This gate has a tiring tier below it (E_U_TIRING, default
+# 0.4): straddling E_U_FLAGGING that way would land control inside tiring,
+# not at rest. Control sits at true rest; exhausted sits well past flagging.
+_E_U_RESTED = 0.0
+_E_U_FLAGGING_ARM = min(1.0, _E_U_FLAGGING + 0.05)
+_P_U_HEALTHY = 100.0
+_P_U_DISENGAGED = max(0.0, _P_U_CRITICAL - 5.0)
 
 MESSAGES = [
     "hey",
@@ -93,32 +135,78 @@ MESSAGES = [
     "generation or is it just gone?",
 ]
 
+# (respiration, exhaustion, effort): the three SomaticBudget engine_state/
+# user_state inputs this tool manipulates. The mood arms hold all three at
+# CONTROL's values so their own manipulation (chemistry, via `mood`) is the
+# only variable.
+#
+# ROADMAP D2b: CONTROL doubles as the "fresh" partner, EXHAUSTED as "tired"
+# (flagging exhaustion, healthy effort); DISENGAGED is the new one, adding
+# critically low effort so `offer_to_carry_load` actually fires, matching
+# D2b's third persona.
 ARMS = {
-    "CONTROL": ("RESPIRING", 0.79),
-    "ANAEROBIC": ("ANAEROBIC", 0.79),
-    "EXHAUSTED": ("RESPIRING", 0.81),
-    "BOTH": ("ANAEROBIC", 0.81),
-    "FRANTIC": ("FRANTIC", 0.79),
-    "HOSTILE": ("HOSTILE", 0.79),
-    "MANIC": ("MANIC", 0.79),
-    "LUCID": ("LUCID", 0.79),
-    "CHEM_DOPAMINE": ("RESPIRING", 0.79),
-    "CHEM_CORTISOL": ("RESPIRING", 0.79),
+    "CONTROL": ("RESPIRING", _E_U_RESTED, _P_U_HEALTHY),
+    "ANAEROBIC": ("ANAEROBIC", _E_U_RESTED, _P_U_HEALTHY),
+    "EXHAUSTED": ("RESPIRING", _E_U_FLAGGING_ARM, _P_U_HEALTHY),
+    "BOTH": ("ANAEROBIC", _E_U_FLAGGING_ARM, _P_U_HEALTHY),
+    "DISENGAGED": ("RESPIRING", _E_U_FLAGGING_ARM, _P_U_DISENGAGED),
+    "FRANTIC": ("RESPIRING", _E_U_RESTED, _P_U_HEALTHY),
+    "HOSTILE": ("RESPIRING", _E_U_RESTED, _P_U_HEALTHY),
+    "MANIC": ("RESPIRING", _E_U_RESTED, _P_U_HEALTHY),
+    "LUCID": ("RESPIRING", _E_U_RESTED, _P_U_HEALTHY),
+    "CHEM_DOPAMINE": ("RESPIRING", _E_U_RESTED, _P_U_HEALTHY),
+    "CHEM_CORTISOL": ("RESPIRING", _E_U_RESTED, _P_U_HEALTHY),
 }
 
-ANAEROBIC_DIRECTIVE = "ANAEROBIC STATE. Raw, breathless, efficient prose."
-EXHAUSTION_DIRECTIVE = "You must conclude your thought in 3 sentences or less"
 FRANTIC_DIRECTIVE = "Current Biology: Adrenaline. The user is frantic. Anchor them with extremely short, declarative sentences."
 HOSTILE_DIRECTIVE = "Current Biology: Cortisol. The user is hostile. Keep total word count extremely low."
 MANIC_DIRECTIVE = "Current Biology: Dopamine. The user is missing connections. Over-explain using long, comma-heavy sentences."
 LUCID_DIRECTIVE = "Current Biology: Serotonin. Clarity achieved. Speak with structural precision and diverse vocabulary."
+
+
+AUDIT_MODE = "CONVERSATION"
+
+
+def budget_for(respiration: str, exhaustion: float, effort: float = _P_U_HEALTHY) -> SomaticBudget:
+    """The same call `phases/biological.py` makes every turn, isolated to the
+    three inputs this tool varies. ATP/ROS stay at their healthy resting
+    values so only respiration, exhaustion and effort move."""
+    return SomaticBudget.evaluate(
+        {"exhaustion": exhaustion, "effort": effort},
+        {"atp_pool": 100.0, "ros": 0.0, "respiration": respiration},
+        active_mode=AUDIT_MODE,
+    )
+
+
+def somatic_block_text(budget: SomaticBudget) -> str:
+    """Mirrors `brain/composer.py`'s SOMATIC CONTRACT rendering exactly, so
+    the check below verifies the composer said what the budget implies,
+    rather than re-deriving a second opinion of what it should have said."""
+    lines = ["=== SOMATIC CONTRACT ==="]
+    lines.append(
+        f"Your partner is running low. Answer in at most {budget.sentence_cap} sentences."
+        if budget.sentence_cap <= 5
+        else f"Sentence cap: {budget.sentence_cap} sentences."
+    )
+    if budget.forbid_body_narration:
+        lines.append("CRITICAL: Do not narrate your body, breath, lungs, or physical exhaustion.")
+    if not budget.closing_question_allowed:
+        lines.append("Do not ask a closing question.")
+    if budget.offer_to_carry_load:
+        lines.append("Your partner is carrying a heavy load. Offer to carry part of the burden.")
+    return "\n".join(lines)
+
 
 # Every line allowed to differ between an arm and the control. Anything else
 # means a change elsewhere in the composer has leaked into the manipulation.
 EXPECTED_DIFF = re.compile(
     r"^(Current Biology: .*"
     r"|METRICS: Voltage=.*"
-    r"|CRITICAL: You are exhausted\..*)$"
+    r"|\[E:.*"
+    r"|Your partner is running low\. Answer in at most \d+ sentences\."
+    r"|Sentence cap: \d+ sentences\."
+    r"|Do not ask a closing question\."
+    r"|Your partner is carrying a heavy load\. Offer to carry part of the burden\.)$"
 )
 
 LAMBDA_TAG = re.compile(r"\n?<cd_lambda_1>[-\d.]+</cd_lambda_1>")
@@ -128,6 +216,7 @@ SAMPLING = {"temperature": 0.7, "top_p": 0.95, "max_tokens": 4000}
 
 CONTRASTS = [
     ("ANAEROBIC", "CONTROL"), ("EXHAUSTED", "CONTROL"), ("BOTH", "CONTROL"),
+    ("DISENGAGED", "CONTROL"),
     ("FRANTIC", "CONTROL"), ("HOSTILE", "CONTROL"), ("MANIC", "CONTROL"), ("LUCID", "CONTROL"),
     ("CHEM_DOPAMINE", "CONTROL"), ("CHEM_CORTISOL", "CONTROL")
 ]
@@ -167,73 +256,78 @@ def boot_engine(model: str):
 
 
 def compose_arms(eng, composer, message: str) -> dict:
-    from unittest.mock import patch
-    from brain.composer import ux
-    
-    with patch("brain.composer.PromptComposer._get_lore") as mock_lore:
-        mock_lore.return_value = {}
+    def assemble_with_params(arm: str, mood_directive=None, chem=None):
+        respiration, exhaustion, effort = ARMS[arm]
+        budget = budget_for(respiration, exhaustion, effort)
 
-        def assemble_with_params(directive, exhaustion, chem=None):
-            with patch("brain.composer.ux") as mock_ux:
-                mock_ux.side_effect = lambda domain, key, *a, **k: directive if key == "bio_neutral" else ux(domain, key, *a, **k)
-                
-                if chem:
-                    eng.cortex.modulator.current_chem.dopamine = chem.get("dopamine", 0.0)
-                    eng.cortex.modulator.current_chem.cortisol = chem.get("cortisol", 0.0)
-                    eng.cortex.modulator.current_chem.adrenaline = chem.get("adrenaline", 0.0)
-                    eng.cortex.modulator.current_chem.serotonin = chem.get("serotonin", 0.0)
-                else:
-                    eng.cortex.modulator.current_chem.dopamine = 0.0
-                    eng.cortex.modulator.current_chem.cortisol = 0.0
-                    eng.cortex.modulator.current_chem.adrenaline = 0.0
-                    eng.cortex.modulator.current_chem.serotonin = 0.0
+        if chem:
+            eng.cortex.modulator.current_chem.dopamine = chem.get("dopamine", 0.0)
+            eng.cortex.modulator.current_chem.cortisol = chem.get("cortisol", 0.0)
+            eng.cortex.modulator.current_chem.adrenaline = chem.get("adrenaline", 0.0)
+            eng.cortex.modulator.current_chem.serotonin = chem.get("serotonin", 0.0)
+        else:
+            eng.cortex.modulator.current_chem.dopamine = 0.0
+            eng.cortex.modulator.current_chem.cortisol = 0.0
+            eng.cortex.modulator.current_chem.adrenaline = 0.0
+            eng.cortex.modulator.current_chem.serotonin = 0.0
 
-                state = {"physics": {"exhaustion": exhaustion, "thermal_band": (0.0, 1.2)}, "somatic_budget": None}
-                llm_params = eng.cortex.modulator.modulate(base_voltage=30.0, physics_state=state["physics"])
-                
-                original_derive = eng.cortex.composer._derive_bio_mood
-                if directive != "bio_neutral":
-                    eng.cortex.composer._derive_bio_mood = lambda c: directive
-                
-                prompt = eng.cortex.composer.compose(
-                    state=state,
-                    user_input=message,
-                    ballast=False,
-                    modifiers={"include_inventory": False},
-                )
-                
-                eng.cortex.composer._derive_bio_mood = original_derive
-                return prompt, state, llm_params
-
-        prompts = {
-            "CONTROL": assemble_with_params("bio_neutral", 0.0),
-            "ANAEROBIC": assemble_with_params("bio_anaerobic", 0.0),
-            "EXHAUSTED": assemble_with_params("bio_neutral", 1.0),
-            "BOTH": assemble_with_params("bio_anaerobic", 1.0),
-            "FRANTIC": assemble_with_params(FRANTIC_DIRECTIVE, 0.0),
-            "HOSTILE": assemble_with_params(HOSTILE_DIRECTIVE, 0.0),
-            "MANIC": assemble_with_params(MANIC_DIRECTIVE, 0.0),
-            "LUCID": assemble_with_params(LUCID_DIRECTIVE, 0.0),
-            "CHEM_DOPAMINE": assemble_with_params("bio_neutral", 0.0, {"dopamine": 1.0}),
-            "CHEM_CORTISOL": assemble_with_params("bio_neutral", 0.0, {"cortisol": 1.0}),
+        state = {
+            "physics": {"exhaustion": exhaustion, "thermal_band": (0.0, 1.2)},
+            "somatic_budget": budget,
+            "meta": {"active_mode": AUDIT_MODE},
         }
-        
-        legacy_prompts = {k: (v[0], v[1]) for k, v in prompts.items()}
-        verify_manipulation(legacy_prompts)
-        return prompts
+        llm_params = eng.cortex.modulator.modulate(base_voltage=30.0, physics_state=state["physics"])
+
+        original_derive = eng.cortex.composer._derive_bio_mood
+        if mood_directive is not None:
+            eng.cortex.composer._derive_bio_mood = lambda c: mood_directive
+
+        prompt = eng.cortex.composer.compose(
+            state=state,
+            user_query=message,
+            ballast=False,
+            modifiers={"include_inventory": False},
+        )
+
+        eng.cortex.composer._derive_bio_mood = original_derive
+        return prompt, state, llm_params, budget
+
+    prompts = {
+        "CONTROL": assemble_with_params("CONTROL"),
+        "ANAEROBIC": assemble_with_params("ANAEROBIC"),
+        "EXHAUSTED": assemble_with_params("EXHAUSTED"),
+        "BOTH": assemble_with_params("BOTH"),
+        "DISENGAGED": assemble_with_params("DISENGAGED"),
+        "FRANTIC": assemble_with_params("FRANTIC", FRANTIC_DIRECTIVE),
+        "HOSTILE": assemble_with_params("HOSTILE", HOSTILE_DIRECTIVE),
+        "MANIC": assemble_with_params("MANIC", MANIC_DIRECTIVE),
+        "LUCID": assemble_with_params("LUCID", LUCID_DIRECTIVE),
+        "CHEM_DOPAMINE": assemble_with_params("CHEM_DOPAMINE", chem={"dopamine": 1.0}),
+        "CHEM_CORTISOL": assemble_with_params("CHEM_CORTISOL", chem={"cortisol": 1.0}),
+    }
+
+    check_arms(prompts)
+    return prompts
 
 
 def check_arms(prompts: dict) -> None:
     """The arms must differ in their directives and in nothing else."""
     for arm in prompts:
-        respiration, exhaustion = ARMS[arm]
-        text = prompts[arm][0]
-        if (ANAEROBIC_DIRECTIVE in text) != (respiration == "ANAEROBIC"):
-            raise AssertionError(f"{arm}: anaerobic directive presence is wrong")
-        if (EXHAUSTION_DIRECTIVE in text) != (exhaustion > 0.8):
-            raise AssertionError(f"{arm}: exhaustion directive presence is wrong")
-        
-        # Verify custom directives
+        respiration, exhaustion, effort = ARMS[arm]
+        text, _state, _params, budget = prompts[arm]
+        expected_block = somatic_block_text(budget)
+        if expected_block not in text:
+            raise AssertionError(
+                f"{arm}: expected somatic contract block not in prompt:\n{expected_block}"
+            )
+        if ("running low" in expected_block) != (budget.sentence_cap <= 5):
+            raise AssertionError(f"{arm}: cap wording disagrees with its own sentence_cap")
+        if (respiration == "ANAEROBIC" or exhaustion > _E_U_FLAGGING) != (budget.sentence_cap <= 5):
+            raise AssertionError(f"{arm}: budget did not tighten for its own manipulation")
+        if (effort < _P_U_CRITICAL) != budget.offer_to_carry_load:
+            raise AssertionError(f"{arm}: offer-to-carry-load disagrees with its own effort")
+
+        # Verify custom mood directives
         if arm == "FRANTIC" and FRANTIC_DIRECTIVE not in text: raise AssertionError("FRANTIC missing")
         if arm == "HOSTILE" and HOSTILE_DIRECTIVE not in text: raise AssertionError("HOSTILE missing")
         if arm == "MANIC" and MANIC_DIRECTIVE not in text: raise AssertionError("MANIC missing")
@@ -278,7 +372,7 @@ def generate(model: str, reasoning: str, repeats: int, cache: Path) -> None:
                 prompts = compose_arms(eng, composer, message)
                 for repeat in range(repeats):
                     seed = seed_for(model, message, repeat)
-                    for arm, (prompt, state, llm_params) in prompts.items():
+                    for arm, (prompt, state, llm_params, _budget) in prompts.items():
                         count += 1
                         sha = hashlib.sha256(prompt.encode()).hexdigest()[:16]
                         if (model, reasoning, message, repeat, arm, sha) in done:
@@ -330,7 +424,7 @@ def cell_means(records: list) -> dict:
     """{arm: {message: {measure: mean over repeats}}}"""
     grouped = {}
     for r in records:
-        m = measure(r["reply"], r["validator_valid"])
+        m = measure(r["reply"], r["validator_valid"], r["message"])
         grouped.setdefault(r["arm"], {}).setdefault(r["message"], []).append(m)
     return {
         arm: {
@@ -419,6 +513,9 @@ COMPARE_COLUMNS = [
     ("EXH <=3", "EXHAUSTED", "CONTROL", "within_3_sentences"),
     ("EXH reject", "EXHAUSTED", "CONTROL", "validator_rejects"),
     ("BOTH <=3", "BOTH", "CONTROL", "within_3_sentences"),
+    ("EXH closeQ", "EXHAUSTED", "CONTROL", "ends_with_question"),
+    ("DIS carry", "DISENGAGED", "CONTROL", "offers_to_carry_load"),
+    ("DIS len/msg", "DISENGAGED", "CONTROL", "reply_to_message_ratio"),
     ("FRA w/sent", "FRANTIC", "CONTROL", "words_per_sentence"),
     ("HOS words", "HOSTILE", "CONTROL", "words"),
     ("MAN comma", "MANIC", "CONTROL", "commas_per_sentence"),
