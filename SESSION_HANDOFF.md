@@ -1,8 +1,81 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+<a id="vanilla-blind-comparison-2026-09-19"></a>
+
+## Latest: a blind BoneAmanita-vs-vanilla comparison, and Ollama's silent context default bit twice in one day, 2026-09-19
+
+Gordon, reading the friendship census: "truly remarkable; but I am quite
+biased." Asked for a vanilla baseline (same script, same model, zero system
+prompt, real conversation history, no metrics) and a genuinely blind
+comparison, both an independent LLM judge and his own blind read. Two new
+tools: `tools/audit_somatic_vanilla.py` and `tools/audit_somatic_blind_judge.py`
+(`gemma4:e4b`, which generated neither transcript, shown "Reply A"/"Reply B"
+with labels reshuffled per turn by a seeded coin flip so a fixed left/right
+bias can't launder into a fixed system preference), plus a blind-read artifact
+for Gordon's own pass.
+
+### Two rounds of a length cap, both rejected as arbitrary
+
+First vanilla run capped `max_tokens` at 450 (matched to BoneAmanita's own
+ceiling): 20 of 30 replies cut off mid-sentence, because vanilla's unprompted
+replies run far longer than BoneAmanita's budget-capped ones. Raised to 2000
+as a quick fix; Gordon pushed back correctly - *"that's an arbitrary cap. do
+we really need to limit it to 450?"* - 2000 is exactly as arbitrary as 450,
+just a bigger number with no equivalent in "vanilla." Dropped `max_tokens`
+entirely. A direct curl test confirmed the model then stops on its own
+(`finish_reason: "stop"`, even past 1700 completion tokens) - looked fixed.
+
+### It wasn't. The actual bug was the context window, not the output cap
+
+Re-running with no cap still truncated 14 of 30 replies, but differently:
+mid-word, and several collapsed to one or two words (`"This"`,
+`"That walk was a physical manifestation"`) after only ~4 seconds - too fast
+and too short to be a generation limit. The tell was `ollama ps`: the loaded
+model's `context_length` read **4096**, Ollama's silent default, regardless of
+what was sent. `/v1/chat/completions` (the OpenAI-compatible shim the script
+was using) ignores an `options.num_ctx` override entirely - confirmed live by
+sending one and re-checking `ollama ps`, unchanged. The native `/api/chat`
+endpoint honors it (confirmed the same way, `context_length` moved to the
+requested size). Vanilla's own real replies run 500-700+ words each; by
+turn 4-6 the accumulated conversation had already filled 4096 tokens, and the
+rest of the run degraded into context overflow, not overlength output.
+
+This is the same defect already named in this file's open-items list (#8,
+the reasoning-model fix): `gemma4:12b` filling Ollama's default 4096-token
+context was known to cost 13% of production generations. It had never been
+seen on the vanilla side before because nothing had asked the model for
+30 turns of genuinely unbudgeted replies against the OpenAI-compatible shim.
+
+Fixed in `tools/audit_somatic_vanilla.py`: switched to `/api/chat`, added
+`"options": {"num_ctx": 32768}` (confirmed live it loads), replaced
+`reasoning_effort: "none"` with that endpoint's equivalent, `think: false`.
+Re-run: all 30 replies end cleanly, no truncation, no short-and-fast
+anomalies. BoneAmanita's own side of the comparison was never touched -
+its replies stay well under 4096 tokens all on their own, budget-capped by
+the somatic contract - so this was purely a vanilla-side measurement fix, not
+a change to what's being measured.
+
+### Corrected result
+
+`tools/audit_somatic_blind_judge.py --topic friendship` against the corrected
+data: **BoneAmanita 22, Vanilla 3**, 0 ties, 0 unparsed, 5 turns skipped
+(BoneAmanita held silence, nothing to pair against). An earlier run against
+the truncated vanilla data had scored 23-2 - close to the corrected number,
+but for the wrong reason: a separate bug in the judge script (turn-selection
+checked dict-key presence, not reply truthiness, so held turns fed the
+literal string `"None"` to the judge as BoneAmanita's answer) has also been
+fixed. The 23-2 figure should not be cited; 22-3 is the number, from clean
+data on both sides. The blind-read artifact's embedded transcripts were
+regenerated from the corrected cache and republished to the same link.
+
+### Not yet done
+
+Gordon's own blind read of the artifact hasn't happened yet - the judge
+result is one signal, not the verdict, per the tool's own docstring.
+
 <a id="advice-restraint-cursed-word-bug-2026-09-19"></a>
 
-## Latest: a third census, an advice-restraint fix, and "feel" was a cursed word, 2026-09-19
+## Earlier: a third census, an advice-restraint fix, and "feel" was a cursed word, 2026-09-19
 
 Same day, third and final round. Gordon's read of the marathon transcript:
 the conversation "felt much more natural," with one specific note - the

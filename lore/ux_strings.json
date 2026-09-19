@@ -406,7 +406,7 @@
   },
   "silence_reasons": {
     "_comment": "What a person actually reads when the engine holds. Every gate here writes its own technical reason for logs and receipts (developer-facing, unchanged); this is the separate, calm translation shown to the person instead. No internal tags, no jargon, nothing that reads as blaming their input.",
-    "GATEKEEPER": "Something in how that came through didn't parse cleanly on this end. Try sending it again, maybe rephrased or a bit shorter.",
+    "GATEKEEPER": "Take a moment while we collect our thoughts.",
     "MOOG": "That's a bigger question than I can chase down right now. Setting it aside for a moment.",
     "GORDON_ANCHOR": "Things got intense there. Pausing to steady things before continuing.",
     "PINKER": "That direction felt like it was heading somewhere unstable. Let's take a different angle.",

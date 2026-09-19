@@ -53,6 +53,26 @@ you whether it ran.
 
 ## Status — reconciled 2026-09-19 (latest)
 
+**A blind BoneAmanita-vs-vanilla comparison, and Ollama's silent 4096-token
+context default, 2026-09-19:** Gordon asked for a vanilla baseline (same
+script, same model, zero system prompt) and a genuinely blind comparison
+(independent judge model plus his own blind read) against the friendship
+census. Two length-cap fixes (`max_tokens` 450, then 2000) were both correctly
+rejected as arbitrary; the real bug surfaced only once the cap was dropped
+entirely - vanilla's unprompted replies (500-700+ words) fill Ollama's silent
+4096-token context default within a handful of turns, the same defect this
+file's D7/open-items already named on the reasoning-model side, just never
+seen here before because nothing had asked for this much unbudgeted output.
+Fixed by moving `tools/audit_somatic_vanilla.py` off the OpenAI-compatible
+shim (which silently ignores `options.num_ctx`) onto Ollama's native
+`/api/chat` endpoint with `num_ctx: 32768`; confirmed live both that the shim
+really does ignore the option and that the native endpoint honors it.
+BoneAmanita's own side needed no change - its replies stay well under 4096
+tokens on their own. Corrected blind-judge result: **BoneAmanita 22, Vanilla
+3** (an earlier 23-2 figure, run against the truncated data and a separate
+key-presence bug in the judge script itself, should not be cited). See the
+[2026-09-19 vanilla-comparison handoff](SESSION_HANDOFF.md#vanilla-blind-comparison-2026-09-19).
+
 **A third census, advice-restraint, and a cursed-word false positive,
 2026-09-19:** a third scripted conversation (`--topic friendship`,
 deliberately no physical project or parent theme this time, so more of its
