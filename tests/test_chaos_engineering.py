@@ -1,6 +1,8 @@
 """tests/test_chaos_engineering.py"""
 
+import random
 import unittest
+from unittest.mock import MagicMock
 
 from main import BoneAmanita
 from physics.models import PhysicsPacket
@@ -211,58 +213,131 @@ class TestChaosEngineering(BoneTestCase):
                 f"[CRITICAL] Engine crashed unexpectedly when a village member was suppressed: {e}"
             )
 
-    def test_terminal_topology_collapse(self):
-        from unittest.mock import MagicMock
+    @staticmethod
+    def _bridged_cliques(clique_size: int, count: int) -> dict:
+        adj: dict = {}
+        for c in range(count):
+            nodes = [str(c * clique_size + i) for i in range(clique_size)]
+            for n in nodes:
+                adj[n] = set(x for x in nodes if x != n)
+        for c in range(1, count):
+            a, b = str((c - 1) * clique_size), str(c * clique_size)
+            adj[a].add(b)
+            adj[b].add(a)
+        return adj
 
+    def _run_topology_check(self):
+        self.engine.orchestrator._verify_semantic_topology(MagicMock())
+        self.engine.orchestrator._async_pool.shutdown(wait=True)
+        # A finished pool cannot be reused; the daemon rebuilds it lazily via
+        # `_submit_background`, and this fixture calls the check more than
+        # once to exercise the 3-strike requirement.
+        from concurrent.futures import ThreadPoolExecutor
+
+        self.engine.orchestrator._async_pool = ThreadPoolExecutor(
+            max_workers=3, thread_name_prefix="CycleAsyncTest"
+        )
+
+    def test_terminal_topology_collapse(self):
+        """A dense but bipartite graph (two sides of 10, every cross-edge
+        present, none within a side) has zero triangles despite real density,
+        so it is genuinely worse than what random rewiring of the same degree
+        sequence typically produces by chance alone (verified stable across
+        ten seeds). That is real collapse, not the degenerate case
+        `test_a_sparse_graph_does_not_trigger_shutdown` covers below, where
+        the comparison is meaningless because both sides are already at zero.
+
+        A single crossing is not enough: `_verify_semantic_topology` requires
+        it to repeat across `CORE.TOPOLOGY_COLLAPSE_STRIKES` (default 3)
+        consecutive checks before taking the irreversible action, the same
+        discipline the embedding fallback's terminal transition uses for its
+        own consecutive-failure count. Health must survive the first two and
+        only die on the third."""
+        random.seed(1234)
         check_freq = int(getattr(self.engine.config.CORE, "TOPOLOGY_FREQ", 10))
-        self.engine.tick_count = check_freq
         self.engine.mind.mem.hippocampus = MagicMock()
         # get_graph() returns the adjacency dict itself. This mock used to wrap
         # it in an object exposing `.adj`, matching what cycle.py asked for and
         # not what HippocampalCache has ever returned; the test passed because
         # production shared the same wrong assumption, so the real code path
         # was dead while the test exercised the mock's version of it.
-        #
-        # `calculate_clustering` itself used to be mocked too, for the same
-        # reason: the method did not exist on MycelialNetwork, so every real
-        # call raised into the topology check's `except Exception`. A chain
-        # has no triangles (clustering 0.0) and neither does a random rewiring
-        # of one, so the real implementation collapses this case correctly
-        # without needing a scripted return sequence.
-        self.engine.mind.mem.hippocampus.get_graph.return_value = {
-            str(i): {str(i + 1)} for i in range(10)
-        }
-        self.engine.orchestrator._verify_semantic_topology(MagicMock())
-        self.engine.orchestrator._async_pool.shutdown(wait=True)
+        side_a = [str(i) for i in range(10)]
+        side_b = [str(i) for i in range(10, 20)]
+        bipartite = {a: set(side_b) for a in side_a}
+        bipartite.update({b: set(side_a) for b in side_b})
+        self.engine.mind.mem.hippocampus.get_graph.return_value = bipartite
+
+        for strike in (1, 2):
+            self.engine.tick_count = check_freq * strike
+            self._run_topology_check()
+            self.assertGreater(
+                self.engine.health, 0.0,
+                f"[FAIL] Shutdown fired on strike {strike}, before the 3-strike floor.",
+            )
+        self.engine.tick_count = check_freq * 3
+        self._run_topology_check()
         self.assertEqual(
             self.engine.health,
             0.0,
             "[FAIL] Engine failed to execute terminal shutdown upon topology collapse.",
         )
 
-    def test_healthy_topology_does_not_trigger_shutdown(self):
-        """The negative case A4 asks for: two fully-connected cliques joined
-        by one bridge edge (clustering 0.875) have far more real structure
-        than a random rewiring of the same degree sequence can produce by
-        chance, so the collapse gate must not fire. Seeded: the null models
-        are randomized, and a coincidentally structured shuffle should not
-        make this test flaky."""
-        import random
-        from unittest.mock import MagicMock
+    def test_a_sparse_graph_does_not_trigger_shutdown_when_null_is_also_zero(self):
+        """The bug a live census found: `calculate_clustering` was missing
+        entirely until today, so this check had never actually run in
+        production. The first time it did, on a real 10-node conversational
+        memory graph, it killed the engine at turn 10 of 30. The graph was a
+        sparse, tree-like structure (no triangles, clustering 0.0) - and a
+        random rewiring of that same sparse structure is ALSO all but
+        guaranteed to have no triangles, so the null baseline was 0.0 too.
+        'No better than null' is not evidence of collapse when null carries no
+        signal to begin with; it just means the graph was never dense enough
+        to have community structure. `_verify_semantic_topology` must decline
+        to judge in that case, not treat two low values as proof of
+        destruction. (30 nodes, not 10: verified stable at 10/10 seeds: a
+        10-node path is too small for the null-model draws to reliably land
+        at the noise floor on their own, which is a second, independent
+        reason the original bug was so easy to trigger on a real, small
+        early-conversation graph.)"""
+        check_freq = int(getattr(self.engine.config.CORE, "TOPOLOGY_FREQ", 10))
+        self.engine.tick_count = check_freq
+        self.engine.mind.mem.hippocampus = MagicMock()
+        path = {}
+        for i in range(30):
+            neighbors = set()
+            if i > 0:
+                neighbors.add(str(i - 1))
+            if i < 29:
+                neighbors.add(str(i + 1))
+            path[str(i)] = neighbors
+        self.engine.mind.mem.hippocampus.get_graph.return_value = path
+        starting_health = self.engine.health
+        self._run_topology_check()
+        self.assertEqual(
+            self.engine.health,
+            starting_health,
+            "[FAIL] A sparse graph with no real signal to compare against "
+            "still triggered terminal shutdown.",
+        )
 
+    def test_healthy_topology_does_not_trigger_shutdown(self):
+        """The negative case A4 asks for: five fully-connected 4-cliques,
+        chain-bridged (20 nodes), have far more real structure than a random
+        rewiring of the same degree sequence can produce by chance, so the
+        collapse gate must not fire. Verified stable at 10/10 seeds; fewer,
+        larger cliques were not (a denser degree sequence gives the null
+        models more chances to grow incidental clustering too, shrinking the
+        real gap): the count of separate communities matters more here than
+        the size of any one of them."""
         random.seed(1234)
         check_freq = int(getattr(self.engine.config.CORE, "TOPOLOGY_FREQ", 10))
         self.engine.tick_count = check_freq
         self.engine.mind.mem.hippocampus = MagicMock()
-        self.engine.mind.mem.hippocampus.get_graph.return_value = {
-            "0": {"1", "2", "3"}, "1": {"0", "2", "3"}, "2": {"0", "1", "3"},
-            "3": {"0", "1", "2", "4"},
-            "4": {"3", "5", "6", "7"},
-            "5": {"4", "6", "7"}, "6": {"4", "5", "7"}, "7": {"4", "5", "6"},
-        }
+        self.engine.mind.mem.hippocampus.get_graph.return_value = self._bridged_cliques(
+            clique_size=4, count=5
+        )
         starting_health = self.engine.health
-        self.engine.orchestrator._verify_semantic_topology(MagicMock())
-        self.engine.orchestrator._async_pool.shutdown(wait=True)
+        self._run_topology_check()
         self.assertEqual(
             self.engine.health,
             starting_health,

@@ -664,6 +664,9 @@
     ],
     "TELEMETRY_LOG_DIR": "logs/telemetry",
     "TOPOLOGY_FREQ": 10,
+    "TOPOLOGY_MIN_NODES": 20,
+    "TOPOLOGY_NULL_FLOOR": 0.05,
+    "TOPOLOGY_COLLAPSE_STRIKES": 3,
     "WLS_FREQ": 8
   },
   "CYCLE": {

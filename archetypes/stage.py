@@ -44,6 +44,7 @@ class Verdict:
     reason: str
     tension: Tension = field(default_factory=Tension)
     adjustments: Dict[str, float] = field(default_factory=dict)
+    gate: str = ""
 
     @property
     def is_silence(self) -> bool:
@@ -97,7 +98,8 @@ class StageManager:
                     "THE STAGE MANAGER",
                     winning_nom.reason,
                     tension,
-                    adjustments={"refusal_packet": winning_nom.packet} if winning_nom.packet else {}
+                    adjustments={"refusal_packet": winning_nom.packet} if winning_nom.packet else {},
+                    gate=winning_nom.gate,
                 )
             
         if not tension.voices:
@@ -137,6 +139,7 @@ class StageManager:
                 "THE STAGE MANAGER",
                 f"{tension} and only {float(atp):.0f} ATP to reconcile them",
                 tension,
+                gate="ATP_FLOOR",
             )
 
         if tension.magnitude >= int(self._cfg("TENSION_HOLD_MAGNITUDE", 3)):
@@ -146,6 +149,7 @@ class StageManager:
                 "THE STAGE MANAGER",
                 f"{len(tension.voices)} voices at once with no fusion between them",
                 tension,
+                gate="TENSION_MAGNITUDE",
             )
 
         self.consecutive_holds = 0

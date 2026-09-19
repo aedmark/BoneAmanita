@@ -171,13 +171,24 @@ class ArbitrationPhase(SimulationPhase):
             ux("cycle_strings", "stage_manager_silence")
             or "The Stage Manager holds the floor empty. Nothing here is ready to be said."
         )
+        # `verdict.reason` is the gate's own technical string, written for logs
+        # and receipts, not a person to read: raw gate tags, in-universe jargon,
+        # and phrasing that can land as blaming their input. `human_reason` is
+        # the separate, calm translation (`lore/ux_strings.json:silence_reasons`,
+        # keyed by `verdict.gate`) shown to them instead; the technical reason
+        # stays exactly where it was already useful, below.
+        human_reason = ux(
+            "silence_reasons",
+            verdict.gate or "_default",
+            ux("silence_reasons", "_default", "I need a moment before I can answer that."),
+        )
         ctx.log(f"{Prisma.GRY}{held}{Prisma.RST}")
         ctx.log(f"{Prisma.GRY}   {verdict.reason}.{Prisma.RST}")
         ctx.active_lens = "THE STAGE MANAGER"
         ctx.refusal_triggered = True
         ctx.refusal_packet = {
             "type": "SILENCE",
-            "ui": f"\n{Prisma.GRY}{held}{Prisma.RST}\n{Prisma.GRY}   {verdict.reason}.{Prisma.RST}",
+            "ui": f"\n{Prisma.GRY}{held}{Prisma.RST}\n{Prisma.GRY}   {human_reason}{Prisma.RST}",
             "logs": [held, verdict.reason],
             "metrics": getattr(self.eng, "get_metrics", lambda: {})(),
             "physics": _safe_dict(ctx.physics),

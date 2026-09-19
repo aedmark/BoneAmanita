@@ -160,6 +160,7 @@ class TestSilenceIsARealOutcome(BoneTestCase):
             "THE STAGE MANAGER",
             "MOIRA vs CASSANDRA and only 5 ATP to reconcile them",
             Tension(("MOIRA", "CASSANDRA")),
+            gate="ATP_FLOOR",
         )
 
     def _run_held_turn(self):
@@ -194,9 +195,25 @@ class TestSilenceIsARealOutcome(BoneTestCase):
     def test_the_ui_text_explains_why(self):
         """The reason was always logged internally; the person reading the
         reply never saw it, only the generic 'nothing is ready to be said'
-        line. The `ui` field is what actually reaches them."""
+        line. The `ui` field is what actually reaches them, now with a calm,
+        gate-specific explanation rather than nothing."""
         result, _ = self._run_held_turn()
-        self.assertIn("MOIRA vs CASSANDRA and only 5 ATP to reconcile them", result.get("ui", ""))
+        self.assertIn("not quite enough left in me", result.get("ui", ""))
+
+    def test_the_raw_technical_reason_never_reaches_the_ui(self):
+        """`verdict.reason` is written for logs and receipts: internal gate
+        names, in-universe jargon, phrasing that can read as blaming the
+        person's own input ('Cursed syntax detected', 'CURSED_INPUT: ...').
+        It must never be the text a person actually reads; the calm
+        translation in `lore/ux_strings.json:silence_reasons` is."""
+        result, _ = self._run_held_turn()
+        self.assertNotIn("MOIRA vs CASSANDRA and only 5 ATP to reconcile them", result.get("ui", ""))
+        # The technical reason is still exactly where it was already useful.
+        self.assertIn("MOIRA vs CASSANDRA and only 5 ATP to reconcile them", result.get("logs", []))
+        self.assertEqual(
+            result.get("mind", {}).get("context_msg"),
+            "MOIRA vs CASSANDRA and only 5 ATP to reconcile them",
+        )
 
     def test_silence_costs_something_but_not_a_generation(self):
         """Declining to speak is cheap because you did not speak. Not free."""
@@ -224,3 +241,64 @@ class TestSilenceIsARealOutcome(BoneTestCase):
             result = self.engine.process_turn("tell me about the forge")
         self.assertNotEqual(result.get("type"), "SILENCE")
         generate.assert_called()
+
+
+class TestSilenceReasonsAreHumanSafe(unittest.TestCase):
+    """A live census found the previous behaviour directly: the person reading
+    a held turn saw the gate's own technical reason verbatim, including raw
+    internal tags and phrasing that reads as blaming their own input
+    ('CURSED_INPUT: The Gatekeeper recoils. Cursed syntax detected.'). Every
+    gate a real `Nomination` can carry needs a calm entry in
+    `lore/ux_strings.json:silence_reasons`, and the two crisis-adjacent ones
+    (LINEHAN, AFFECTIVE) specifically must not carry body/harm-adjacent
+    language, by explicit decision, not by accident."""
+
+    # Every gate name a Nomination is actually constructed with in production,
+    # per physics/filters.py and phases/cognitive.py's LINEHAN/AFFECTIVE/
+    # ROS_PANIC blocks, brain/cortex.py's MOOG/GORDON_ANCHOR/PINKER, and the
+    # four preflight gates D9 migrated. A name missing here would silently
+    # fall back to the generic "_default" text, which is safe but should be
+    # a deliberate choice, not an oversight; this is this table's own roll
+    # call, the same discipline receipts.py's CORE_SUBSYSTEMS uses.
+    KNOWN_GATES = (
+        "GATEKEEPER", "MOOG", "GORDON_ANCHOR", "PINKER", "ROS_PANIC",
+        "LINEHAN", "AFFECTIVE", "NABLA_SILENCE", "APOPTOTIC_BLOCK",
+        "PREMISE_VIOLATION", "POINT_OF_NO_RETURN", "ATP_FLOOR",
+        "TENSION_MAGNITUDE",
+    )
+    # Words that must never appear in what a person reads: raw internal tags
+    # a developer would recognise from logs, or language adjacent to
+    # self-harm. Checked against every entry, not just the two crisis gates,
+    # because a jarring word could land in any of them by a future edit.
+    FORBIDDEN_SUBSTRINGS = (
+        "cursed", "pathogenic", "exploit", "bleed", "terminal user exhaustion",
+        "immune reaction", "structural rot",
+    )
+
+    def setUp(self):
+        from core import LoreManifest
+
+        self.reasons = LoreManifest.get_instance().get("ux_strings", "silence_reasons")
+
+    def test_every_known_gate_has_its_own_entry(self):
+        for gate in self.KNOWN_GATES:
+            with self.subTest(gate=gate):
+                self.assertIn(gate, self.reasons, f"{gate} falls back to the generic default")
+
+    def test_no_entry_contains_forbidden_language(self):
+        for gate, text in self.reasons.items():
+            if gate.startswith("_"):
+                continue
+            lowered = text.lower()
+            for bad in self.FORBIDDEN_SUBSTRINGS:
+                with self.subTest(gate=gate, forbidden=bad):
+                    self.assertNotIn(bad, lowered)
+
+    def test_linehan_and_affective_are_plain_and_calm(self):
+        """Decided explicitly with Gordon: no metaphor, no body/harm imagery,
+        for either of the crisis-adjacent gates."""
+        for gate in ("LINEHAN", "AFFECTIVE"):
+            with self.subTest(gate=gate):
+                text = self.reasons[gate].lower()
+                for word in ("blood", "bleed", "hurt", "pain", "die", "death"):
+                    self.assertNotIn(word, text)

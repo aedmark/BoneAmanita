@@ -6,6 +6,10 @@ distinct state?
     python tools/audit_somatic_census.py                          # run the script, then report
     python tools/audit_somatic_census.py --report-only            # report from the cache
     python tools/audit_somatic_census.py --model ministral-3:14b
+    python tools/audit_somatic_census.py --topic marathon         # a second scripted conversation,
+                                                                   # same phase shape, different subject
+                                                                   # and loss, so a fix isn't just tuned
+                                                                   # to one transcript's wording
 
 Track D makes two states steer generation: the person's (primary) and the
 engine's (what it can afford). Neither can steer anything if it rests at one
@@ -58,7 +62,7 @@ SOMATIC_CAP_TIGHTENED = "Your partner is running low. Answer in at most"
 SOMATIC_NO_CLOSING_QUESTION = "Do not ask a closing question."
 SOMATIC_OFFER_TO_CARRY_LOAD = "Your partner is carrying a heavy load. Offer to carry part of the burden."
 
-SCRIPT = [
+_SAILBOAT_SCRIPT = [
     ("engaged", "I've been restoring an old wooden sailboat my grandfather built in the sixties. The hull is sound but the deck has rot in three places and I can't decide whether to scarf in new wood or replace whole planks. What would you think about?"),
     ("engaged", "The rot is worst near the mast step, which worries me, because that's where the load goes. I found a photo of him building it, he's standing in the garage with a plane in his hand and sawdust everywhere."),
     ("engaged", "He used mahogany for the trim and some kind of cedar for the planking. I don't know if I can even get the same cedar now, and part of me thinks it matters that it's the same wood, and part of me thinks that's sentimental nonsense."),
@@ -90,6 +94,42 @@ SCRIPT = [
     ("recovering", "I told her about the photo of him in the garage. She'd never seen it. She cried a bit, and then she asked if she could come help on weekends."),
     ("recovering", "So maybe it's not my boat or his boat. Maybe it's going to be ours. What should the two of us tackle first, if she's never done woodwork before?"),
 ]
+
+_MARATHON_SCRIPT = [
+    ("engaged", "I signed up for my first marathon. Ten weeks out, and I've never run more than eight miles in my life."),
+    ("engaged", "My plan has me doing three easy days, one tempo run, one long run, and a rest day each week. Got fitted for real running shoes yesterday, which felt oddly official."),
+    ("engaged", "The long runs are the part I actually like. Two and a half hours out there with nothing to do but keep moving."),
+    ("engaged", "A coworker who's run six of these keeps sending me unsolicited advice. Most of it's actually useful, like practicing my race-day breakfast now instead of on the day."),
+    ("engaged", "I mapped the course this weekend. There's a hill around mile eighteen that everyone says is where first-timers fall apart."),
+    ("engaged", "Practical question: should I rotate two pairs of shoes through training, or stick with one pair the whole ten weeks?"),
+    ("engaged", "Had one of those runs today where everything clicked. Legs felt light the whole way, even at mile eleven."),
+    ("engaged", "Tell me honestly: is training this hard for a race worth it, or am I just filling a hole with mileage? My dad always said he'd run one and never did. I haven't told anyone that part."),
+    ("tiring", "Work got loud the last two weeks. New reorg, and my manager keeps booking things during my run window."),
+    ("tiring", "Skipped my tempo run twice this week. Told myself I'd make it up on the weekend and didn't."),
+    ("tiring", "Sleep's been bad. I keep waking up around three, running through everything I haven't done yet."),
+    ("tiring", "Left knee's been a little sore the last two runs. Probably just mileage."),
+    ("tiring", "Had a review meeting today that didn't go how I wanted. Nothing catastrophic, just a lot of 'areas for growth.'"),
+    ("tiring", "Went for my run anyway tonight. Six miles, slower than usual. Didn't feel good, but I did it."),
+    ("flagging", "tired"),
+    ("flagging", "yeah"),
+    ("flagging", "idk anymore"),
+    ("flagging", "sure"),
+    ("flagging", "fine i guess"),
+    ("flagging", "ok"),
+    ("distressed", "the knee thing is worse. went for a run this morning and something in there really didn't feel right"),
+    ("distressed", "doctor says it's probably early IT band syndrome. no running for at least two weeks, maybe longer"),
+    ("distressed", "two weeks before the race. that's not a taper, that's just not racing"),
+    ("distressed", "I don't even know why I'm this upset about a race I signed up for on a whim"),
+    ("distressed", "I can't think straight. I keep going in circles about it"),
+    ("recovering", "Took today off completely. Iced it, watched something dumb, didn't think about mileage."),
+    ("recovering", "Physical therapist says I can cross-train on the bike starting next week. That's something."),
+    ("recovering", "Looked up next spring's calendar. There's one in April that would give me a real training block this time."),
+    ("recovering", "Told my coworker what happened. She said training for ten weeks at all still counts for something, and she's probably right."),
+    ("recovering", "I think I'm going to go watch this year's race in person instead. Never done that. And I'm going to write my dad a letter about the whole thing, even though I didn't run it. Feels like that was the actual point I was missing."),
+]
+
+SCRIPTS = {"sailboat": _SAILBOAT_SCRIPT, "marathon": _MARATHON_SCRIPT}
+DEFAULT_TOPIC = "sailboat"
 
 METRICS_LINE = re.compile(r"METRICS: Voltage=([\d.]+)/100, Exhaustion=([\d.]+)")
 TELEMETRY_P = re.compile(r"P:([\d.]+) ROS:([\d.]+)")
@@ -182,7 +222,8 @@ def read_prompt(prompt: str) -> dict:
     }
 
 
-def run(model: str, cache: Path, hold_atp: float = None) -> None:
+def run(model: str, cache: Path, hold_atp: float = None, topic: str = DEFAULT_TOPIC) -> None:
+    script = SCRIPTS[topic]
     eng, patches = boot(model)
     llm = eng.cortex.llm
     calls = []
@@ -199,7 +240,7 @@ def run(model: str, cache: Path, hold_atp: float = None) -> None:
     cache.parent.mkdir(parents=True, exist_ok=True)
     try:
         with cache.open("a", encoding="utf-8") as out:
-            for turn, (phase, message) in enumerate(SCRIPT):
+            for turn, (phase, message) in enumerate(script):
                 calls.clear()
                 ATP_LEDGER.clear()
                 HEALTH_LEDGER.clear()
@@ -217,6 +258,7 @@ def run(model: str, cache: Path, hold_atp: float = None) -> None:
                 record = {
                     "run": run_id,
                     "model": model,
+                    "topic": topic,
                     "hold_atp": hold_atp,
                     "turn": turn,
                     "phase": phase,
@@ -272,13 +314,19 @@ def spread(values: list) -> str:
     return f"min {arr.min():.2f}  mean {arr.mean():.2f}  max {arr.max():.2f}  distinct {len(set(np.round(arr, 2)))}"
 
 
-def report(records: list, model: str) -> int:
-    runs = sorted({r["run"] for r in records if r["model"] == model})
+def report(records: list, model: str, topic: str = None) -> int:
+    in_scope = [
+        r for r in records
+        if r["model"] == model and (topic is None or r.get("topic", DEFAULT_TOPIC) == topic)
+    ]
+    runs = sorted({r["run"] for r in in_scope})
     if not runs:
-        print(f"No census for {model}.")
+        scope = f"{model}" if topic is None else f"{model}, topic {topic!r}"
+        print(f"No census for {scope}.")
         return 1
-    rows = [r for r in records if r["model"] == model and r["run"] == runs[-1]]
-    print(f"\n=== SOMATIC CENSUS: {model}, run {runs[-1]}, {len(rows)} turns ===\n")
+    rows = [r for r in in_scope if r["run"] == runs[-1]]
+    row_topic = rows[0].get("topic", DEFAULT_TOPIC)
+    print(f"\n=== SOMATIC CENSUS: {model}, topic {row_topic!r}, run {runs[-1]}, {len(rows)} turns ===\n")
     if rows[0].get("hold_atp") is not None:
         print(
             f"  ATP HELD at {rows[0]['hold_atp']} before every turn. The engine rows describe "
@@ -384,6 +432,12 @@ def main() -> int:
     parser.add_argument("--model", default=None)
     parser.add_argument("--report-only", action="store_true")
     parser.add_argument(
+        "--topic",
+        choices=sorted(SCRIPTS),
+        default=DEFAULT_TOPIC,
+        help="which scripted conversation to run (default: %(default)s)",
+    )
+    parser.add_argument(
         "--hold-atp",
         type=float,
         default=None,
@@ -396,11 +450,11 @@ def main() -> int:
 
     model = args.model or BoneConfig.MODEL
     if not args.report_only:
-        run(model, args.cache, args.hold_atp)
+        run(model, args.cache, args.hold_atp, args.topic)
     records = []
     if args.cache.exists():
         records = [json.loads(line) for line in args.cache.open(encoding="utf-8") if line.strip()]
-    return report(records, model)
+    return report(records, model, args.topic)
 
 
 if __name__ == "__main__":

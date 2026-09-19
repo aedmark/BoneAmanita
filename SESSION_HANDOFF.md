@@ -1,8 +1,146 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+<a id="firewall-topology-second-census-2026-09-19"></a>
+
+## Latest: reading the census closely, the Lexical Firewall widened, a live-killing topology bug found and fixed, a second topic confirms it, 2026-09-19
+
+Same day as the entry below, continued. Gordon read the 30-turn sailboat
+census transcript directly (not just the summary numbers) and found two real
+problems the aggregate statistics couldn't show: occasional em dashes and
+antithesis ("not X, but Y") that the Lexical Firewall was missing, and a
+tonal drift where flagging/distressed replies narrated the person's situation
+back at them instead of answering them directly. Fixing both, then verifying
+on a second, unrelated topic, surfaced a serious bug that had nothing to do
+with either fix.
+
+### The Lexical Firewall: two real gaps, one deliberately not closed
+
+`NEGATIVE_COMPARISON` (`lore/style_crimes.json`) only matched "not X, but Y"
+linked by a comma or dash inside one sentence. A live turn had three
+uncaught antithesis constructions split across sentences and a semicolon:
+*"it isn't a monument. It's a transition. You aren't building a shrine; you're
+honoring him..."* Widened to also match a negation clause ending in `.`/`!`/
+`;` immediately followed by "It's/They're/You're/We're/That's", verified
+against the exact failing text plus a set of plain-negation controls that
+must NOT fire (`tests/test_composer.py:TestNegativeComparisonDetection`).
+
+Em dashes were deliberately **not** given a hard numeric cap after discussion:
+occasional use is normal writing, and D2's own "coarse proxy, not grammar
+police" ethos argues against a strict reject rule here. Instead,
+`lore/system_prompts.json` CONVERSATION style_guide gained item 4: real people
+reach for a semicolon, an Oxford comma, or parentheses before a dash in
+spoken conversation; formal writing and literature are unrestricted. A "time
+and place" preference, not a validator rule.
+
+### The tone finding: candor without presence
+
+Reading the sailboat census's flagging/distressed replies found a pattern:
+*"She just cut the cord on your time with it... It's a betrayal of the work
+you were trying to do in private"* — narrating the person's situation from
+outside it, like a narrator summarizing a character, rather than answering
+them. Traced to the kernel's "Candor over empathy" line: it named what not to
+do (empathy-guessing, banned separately by the firewall's `SYRUPY_EMPATHY`
+pattern) but never named what presence actually looks like, so the model
+filled the gap with detached analysis. New style_guide item 5, **RESPOND, DO
+NOT NARRATE**, names the failure mode with the real example and asks for
+first-person, direct address instead. Both new lines are pinned to
+CONVERSATION only, absent from ADVENTURE
+(`tests/test_physics_to_prompt.py:TestPunctuationGuidanceIsConversationOnly`,
+`TestPresenceOverNarrationGuidanceIsConversationOnly`).
+
+### Also: the Stage Manager's reason now reaches the person
+
+Gordon asked for a small description of why the Stage Manager chose silence,
+when it does. `_hold_the_silence` (`phases/cognitive.py`) always computed
+`verdict.reason` but only ever logged it internally; the text a person
+actually saw was the generic "nothing is ready to be said" line. It is now
+appended to the `ui` field that reaches them
+(`tests/test_stage_manager.py::test_the_ui_text_explains_why`). **This surfaced
+a second, more serious problem, covered in the next entry
+(`SESSION_HANDOFF.md#silence-reason-tone`): several of the raw reason strings
+this exposes are not fit for a person to read as-is.**
+
+### The bug the second census found: a live-killing false positive in the topology check
+
+Running a second scripted conversation (`--topic marathon`, same phase shape
+as the sailboat script, different subject: marathon training derailed by
+injury) to confirm the firewall/tone fixes on fresh material found the
+engine dying at turn 10 of 30 and staying dead. Cause: today's earlier
+`calculate_clustering` fix (see the entry below) had activated a
+terminal-shutdown check that had *never once run in production before*, and
+its comparison logic was broken in two ways a working implementation finally
+exposed:
+
+1. **Zero-versus-zero.** A real 10-node conversational memory graph is sparse
+   and tree-like this early, with no triangles; a random rewiring of that
+   same sparse graph is equally triangle-free. Comparing 0.0 to a null
+   baseline of 0.0 is not evidence of collapse, but the original comparison
+   (`actual <= null * 1.05`) treated it as fatal proof and executed an
+   irreversible shutdown.
+2. **Single-sample noise**, found on a second reproduction after fixing (1):
+   one random rewiring or configuration-model draw is one noisy sample; a
+   sparse, small graph can land a stray triangle, or none, by pure chance.
+
+Fixed in `cycle.py:_verify_semantic_topology`/`_bg_topology_check`:
+
+- Minimum graph size raised from 6 nodes to `CORE.TOPOLOGY_MIN_NODES` (20).
+  The same discipline `GATE.MIN_CORPUS` already applies to the governor's own
+  null comparison, for the same reason: small-n statistics need a real floor.
+- Both null estimators (rewire and configuration-model) are now averaged
+  over 5 independent draws each, not a single draw.
+- The null baseline must clear `CORE.TOPOLOGY_NULL_FLOOR` (0.05) before "no
+  better than null" is treated as meaningful; comparing a value against noise
+  is not evidence anything collapsed.
+- A single crossing is no longer terminal. `CORE.TOPOLOGY_COLLAPSE_STRIKES`
+  (3, matching the embedding fallback's own consecutive-failure count for its
+  terminal transition) must be reached on **consecutive** checks before health
+  is actually set to zero; any declined or negative check resets the count.
+
+`tests/test_chaos_engineering.py` rewritten with three validated fixtures
+(stress-tested 10+ seeds, 5 repeated full runs, all stable): a dense bipartite
+graph (real collapse, needs all 3 strikes to fire), a 30-node sparse path
+(declines to judge, the exact bug reproduced), and 5 bridged 4-cliques
+(healthy, does not fire). The clique-count-over-clique-size finding is worth
+keeping: denser individual communities give the null models more chances to
+grow incidental clustering too, shrinking the real gap; more, smaller
+communities is the reliable construction.
+
+### The re-run: clean
+
+With the fix in place, the marathon census completed all 30 turns: 28 of 30
+generated (93%), flagging 6/6, distressed 4/5, health held between 83.5 and
+99.8 throughout. Both halts (turns 13, 20) carry the same clean Stage Manager
+reason. Cache: `tools/cache/somatic_census.jsonl`, run `20260919-122608`.
+`tools/audit_somatic_census.py` gained `--topic` (`sailboat` default,
+`marathon` new), so a second scripted conversation is a flag away rather than
+a hand edit, specifically so a fix is not just verified against the one
+transcript that found it.
+
+The tone fix shows up directly in the transcript. Sailboat flagging phase
+(before): *"The timber will wait for tomorrow's light,"* *"The wood doesn't
+care about the timing"* — deflecting to object logistics. Marathon flagging
+phase (after): *"I am right here with you in the quiet,"* *"I am here in this
+space with you."* Worth watching, not yet a problem: those six replies now
+converge on their own "I'm here in this space" refrain. A better failure mode
+than before, still a formula.
+
+Firewall: one em dash total across 30 replies, both single instances, and no
+negative-comparison antithesis slipped through, including a phrase that
+correctly did *not* fire (*"It was never just the race. It was the goal..."*,
+plain rhetorical contrast, not the AI-tell pattern the rule targets).
+
+### Verification
+
+Full suite after the firewall and tone changes: 570 passed. After the
+silence-reason fix: 571. After the topology-check overhaul: 574. All are
+5 skipped, 29 subtests passed, no failures at any point. `config.json.bak`
+(byte-identical to the gitignored `config.json`, produced by some boot path
+during direct engine construction outside the test harness) is untracked and
+safe to delete.
+
 <a id="d9-d1-d2-census-2026-09-19"></a>
 
-## Latest: D9 unified, D1 completed, D2/D2b rebuilt, and the confirming census, 2026-09-19
+## Earlier: D9 unified, D1 completed, D2/D2b rebuilt, and the confirming census, 2026-09-19
 
 Starting state: clean `6d7fd0b` (`20.7.1.3`). This session audited D1/D2/D9 against
 their own written acceptance criteria (the roadmap's own next step after the

@@ -351,6 +351,7 @@ class GeodesicOrchestrator:
         if symbiosis is not None and hasattr(symbiosis, "attach_lattice"):
             symbiosis.attach_lattice(self.eng.shared_lattice)
         self.congruence_validator = CongruenceValidator()
+        self._topology_collapse_strikes = 0
 
     def start_daemon(self):
         if not self.is_running:
@@ -538,27 +539,84 @@ class GeodesicOrchestrator:
             return
         mem = self.eng.mind.mem
         actual_adj = mem.hippocampus.get_graph()
-        if not isinstance(actual_adj, dict) or len(actual_adj) <= 5:
+        # A live census found the old floor of 6 nodes let this run against
+        # memory graphs too sparse and small for a single-sample null-model
+        # comparison to mean anything: it killed a real 30-turn conversation
+        # at turn 10 over a 10-node graph. GATE.MIN_CORPUS applies the same
+        # discipline to the governor's own null comparison, for the same
+        # reason: small-n statistics need a real floor, not a smaller one.
+        min_nodes = int(getattr(self.eng.config.CORE, "TOPOLOGY_MIN_NODES", 20))
+        if not isinstance(actual_adj, dict) or len(actual_adj) < min_nodes:
             return
 
         def _bg_topology_check(raw_adj):
             try:
                 adj_copy = {k: set(v) for k, v in raw_adj.items()}
                 max_swaps = min(len(adj_copy) * 10, 1000)
-                null_adj_rewire = _native_rewire(adj_copy, n_swaps=max_swaps)
-                null_adj_config = _native_configuration_model(adj_copy)
+                # A single rewire or configuration-model draw is one noisy
+                # sample; a real memory graph is sparse enough that a stray
+                # triangle (or the lack of one) in one random draw is common
+                # chance, not signal. Five independent draws each, averaged,
+                # is a steadier baseline.
+                rewire_samples = [
+                    mem.calculate_clustering(_native_rewire(adj_copy, n_swaps=max_swaps))
+                    for _ in range(5)
+                ]
+                config_samples = [
+                    mem.calculate_clustering(_native_configuration_model(adj_copy))
+                    for _ in range(5)
+                ]
+                null_cluster_rewire = sum(rewire_samples) / len(rewire_samples)
+                null_cluster_config = sum(config_samples) / len(config_samples)
                 actual_cluster = float(mem.calculate_clustering(adj_copy))
-                null_cluster_rewire = float(mem.calculate_clustering(null_adj_rewire))
-                null_cluster_config = float(mem.calculate_clustering(null_adj_config))
                 strict_null_cluster = float(
                     max(null_cluster_rewire, null_cluster_config)
                 )
+                null_floor = float(getattr(self.eng.config.CORE, "TOPOLOGY_NULL_FLOOR", 0.05))
+                if strict_null_cluster <= null_floor:
+                    # A memory graph too sparse for real community structure
+                    # is also too sparse for a random rewiring of it to grow
+                    # any, so the null baseline sits at noise level. "No
+                    # better than null" only means collapse when null carries
+                    # a real clustering signal to fall below; comparing a
+                    # value against noise is not evidence anything collapsed.
+                    self._topology_collapse_strikes = 0
+                    self.eng.events.log(
+                        f"Topology check declined: null-model clustering "
+                        f"({strict_null_cluster:.3f}) is at the noise floor, "
+                        "so a real value near it is not collapse.",
+                        "CYCLE",
+                    )
+                    return
                 if actual_cluster <= (strict_null_cluster * 1.05):
+                    # Even a steadied, averaged baseline is one measurement of
+                    # a randomized process; a single crossing can still be
+                    # noise. Require it to repeat across consecutive checks
+                    # (config CORE.TOPOLOGY_COLLAPSE_STRIKES, default 3, the
+                    # same discipline the embedding fallback's terminal
+                    # transition uses for its own consecutive-failure count)
+                    # before taking the irreversible action.
+                    strikes_needed = int(
+                        getattr(self.eng.config.CORE, "TOPOLOGY_COLLAPSE_STRIKES", 3)
+                    )
+                    self._topology_collapse_strikes += 1
+                    if self._topology_collapse_strikes < strikes_needed:
+                        self.eng.events.log(
+                            f"Topology check: clustering ({actual_cluster:.3f}) at or "
+                            f"below null ({strict_null_cluster:.3f}) "
+                            f"[{self._topology_collapse_strikes}/{strikes_needed}]. "
+                            "Not yet terminal.",
+                            "CYCLE",
+                            "WARN",
+                        )
+                        return
                     self.eng.events.log(
                         f"{Prisma.RED}Structural collapse detected. Semantic topology destroyed against strict dual-baseline. Engine is flagged for terminal shutdown.{Prisma.RST}",
                         "BIO",
                     )
                     self.eng.health = 0.0
+                else:
+                    self._topology_collapse_strikes = 0
             except Exception as e:
                 self.eng.events.log(f"Async Topology Error: {e}", "CYCLE", "WARN")
 

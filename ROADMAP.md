@@ -51,9 +51,30 @@ preference, it is the precondition for the other two tracks. You cannot
 verify that a PDE is steering behaviour inside a system that cannot tell
 you whether it ran.
 
-## Status — reconciled 2026-09-19
+## Status — reconciled 2026-09-19 (later)
 
-**D9/D1/D2/D2b audit and census, 2026-09-19:** auditing D1/D2/D9 against their
+**Firewall widening, tone fix, and a live-killing topology bug, 2026-09-19:**
+reading the sailboat census transcript directly (not just its summary
+numbers) found antithesis slipping past `NEGATIVE_COMPARISON` when split
+across a sentence or semicolon (widened, verified against the failing text),
+and flagging/distressed replies narrating the person's situation from
+outside it rather than answering them (kernel gained "RESPOND, DO NOT
+NARRATE"; live re-run shows a real, visible shift toward first-person
+presence). Verifying both on a second, unrelated scripted conversation
+(`--topic marathon`) found the engine dying at turn 10 of 30: today's
+`calculate_clustering` fix had activated a terminal-shutdown check that had
+never once run in production, and its comparison logic was broken in two
+ways only a working implementation could expose (a zero-vs-zero false
+positive, then single-sample null-model noise). Fixed with the same
+discipline `GATE.MIN_CORPUS` and the embedding fallback's consecutive-failure
+count already use elsewhere in this codebase: a real minimum graph size, an
+averaged multi-draw null baseline, a noise floor, and three consecutive
+confirmations before the irreversible action. Marathon census re-run clean:
+28/30 generated, flagging 6/6. See the
+[2026-09-19 firewall/topology handoff](SESSION_HANDOFF.md#firewall-topology-second-census-2026-09-19).
+Full suite: 574 passed, 5 skipped, 29 subtests, throughout.
+
+**D9/D1/D2/D2b audit and census, 2026-09-19 (earlier):** auditing D1/D2/D9 against their
 own written acceptance criteria (this section's own instruction below) found
 each partly complete, not just unmeasured. D9 had four refusal paths in
 `SimulationPreflightPhase` still bypassing the Stage Manager entirely,
