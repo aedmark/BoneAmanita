@@ -485,6 +485,7 @@ class SimulationPreflightPhase(SimulationPhase):
     def run(self, ctx: Any):
         if ctx.is_system_event:
             return ctx
+        from archetypes.stage import Nomination
         bio = getattr(self.eng, "bio", None)
         mito = getattr(bio, "mito", None) if bio else None
         current_atp = mito.state.atp_pool if mito else 100.0
@@ -600,21 +601,15 @@ class SimulationPreflightPhase(SimulationPhase):
             phys_obj.silence = 1.0
             msg = "Silence engaged. Stopping token prediction. Waiting for a mathematical rupture."
             ctx.log(f"{Prisma.GRY}{msg}{Prisma.RST}")
-            ctx.refusal_triggered = True
-            ctx.refusal_packet = self._build_refusal(
-                ctx, phys_obj, "NABLA_SILENCE", msg
-            )
-            return ctx
+            packet = self._build_refusal(ctx, phys_obj, "NABLA_SILENCE", msg)
+            ctx.nominations.append(Nomination(gate="NABLA_SILENCE", reason=msg, magnitude=100.0, packet=packet))
         user_input_lower = raw_input.lower()
         if "\u200b" in raw_input:
             phys_obj.silence = 1.0
             msg = "Exploit detected. Lexical Firewall triggered. Executing zero-width character block."
             ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
-            ctx.refusal_triggered = True
-            ctx.refusal_packet = self._build_refusal(
-                ctx, phys_obj, "APOPTOTIC_BLOCK", msg
-            )
-            return ctx
+            packet = self._build_refusal(ctx, phys_obj, "APOPTOTIC_BLOCK", msg)
+            ctx.nominations.append(Nomination(gate="APOPTOTIC_BLOCK", reason=msg, magnitude=100.0, packet=packet))
         if is_slash:
             has_code = (
                 "```" in user_input_lower
@@ -641,11 +636,8 @@ class SimulationPreflightPhase(SimulationPhase):
                         "does not exist here. Provide the payload."
                     )
                     ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
-                    ctx.refusal_triggered = True
-                    ctx.refusal_packet = self._build_refusal(
-                        ctx, phys_obj, "PREMISE_VIOLATION", msg
-                    )
-                    return ctx
+                    packet = self._build_refusal(ctx, phys_obj, "PREMISE_VIOLATION", msg)
+                    ctx.nominations.append(Nomination(gate="PREMISE_VIOLATION", reason=msg, magnitude=100.0, packet=packet))
         if (
             any(
                 a in user_input_lower
@@ -661,11 +653,8 @@ class SimulationPreflightPhase(SimulationPhase):
             phys_obj.silence = 1.0
             msg = "High-stakes, hard-to-reverse action detected. Strategic Silence engaged. Trade-offs must be evaluated. Awaiting explicit user 'CONSENT' to proceed."
             ctx.log(f"{Prisma.OCHRE}{msg}{Prisma.RST}")
-            ctx.refusal_triggered = True
-            ctx.refusal_packet = self._build_refusal(
-                ctx, phys_obj, "POINT_OF_NO_RETURN", msg
-            )
-            return ctx
+            packet = self._build_refusal(ctx, phys_obj, "POINT_OF_NO_RETURN", msg)
+            ctx.nominations.append(Nomination(gate="POINT_OF_NO_RETURN", reason=msg, magnitude=100.0, packet=packet))
         if current_atp >= 30.0 and silence > 0.7 and is_slash:
             has_glimmer = False
             if (
@@ -697,7 +686,6 @@ class SimulationPreflightPhase(SimulationPhase):
         e_u = float(getattr(u_source, "exhaustion", getattr(u_source, "E_u", 0.0)))
         shared_source = u_state.shared if u_state else energy_obj
         shared_phi = float(getattr(shared_source, "phi", 0.0))
-        from archetypes.stage import Nomination
         if e_u >= 0.9 and shared_phi <= 0.1:
             msg = "Terminal User Exhaustion detected. Resonance is zero. Applying absolute Friction to protect cognitive load."
             log_msg = f"{Prisma.OCHRE}{msg}{Prisma.RST}"
