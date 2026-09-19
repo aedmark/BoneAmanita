@@ -102,7 +102,7 @@
     },
     {
       "name": "NEGATIVE_COMPARISON",
-      "regex": "(?i)\\bnot\\s+(?:only|just|merely|simply)?\\s*[^.!?\\n]+?(?:,|\\s-|—)\\s*(?:but|rather|instead|they|it)\\b",
+      "regex": "(?i)\\bnot\\s+(?:only|just|merely|simply)?\\s*[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but|rather|instead|they|it)\\b|\\b(?:isn'?t|aren'?t|wasn'?t|weren'?t|doesn'?t|don'?t|didn'?t|won'?t|wouldn'?t|can'?t|couldn'?t|shouldn'?t|not)\\b[^.!?;\\n]*[.!?;]\\s+(?:It'?s|It\\s+is|They'?re|They\\s+are|You'?re|You\\s+are|We'?re|We\\s+are|That'?s|That\\s+is)\\b",
       "error_msg": "DETECTED NEGATIVE COMPARISON. Don't say what it isn't. Say exactly what it is."
     },
     {

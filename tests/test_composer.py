@@ -87,6 +87,44 @@ class TestResponseValidator(BoneTestCase):
         )
 
 
+class TestNegativeComparisonDetection(BoneTestCase):
+    """The Lexical Firewall's antithesis rule only caught 'not X, but Y'
+    linked by a comma or dash inside one sentence. A live census turn slipped
+    three separate antithesis constructions past it, split across sentences
+    and semicolons instead: 'it isn't a monument. It's a transition. You
+    aren't building a shrine; you're honoring him...'. Widened to also catch
+    the negation and its contrastive echo split across a sentence boundary or
+    a semicolon."""
+
+    def setUp(self):
+        super().setUp()
+        self.validator = self.engine.cortex.validator
+
+    def _feedback(self, text: str) -> dict:
+        return self.validator.validate(text, {"meta": {"active_mode": "CONVERSATION"}})
+
+    def test_same_sentence_comma_form_is_still_caught(self):
+        result = self._feedback("It's not merely a boat, but a memory of him.")
+        self.assertFalse(result["valid"])
+
+    def test_cross_sentence_form_is_now_caught(self):
+        result = self._feedback(
+            "It isn't a monument. It's a transition, built one plank at a time."
+        )
+        self.assertFalse(result["valid"])
+
+    def test_semicolon_linked_form_is_now_caught(self):
+        result = self._feedback(
+            "Adding reinforcement isn't an admission of failure; it's insurance."
+        )
+        self.assertFalse(result["valid"])
+
+    def test_plain_negation_is_not_flagged(self):
+        """A pure negative statement, with no contrastive echo, is not antithesis."""
+        result = self._feedback("It isn't clear yet what you'll decide, and that's fine.")
+        self.assertTrue(result["valid"])
+
+
 class TestPromptComposer(BoneTestCase):
     def setUp(self):
         super().setUp()

@@ -411,6 +411,41 @@ class TestVoltageSwitchesTheDirectiveSet(PhysicsToPromptCase):
         )
 
 
+class TestPunctuationGuidanceIsConversationOnly(PhysicsToPromptCase):
+    """Em dashes are a 'time and place' rule, not a hard validator ban: a
+    style_guide line, not a regex reject. CONVERSATION gets told real people
+    reach for a semicolon or a new sentence instead; ADVENTURE, writing
+    literary narration, is not."""
+
+    PUNCTUATION_LINE = "PUNCTUATION HAS A TIME AND PLACE"
+
+    def test_conversation_mode_gets_the_guidance(self):
+        prompt = self.compose_with({}, mode="CONVERSATION")
+        self.assertIn(self.PUNCTUATION_LINE, prompt)
+
+    def test_adventure_mode_does_not(self):
+        prompt = self.compose_with({}, mode="ADVENTURE")
+        self.assertNotIn(self.PUNCTUATION_LINE, prompt)
+
+
+class TestPresenceOverNarrationGuidanceIsConversationOnly(PhysicsToPromptCase):
+    """A census read found flagging/distressed-phase replies narrating the
+    person's situation back at them from outside it ('It forces a finality
+    you weren't ready for') instead of answering them directly. The kernel's
+    'Candor over empathy' line named what not to do (empathy-guessing) but
+    never named what presence actually looks like."""
+
+    PRESENCE_LINE = "RESPOND, DO NOT NARRATE"
+
+    def test_conversation_mode_gets_the_guidance(self):
+        prompt = self.compose_with({}, mode="CONVERSATION")
+        self.assertIn(self.PRESENCE_LINE, prompt)
+
+    def test_adventure_mode_does_not(self):
+        prompt = self.compose_with({}, mode="ADVENTURE")
+        self.assertNotIn(self.PRESENCE_LINE, prompt)
+
+
 class TestTheSerializationBoundary(PhysicsToPromptCase):
     """The gap every other test in this file steps over.
 

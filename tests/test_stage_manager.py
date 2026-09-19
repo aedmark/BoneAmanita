@@ -191,6 +191,13 @@ class TestSilenceIsARealOutcome(BoneTestCase):
         result, _ = self._run_held_turn()
         self.assertEqual(sorted(result.get("tension", [])), ["CASSANDRA", "MOIRA"])
 
+    def test_the_ui_text_explains_why(self):
+        """The reason was always logged internally; the person reading the
+        reply never saw it, only the generic 'nothing is ready to be said'
+        line. The `ui` field is what actually reaches them."""
+        result, _ = self._run_held_turn()
+        self.assertIn("MOIRA vs CASSANDRA and only 5 ATP to reconcile them", result.get("ui", ""))
+
     def test_silence_costs_something_but_not_a_generation(self):
         """Declining to speak is cheap because you did not speak. Not free."""
         before = self.engine.bio.mito.state.atp_pool

@@ -177,7 +177,7 @@ class ArbitrationPhase(SimulationPhase):
         ctx.refusal_triggered = True
         ctx.refusal_packet = {
             "type": "SILENCE",
-            "ui": f"\n{Prisma.GRY}{held}{Prisma.RST}",
+            "ui": f"\n{Prisma.GRY}{held}{Prisma.RST}\n{Prisma.GRY}   {verdict.reason}.{Prisma.RST}",
             "logs": [held, verdict.reason],
             "metrics": getattr(self.eng, "get_metrics", lambda: {})(),
             "physics": _safe_dict(ctx.physics),
