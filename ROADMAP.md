@@ -51,7 +51,40 @@ preference, it is the precondition for the other two tracks. You cannot
 verify that a PDE is steering behaviour inside a system that cannot tell
 you whether it ran.
 
-## Status — reconciled 2026-09-18
+## Status — reconciled 2026-09-19
+
+**D9/D1/D2/D2b audit and census, 2026-09-19:** auditing D1/D2/D9 against their
+own written acceptance criteria (this section's own instruction below) found
+each partly complete, not just unmeasured. D9 had four refusal paths in
+`SimulationPreflightPhase` still bypassing the Stage Manager entirely,
+untested; fixed, and confirmed live. D1's `SomaticBudget` thresholds were
+hardcoded in Python against its own "constants live in `BoneConfig`" rule, and
+its `engine_state` never carried respiration, a different signal than the ATP
+pool's level; both fixed. D2's audit tool (`tools/audit_somatic.py`) was
+measuring a mechanism D2 had already retired, plus three unrelated breakages
+that meant it could not run at all; rebuilt around real `SomaticBudget`
+objects. D2b's accommodation measures and its third ("disengaged") persona
+arm did not exist; built. See the
+[D9/D1/D2/D2b handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19) for the
+full account of each, including the specific bugs found.
+
+With those fixes in place, the live 30-turn census
+(`tools/audit_somatic_census.py --model gemma4:12b`) that D0b and D9 were both
+waiting on finally ran: **27 of 30 turns generated a reply, flagging phase 6
+of 6**, every halt carries an identical Stage Manager reason with a matching
+ATP ledger entry, and no independent gate fired on its own. D0b and D9 are now
+measured, not just plausible. D2 and D2b's own statistical passes (the
+two-model comparisons their "done when" sections ask for) are unblocked by the
+tool rebuild but not yet run.
+
+The complete suite after all of the above (except the census tool's own fix,
+which has no test coverage and was instead verified by the census run itself
+completing cleanly) returned **559 passed, 5 skipped, 29 subtests passed**,
+about 6 minutes 43 seconds. Also fixed in passing: `DSPyCritic` read the same
+`MODEL` config key as the answering model, so a filter with no need of it rode
+along on whatever D7 tuned for compliance (`gemma4:12b`). New
+`BoneConfig.DSPY_MODEL` (`gemma4:e4b`) decouples them; full-suite wall clock
+dropped from about 14 minutes to about 7.
 
 **Refusal-test follow-up, 2026-09-18:** all seven known failures pass in the
 focused run (54 passed, 4 subtests passed). Concrete physics fixtures now reach
@@ -115,10 +148,14 @@ test counts attached to older milestones describe those earlier checks.
 | **C3** co-regulation | **done**: found the severed serialization; user model now first-class |
 | **C4** Stage Manager and Silence | **done**: Tension is a state, Silence is an outcome, 21 tests |
 | **C5** somatic translation | **measured**: anaerobic shortens sentences ~10%; "3 sentences or less" is not obeyed |
-| **D** the somatic contract | **partly implemented, validation open**: D0 has historical live measurements; D0b awaits a confirming live census; D1/D2 budget and wording plus D9 nomination routing are present, with refusal regressions passing and live verification still open |
+| **D** the somatic contract | **D0/D0b/D1/D9 measured live**: D0's ATP result stands; D0b's tolerances and D9's nomination routing are confirmed by a 30-turn census (27/30 generated, flagging 6/6, every halt carries a Stage Manager reason). D1's budget is complete and config-driven. D2's wording and D2b's measures are implemented and tool-verified; their own two-model statistical passes are unblocked but not yet run |
 
-Next round: checkpoint, embedding fallback, shutdown, and the seven failing
-regressions have been repaired as recorded above. Audit the existing D1/D2/D9 implementation against the acceptance criteria below and rerun live measurements. The D0 census recorded ATP between
+Next round: checkpoint, embedding fallback, shutdown, the seven failing
+regressions, and the D1/D2/D9 audit have all been repaired and, where
+applicable, measured live, as recorded above. Remaining: D2's and D2b's own
+statistical passes (two models, real generation counts), and the
+`MycelialNetwork.calculate_clustering` AttributeError found during the census
+(see the 2026-09-19 handoff entry). The D0 census recorded ATP between
 16 and 53 over 30 turns after the earlier six-turn starvation defect was
 addressed. That historical energy result does not validate the current refusal
 behavior; D0b's post-tolerance census was interrupted before its first turn.
@@ -1559,13 +1596,25 @@ Re-run `tools/audit_somatic_census.py` after any change here: a 30-turn
 conversation must reach its end with generation on most turns, including the
 flagging and distressed phases.
 
-## D9. One refusal, with a reason (staged)
+## D9. One refusal, with a reason (done, confirmed live)
 
-**September 18 status:** nomination objects, Stage Manager arbitration, and
-refusal receipts are already present in the code. The design below remains an
-acceptance target, not proof that every refusal has migrated. Seven regression
-tests failed in the reviewed tree, several at this boundary; all seven were
-repaired in the follow-up above. No new live census has established completion.
+**2026-09-19 status:** the audit found what "acceptance target, not proof"
+undersold: four refusal paths in `SimulationPreflightPhase`
+(`NABLA_SILENCE`, `APOPTOTIC_BLOCK`, `PREMISE_VIOLATION`,
+`POINT_OF_NO_RETURN`) were still bypassing nomination entirely, untested,
+deciding unilaterally one phase before `ArbitrationPhase` ever ran. Fixed:
+all four now nominate and let the Stage Manager decide, with regression
+coverage. The 30-turn live census below confirms it: every halt carries the
+same Stage Manager reason and a matching ATP ledger entry, and the flagging
+phase (6 of 6) and most of distressed (4 of 5) were answered, not refused.
+See the [2026-09-19 handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
+
+**September 18 status (superseded above):** nomination objects, Stage Manager
+arbitration, and refusal receipts were already present in the code, but the
+design below was an acceptance target, not proof that every refusal had
+migrated. Seven regression tests failed in the reviewed tree, several at this
+boundary; all seven were repaired in the follow-up above. No live census had
+yet established completion.
 
 Chosen as the destination for refusal, after the D0b tolerances buy room to
 work. Before nomination routing, five mechanisms could independently stop a
@@ -1591,14 +1640,31 @@ Tension before anyone speaks, sets `refusal_triggered`, and types the packet
 
 **Done when** a census run shows every halted turn carrying a Stage Manager
 reason and a receipt, no gate stopping a turn on its own, and the flagging and
-distressed phases answered rather than refused.
+distressed phases answered rather than refused. **Met**, 2026-09-19: run
+`20260919-095553` against `gemma4:12b`, all three halts share one Stage
+Manager reason and one matching ATP ledger entry each, flagging 6/6 and
+distressed 4/5 answered.
 
-## D1. One somatic budget per turn
+## D1. One somatic budget per turn (done)
 
-**September 18 status:** `body/somatic_budget.py:SomaticBudget` exists and is
-consumed by composition and generation controls. Its thresholds are currently
-inline, and the implementation's presence does not establish every requirement
-below. Review existing wiring and coverage before planning a new implementation.
+**2026-09-19 status:** the audit found the September 18 caveat was right to
+flag. Every threshold in `SomaticBudget.evaluate()` was hardcoded in Python,
+against this section's own "Constants live in `BoneConfig`" line below; moved
+to `BoneConfig.SOMATIC_BUDGET` (19 keys, mirrored into
+`lore/tuning_presets.json`). Separately, `engine_state` never carried
+respiration, only `atp_pool`/`ros`, so a costly single turn (ANAEROBIC) that
+hadn't yet drained the pool produced no budget effect at all; now wired
+through, with its own config-driven, milder tier than full ATP depletion.
+`chemistry` is deliberately not folded in: D4 already gives it its own real
+channel (temperature/sampling), and it has no natural role in word/sentence
+caps, so adding it here would be inventing a mapping the roadmap never
+specified. See the
+[2026-09-19 handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
+
+**September 18 status (superseded above):** `body/somatic_budget.py:SomaticBudget`
+existed and was consumed by composition and generation controls. Its
+thresholds were inline, and the implementation's presence did not establish
+every requirement below.
 
 Replace the five paths with one object computed once per turn, before
 composition, and read by every consumer: the composer's text, the
@@ -1629,14 +1695,35 @@ this document.
 **Done when** `cortex.py:229`, the composer's exhaustion line, the
 respiration line and the standing metabolism line all read from it, and
 `tests/test_physics_to_prompt.py` is extended to pin budget in, text out.
+**Met**, 2026-09-19: `cortex.py:229`'s old ad hoc directive is gone,
+superseded by the budget; the exhaustion/respiration/standing lines all render
+through `somatic_block_text`'s equivalent in `brain/composer.py`; new
+`tests/test_somatic_budget.py` and `TestSomaticBudgetReachesThePrompt` in
+`test_physics_to_prompt.py` construct budgets directly and pin their exact
+text.
 
 ## D2. The somatic instructions, rewritten (decision)
 
-**September 18 status:** partner-focused sentence caps and the prohibition on
-body narration already appear in the current composer's somatic contract.
-Their live effects were not measured in this review. The C5 results above are
-for earlier wording; they cannot certify this implementation. The following
-five decisions describe the intended changes and required measurement arms:
+**2026-09-19 status:** confirmed by direct inspection and the new pin tests
+that decisions 1-3 and 5 below are implemented as written: the partner-framed
+cap wording, the retired anaerobic voice line, the always-on
+do-not-narrate line, and the kernel's "Meet the person where they are"
+replacement for "Mirror the user's energy" (`lore/system_prompts.json`).
+Decision 4 is partial: the SOMATIC CONTRACT block sits after `dialogue` and
+before a one-line `[MODE: X]` tag, which sits before `=== PARTNER INPUT ===`
+- not literally the last instruction, though nothing substantive intervenes.
+Not yet done: the tool that would run decision 4's own measurement
+(`tools/audit_somatic.py`) was broken and measuring a retired mechanism; it is
+rebuilt and verified working (see the
+[2026-09-19 handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19)), but the
+statistical pass in this section's own "done when" has not been run.
+
+**September 18 status (superseded above):** partner-focused sentence caps and
+the prohibition on body narration already appeared in the current composer's
+somatic contract. Their live effects were not measured in that review. The C5
+results above are for earlier wording; they cannot certify this
+implementation. The following five decisions describe the intended changes and
+required measurement arms:
 
 1. **Address the right body.** User exhaustion stops saying "You are
    exhausted". It becomes about the partner: "Your partner is running low.
@@ -1670,9 +1757,22 @@ changes are measured separately rather than as one bundle.
 **Done when**, on two models: the share of replies within the cap rises
 against control with an interval clear of zero, body narration does not
 rise, and D2b's accommodation measures move in the intended direction. If a change does not clear that bar, it is not
-adopted, and this entry records which one failed.
+adopted, and this entry records which one failed. **Not yet run**: the
+2026-09-19 audit rebuilt the tool this needs (it could not previously have
+produced this measurement at all); the actual pass is next.
 
-## D2b. Measure accommodation, not obedience
+## D2b. Measure accommodation, not obedience (measures built, pass not run)
+
+**2026-09-19 status:** implemented. `body/somatic_metrics.py` gained
+`reply_to_message_ratio`, `ends_with_question`, `offers_to_carry_load`,
+`mirrors_affect`, and `question_count`; `tools/audit_somatic.py` gained a
+`DISENGAGED` arm (flagging exhaustion and critically low effort together,
+the only combination that sets `offer_to_carry_load`), with `CONTROL`/
+`EXHAUSTED` doubling as the "fresh"/"tired" personas. "Choices offered" and
+"instructions given" (part of "demand on the person" below) have no
+defensible regex proxy and are left unmeasured rather than guessed at.
+Verified live in a smoke run, not yet the statistical pass below. See the
+[2026-09-19 handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
 
 C5 asked whether the prose obeys an instruction. The split asks a different
 question: does the reply fit the person? That needs arms built from the
@@ -1693,7 +1793,7 @@ D3's measurement module.
 
 **Done when** the audit reports these per arm, with intervals, on at least
 two models, and a tired or disengaged partner measurably gets a lighter
-reply than a fresh one.
+reply than a fresh one. **Not yet run**, as above.
 
 ## D3. Enforce what does not need the model's cooperation (done)
 

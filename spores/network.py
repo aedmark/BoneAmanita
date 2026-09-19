@@ -140,6 +140,34 @@ class MycelialNetwork:
     def calculate_mass(self, node):
         return self.memory_core.calculate_mass(node)
 
+    def calculate_clustering(self, adj: Dict[str, set]) -> float:
+        """Average local clustering coefficient over an adjacency dict.
+
+        `cycle.py`'s topology check compares this graph's own value against
+        its null models (`_native_rewire`, `_native_configuration_model`),
+        which both maintain symmetric edges regardless of what `adj` started
+        as, so adjacency here is read as undirected: `b` counts as a
+        neighbour of `a` if either lists the other. A node with fewer than
+        two neighbours has no possible triangle and contributes 0, the same
+        convention `networkx.average_clustering` uses by default.
+        """
+        if not adj:
+            return 0.0
+        total = 0.0
+        for node, neighbors in adj.items():
+            degree = len(neighbors)
+            if degree < 2:
+                continue
+            neighbor_list = list(neighbors)
+            linked_pairs = 0
+            for i, n1 in enumerate(neighbor_list):
+                n1_neighbors = adj.get(n1, ())
+                for n2 in neighbor_list[i + 1:]:
+                    if n2 in n1_neighbors or n1 in adj.get(n2, ()):
+                        linked_pairs += 1
+            total += (2.0 * linked_pairs) / (degree * (degree - 1))
+        return total / len(adj)
+
     def run_ecosystem(self, physics: Any, stamina: float, tick: int) -> List[str]:
         clean_words = safe_get(physics, "clean_words", [])
         logs = []

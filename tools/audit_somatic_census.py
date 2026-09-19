@@ -48,9 +48,15 @@ import numpy as np  # noqa: E402
 
 from constants import Prisma  # noqa: E402
 from struts import safe_get  # noqa: E402
-from audit_somatic import ANAEROBIC_DIRECTIVE, EXHAUSTION_DIRECTIVE, measure  # noqa: E402
+from audit_somatic import measure  # noqa: E402
 
-ENGINE_DEPLETION_DIRECTIVE = "You must conclude your thought in under 3 sentences"
+# ROADMAP D1/D2: the old separate anaerobic/exhaustion/engine-depletion
+# directives are retired. `body.somatic_budget.SomaticBudget` unifies all
+# three into one SOMATIC CONTRACT block; these are its rendered lines
+# (`brain/composer.py`), not separate mechanisms with separate strings.
+SOMATIC_CAP_TIGHTENED = "Your partner is running low. Answer in at most"
+SOMATIC_NO_CLOSING_QUESTION = "Do not ask a closing question."
+SOMATIC_OFFER_TO_CARRY_LOAD = "Your partner is carrying a heavy load. Offer to carry part of the burden."
 
 SCRIPT = [
     ("engaged", "I've been restoring an old wooden sailboat my grandfather built in the sixties. The hull is sound but the deck has rot in three places and I can't decide whether to scarf in new wood or replace whole planks. What would you think about?"),
@@ -169,9 +175,9 @@ def read_prompt(prompt: str) -> dict:
         "p": float(telemetry.group(1)) if telemetry else None,
         "ros": float(telemetry.group(2)) if telemetry else None,
         "mood": mood.group(1).strip() if mood else None,
-        "anaerobic_directive": ANAEROBIC_DIRECTIVE in prompt,
-        "exhaustion_directive": EXHAUSTION_DIRECTIVE in prompt,
-        "engine_depletion_directive": ENGINE_DEPLETION_DIRECTIVE in prompt,
+        "somatic_cap_tightened": SOMATIC_CAP_TIGHTENED in prompt,
+        "closing_question_forbidden": SOMATIC_NO_CLOSING_QUESTION in prompt,
+        "offer_to_carry_load": SOMATIC_OFFER_TO_CARRY_LOAD in prompt,
         "somatic_cues": "SOMATIC CUES:" in prompt,
     }
 
@@ -310,7 +316,7 @@ def report(records: list, model: str) -> int:
     for r in rows_p:
         moods[r["prompt"]["mood"]] = moods.get(r["prompt"]["mood"], 0) + 1
     print(f"    mood lines             {moods}")
-    for key in ("anaerobic_directive", "exhaustion_directive", "engine_depletion_directive", "somatic_cues"):
+    for key in ("somatic_cap_tightened", "closing_question_forbidden", "offer_to_carry_load", "somatic_cues"):
         fired = [r["turn"] for r in rows_p if r["prompt"][key]]
         print(f"    {key:<24} {len(fired):>2}/{len(rows_p)}  turns {fired}")
 

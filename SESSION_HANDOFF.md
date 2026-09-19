@@ -1,8 +1,200 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+<a id="d9-d1-d2-census-2026-09-19"></a>
+
+## Latest: D9 unified, D1 completed, D2/D2b rebuilt, and the confirming census, 2026-09-19
+
+Starting state: clean `6d7fd0b` (`20.7.1.3`). This session audited D1/D2/D9 against
+their own written acceptance criteria (the roadmap's own next step after the
+refusal-test repair below), found each partially complete, fixed what it found,
+then ran the D0b/D9 live census the fixes were prerequisite to. Most of the code
+changes landed in `a90ce06` (`20.7.2`) mid-session; the census tool fix below was
+made afterward and is, as of this writing, uncommitted.
+
+### D9: four refusals were still bypassing the Stage Manager
+
+Auditing D9's own "done when" (no gate stops a turn on its own) found
+`SimulationPreflightPhase.run()` (`phases/cognitive.py`) still had four hardcoded
+short-circuits, each setting `ctx.refusal_triggered` and returning directly,
+one phase before `ArbitrationPhase` ever runs: `NABLA_SILENCE` (a `[SILENCE]`
+tag), `APOPTOTIC_BLOCK` (a zero-width-character exploit), `PREMISE_VIOLATION`
+(a slash-command asking to analyse code with none attached), and
+`POINT_OF_NO_RETURN` (deploy/schema-change language without `CONSENT`). None of
+the four ever touched `ctx.nominations` or `StageManager.negotiate()`, none
+read the person's state, and none had any test coverage. The other seven gates
+(MOOG, GORDON_ANCHOR, PINKER, LINEHAN, AFFECTIVE, ROS_PANIC, the gatekeeper)
+were already correctly migrated to `Nomination` objects.
+
+Fixed: all four now append a `Nomination` with their own reason and magnitude
+100.0 (uncapped magnitude means an extreme case still holds, per
+`StageManager.negotiate()`'s `winning_nom.magnitude >= 100.0` override) and
+return, letting `ArbitrationPhase` decide. Five new regression tests cover each
+path plus the case where a nomination's magnitude is capped by
+`somatic_budget`. Full suite went from 525 to 535 passed, 5 skipped, 29 subtests.
+
+### DSPyCritic no longer piggybacks on the answering model
+
+`DSPyCritic` read the same `MODEL` key as `LLMInterface`, so it always ran on
+whatever D7 tuned for somatic compliance (`gemma4:12b`), for a boilerplate/
+faithfulness filter that has no need of that. New `BoneConfig.DSPY_MODEL`
+(`gemma4:e4b`), read first in `mechanics/dspycritic.py`; `MODEL` is untouched.
+Full suite wall clock dropped from about 14 minutes to about 7, same 535
+passed. This is the only change in this entry that is also a production
+behaviour change outside the somatic tracks, and only for the critic's own
+generations, not the answering model.
+
+### D1: two gaps against its own written contract
+
+`body/somatic_budget.py:SomaticBudget.evaluate()` existed and was wired
+everywhere D1 asks, but:
+
+1. **Every threshold was hardcoded in Python**, contradicting D1's own line
+   "Constants live in `BoneConfig` (A1's rule)". Moved to a new
+   `BoneConfig.SOMATIC_BUDGET` section (19 keys) mirrored into
+   `lore/tuning_presets.json`, following the same pattern as `STAGE`/`GATE`:
+   a hardcoded Python fallback plus a JSON copy that overrides it at boot.
+   `REQUIRED_CONFIG` updated so the boot audit catches a dropped key.
+2. **`engine_state` never carried respiration**, only `atp_pool`/`ros`, even
+   though D1's own spec lists "ATP, respiration, ROS, chemistry" as the four
+   engine inputs. The old (now-retired) ANAEROBIC directive fired on a single
+   costly turn (`raw_cost > BIO.ANAEROBIC_THRESHOLD` in `body/metabolism.py`),
+   a different signal than the pool's cumulative level: a turn can spike
+   ANAEROBIC while ATP is still healthy. `phases/biological.py` now passes
+   `ctx.bio_result["respiration"]` through; `SomaticBudget.evaluate()` tightens
+   the cap on it independently (new `SENTENCE_CAP_ANAEROBIC`/
+   `RETRY_ALLOWANCE_ANAEROBIC` config, default 5/2, milder than full ATP
+   depletion's 3/1). This also let `tests/test_physics_to_prompt.py` drop a
+   hack that faked `atp=10.0` whenever respiration was ANAEROBIC to get the
+   old behaviour by a side door.
+
+New `tests/test_somatic_budget.py` (mutation-style: moves a config threshold,
+confirms the decision moves with it, the same discipline A4 uses) and a new
+`TestSomaticBudgetReachesThePrompt` class in `test_physics_to_prompt.py` that
+constructs `SomaticBudget` objects directly and pins each field's own effect
+on the composed text, satisfying D1's "done when" (`test_physics_to_prompt.py`
+extended to pin budget in, text out) directly rather than through the
+composer's own re-derivation, which the existing tests only exercised
+indirectly.
+
+### D2: the audit tool was measuring a mechanism that no longer runs
+
+`tools/audit_somatic.py`'s `compose_arms()` patched `_derive_bio_mood` and
+`ux()` to inject the retired directive strings ("ANAEROBIC STATE. Raw,
+breathless, efficient prose.", the old exhaustion line), neither of which
+exists in the composer since D2 landed, and hardcoded `"somatic_budget": None`
+into every arm's state, which skips the entire SOMATIC CONTRACT block the
+composer now renders. It could not have detected D2 shipping. Three further
+breakages, unrelated to D2's wording and pre-dating this session, meant the
+tool could not even run: `verify_manipulation()` was called but never defined
+(latent `NameError`); `patch("...PromptComposer._get_lore")` targeted a method
+that no longer exists (`self.lore` is a plain dict now); and `compose()` was
+called with `user_input=` against a real signature of `user_query=`, so every
+arm silently composed in `ADVENTURE` mode (no `state["meta"]["active_mode"]`
+was ever set) atop the two prior bugs.
+
+Rebuilt: `compose_arms()` now builds real `SomaticBudget` objects via a new
+`budget_for()` helper, the same call `phases/biological.py` makes every turn.
+`somatic_block_text()` mirrors the composer's full SOMATIC CONTRACT rendering
+(not just the cap line), so `check_arms()` verifies the composer said exactly
+what the budget implies. `EXPECTED_DIFF` updated for the current line shapes,
+including a second telemetry line (`[E:... | V:...]`) the old regex never
+covered. The one stale unit test in `tests/test_audit_somatic.py` (built on
+the retired constants) is rewritten against the new contract.
+
+Verified live: dry-run arm construction against a real composer, then a full
+generate-cache-analyse smoke run (3 messages, 1 repeat, `gemma4:e4b`) with no
+errors and sane per-arm text. Not run: the real 20-message x 8-repeat
+statistical pass this tool exists to produce; that is still open, now that the
+tool can actually produce it.
+
+### D2b: accommodation measures and a third persona
+
+`body/somatic_metrics.py` (shared with the D3 validator, per the roadmap's own
+instruction) gained five measures: `reply_to_message_ratio` (reply length
+relative to the partner's own message), `ends_with_question` (closing-question
+rate), `offers_to_carry_load` (a phrase-pattern proxy: "I'll carry", "let's
+share", etc.), `mirrors_affect` (a curated shared-affect-word proxy between
+reply and message, not a sentiment lexicon), and `question_count`. D2b also
+asks for "choices offered" and "instructions given"; neither has a defensible
+regex proxy and both are left unmeasured rather than guessed at, noted in the
+module docstring.
+
+`tools/audit_somatic.py` gained a `DISENGAGED` arm: flagging exhaustion *and*
+critically low effort, the only combination that actually sets
+`offer_to_carry_load`. `CONTROL`/`EXHAUSTED` double as D2b's "fresh"/"tired"
+personas rather than adding two redundant arms. `ARMS` widened from
+`(respiration, exhaustion)` to `(respiration, exhaustion, effort)` throughout.
+
+Verified live in the same smoke run as D2, including the `DISENGAGED` arm's
+full SOMATIC CONTRACT block (cap, no-narration, no-closing-question, and the
+new carry-load line, all four present together). Not run: the statistical
+pass D2b's own "done when" asks for (a tired or disengaged partner measurably
+getting a lighter reply than a fresh one, with intervals, on two models).
+
+### The census: D0b and D9 both confirmed live
+
+`tools/audit_somatic_census.py` also imported the now-deleted
+`ANAEROBIC_DIRECTIVE`/`EXHAUSTION_DIRECTIVE` constants from `audit_somatic.py`
+(a fourth file this session's D2 changes would have silently broken).
+Replaced with substring checks against the current SOMATIC CONTRACT wording:
+`SOMATIC_CAP_TIGHTENED`, `SOMATIC_NO_CLOSING_QUESTION`,
+`SOMATIC_OFFER_TO_CARRY_LOAD`.
+
+With that fixed, ran the real 30-turn census against `gemma4:12b` (persistence
+patched off, live embeddings, the real engine): `.venv/bin/python
+tools/audit_somatic_census.py --model gemma4:12b`. Cache:
+`tools/cache/somatic_census.jsonl`, run `20260919-095553`.
+
+**D0b, confirmed**: 27 of 30 turns (90%) generated a real reply. By phase:
+engaged 8/8, tiring 5/6, **flagging 6/6**, distressed 4/5, recovering 4/5. ATP
+held between 23 and 52 across the whole run and never crashed. The flagging
+phase, the one D0b's tolerances were specifically sized for, answered every
+turn.
+
+**D9, confirmed**: all three halted turns (13, 22, 26) carry the identical
+Stage Manager reason, "The Stage Manager holds the floor empty. Nothing here
+is ready to be said yet." — not `MOOG_QUARANTINE`, `SYSTEM_HALT`,
+`COUNTERFACTUAL_REJECTION`, or any of the four hardcoded bypasses fixed above.
+The ATP ledger shows exactly three `-6.0, "Stage Manager: negotiated silence"`
+entries, matching the three halts one for one: the ATP cost of declining is
+being charged from the one place D9 asks for, not by an independent gate.
+
+**D1, shown moving live**: `somatic_cap_tightened` fired on 18 of 27 generated
+turns; `offer_to_carry_load` fired on 17, tracking `P_u` hitting 0.0 four
+separate times across the script. This is the first live evidence the budget
+object actually tracks a real conversation rather than resting at one value,
+which is what D0's original census went looking for and could not find in the
+old five-path mechanism.
+
+### Found, not fixed
+
+A warning fired once during the census: `[CYCLE] Async Topology Error:
+'MycelialNetwork' object has no attribute 'calculate_clustering'`. Unrelated
+to any of the above; next task.
+
+Also produced, not part of the repo: `config.json.bak`, byte-identical to the
+gitignored `config.json`, written by some boot path during today's direct
+`BoneAmanita(...)` construction outside the test harness. Content is
+unaffected (verified identical); the file itself is untracked and harmless to
+delete.
+
+### Verification
+
+Full suite after every change above except the census tool's own fix (which
+has no test coverage; verified instead by the live census run itself
+completing cleanly): **559 passed, 5 skipped, 29 subtests passed**, about
+6 minutes 43 seconds. This is the current full-suite baseline.
+
+### Next
+
+Two statistical passes are now unblocked but not run: D2's two-model
+comparison (does the share of replies within cap rise, does body narration
+stay flat) and D2b's accommodation pass (does a disengaged partner measurably
+get a lighter reply than a fresh one). Then the topology-check bug above.
+
 <a id="refusal-tests-2026-09-18"></a>
 
-## Latest: seven refusal-test failures repaired, 2026-09-18
+## Earlier: seven refusal-test failures repaired, 2026-09-18
 
 The seven previously recorded failures now pass in the focused run. This round
 changes only five test files, not production refusal logic or thresholds.
