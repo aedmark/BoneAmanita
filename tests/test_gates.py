@@ -55,6 +55,44 @@ class TestGates(BoneTestCase):
             "[FAIL] Gate 2 failed to detect the infinite loop.",
         )
 
+    def test_ordinary_feelings_do_not_trigger_cursed_input(self):
+        """A live census found this directly: `TheGatekeeper._audit_safety`
+        rejects a turn as CURSED_INPUT whenever any word in it appears in
+        `lore/lexicon.json`'s "cursed" list, meant to catch meta-awareness
+        talk ('are you sentient?'). "feel" and "human" were on that list,
+        so two completely ordinary, vulnerable statements from a distressed
+        person - the exact moments this engine most needs to answer, not
+        refuse - were silenced:
+
+            "she called me crying tonight, her job let her go, and I spent
+            two hours on the phone with her and I don't feel bad about that
+            part"
+            "I feel like a horrible person for even having these thoughts
+            while she's going through this"
+
+        Removed. "future", "predict", "sentient", "secret" remain, on the
+        theory they are rarer in ordinary speech; that theory is not
+        re-verified here and is worth another look if any of them turns up
+        the same way.
+        """
+        from physics.filters import TheGatekeeper
+
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        messages = [
+            "she called me crying tonight, her job let her go, and I spent "
+            "two hours on the phone with her and I don't feel bad about that part",
+            "I feel like a horrible person for even having these thoughts "
+            "while she's going through this",
+            "I'm only human, I can't hold everything at once.",
+        ]
+        for message in messages:
+            with self.subTest(message=message[:40]):
+                words = self.engine.lex.clean(message)
+                self.assertFalse(
+                    gatekeeper._audit_safety(words),
+                    f"[FAIL] An ordinary emotional statement was flagged CURSED_INPUT: {message!r}",
+                )
+
     def test_permutation_entropy_slop_detection(self):
         from cycle import _native_permutation_entropy
 

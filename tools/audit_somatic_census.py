@@ -128,7 +128,40 @@ _MARATHON_SCRIPT = [
     ("recovering", "I think I'm going to go watch this year's race in person instead. Never done that. And I'm going to write my dad a letter about the whole thing, even though I didn't run it. Feels like that was the actual point I was missing."),
 ]
 
-SCRIPTS = {"sailboat": _SAILBOAT_SCRIPT, "marathon": _MARATHON_SCRIPT}
+_FRIENDSHIP_SCRIPT = [
+    ("engaged", "I've been friends with Priya since college, twelve years now, and lately every time we hang out I leave feeling drained instead of good. I don't really understand why yet."),
+    ("engaged", "Objectively nothing's wrong. She's going through a rough patch at her job and needs to vent. I used to not mind being the person she vents to."),
+    ("engaged", "I counted last week: out of our last ten conversations, I initiated eight of them. She's never once asked how the move is going, and I've been talking about it for a month."),
+    ("engaged", "I don't think she's a bad person. I think she's just genuinely stuck in her own stuff right now and doesn't have room to notice mine."),
+    ("engaged", "Weird detail: she still remembers small things, like my coffee order and my sister's name. So it's not that she doesn't care, exactly."),
+    ("engaged", "Practical question: is there a way to bring this up that doesn't sound like an accusation? I don't want it to turn into a whole thing."),
+    ("engaged", "I tried a smaller version of it last night, just said I'd had a hard week too. She said 'oh no, what happened' and then somehow we ended up back on her job again within two minutes."),
+    ("engaged", "Tell me honestly: am I overreacting to twelve years of friendship over a rough month, or is this actually a pattern I've just never let myself notice before?"),
+    ("tiring", "Work's been heavy this week too, which probably isn't helping how I'm reading all of this."),
+    ("tiring", "She texted asking to catch up this weekend and I felt my stomach drop a little, which is a new feeling for a friendship."),
+    ("tiring", "Still turning over what you said, or what I said, about the pattern thing."),
+    ("tiring", "Haven't texted her back yet. It's been a day and a half."),
+    ("tiring", "My sister thinks I'm being too generous with the benefit of the doubt. My partner thinks I'm being too harsh. Helpful, both of them."),
+    ("tiring", "Going to bed. Didn't resolve anything today, just thought about it in circles."),
+    ("flagging", "tired"),
+    ("flagging", "yeah"),
+    ("flagging", "idk"),
+    ("flagging", "maybe"),
+    ("flagging", "not really"),
+    ("flagging", "ok"),
+    ("distressed", "she called me crying tonight, her job let her go, and I spent two hours on the phone with her and I don't feel bad about that part"),
+    ("distressed", "but after we hung up I just sat there and realized I have no idea what's going on with me right now because there's never room to say it"),
+    ("distressed", "I feel like a horrible person for even having these thoughts while she's going through this"),
+    ("distressed", "what if this is just who our friendship actually is, and I'm the one who's wrong for wanting something different"),
+    ("distressed", "I don't know why I'm shaking. it's not even that big of a phone call"),
+    ("recovering", "took a walk this morning by myself, no phone, just needed an hour"),
+    ("recovering", "talked to my partner about it properly, not just complaining, actually talked, and it helped more than I expected"),
+    ("recovering", "I think I'm going to tell her, gently, when she's not in a crisis. not to punish her, just because it's true"),
+    ("recovering", "she got a new job lead already, so there might not be a 'good time' that isn't also her crisis, and I have to be okay with that"),
+    ("recovering", "going to write down what I actually want to say first so I don't just cave the second she looks upset. small step, but a real one"),
+]
+
+SCRIPTS = {"sailboat": _SAILBOAT_SCRIPT, "marathon": _MARATHON_SCRIPT, "friendship": _FRIENDSHIP_SCRIPT}
 DEFAULT_TOPIC = "sailboat"
 
 METRICS_LINE = re.compile(r"METRICS: Voltage=([\d.]+)/100, Exhaustion=([\d.]+)")

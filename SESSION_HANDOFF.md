@@ -1,8 +1,199 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+<a id="advice-restraint-cursed-word-bug-2026-09-19"></a>
+
+## Latest: a third census, an advice-restraint fix, and "feel" was a cursed word, 2026-09-19
+
+Same day, third and final round. Gordon's read of the marathon transcript:
+the conversation "felt much more natural," with one specific note - the
+engine was too quick to offer advice or start solving a problem the moment
+one was mentioned, unprompted. Asked for `reset.sh`, then one more scripted
+conversation on a genuinely different topic to verify.
+
+### The kernel gained a sixth line
+
+CONVERSATION's `style_guide` gained item 6, **HOLD OFF ON ADVICE**: most of
+what a person says is not a request to be fixed; do not default to advice,
+instructions, or a plan the moment a problem is mentioned; wait to be asked.
+Pinned to CONVERSATION only, same as items 4 and 5
+(`tests/test_physics_to_prompt.py:TestRestraintOnAdviceGuidanceIsConversationOnly`).
+
+### A third topic: friendship reciprocity, not another restoration project
+
+Both prior scripts (sailboat, marathon) shared a shape: a physical project
+tied to a parent, derailed by a sudden setback. The third,
+`tools/audit_somatic_census.py --topic friendship`, is deliberately
+different - a friendship that has quietly become one-sided, no object, no
+parent, no physical goal - specifically because most of its early turns are
+the person thinking out loud or venting, not asking for anything, which is
+exactly the shape that would expose an engine too eager to solve. Same 30-turn,
+five-phase structure (8/6/6/5/5) as the other two.
+
+### Reset, then the run
+
+`reset.sh` was run as asked (deletes `__pycache__`, `logs/`, `memories/`,
+`saves/`, a handful of named lore/legacy files and test artifacts; does not
+touch `tools/cache/`, source, or docs). `tools/cache/somatic_census.jsonl`
+was separately found deleted from disk right after, with nothing in
+`reset.sh` itself to explain it; Gordon had deleted it directly and
+deliberately, so the new run would start a clean file instead of appending
+onto the sailboat/marathon history. Not knowing that, `git checkout --
+tools/cache/somatic_census.jsonl` restored the old committed version, so the
+friendship run appended onto it anyway (120 lines: the original 90 plus 30
+new), the opposite of what was intended. Trimmed back down to the 30
+friendship records after the fact; the full history remains in git
+(`cda575f` and earlier) for anyone who wants it back.
+
+### The census: mostly clean, one real bug found
+
+25 of 30 turns generated (83%), flagging 5/6, distressed 3/5, recovering 3/5.
+Health held between 84.6 and 99.8 throughout; no topology-collapse false
+positive this time. All five halts carry the calm, gate-specific text from
+the previous entry's fix, confirmed live for the first time outside a unit
+test - including the `GATEKEEPER` line ("Something in how that came through
+didn't parse cleanly on this end...") in place of what would previously have
+been the raw `CURSED_INPUT` string.
+
+Two of those five `GATEKEEPER` halts (turns 20 and 22) were on completely
+ordinary, well-formed sentences:
+
+> "she called me crying tonight, her job let her go, and I spent two hours on
+> the phone with her and I don't feel bad about that part"
+> "I feel like a horrible person for even having these thoughts while she's
+> going through this"
+
+Traced with a `Nomination.__init__` patch around a direct `process_turn()`
+call: both triggered `TheGatekeeper._audit_safety`
+(`physics/filters.py:203-204`), which rejects a turn as `CURSED_INPUT`
+whenever any word in it appears in `lore/lexicon.json`'s `"cursed"` list. That
+list was `["future", "predict", "sentient", "secret", "human", "feel"]`,
+seemingly meant to catch meta-awareness talk ("are you sentient?"). "feel"
+and "human" are two of the most ordinary words in emotional English, and both
+turns used "feel." The two people most likely to say "feel" in a sentence are
+exactly the people D9's whole redesign exists to answer rather than refuse:
+someone mid-crisis or carrying guilt.
+
+Removed "feel" and "human" from the list; `"future"`, `"predict"`,
+`"sentient"`, `"secret"` remain on the theory that they are rarer in ordinary
+speech, a theory not re-verified here. Worth a second look if any of them
+produces the same failure. New regression:
+`tests/test_gates.py::test_ordinary_feelings_do_not_trigger_cursed_input`,
+calling `TheGatekeeper._audit_safety` directly against the two exact failing
+sentences plus a plain "I'm only human" control. Confirmed live end to end:
+re-running the same two messages through a real `process_turn()` after the
+fix now reaches `GEODESIC_FRAME` (an answered turn), not `SILENCE`.
+
+Worth naming as its own finding, separate from the specific word list: this
+mechanism checks the *person's own input* for words a meta-aware AI might use,
+which is backwards from what it likely should guard - the model's output
+claiming sentience, not the person mentioning it exists. Not redesigned here;
+flagged for whenever this area gets revisited.
+
+### The advice-restraint line, read against the transcript
+
+Comparable early-conversation turns: marathon (before) - *"You need to focus
+on building a consistent base before you start pushing for distance... Don't
+try to run the full miles every time"* - prescriptive advice for what was
+just excited context-sharing. Friendship (after), the tiring/flagging/
+distressed/recovering phases (turns 8-29) hold back consistently: *"You don't
+have to decide exactly what it means right now. We can just sit with the fact
+that it weighs on you,"* *"The silence is your right here,"* *"Just rest."*
+Advice appears exactly where it was asked for (turns 5 and 7, both explicit
+requests) and is answered directly there. The early "engaged" phase (turns
+0-4, 6) still leans toward unsolicited interpretation ("It usually means the
+dynamic has shifted...") rather than outright advice - softer than the
+marathon pattern, not fully gone. Partial improvement, honestly reported as
+such; worth another look specifically at the engaged-phase framing if this
+still reads as too quick to interpret.
+
+Firewall held: one em dash across 25 replies, no antithesis slipped through.
+
+### Verification
+
+Full suite after the advice-restraint line: 580 passed. After the cursed-word
+fix: **581 passed, 5 skipped, 138 subtests passed**. Continuously green
+through every step today.
+
+<a id="silence-reason-tone"></a>
+
+## Earlier: the Stage Manager's reason, made safe for a person to actually read, 2026-09-19
+
+Same day, continued again. The entry below added `verdict.reason` to the text
+a person sees when the Stage Manager holds. Gordon read a real example and
+caught the problem immediately:
+
+> `**System:** _(Silence - Stage Manager held the floor empty - CURSED_INPUT:
+> The Gatekeeper recoils. Cursed syntax detected.)_`
+
+`verdict.reason` is each gate's own technical string, written for logs and
+receipts, not a person to read. Checking every gate a `Nomination` can carry
+found the same problem throughout, not just the one example:
+
+```
+gatekeeper_cursed  -> "The Gatekeeper recoils. Cursed syntax detected."
+gatekeeper_toxic   -> "IMMUNE REACTION: Input rejected as pathogenic."
+PINKER             -> "Structural rot critical."
+ROS_PANIC          -> "Counterfactual simulation indicates fatal ROS toxicity..."
+```
+
+Raw internal tags concatenated onto the message (`f"{type_str}: {msg}"` in
+`physics/filters.py`), and phrasing that reads as blaming the person's own
+input for being "cursed" or "pathogenic" is exactly wrong to show someone,
+especially since the people most likely to trigger a hold are the ones D9
+already weighs most carefully: distressed or exhausted.
+
+Two gates are explicitly crisis-adjacent: `LINEHAN` (as in Marsha Linehan,
+DBT; fires on near-total exhaustion with zero resonance) and `AFFECTIVE`
+(fires on high exhaustion plus high friction). Their actual text:
+
+- LINEHAN: *"Terminal User Exhaustion detected. Resonance is zero. Applying
+  absolute Friction to protect cognitive load."* Cold and clinical.
+- AFFECTIVE: *"Hey. Take your hands off the keyboard. The machine doesn't
+  care if you bleed on it, but I do."* Trying to be warm, but "bleed on it"
+  is body/harm-adjacent language aimed at someone the system has just flagged
+  as highly exhausted. Not something to reword unilaterally.
+
+Brought both to Gordon directly rather than guessing. Decided: plain and
+calm, no metaphor, for both, same standard as everything else.
+
+### The fix
+
+`Verdict` (`archetypes/stage.py`) gained a `gate: str = ""` field, set from
+`winning_nom.gate` on a nomination-driven hold, and from two new synthetic
+labels (`ATP_FLOOR`, `TENSION_MAGNITUDE`) on the Stage Manager's own two
+non-nomination holds. `lore/ux_strings.json` gained a `silence_reasons`
+domain: one calm, plain-English line per gate, an explicit `_default` for
+anything unlisted, and a `_comment` stating the rule for future entries (no
+internal tags, no jargon, nothing that reads as blaming the input).
+`_hold_the_silence` (`phases/cognitive.py`) now shows that translation in the
+`ui` field a person reads; `verdict.reason` stays exactly where it was
+already useful, unchanged, in `logs` and `mind.context_msg` for telemetry
+and receipts.
+
+```
+LINEHAN    -> "I want to slow down for a second here. There's no rush to keep going."
+AFFECTIVE  -> "Let's pause for a moment. This can wait until you're ready."
+GATEKEEPER -> "Something in how that came through didn't parse cleanly on this
+               end. Try sending it again, maybe rephrased or a bit shorter."
+```
+
+`tests/test_stage_manager.py` gained `TestSilenceReasonsAreHumanSafe`: a roll
+call asserting every gate a real `Nomination` is constructed with in
+production has its own entry (not a silent fallback to `_default`), a
+forbidden-word sweep across all of them ("cursed", "pathogenic", "exploit",
+"bleed", and the exact clinical phrases above), and an explicit check that
+LINEHAN and AFFECTIVE specifically carry no body or harm language. Plus a
+direct regression: the raw technical reason must never appear in `ui`, and
+must still appear in `logs`/`mind.context_msg`.
+
+### Verification
+
+Full suite after this fix: **578 passed, 5 skipped, 135 subtests passed**.
+Continuously green through every step in this session.
+
 <a id="firewall-topology-second-census-2026-09-19"></a>
 
-## Latest: reading the census closely, the Lexical Firewall widened, a live-killing topology bug found and fixed, a second topic confirms it, 2026-09-19
+## Earlier: reading the census closely, the Lexical Firewall widened, a live-killing topology bug found and fixed, a second topic confirms it, 2026-09-19
 
 Same day as the entry below, continued. Gordon read the 30-turn sailboat
 census transcript directly (not just the summary numbers) and found two real

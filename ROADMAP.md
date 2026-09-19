@@ -51,7 +51,28 @@ preference, it is the precondition for the other two tracks. You cannot
 verify that a PDE is steering behaviour inside a system that cannot tell
 you whether it ran.
 
-## Status — reconciled 2026-09-19 (later)
+## Status — reconciled 2026-09-19 (latest)
+
+**A third census, advice-restraint, and a cursed-word false positive,
+2026-09-19:** a third scripted conversation (`--topic friendship`,
+deliberately no physical project or parent theme this time, so more of its
+early turns are venting rather than requests) verified a new kernel line
+("HOLD OFF ON ADVICE" - do not default to solving a problem the moment it is
+mentioned) against real generations: clear improvement in the
+tiring/flagging/distressed/recovering phases, partial in the early engaged
+phase. The run also caught a real bug live: `TheGatekeeper._audit_safety`
+(`physics/filters.py`) rejected two completely ordinary distressed messages
+as `CURSED_INPUT` because both used the word "feel," which was on
+`lore/lexicon.json`'s `"cursed"` list alongside "human" - a list meant to
+catch meta-awareness talk, catching ordinary emotional language instead, at
+exactly the moments (mid-crisis, carrying guilt) this session's whole
+direction exists to answer rather than refuse. Both words removed; regression
+added (`tests/test_gates.py`); confirmed live that the same two messages now
+reach a real answer. The mechanism itself (checking the *person's* words for
+AI-meta-awareness language, rather than the *model's* output) is flagged as
+worth a further look, not redesigned here. See the
+[2026-09-19 handoff](SESSION_HANDOFF.md#advice-restraint-cursed-word-bug-2026-09-19).
+Full suite: 581 passed, 5 skipped, 138 subtests, holding green.
 
 **Firewall widening, tone fix, and a live-killing topology bug, 2026-09-19:**
 reading the sailboat census transcript directly (not just its summary

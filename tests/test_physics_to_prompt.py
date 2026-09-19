@@ -446,6 +446,23 @@ class TestPresenceOverNarrationGuidanceIsConversationOnly(PhysicsToPromptCase):
         self.assertNotIn(self.PRESENCE_LINE, prompt)
 
 
+class TestRestraintOnAdviceGuidanceIsConversationOnly(PhysicsToPromptCase):
+    """Gordon's read of the marathon census: the engine was too quick to
+    offer advice or start solving a problem the moment one was mentioned,
+    even when nothing was asked for. Sharing something is not a request to
+    be fixed."""
+
+    RESTRAINT_LINE = "HOLD OFF ON ADVICE"
+
+    def test_conversation_mode_gets_the_guidance(self):
+        prompt = self.compose_with({}, mode="CONVERSATION")
+        self.assertIn(self.RESTRAINT_LINE, prompt)
+
+    def test_adventure_mode_does_not(self):
+        prompt = self.compose_with({}, mode="ADVENTURE")
+        self.assertNotIn(self.RESTRAINT_LINE, prompt)
+
+
 class TestTheSerializationBoundary(PhysicsToPromptCase):
     """The gap every other test in this file steps over.
 
