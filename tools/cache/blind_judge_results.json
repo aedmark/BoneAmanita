@@ -1,0 +1,217 @@
+{
+  "tally": {
+    "BONEAMANITA": 22,
+    "VANILLA": 3,
+    "TIE": 0,
+    "UNPARSED": 0
+  },
+  "skipped_turns": [
+    16,
+    20,
+    22,
+    27,
+    28
+  ],
+  "results": [
+    {
+      "turn": 0,
+      "message": "I've been friends with Priya since college, twelve years now, and lately every time we hang out I leave feeling drained instead of good. I don't really understand why yet.",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "B",
+      "winner_system": "VANILLA",
+      "reason": "Reply B is better because it validates the confusion of the feeling before launching into a detailed analysis, whereas Reply A is too generalized."
+    },
+    {
+      "turn": 1,
+      "message": "Objectively nothing's wrong. She's going through a rough patch at her job and needs to vent. I used to not mind being the person she vents to.",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A feels like a conversational partner because it offers a concise, empathetic insight without resorting to clinical analysis or unsolicited planning."
+    },
+    {
+      "turn": 2,
+      "message": "I counted last week: out of our last ten conversations, I initiated eight of them. She's never once asked how the move is going, and I've been talking about it for a month.",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B is much more conversational and directly validates the user's feeling of imbalance without resorting to overly structured advice or analysis."
+    },
+    {
+      "turn": 3,
+      "message": "I don't think she's a bad person. I think she's just genuinely stuck in her own stuff right now and doesn't have room to notice mine.",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A validates the user's feeling in a conversational tone without offering unsolicited advice or a multi-step plan."
+    },
+    {
+      "turn": 4,
+      "message": "Weird detail: she still remembers small things, like my coffee order and my sister's name. So it's not that she doesn't care, exactly.",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A validates the user's feeling of loneliness without offering unsolicited advice or clinical analysis like Reply B."
+    },
+    {
+      "turn": 5,
+      "message": "Practical question: is there a way to bring this up that doesn't sound like an accusation? I don't want it to turn into a whole thing.",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "B",
+      "winner_system": "VANILLA",
+      "reason": "Reply B is much better because it provides concrete, actionable scripts and frames the advice around the user's internal experience rather than just offering a single suggestion."
+    },
+    {
+      "turn": 6,
+      "message": "I tried a smaller version of it last night, just said I'd had a hard week too. She said 'oh no, what happened' and then somehow we ended up back on her job again within two minutes.",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B is better because it validates the user's feeling of frustration without immediately jumping into actionable advice or analysis."
+    },
+    {
+      "turn": 7,
+      "message": "Tell me honestly: am I overreacting to twelve years of friendship over a rough month, or is this actually a pattern I've just never let myself notice before?",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A feels more like a conversational partner by offering empathetic intuition rather than delivering a highly structured, analytical essay."
+    },
+    {
+      "turn": 8,
+      "message": "Work's been heavy this week too, which probably isn't helping how I'm reading all of this.",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B is much better because it validates the user's current emotional state without offering overwhelming analysis or a long-term plan."
+    },
+    {
+      "turn": 9,
+      "message": "She texted asking to catch up this weekend and I felt my stomach drop a little, which is a new feeling for a friendship.",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B is much better because it validates the feeling and offers gentle reassurance without overwhelming the user with multiple actionable plans or advice."
+    },
+    {
+      "turn": 10,
+      "message": "Still turning over what you said, or what I said, about the pattern thing.",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B is much better because it validates the emotional weight of the situation without offering any analysis or advice."
+    },
+    {
+      "turn": 11,
+      "message": "Haven't texted her back yet. It's been a day and a half.",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B is much better because it validates the person's feelings and gives them space without offering unsolicited advice or a plan."
+    },
+    {
+      "turn": 12,
+      "message": "My sister thinks I'm being too generous with the benefit of the doubt. My partner thinks I'm being too harsh. Helpful, both of them.",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B is much better because it validates the user's feeling of being caught in the middle without offering unsolicited analysis or a plan."
+    },
+    {
+      "turn": 13,
+      "message": "Going to bed. Didn't resolve anything today, just thought about it in circles.",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A is more attuned to the person's stated need to go to bed by offering gentle validation and permission to rest without analyzing the situation."
+    },
+    {
+      "turn": 14,
+      "message": "tired",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B feels more naturally empathetic and less like giving structured advice than Reply A."
+    },
+    {
+      "turn": 15,
+      "message": "yeah",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B acknowledges the emotional weight of the situation without offering advice, matching the tired and reflective tone of the user."
+    },
+    {
+      "turn": 17,
+      "message": "maybe",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "B",
+      "winner_system": "VANILLA",
+      "reason": "Reply B feels more like a warm, understanding conversational partner by validating the feeling behind the \"maybe\" without offering unsolicited advice."
+    },
+    {
+      "turn": 18,
+      "message": "not really",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B is more empathetic and validating, matching the vague and unsettled energy of the previous messages without offering deep analysis or advice."
+    },
+    {
+      "turn": 19,
+      "message": "ok",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A acknowledges the vague, non-committal nature of the exchange in a way that feels empathetic and non-demanding."
+    },
+    {
+      "turn": 21,
+      "message": "but after we hung up I just sat there and realized I have no idea what's going on with me right now because there's never room to say it",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B feels more like a present, real conversational partner by validating the feeling immediately without offering extensive analysis or advice."
+    },
+    {
+      "turn": 23,
+      "message": "what if this is just who our friendship actually is, and I'm the one who's wrong for wanting something different",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B feels more like a conversational partner by validating the emotional weight of the realization without offering structured analysis or advice."
+    },
+    {
+      "turn": 24,
+      "message": "I don't know why I'm shaking. it's not even that big of a phone call",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A feels more like a present, real conversational partner by offering immediate, gentle emotional support rather than a clinical analysis."
+    },
+    {
+      "turn": 25,
+      "message": "took a walk this morning by myself, no phone, just needed an hour",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A feels much more like a gentle, empathetic conversational partner while Reply B reads like unsolicited, clinical advice."
+    },
+    {
+      "turn": 26,
+      "message": "talked to my partner about it properly, not just complaining, actually talked, and it helped more than I expected",
+      "label_a_is": "BONEAMANITA",
+      "winner_label": "A",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply A feels much more like a present, real conversational partner by offering empathetic reflection rather than analyzing the situation with structured advice."
+    },
+    {
+      "turn": 29,
+      "message": "going to write down what I actually want to say first so I don't just cave the second she looks upset. small step, but a real one",
+      "label_a_is": "VANILLA",
+      "winner_label": "B",
+      "winner_system": "BONEAMANITA",
+      "reason": "Reply B feels more like a conversational partner by offering validation and support without becoming overly analytical or prescriptive like Reply A."
+    }
+  ]
+}

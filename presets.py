@@ -219,6 +219,7 @@ class BoneConfig:
             "COUNTERFACTUAL_ROS_GATE",
             "REASONING_EFFORT",
             "COGNITIVE_RETRY_LIMIT",
+            "EPIGENETIC_MUTATION_DISABLED_MODES",
         ],
         "MACHINE": ["PACEMAKER_BOREDOM_THRESHOLD", "CRUCIBLE_MELTDOWN_VOLTAGE"],
         "DRIVERS": [

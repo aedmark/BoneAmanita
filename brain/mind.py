@@ -475,13 +475,32 @@ class DreamEngine:
             if self.trauma_buffer:
                 traumas = list(self.trauma_buffer)
                 self.trauma_buffer.clear()
-                trauma_str = " | ".join(traumas)
-                current_state_str = (
-                    f"Archetype: {soul_snapshot.get('archetype', 'UNKNOWN')}"
+                # The critic only ever sees "the lattice rejected this generation,"
+                # never active_mode or the person's state - it once turned a
+                # string of CONVERSATION-mode firewall trips (natural hedging
+                # while the person was mid-crisis) into a permanent "never
+                # soothe or reassure" axiom, applied for the rest of the
+                # conversation regardless of how the person was doing. Modes
+                # listed here never reach evolve_prompt at all; the trauma is
+                # still cleared so it can't queue up and fire later once the
+                # mode changes.
+                active_mode = getattr(
+                    getattr(self.eng, "cortex", None), "active_mode", ""
                 )
-                new_axiom = self.dspy_critic.evolve_prompt(
-                    current_state_str, trauma_str
+                disabled_modes = safe_get(
+                    safe_get(self.cfg, "CORTEX", {}),
+                    "EPIGENETIC_MUTATION_DISABLED_MODES",
+                    [],
                 )
+                new_axiom = None
+                if active_mode not in disabled_modes:
+                    trauma_str = " | ".join(traumas)
+                    current_state_str = (
+                        f"Archetype: {soul_snapshot.get('archetype', 'UNKNOWN')}"
+                    )
+                    new_axiom = self.dspy_critic.evolve_prompt(
+                        current_state_str, trauma_str
+                    )
                 if new_axiom:
                     try:
                         disk_prompts = (

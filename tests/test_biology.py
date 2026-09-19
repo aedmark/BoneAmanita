@@ -102,6 +102,71 @@ class BiologyTests(BoneTestCase):
             "[FAIL] Lore manifest was not saved after epigenetic mutation.",
         )
 
+    def test_epigenetic_mutation_gated_off_in_conversation_mode(self):
+        """The critic only ever sees "the lattice rejected this" and nothing
+        about mode or the person's state; it once turned a run of ordinary
+        CONVERSATION-mode hedging (natural mid-crisis) into a permanent
+        "never soothe or reassure" axiom. CONVERSATION is listed in
+        CORTEX.EPIGENETIC_MUTATION_DISABLED_MODES so this can't recur."""
+        from brain.mind import DreamEngine
+
+        mock_lore = MagicMock()
+        mock_lore.get.return_value = {"SYSTEM_PROMPTS": {}}
+        mock_eng = MagicMock()
+        mock_eng.cortex.active_mode = "CONVERSATION"
+        dreamer = DreamEngine(
+            events=MagicMock(), lore_ref=mock_lore, eng_ref=mock_eng, mem_ref=MagicMock()
+        )
+        dreamer.dspy_critic = MagicMock()
+        dreamer.dspy_critic.enabled = True
+        dreamer.dspy_critic.evolve_prompt.return_value = "NEW_SCAR_AXIOM"
+        dreamer.trauma_buffer.append("Critical failure: Generative slop detected.")
+        bio_state = {"mito": {"atp": 50.0}, "chem": {"cortisol": 0.0}}
+        msg, shift = dreamer.enter_rem_cycle(
+            soul_snapshot={"archetype": "THE_VOID"}, bio_state=bio_state
+        )
+        dreamer.dspy_critic.evolve_prompt.assert_not_called()
+        self.assertNotIn(
+            "scar-tissue axiom",
+            msg or "",
+            "[FAIL] CONVERSATION mode still let a new axiom mutate the prompt.",
+        )
+        self.assertFalse(
+            mock_lore.save.called,
+            "[FAIL] Lore was written even though the mutation was gated off.",
+        )
+        self.assertEqual(
+            len(dreamer.trauma_buffer),
+            0,
+            "[FAIL] Trauma should still drain in a gated mode, or it queues up "
+            "and fires the moment the mode changes.",
+        )
+
+    def test_epigenetic_mutation_still_fires_outside_conversation_mode(self):
+        from brain.mind import DreamEngine
+
+        mock_lore = MagicMock()
+        mock_lore.get.return_value = {"SYSTEM_PROMPTS": {}}
+        mock_eng = MagicMock()
+        mock_eng.cortex.active_mode = "ADVENTURE"
+        dreamer = DreamEngine(
+            events=MagicMock(), lore_ref=mock_lore, eng_ref=mock_eng, mem_ref=MagicMock()
+        )
+        dreamer.dspy_critic = MagicMock()
+        dreamer.dspy_critic.enabled = True
+        dreamer.dspy_critic.evolve_prompt.return_value = "NEW_SCAR_AXIOM"
+        dreamer.trauma_buffer.append("Critical failure: Generative slop detected.")
+        bio_state = {"mito": {"atp": 50.0}, "chem": {"cortisol": 0.0}}
+        msg, shift = dreamer.enter_rem_cycle(
+            soul_snapshot={"archetype": "THE_VOID"}, bio_state=bio_state
+        )
+        dreamer.dspy_critic.evolve_prompt.assert_called_once()
+        self.assertIn(
+            "scar-tissue axiom",
+            msg,
+            "[FAIL] The gate should only apply to CONVERSATION, not other modes.",
+        )
+
     def test_config_glimmer_yield(self):
         target_cfg = getattr(self.engine, "config")
         feedback = {"INTEGRITY": 0.95}
