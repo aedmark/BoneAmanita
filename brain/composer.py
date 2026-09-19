@@ -518,8 +518,15 @@ class PromptComposer:
         if modifiers["include_inventory"]:
             style_notes.extend(mode_data.get("inventory_rules", []))
         self._inject_resonances(style_notes, state, modifiers)
-        orbit_data = state.get("world", {}).get("orbit") or ["Unknown"]
-        loc = orbit_data[0] if orbit_data else "Unknown"
+        orbit_raw = state.get("world", {}).get("orbit")
+        # orbit is a bare zone-label string in normal play (phases/environmental.py)
+        # but a list in a few other producers; indexing a string gave the
+        # location's first CHARACTER ("V" for "VOID") instead of its name.
+        loc = (
+            str(orbit_raw[0])
+            if isinstance(orbit_raw, list) and orbit_raw
+            else str(orbit_raw) if orbit_raw else "Unknown"
+        )
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = self._format_inventory(state, modifiers)
         inventory_block = (

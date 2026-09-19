@@ -1,5 +1,6 @@
 """main.py"""
 
+import json
 import queue
 import random
 import re
@@ -12,7 +13,7 @@ from typing import Any, Dict, Optional, Tuple
 from archetypes.council import CouncilChamber
 from body import SomaticLoop
 from brain.composer import LLMInterface
-from brain.cortex import TheCortex
+from brain.cortex import TheCortex, _room_slug
 from brain.mind import NoeticLoop
 from constants import Prisma, RealityLayer
 from core import (
@@ -79,6 +80,15 @@ class BoneAmanita:
             val = self.sys_config.get(key) or self.sys_config.get(key.upper())
             if val:
                 setattr(self.config, key.upper(), val)
+        # ConfigWizard's COMPUTE PROFILE step writes a CORTEX override (retry
+        # budget, topology/WLS frequency) tuned to the chosen hardware tier.
+        # This is the only place that override is applied; without it, every
+        # compute-profile choice silently did nothing past model/provider.
+        if isinstance(cortex_overrides := self.sys_config.get("CORTEX"), dict):
+            cortex_cfg = getattr(self.config, "CORTEX", None)
+            if cortex_cfg is not None:
+                for key, val in cortex_overrides.items():
+                    setattr(cortex_cfg, key, val)
         self.navi_sad = NaviSADProtocol()
         self.events = EventBus(config_ref=self.config)
         self.cmd = CommandProcessor(self, Prisma, config_ref=self.config)
@@ -727,6 +737,7 @@ class BoneAmanita:
             self.events.log(f"{Prisma.GRY}{msg_pod}{Prisma.RST}", "SYS")
             self._apply_boot_mode()
             self.cortex.restore_context(history)
+            self._load_fractal_state()
             cont = self.embryo.continuity or {}
             loc = cont.get("location", "Unknown")
             last_scene = (
@@ -772,11 +783,34 @@ class BoneAmanita:
             )
         return cold_result
 
+    def _load_fractal_state(self) -> None:
+        """Restore visited-room memory from fractal_adventure.json, if present.
+
+        This is the only persisted copy of the LLM-narrated room history;
+        chronos's own checkpoint never carried it, so a resumed session used
+        to lose room/examine continuity even though it wrote this file out.
+        """
+        try:
+            with open("fractal_adventure.json", encoding="utf-8") as f:
+                fractal = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return
+        rooms = fractal.get("rooms")
+        if not isinstance(rooms, dict):
+            return
+        self.cortex.restore_room_state(rooms, fractal.get("startingRoomId", ""))
+
     def save_checkpoint(self, history: Optional[list] = None) -> str:
         if gordon := getattr(self.village, "gordon", None):
-            carto = getattr(self.village, "navigator", None)
+            starting_room_id = (
+                _room_slug(self.cortex.current_room_name)
+                if self.cortex.current_room_name
+                else "GENESIS_POINT"
+            )
             try:
-                fractal_json = gordon.export_fractal_state(carto)
+                fractal_json = gordon.export_fractal_state(
+                    self.cortex.visited_rooms, starting_room_id
+                )
                 with open("fractal_adventure.json", "w", encoding="utf-8") as f:
                     f.write(fractal_json)
             except Exception as e:

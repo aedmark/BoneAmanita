@@ -36,41 +36,81 @@ def beautify_thoughts(text: str) -> str:
     return _THOUGHT_PATTERN.sub(replacer, text)
 
 
+_BULLET_LINE = re.compile(r"^\s*[-*•]\s*(.+?)\s*$")
+_BOLD_HEADING_LINE = re.compile(r"^\*\*([^*]+)\*\*\s*:?\s*$")
+
+
+def _extract_bulleted_block(lines: List[str], start_idx: int) -> List[str]:
+    """Collect bullet items starting at lines[start_idx] until a blank line or heading.
+
+    ADVENTURE's own template renders Points of Interest/Exits as a multi-line
+    bulleted list under a "**Heading:**" line, not inline text after the
+    colon. The single-line regex below never matched that shape, so it always
+    returned an empty list against real output.
+    """
+    items = []
+    for line in lines[start_idx:]:
+        stripped = line.strip()
+        if not stripped:
+            break
+        bullet = _BULLET_LINE.match(stripped)
+        if bullet:
+            items.append(bullet.group(1).replace("*", "").strip())
+        elif _BOLD_HEADING_LINE.match(stripped) or not items:
+            break
+        else:
+            break
+    return [i for i in items if i]
+
+
 def parse_spatial_reality(raw_text: str) -> Dict[str, Any]:
     """
     Extracts Room Name, Points of Interest, and Exits from the LLM's raw text block.
     """
     node_data = {
         "room_name": "Uncharted Zone",
+        "description": "",
         "pois": [],
         "exits": []
     }
+    lines = raw_text.split("\n")
 
     room_match = re.search(
         r"(?:Room Name|Location|Room|Zone):\s*([^\n]+)", raw_text, re.IGNORECASE
     )
     if room_match:
         node_data["room_name"] = room_match.group(1).replace("*", "").strip()
+    else:
+        for idx, line in enumerate(lines):
+            heading = _BOLD_HEADING_LINE.match(line.strip())
+            if heading and heading.group(1).strip().rstrip(":").strip().lower() not in (
+                "points of interest",
+                "exits",
+            ):
+                node_data["room_name"] = heading.group(1).strip()
+                desc_lines = []
+                for follow in lines[idx + 1:]:
+                    stripped = follow.strip()
+                    if _BOLD_HEADING_LINE.match(stripped):
+                        break
+                    if stripped:
+                        desc_lines.append(stripped)
+                node_data["description"] = " ".join(desc_lines).strip()
+                break
 
-    poi_match = re.search(
-        r"(?:Points of Interest|POIs|Notice|Looking around):\s*([^\n]+)",
-        raw_text,
-        re.IGNORECASE,
-    )
-    if poi_match:
-        pois_raw = poi_match.group(1).replace("*", "").strip()
-        node_data["pois"] = [
-            p.strip() for p in re.split(r",|\band\b", pois_raw) if p.strip()
-        ]
+    def find_section(label_pattern: str) -> List[str]:
+        for idx, line in enumerate(lines):
+            m = re.search(rf"(?:{label_pattern}):\s*(.*)$", line, re.IGNORECASE)
+            if not m:
+                continue
+            inline = m.group(1).replace("*", "").strip()
+            if inline:
+                return [p.strip() for p in re.split(r",|\band\b", inline) if p.strip()]
+            return _extract_bulleted_block(lines, idx + 1)
+        return []
 
-    exits_match = re.search(
-        r"(?:Exits|Paths|Doors):\s*([^\n]+)", raw_text, re.IGNORECASE
-    )
-    if exits_match:
-        exits_raw = exits_match.group(1).replace("*", "").strip()
-        node_data["exits"] = [
-            e.strip() for e in re.split(r",|\band\b", exits_raw) if e.strip()
-        ]
+    node_data["pois"] = find_section("Points of Interest|POIs|Notice|Looking around")
+    node_data["exits"] = find_section("Exits|Paths|Doors")
 
     return node_data
 

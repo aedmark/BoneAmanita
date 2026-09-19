@@ -687,26 +687,22 @@ class GordonKnot:
         return False, None
 
     def export_fractal_state(
-        self, cartographer_ref=None, title="BoneAmanita Manifest"
+        self,
+        rooms: Optional[Dict[str, Dict[str, Any]]] = None,
+        starting_room_id: str = "GENESIS_POINT",
+        title="BoneAmanita Manifest",
     ) -> str:
+        """Rooms come from the cortex's `visited_rooms` - what the LLM actually
+        narrated - not the Cartographer's physics-vector-hashed graph, whose
+        procedurally invented room names never matched the real story."""
         fractal: Dict[str, Any] = {
             "title": title,
-            "startingRoomId": cartographer_ref.current_node_id
-            if cartographer_ref
-            else "GENESIS_POINT",
+            "startingRoomId": starting_room_id,
             "winCondition": {"type": "none"},
-            "rooms": {},
+            "rooms": dict(rooms or {}),
             "items": {},
             "npcs": {},
         }
-        if cartographer_ref:
-            for node_id, node in cartographer_ref.world_graph.items():
-                fractal["rooms"][node_id] = {
-                    "id": node_id,
-                    "name": node.name,
-                    "description": f"{node.atmosphere} {node.smell}",
-                    "exits": {},
-                }
         for name, item in self.registry.items():
             clean_id = name.lower().replace(" ", "_")
             fractal["items"][clean_id] = {

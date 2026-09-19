@@ -17,10 +17,39 @@ from core import DecisionCrystal, EventBus, LoreManifest, TelemetryService
 from receipts import issue as issue_receipt
 from mechanics.dspycritic import DSPyCritic
 from mechanics.pragmatics import ThePragmatist
-from mechanics.projector import beautify_thoughts
+from mechanics.projector import beautify_thoughts, parse_spatial_reality
 from mechanics.tools import LibraryGraph, RandomRetrievalNavigator
 from presets import BoneConfig, BonePresets
 from struts import dump_state, safe_get, safe_set, ux
+
+
+_EXAMINE_VERBS = re.compile(
+    r"\b(?:look(?:\s+closer)?\s+at|examine|inspect|check\s+out|study|observe)\b"
+    r"\s+(?:the\s+|a\s+|an\s+)?(.+)",
+    re.IGNORECASE,
+)
+_EXAMINE_STOPWORDS = frozenset(
+    "the a an at closer to again once more please just now it that this".split()
+)
+
+
+def _room_slug(room_name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", room_name.lower()).strip("_") or "room"
+
+
+def _examine_target_key(user_input: str) -> Optional[str]:
+    """Normalize an "examine X" input into a stable cache key for X.
+
+    Different phrasings of the same target ("look at the server rack" vs.
+    "examine server rack again") should hit the same cache entry, so this
+    keys on the sorted set of content words rather than the raw phrase.
+    """
+    match = _EXAMINE_VERBS.search(user_input)
+    if not match:
+        return None
+    words = re.findall(r"[a-z0-9]+", match.group(1).lower())
+    content = sorted({w for w in words if w not in _EXAMINE_STOPWORDS})
+    return " ".join(content) if content else None
 
 
 @dataclass
@@ -63,6 +92,10 @@ class TheCortex:
         )
         self.last_physics = {}
         self.last_shadow_nodes = []
+        self.room_examine_cache: Dict[str, str] = {}
+        self.current_room_name: str = ""
+        self.current_room_description: str = ""
+        self.visited_rooms: Dict[str, Dict[str, Any]] = {}
         self.consultant = services.consultant
         self.llm = llm_client or LLMInterface(
             self.events, provider="mock", config_ref=self.cfg
@@ -132,11 +165,68 @@ class TheCortex:
     def _update_history(self, user_text: str, system_text: str):
         self.dialogue_buffer.append(f"Traveler: {user_text}\nSystem: {system_text}")
 
+    def _check_examine_cache(self, user_input: str) -> Optional[str]:
+        target_key = _examine_target_key(user_input)
+        if target_key is None:
+            return None
+        return self.room_examine_cache.get(target_key)
+
+    def _record_examine_result(self, user_input: str, final_output: str) -> None:
+        """After a fresh, validated generation: cache it, and remember the room.
+
+        ADVENTURE's system prompt puts the full "**Room**/Points of
+        Interest/Exits" template on EVERY reply, not just room entries, so
+        the parser finding that shape can't tell "new room" from "still here,
+        examining something." Comparing the parsed room name against the one
+        already tracked can: an unchanged name means still in the same visit,
+        so an "examine X" turn gets cached for replay; a changed name means a
+        new room, so the last room's cache no longer applies.
+
+        Every room actually narrated by the LLM is kept in `visited_rooms`,
+        the real source for the world section of `fractal_adventure.json` -
+        unlike the Cartographer's physics-vector-hashed graph, this reflects
+        the rooms the player actually read about.
+        """
+        parsed = parse_spatial_reality(final_output)
+        room_name = parsed["room_name"]
+        is_new_room = room_name != "Uncharted Zone" and room_name != self.current_room_name
+        if room_name != "Uncharted Zone":
+            room_id = _room_slug(room_name)
+            existing = self.visited_rooms.get(room_id, {})
+            self.visited_rooms[room_id] = {
+                "id": room_id,
+                "name": room_name,
+                "description": parsed["description"] or existing.get("description", ""),
+                "exits": parsed["exits"] or existing.get("exits", []),
+                "pois": parsed["pois"] or existing.get("pois", []),
+            }
+        if is_new_room:
+            self.current_room_name = room_name
+            self.current_room_description = parsed["description"]
+            self.room_examine_cache = {}
+            return
+        target_key = _examine_target_key(user_input)
+        if target_key:
+            self.room_examine_cache[target_key] = final_output
+
+    def restore_room_state(
+        self, visited_rooms: Dict[str, Dict[str, Any]], current_room_id: str
+    ) -> None:
+        """Repopulate room memory from a loaded fractal_adventure.json."""
+        self.visited_rooms = dict(visited_rooms)
+        current = self.visited_rooms.get(current_room_id, {})
+        self.current_room_name = current.get("name", "")
+        self.current_room_description = current.get("description", "")
+
     def shutdown(self):
         pass
 
     def purge_context(self):
         self.last_shadow_nodes = []
+        self.room_examine_cache.clear()
+        self.current_room_name = ""
+        self.current_room_description = ""
+        self.visited_rooms.clear()
         self.dialogue_buffer.clear()
         self.last_physics.clear()
         self.dreamer.trauma_buffer.clear()
@@ -182,6 +272,19 @@ class TheCortex:
             "trace_id": getattr(ctx, "trace_id", "UNKNOWN"),
             "type": getattr(ctx, "type", "SNAPSHOT"),
         }
+        if (
+            self.active_mode == "ADVENTURE"
+            and not is_boot_sequence
+            and self.current_room_description
+        ):
+            # ctx.world_state is rebuilt empty every turn (core.py's
+            # CycleContext), so "loci_description" only ever survived from the
+            # one-time boot overlay. Carry the last parsed room description
+            # forward here so ENVIRONMENT ANCHOR reflects where the player
+            # actually is instead of permanently reading "Unknown."
+            sim_result["world"].setdefault(
+                "loci_description", self.current_room_description
+            )
         if halt := self._pre_flight_routing(
             user_input, is_system, is_boot_sequence, ctx, sim_result
         ):
@@ -275,7 +378,20 @@ class TheCortex:
             from physics import TheGatekeeper
 
             gk = TheGatekeeper(self.svc.lexicon, config_ref=self.cfg)
-        if cognitive_retries > 0:
+        cached_examine = (
+            self._check_examine_cache(user_input)
+            if self.active_mode == "ADVENTURE" and not is_boot_sequence and not val_res.get("valid")
+            else None
+        )
+        if cached_examine is not None:
+            final_output = cached_examine
+            val_res = {"valid": True, "content": cached_examine, "meta_logs": []}
+            if self.events:
+                self.events.log(
+                    f"{Prisma.GRY}[MEMORY] You've already looked at this. Recalling.{Prisma.RST}",
+                    "CORTEX",
+                )
+        elif cognitive_retries > 0:
             final_output, raw_resp, extracted_logs, inv_logs, val_res, final_prompt, attempt_count = (
                 self._execute_cognitive_loop(
                     user_input,
@@ -300,6 +416,10 @@ class TheCortex:
                     100.0, current_ros + ros_yield
                 )
                 self.svc.bio.mito.adjust_atp(-atp_burn, "LLM Token Generation")
+            if val_res.get("valid") and self.active_mode == "ADVENTURE":
+                self._record_examine_result(
+                    "SYSTEM_INIT" if is_boot_sequence else user_input, final_output
+                )
         if val_res["valid"] and phys_state.get("psi", 0.0) > 0.6 and allow_loot:
             if self.svc.bio:
                 self.svc.bio.mito.adjust_atp(-1.0, "Anti-AI Substrate Filter")

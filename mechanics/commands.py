@@ -47,7 +47,11 @@ class CommandStateInterface:
         if cortex := getattr(self.eng, "cortex", None):
             state = cortex.gather_state({"physics": getattr(cortex, "last_physics", {})})
             orbit = state.get("world", {}).get("orbit")
-            loc = orbit[0] if orbit else ux("command_state", "default_orbit")
+            loc = (
+                str(orbit[0])
+                if isinstance(orbit, list) and orbit
+                else str(orbit) if orbit else ux("command_state", "default_orbit")
+            )
             if cortex.dialogue_buffer:
                 last_out = cortex.dialogue_buffer[-1]
         bio = getattr(self.eng, "bio", None)
