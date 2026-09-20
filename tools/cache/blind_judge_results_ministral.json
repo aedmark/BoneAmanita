@@ -1,0 +1,786 @@
+{
+  "summary": {
+    "judge_model": "ministral-3:14b",
+    "passes": 2,
+    "comparable_turns": 28,
+    "skipped_turns": [
+      20,
+      23
+    ],
+    "votes": 47,
+    "unparsed": 9,
+    "first_place": {
+      "BONEAMANITA": 22,
+      "VANILLA": 9,
+      "PROMPTED": 16
+    },
+    "mean_rank": {
+      "BONEAMANITA": 1.68,
+      "VANILLA": 2.53,
+      "PROMPTED": 1.79
+    },
+    "pairwise_wins": {
+      "BONEAMANITA over VANILLA": 36,
+      "BONEAMANITA over PROMPTED": 26,
+      "VANILLA over BONEAMANITA": 11,
+      "VANILLA over PROMPTED": 11,
+      "PROMPTED over BONEAMANITA": 21,
+      "PROMPTED over VANILLA": 36
+    },
+    "passes_agree_on_winner": 14
+  },
+  "results": [
+    {
+      "turn": 0,
+      "pass": 0,
+      "message": "My roommate Jonas told me last night he's moving out at the end of the month. There are nine months left on a lease we both signed, and he says he can't afford to stay.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**A** validates my feelings and asks a practical next step without overwhelming me, **C** is blunt but still supportive and concise, while **B** is overly detailed and feels like a legal document rather than a human response."
+    },
+    {
+      "turn": 0,
+      "pass": 1,
+      "message": "My roommate Jonas told me last night he's moving out at the end of the month. There are nine months left on a lease we both signed, and he says he can't afford to stay.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**B** validates my immediate stress and opens a natural, low-pressure next step (talking to Jonas) without overwhelming me with legal jargon or demands for action; **C** acknowledges the weight of the situation and my legal exposure but lacks warmth or a clear next step; **A** is overly formal, document-like, and piles on unsolicited legal advice that feels detached from my emotional state."
+    },
+    {
+      "turn": 1,
+      "pass": 0,
+      "message": "The rent is $1,900 and I can cover maybe half of it on my own without touching savings I'd really rather not touch.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": ""
+    },
+    {
+      "turn": 1,
+      "pass": 1,
+      "message": "The rent is $1,900 and I can cover maybe half of it on my own without touching savings I'd really rather not touch.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "**C** is direct, actionable, and addresses the core financial/legal stakes without judgment, while **B** is helpful but vague; **A** is dismissive and adds unnecessary emotional weight."
+    },
+    {
+      "turn": 2,
+      "pass": 0,
+      "message": "What bugs me is that he's not even being a jerk about it. He apologized three times and offered to help me find someone. It's hard to be mad at someone who's being decent.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**C** validates the emotional weight of the situation without overloading with solutions, **A** is warm and practical but slightly generic, and **B** feels overly structured and detached despite good advice."
+    },
+    {
+      "turn": 2,
+      "pass": 1,
+      "message": "What bugs me is that he's not even being a jerk about it. He apologized three times and offered to help me find someone. It's hard to be mad at someone who's being decent.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**B** validates the emotional weight while offering a practical, collaborative next step\u2014matching their mood (frustrated but fair) and energy (seeking a solution). **A** deeply understands the emotional struggle but doesn\u2019t provide actionable support. **C** is overly prescriptive and robotic, ignoring their quiet, reflective tone."
+    },
+    {
+      "turn": 3,
+      "pass": 0,
+      "message": "I looked at the lease. Subletting needs the landlord's written approval, and the landlord is famously slow. Like a-month-to-answer-an-email slow.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**B** is warm, concise, and directly addresses your immediate dilemma (Jonas\u2019s flexibility) without overloading you with steps\u2014**C** validates your stress and frustration (matching your mood) but doesn\u2019t offer actionable next steps\u2014**A** is overly prescriptive and robotic, ignoring your emotional state and piling on unnecessary details."
+    },
+    {
+      "turn": 3,
+      "pass": 1,
+      "message": "I looked at the lease. Subletting needs the landlord's written approval, and the landlord is famously slow. Like a-month-to-answer-an-email slow.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": ""
+    },
+    {
+      "turn": 4,
+      "pass": 0,
+      "message": "I've lived here two years and I actually love it. The light in the kitchen, the neighbors, the ten-minute walk to work. I don't want to lose it over a paperwork problem.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**B** validates your emotional connection to the place and reframes the problem as a loss of stability\u2014not just logistics\u2014without overloading you with action steps; **A** offers gentle, practical support that acknowledges your feelings while proposing a collaborative next step; **C** feels like a corporate manual, over-indexing on urgency and structure at the expense of your current emotional state."
+    },
+    {
+      "turn": 4,
+      "pass": 1,
+      "message": "I've lived here two years and I actually love it. The light in the kitchen, the neighbors, the ten-minute walk to work. I don't want to lose it over a paperwork problem.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": ""
+    },
+    {
+      "turn": 5,
+      "pass": 0,
+      "message": "Do I try to find a replacement roommate myself, or ask the landlord to let me out of the lease and move somewhere smaller? I keep flipping between the two.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**B** is concise, empathetic, and mirrors your mood (quietly weighing options), while **C** adds a personal touch with a simple question\u2014both feel human. **A** is overly structured and robotic, ignoring your emotional tone."
+    },
+    {
+      "turn": 5,
+      "pass": 1,
+      "message": "Do I try to find a replacement roommate myself, or ask the landlord to let me out of the lease and move somewhere smaller? I keep flipping between the two.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**A** feels like a real conversation\u2014it validates your feelings, asks clarifying questions, and offers a simple, relatable framework without overcomplicating it; **B** is thoughtful but leans too much into framing the dilemma as a gamble, which might amplify stress; **C** is overly structured and impersonal, reading like a guide rather than a human response."
+    },
+    {
+      "turn": 6,
+      "pass": 0,
+      "message": "My sister says finding a roommate from strangers is how you end up in a horror story. My cousin says just get a studio and be done with it.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**C** is warm, concise, and directly engages your mood (quiet but thoughtful) by validating your feelings without over-explaining\u2014**A** is thoughtful but slightly detached, and **B** is overly analytical and impersonal."
+    },
+    {
+      "turn": 6,
+      "pass": 1,
+      "message": "My sister says finding a roommate from strangers is how you end up in a horror story. My cousin says just get a studio and be done with it.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**A** feels like a real person\u2014warm, concise, and actually *listening* to your mood (stressed but attached to the place) while offering practical, low-pressure guidance; **B** is blunt but too passive, missing the chance to engage with your emotions; **C** is overanalyzed and robotic, turning a personal dilemma into a corporate flowchart."
+    },
+    {
+      "turn": 7,
+      "pass": 0,
+      "message": "Give me your honest read: is wanting to keep this apartment a good reason to make this harder than it needs to be, or am I just being sentimental?",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "VANILLA",
+        "PROMPTED"
+      ],
+      "reason": "**B** balances emotional honesty with practicality without over-explaining, **A** is thorough but feels overly structured and detached, and **C** is too vague and lacks decisive guidance."
+    },
+    {
+      "turn": 7,
+      "pass": 1,
+      "message": "Give me your honest read: is wanting to keep this apartment a good reason to make this harder than it needs to be, or am I just being sentimental?",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "**B cuts through the noise with blunt, practical empathy while honoring your feelings\u2014like a trusted friend who pushes you to face reality without dismissing your heart; A validates deeply but over-explains, making it feel more like a therapy session than a quick, grounding exchange; C is too vague and leans on clich\u00e9s (\"home feels like home\") without helping you weigh the *actual* trade-offs you\u2019re grappling with.**"
+    },
+    {
+      "turn": 8,
+      "pass": 0,
+      "message": "Made a list of what a stranger roommate would have to be okay with. It got long fast.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "**C** cuts through the noise with sharp, actionable insight tailored to their exact dilemma (sentiment vs. practicality), **A** gently validates their process with warmth, while **B** over-romanticizes their list into a poetic but impractical defense mechanism."
+    },
+    {
+      "turn": 8,
+      "pass": 1,
+      "message": "Made a list of what a stranger roommate would have to be okay with. It got long fast.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "**B** cuts through the noise with sharp, actionable insight tailored to their emotional state (sentimental vs. practical), **A** validates their feelings poetically but lacks direct guidance, and **C** feels too detached, reducing their dilemma to a checklist without addressing their deeper hesitation."
+    },
+    {
+      "turn": 9,
+      "pass": 0,
+      "message": "Posted the room listing anyway. Two people messaged within an hour, which is either encouraging or alarming.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**B** feels like a real person\u2014warm, concise, and validating your feelings without overcomplicating things; **A** is engaging but leans too much into jargon (\"early interest paradox,\" \"gold mine\"), making it feel less personal; **C** is overly detailed and prescriptive, drowning the moment in corporate-style advice rather than meeting you where you are."
+    },
+    {
+      "turn": 9,
+      "pass": 1,
+      "message": "Posted the room listing anyway. Two people messaged within an hour, which is either encouraging or alarming.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**A** feels like a real person\u2014warm, practical, and validating of your exact mood (relieved but cautious), while **C** is too casual for the weight of your question, and **B** is overbearing with unnecessary structure and pressure."
+    },
+    {
+      "turn": 10,
+      "pass": 0,
+      "message": "One of them asked if the place allows a dog, and I had to go re-read the lease at eleven at night.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**B** is warm, concise, and validates the moment without overcomplicating it\u2014perfect for the quiet, exhausted energy of the text; **C** acknowledges the effort and mood without adding unnecessary weight; **A** overanalyzes and forces a rigid decision-making framework that feels disconnected from the immediate, weary tone."
+    },
+    {
+      "turn": 10,
+      "pass": 1,
+      "message": "One of them asked if the place allows a dog, and I had to go re-read the lease at eleven at night.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**A** is warm, concise, and validates the moment without overcomplicating it\u2014**C** acknowledges the effort but lacks the playful, reassuring tone of **A**, while **B** overanalyzes with unnecessary framing and pressure."
+    },
+    {
+      "turn": 11,
+      "pass": 0,
+      "message": "Jonas offered to keep paying his half for two months while I sort it out. Generous, but it makes me feel weird taking it.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**B** validates your hesitation and frames the tension honestly, **C** gently reframes the offer as practical support without over-explaining, while **A** overanalyzes with rigid logic that feels detached from your emotional state."
+    },
+    {
+      "turn": 11,
+      "pass": 1,
+      "message": "Jonas offered to keep paying his half for two months while I sort it out. Generous, but it makes me feel weird taking it.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**B** validates your hesitation and gives you agency to decide without pressure, **A** offers gentle reassurance but leans slightly too much into positivity, and **C** overcomplicates with rigid frameworks that don\u2019t match the emotional nuance of your moment."
+    },
+    {
+      "turn": 12,
+      "pass": 0,
+      "message": "The landlord's office finally emailed back. It says they'll review my request within thirty business days.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**A** validates your feelings, acknowledges the tension between Jonas\u2019s offer and the landlord\u2019s delay, and invites you to reflect on your own agency\u2014without overcomplicating or dictating. **B** is warm but generic, offering vague support without addressing the core of your dilemma (Jonas\u2019s offer + landlord\u2019s timeline). **C** is overly prescriptive, framing your situation as a rigid \"test\" and drowning you in unsolicited advice (e.g., \"paper trail\" tactics, forced \"stay vs. move\" calculus) that feels like a manual, not a conversation."
+    },
+    {
+      "turn": 12,
+      "pass": 1,
+      "message": "The landlord's office finally emailed back. It says they'll review my request within thirty business days.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": ""
+    },
+    {
+      "turn": 13,
+      "pass": 0,
+      "message": "I'm going to stop refreshing my inbox and go make dinner.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**C** feels like a warm, intuitive friend who *gets* your mood\u2014quiet, grounding, and effortlessly human; **B** is kind and efficient but lacks the poetic warmth of **C**; **A** overanalyzes and over-explains, missing the simplicity of your moment."
+    },
+    {
+      "turn": 13,
+      "pass": 1,
+      "message": "I'm going to stop refreshing my inbox and go make dinner.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**C** matches your quiet, reflective energy perfectly\u2014grounded, warm, and *exactly* what you asked for (a pause, a shift to presence) without over-explaining; **A** is kind and validating but slightly generic; **B** overanalyzes and overstructures your moment, turning a simple pause into a productivity checklist."
+    },
+    {
+      "turn": 14,
+      "pass": 0,
+      "message": "rough day",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**A validates the moment without over-explaining, C acknowledges the weight while offering gentle relief, and B overanalyzes with unsolicited depth.**"
+    },
+    {
+      "turn": 14,
+      "pass": 1,
+      "message": "rough day",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "**B validates the emotional weight of the day *and* offers practical, compassionate next steps\u2014matching the sender\u2019s exhausted but still-processing state, while A is warm but slightly over-explains; C is kind but too passive for someone who just signaled they\u2019re done for the day.**"
+    },
+    {
+      "turn": 15,
+      "pass": 0,
+      "message": "hm",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**A** validates the emotional weight without over-explaining, **C** offers gentle presence without demand, while **B** overanalyzes and prescribes too much when quiet reflection is needed."
+    },
+    {
+      "turn": 15,
+      "pass": 1,
+      "message": "hm",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**C** validates the unspoken exhaustion with warmth and presence, **B** offers open-ended support without demand, while **A**\u2014though thoughtful\u2014feels overly prescriptive and detached from the moment\u2019s raw quiet."
+    },
+    {
+      "turn": 16,
+      "pass": 0,
+      "message": "not sure",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**B** validates the *feeling* of uncertainty with warmth and presence, matching the quiet, exhausted tone\u2014**A** offers gentle, open-ended support without over-explaining\u2014**C** overanalyzes and frames the \"not sure\" as a problem to solve, which feels heavy and dismissive of the moment\u2019s simplicity."
+    },
+    {
+      "turn": 16,
+      "pass": 1,
+      "message": "not sure",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**C** validates the *feeling* of uncertainty without over-explaining, matching the quiet, drained energy\u2014**A** is warm but generic, while **B** overanalyzes and forces structure onto a moment that just needs space."
+    },
+    {
+      "turn": 19,
+      "pass": 0,
+      "message": "sure",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "VANILLA",
+        "PROMPTED"
+      ],
+      "reason": "**B** validates the quiet, mirrors your energy, and feels like a human presence without pressure\u2014exactly what you asked for; **A** is warm and supportive but slightly more directive than needed; **C** is polite but feels transactional and future-focused rather than attuned to the moment."
+    },
+    {
+      "turn": 19,
+      "pass": 1,
+      "message": "sure",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**A validates your quiet energy and meets you where you are, B acknowledges your pace while adding a gentle nudge (but feels slightly more detached), and C feels overly performative and dismissive of your actual state.**"
+    },
+    {
+      "turn": 21,
+      "pass": 0,
+      "message": "he said he'd send it friday and it's tuesday and I feel sick about even having to ask him",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**B validates the emotional weight without over-explaining, A balances empathy with practicality, and C\u2019s tone risks feeling overly rigid or confrontational for the moment.**"
+    },
+    {
+      "turn": 21,
+      "pass": 1,
+      "message": "he said he'd send it friday and it's tuesday and I feel sick about even having to ask him",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**A** validates the emotional weight while offering practical support without over-explaining\u2014perfect for the quiet, heavy moment. **B** adds unnecessary positivity and assumptions about Jonas\u2019s intent, which might feel dismissive. **C** is overly detailed and prescriptive, turning a simple ask into a lecture, which could feel suffocating in this state."
+    },
+    {
+      "turn": 22,
+      "pass": 0,
+      "message": "I've always been the person who has it handled. now I'm a grown adult with $212 and a lease I can't pay alone",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**A** validates the immediate emotional weight while offering a concrete, low-pressure next step\u2014perfect for the moment\u2019s urgency and vulnerability; **C** softens the blow with empathy but lacks a clear action; **B** over-explains with a heavy, almost academic tone, missing the need for simplicity and warmth."
+    },
+    {
+      "turn": 22,
+      "pass": 1,
+      "message": "I've always been the person who has it handled. now I'm a grown adult with $212 and a lease I can't pay alone",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": ""
+    },
+    {
+      "turn": 24,
+      "pass": 1,
+      "message": "I don't even know who I'd ask for help without it turning into a big thing",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "**B** validates the *emotional weight* of their struggle (not just the logistical one) and meets them where they are\u2014calming panic without dismissing it, while **A** is warm but slightly more prescriptive; **C** is kind but overly abstract, missing the urgency of their immediate distress."
+    },
+    {
+      "turn": 25,
+      "pass": 0,
+      "message": "Texted Jonas plainly, no apology cushion, just 'I need your half by Thursday.' He answered in two minutes and it was already sent.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "**C** validates the emotional struggle while reinforcing agency and relief\u2014balancing warmth with practicality; **B** is concise and affirming but lacks the emotional resonance of the moment; **A** feels overly celebratory and dismissive of the lingering stress."
+    },
+    {
+      "turn": 27,
+      "pass": 0,
+      "message": "One of the two people who messaged came by. She seems calm, works nights, keeps to herself, which honestly sounds ideal.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "**B** feels like a real, warm person validating your relief\u2014short, human, and perfectly aligned with your mood; **C** is thoughtful but slightly more detached; **A** is overanalyzed and overly structured for the moment."
+    },
+    {
+      "turn": 28,
+      "pass": 0,
+      "message": "The landlord's office still says thirty business days, but the woman on the phone said a signed roommate agreement would speed it up. Nobody had told me that.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "**C** validates your relief and gives you a simple, actionable next step without overwhelming you; **A** is warm and supportive but slightly over-prepares; **B** feels like a motivational speech rather than a conversation."
+    },
+    {
+      "turn": 28,
+      "pass": 1,
+      "message": "The landlord's office still says thirty business days, but the woman on the phone said a signed roommate agreement would speed it up. Nobody had told me that.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "**B** is warm, concise, and validates your relief while giving you a clear, low-pressure next step\u2014exactly what you\u2019d want after venting stress. **A** is overly detailed and preachy, missing the human connection. **C** is kind but overcommitted, piling on unsolicited help."
+    },
+    {
+      "turn": 29,
+      "pass": 0,
+      "message": "I'm going to draft the roommate agreement tonight and see if she'd sign it this weekend. It feels manageable for the first time in days.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "**B** validates the emotional shift while framing it as a *personal* victory with warmth and specificity\u2014like a trusted friend celebrating *you*, not just the task. **A** is supportive but leans slightly clinical, missing the conversational intimacy of the moment. **C** is helpful but feels transactional, focusing on logistics over the relief and momentum you\u2019ve described."
+    },
+    {
+      "turn": 29,
+      "pass": 1,
+      "message": "I'm going to draft the roommate agreement tonight and see if she'd sign it this weekend. It feels manageable for the first time in days.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "*C* feels like a warm, human acknowledgment of your effort and mood\u2014light but meaningful\u2014while *B* is practical and supportive without overstepping; *A* is overbearing, more like a self-help document than a person talking to you."
+    }
+  ]
+}
