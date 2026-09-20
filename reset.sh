@@ -18,5 +18,5 @@ rm -rf ./test_memories.log
 rm -rf ./test_strata.json
 rm -rf ./test_saves.log
 rm -rf ./test_telemetry.log
-rm -rf ./tests*.log
+rm -rf ./tests*.json
 rm -rf ./dummy.jsonl

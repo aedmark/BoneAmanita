@@ -23,6 +23,7 @@ Wraps, without changing behaviour:
   - TheGatekeeper._audit_safety: which cursed-list word, if any, matched.
 """
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -38,7 +39,10 @@ import archetypes.stage as stage_mod  # noqa: E402
 import brain.cortex as cortex_mod  # noqa: E402
 import physics.filters as filters_mod  # noqa: E402
 
-TOPIC = "friendship"
+CANNED_REPLY = (
+    "That is a lot to hold at once. It sounds like part of you already has a lean, "
+    "even if the rest of you is not ready to say it out loud yet."
+)
 LOG = []
 
 
@@ -103,8 +107,19 @@ def spy_audit_safety(self, words):
 
 
 def main() -> int:
-    script = SCRIPTS[TOPIC]
-    eng, _patches = boot("gemma4:12b")
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[2])
+    parser.add_argument("--topic", default="friendship", choices=sorted(SCRIPTS))
+    parser.add_argument("--model", default="gemma4:12b")
+    parser.add_argument("--canned", action="store_true",
+                        help="answer every turn with one fixed reply instead of calling the model; "
+                             "physics and gates still run, so held turns are explained without GPU time")
+    parser.add_argument("--max-turns", type=int, default=None)
+    args = parser.parse_args()
+
+    script = SCRIPTS[args.topic][: args.max_turns]
+    eng, _patches = boot(args.model)
+    if args.canned:
+        eng.cortex.llm.generate = lambda prompt, params: CANNED_REPLY
     with patch.object(council_mod.TheVillageCouncil, "_evaluate", staticmethod(spy_evaluate)), \
          patch.object(stage_mod.StageManager, "negotiate", spy_negotiate), \
          patch.object(cortex_mod.TheCortex, "nominate_toxicity", spy_nominate_toxicity), \
@@ -113,13 +128,14 @@ def main() -> int:
             CURRENT_TURN["n"] = turn
             started = time.time()
             snapshot = eng.process_turn(message)
-            held = snapshot.get("type") == "SILENCE"
+            kind = snapshot.get("type")
             print(
                 f"[{turn:>2}] {phase:<10} {time.time()-started:>5.1f}s "
-                f"{'HELD' if held else 'spoke'}  {message[:50]!r}"
+                f"{kind:<15}  {message[:50]!r}"
             )
-    Path("tools/cache/silence_diagnostic.log").write_text("\n".join(LOG) + "\n")
-    print("\nFull diagnostic log: tools/cache/silence_diagnostic.log")
+    log_path = Path(f"tools/cache/silence_diagnostic_{args.topic}.log")
+    log_path.write_text("\n".join(LOG) + "\n")
+    print(f"\nFull diagnostic log: {log_path}")
     return 0
 
 

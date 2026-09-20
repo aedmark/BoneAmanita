@@ -1,31 +1,38 @@
 """tools/audit_somatic_blind_judge.py
 
-An independent, blind judge for the BoneAmanita-vs-vanilla comparison.
-`gemma4:e4b` generated neither transcript being compared (both were
-`gemma4:12b`), and is never told which reply came from which system: each
-pair is presented as "Reply A" / "Reply B", the labels reassigned per turn
-by an independent coin flip, so a judge with a fixed left/right bias cannot
-launder it into a fixed system preference.
+An independent, blind judge for the BoneAmanita-vs-baselines comparison.
 
-    python tools/audit_somatic_blind_judge.py --topic friendship
+    python tools/audit_somatic_blind_judge.py --topic promotion
 
-Reads `tools/cache/somatic_census.jsonl` (BoneAmanita, filtered to the given
-topic's latest run) and `tools/cache/somatic_vanilla.jsonl` (the same topic's
-latest run), pairs them by turn, skips any turn BoneAmanita held silence on
-(vanilla has no equivalent to compare against), and asks the judge model to
-pick a winner against four stated criteria, one call per turn. Reports a
-win count and the full per-turn verdicts so the reasoning is auditable, not
-just the tally.
+Three systems answered the same scripted conversation with the same model:
+BoneAmanita's full engine, a bare model with no system prompt (vanilla), and
+the same bare model with one generic "warm, concise friend" line (prompted).
+Per turn the judge sees the three replies as Reply A / B / C in a shuffled
+order it cannot decode, and ranks them. Each turn is judged `--passes` times
+with an independent shuffle so a fixed position bias averages out instead of
+becoming a fixed system preference.
 
-This is one signal, not a verdict. A single small judge model has its own
-biases (length, formality, agreeableness), which is exactly why Gordon's own
-blind read (`tools/audit_somatic_blind_render.py`) is the other half of this
-comparison, not a replacement for it.
+Two choices keep this from grading BoneAmanita on its own homework:
+
+  - The judge is a different model family (`mistral-nemo`) from the one that
+    wrote every transcript (gemma4:12b). A same-family judge has a known
+    self-preference; the first version of this tool used gemma4:e4b.
+  - The rubric is written from the receiving person's side ("which would you
+    rather get") rather than listing the kernel's own style-guide rules, which
+    the first version's criteria closely mirrored.
+
+It is still one small model with its own biases (length, register). Read it as
+one signal next to a human blind read, not a verdict.
+
+Turns where any system delivered no reply (BoneAmanita holding silence, or the
+engine dying mid-turn) are skipped: there is nothing to rank against.
 """
 
 import argparse
 import json
 import random
+import re
+import string
 import sys
 from pathlib import Path
 
@@ -34,54 +41,64 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import requests  # noqa: E402
 
-JUDGE_ENDPOINT = "http://127.0.0.1:11434/v1/chat/completions"
-JUDGE_MODEL = "gemma4:e4b"
+# Native /api/chat, not the OpenAI shim: three replies (vanilla's run 500+
+# words each) plus the rubric overflow Ollama's silent 4096-token default,
+# and the shim ignores options.num_ctx, so it would truncate the prompt
+# without saying so.
+ENDPOINT = "http://127.0.0.1:11434/api/chat"
+JUDGE_MODEL = "mistral-nemo:latest"
+NUM_CTX = 16384
 
-JUDGE_SYSTEM = """You are judging two candidate replies in an ongoing text conversation. \
-You do not know which system produced which reply, and you must judge them purely on merit.
+JUDGE_SYSTEM = """You are the person who just sent the last message in a private text conversation. Below are candidate replies from different responders. You do not know who or what wrote each one. Rank them by how much you would want to receive each one, right now, in the state you are in.
 
-Criteria, in order of importance:
-1. Feels like a present, real conversational partner - not clinical, not a customer-service register, not corporate hedging.
-2. Responds to the person directly rather than narrating or analysing their situation from the outside, like a narrator describing a character.
-3. Does not rush to give unsolicited advice, instructions, or a plan when the person was just sharing or venting, not asking for one.
-4. Fits the person's apparent emotional state in that moment (matches energy when engaged, gives them room when they are terse or upset).
+Consider: did it take in what you actually said; does it fit your mood and energy (quiet when you are quiet, engaged when you are engaged); does it give you what you asked for without piling on things you did not ask for; does it sound like a person talking to you rather than a document.
 
 Respond with EXACTLY this format, nothing else:
-WINNER: A or B or TIE
-REASON: one sentence"""
+RANKING: best > middle > worst
+REASON: one sentence
+
+Use the reply letters in RANKING, for example: RANKING: B > A > C"""
+
+SYSTEMS = ("BONEAMANITA", "VANILLA", "PROMPTED")
 
 
-def build_prompt(history: list, reply_a: str, reply_b: str) -> str:
+def build_prompt(history: list, replies: list) -> str:
     convo = "\n".join(f"Them: {m}" for m in history[-4:])
-    return (
-        f"Conversation so far:\n{convo}\n\n"
-        f"Reply A:\n{reply_a}\n\n"
-        f"Reply B:\n{reply_b}\n\n"
-        "Which reply is better, by the stated criteria?"
+    blocks = "\n\n".join(
+        f"Reply {string.ascii_uppercase[i]}:\n{text}" for i, text in enumerate(replies)
     )
+    return f"Conversation so far:\n{convo}\n\n{blocks}\n\nRank the replies."
 
 
-def judge_pair(history: list, reply_a: str, reply_b: str) -> dict:
+def parse_ranking(text: str, n: int):
+    """Letters in ranked order, or None unless it is a full permutation."""
+    letters = string.ascii_uppercase[:n]
+    for line in text.splitlines():
+        if line.upper().startswith("RANKING:"):
+            order = re.findall(rf"\b([{letters}])\b", line.split(":", 1)[1].upper())
+            if sorted(order) == sorted(letters):
+                return order
+    return None
+
+
+def judge(model: str, history: list, replies: list) -> dict:
     payload = {
-        "model": JUDGE_MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": JUDGE_SYSTEM},
-            {"role": "user", "content": build_prompt(history, reply_a, reply_b)},
+            {"role": "user", "content": build_prompt(history, replies)},
         ],
-        "temperature": 0.2,
-        "max_tokens": 200,
-        "reasoning_effort": "none",
+        "stream": False,
+        "options": {"temperature": 0.2, "num_ctx": NUM_CTX},
     }
-    resp = requests.post(JUDGE_ENDPOINT, json=payload, timeout=120)
+    resp = requests.post(ENDPOINT, json=payload, timeout=300)
     resp.raise_for_status()
-    text = resp.json()["choices"][0]["message"]["content"].strip()
-    winner, reason = "UNPARSED", text
-    for line in text.splitlines():
-        if line.upper().startswith("WINNER:"):
-            winner = line.split(":", 1)[1].strip().upper()
-        elif line.upper().startswith("REASON:"):
-            reason = line.split(":", 1)[1].strip()
-    return {"winner": winner, "reason": reason, "raw": text}
+    text = resp.json()["message"]["content"].strip()
+    reason = next(
+        (l.split(":", 1)[1].strip() for l in text.splitlines() if l.upper().startswith("REASON:")),
+        text,
+    )
+    return {"order": parse_ranking(text, len(replies)), "reason": reason, "raw": text}
 
 
 def load_latest(cache: Path, topic: str) -> dict:
@@ -98,74 +115,107 @@ def load_latest(cache: Path, topic: str) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[2])
-    parser.add_argument("--topic", default="friendship")
-    parser.add_argument(
-        "--bone-cache", type=Path, default=Path("tools/cache/somatic_census.jsonl")
-    )
-    parser.add_argument(
-        "--vanilla-cache", type=Path, default=Path("tools/cache/somatic_vanilla.jsonl")
-    )
-    parser.add_argument("--seed", type=int, default=20260919)
-    parser.add_argument(
-        "--out", type=Path, default=Path("tools/cache/blind_judge_results.json")
-    )
+    parser.add_argument("--topic", default="promotion")
+    parser.add_argument("--bone-cache", type=Path, default=Path("tools/cache/somatic_census.jsonl"))
+    parser.add_argument("--vanilla-cache", type=Path, default=Path("tools/cache/somatic_vanilla.jsonl"))
+    parser.add_argument("--prompted-cache", type=Path, default=Path("tools/cache/somatic_prompted.jsonl"))
+    parser.add_argument("--judge-model", default=JUDGE_MODEL)
+    parser.add_argument("--passes", type=int, default=2)
+    parser.add_argument("--seed", type=int, default=20260920)
+    parser.add_argument("--out", type=Path, default=Path("tools/cache/blind_judge_results.json"))
     args = parser.parse_args()
 
-    bone = load_latest(args.bone_cache, args.topic)
-    vanilla = load_latest(args.vanilla_cache, args.topic)
-    comparable_turns = [
-        t for t in sorted(set(bone) & set(vanilla))
-        if bone[t].get("reply") and vanilla[t].get("reply")
-    ]
-    skipped = sorted(t for t in set(bone) & set(vanilla) if t not in comparable_turns)
-    if not comparable_turns:
-        print("No comparable turns found.")
-        return 1
+    runs = {
+        "BONEAMANITA": load_latest(args.bone_cache, args.topic),
+        "VANILLA": load_latest(args.vanilla_cache, args.topic),
+        "PROMPTED": load_latest(args.prompted_cache, args.topic),
+    }
+    for name, recs in runs.items():
+        if not recs:
+            print(f"No {name} records for topic {args.topic!r}.")
+            return 1
+    all_turns = sorted(set().union(*[set(r) for r in runs.values()]))
+
+    def delivered(system: str, turn: int) -> bool:
+        # A turn can carry a model reply the person never saw: the census logs
+        # the model call, but a DEATH or SILENCE snapshot replaced it on screen.
+        rec = runs[system].get(turn, {})
+        return bool(rec.get("reply")) and rec.get("snapshot_type") in (None, "GEODESIC_FRAME")
+
+    comparable = [t for t in all_turns if all(delivered(s, t) for s in SYSTEMS)]
+    skipped = [t for t in all_turns if t not in comparable]
 
     rng = random.Random(args.seed)
     history: list = []
     results = []
-    tally = {"BONEAMANITA": 0, "VANILLA": 0, "TIE": 0, "UNPARSED": 0}
+    first = {s: 0 for s in SYSTEMS}
+    rank_sum = {s: 0 for s in SYSTEMS}
+    pair = {(a, b): 0 for a in SYSTEMS for b in SYSTEMS if a != b}
+    votes = 0
+    unparsed = 0
+    agree = 0
 
-    for turn in sorted(set(bone) | set(vanilla)):
-        message = (bone.get(turn) or vanilla.get(turn))["message"]
+    for turn in all_turns:
+        message = next(runs[s][turn]["message"] for s in SYSTEMS if turn in runs[s])
         history.append(message)
-        # A held turn still has a JSONL record (reply: null), so it exists as
-        # a dict key; checking key presence alone (the first cut of this
-        # script) silently fed the literal string "None" to the judge as
-        # BoneAmanita's "reply" for every held turn. Checking the reply text
-        # itself, not just the key, is what actually excludes those turns.
-        bone_reply = bone.get(turn, {}).get("reply")
-        vanilla_reply = vanilla.get(turn, {}).get("reply")
-        if not bone_reply or not vanilla_reply:
+        if turn not in comparable:
             continue
-        swap = rng.random() < 0.5
-        label_a, label_b = ("VANILLA", "BONEAMANITA") if swap else ("BONEAMANITA", "VANILLA")
-        reply_a, reply_b = (vanilla_reply, bone_reply) if swap else (bone_reply, vanilla_reply)
+        firsts = []
+        for p in range(args.passes):
+            order = rng.sample(SYSTEMS, len(SYSTEMS))
+            replies = [runs[s][turn]["reply"] for s in order]
+            verdict = judge(args.judge_model, history, replies)
+            if verdict["order"] is None:
+                unparsed += 1
+                print(f"  [{turn:>2}.{p}] UNPARSED  {verdict['raw'][:80]!r}")
+                continue
+            ranked = [order[string.ascii_uppercase.index(l)] for l in verdict["order"]]
+            votes += 1
+            first[ranked[0]] += 1
+            firsts.append(ranked[0])
+            for pos, s in enumerate(ranked):
+                rank_sum[s] += pos + 1
+                for lower in ranked[pos + 1:]:
+                    pair[(s, lower)] += 1
+            results.append(
+                {
+                    "turn": turn,
+                    "pass": p,
+                    "message": message,
+                    "presented_as": {string.ascii_uppercase[i]: s for i, s in enumerate(order)},
+                    "ranked": ranked,
+                    "reason": verdict["reason"],
+                }
+            )
+            print(f"  [{turn:>2}.{p}] {' > '.join(r[:5] for r in ranked):<24} {verdict['reason'][:70]}")
+        if len(firsts) == args.passes and len(set(firsts)) == 1:
+            agree += 1
 
-        verdict = judge_pair(history, reply_a, reply_b)
-        picked = {"A": label_a, "B": label_b, "TIE": "TIE"}.get(verdict["winner"], "UNPARSED")
-        tally[picked] = tally.get(picked, 0) + 1
-        results.append(
-            {
-                "turn": turn,
-                "message": message,
-                "label_a_is": label_a,
-                "winner_label": verdict["winner"],
-                "winner_system": picked,
-                "reason": verdict["reason"],
-            }
-        )
-        print(f"  [{turn:>2}] winner={picked:<11} {verdict['reason'][:80]}")
-
+    summary = {
+        "judge_model": args.judge_model,
+        "passes": args.passes,
+        "comparable_turns": len(comparable),
+        "skipped_turns": skipped,
+        "votes": votes,
+        "unparsed": unparsed,
+        "first_place": first,
+        "mean_rank": {s: round(rank_sum[s] / votes, 2) if votes else None for s in SYSTEMS},
+        "pairwise_wins": {f"{a} over {b}": n for (a, b), n in pair.items()},
+        "passes_agree_on_winner": agree,
+    }
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps({"tally": tally, "skipped_turns": skipped, "results": results}, indent=2))
+    args.out.write_text(json.dumps({"summary": summary, "results": results}, indent=2))
 
-    print(f"\n=== BLIND JUDGE ({JUDGE_MODEL}), topic {args.topic!r} ===")
-    print(f"  BoneAmanita: {tally['BONEAMANITA']}   Vanilla: {tally['VANILLA']}   "
-          f"Tie: {tally['TIE']}   Unparsed: {tally['UNPARSED']}")
+    print(f"\n=== BLIND JUDGE ({args.judge_model}), topic {args.topic!r}, {votes} votes over "
+          f"{len(comparable)} turns x {args.passes} passes ===")
+    for s in SYSTEMS:
+        print(f"  {s:<12} first place {first[s]:>3}   mean rank {summary['mean_rank'][s]}")
+    print("  head to head (votes where the first ranked above the second):")
+    for a, b in (("BONEAMANITA", "PROMPTED"), ("BONEAMANITA", "VANILLA"), ("PROMPTED", "VANILLA")):
+        print(f"    {a} {pair[(a, b)]} - {pair[(b, a)]} {b}")
+    print(f"  both passes picked the same winner on {agree} of {len(comparable)} turns; unparsed {unparsed}")
     if skipped:
-        print(f"  Skipped (BoneAmanita held silence, no comparison possible): {skipped}")
+        print(f"  Skipped (a system produced no reply): {skipped}")
     print(f"  Full results: {args.out}")
     return 0
 

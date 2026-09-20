@@ -231,7 +231,10 @@ class ObservationPhase(SimulationPhase):
                     ctx.log(acquire_msg)
         frustration = getattr(self.eng.mind.mem, "last_frustration_ratio", 0.0)
         gaze_result = self.eng.phys.observer.gaze(
-            ctx.input_text, self.eng.mind.mem.graph, frustration_ratio=frustration
+            ctx.input_text,
+            self.eng.mind.mem.graph,
+            frustration_ratio=frustration,
+            active_mode=getattr(self.eng.cortex, "active_mode", ""),
         )
         input_phys = gaze_result["physics"]
         ctx.clean_words = gaze_result["clean_words"]

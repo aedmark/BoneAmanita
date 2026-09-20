@@ -85,7 +85,13 @@ class QuantumObserver:
     def _on_q_matrix(self, payload):
         self.Q_n = payload.get("q_matrix")
 
-    def gaze(self, text: str, graph: Optional[Dict] = None, frustration_ratio: float = 0.0) -> Dict:
+    def gaze(
+        self,
+        text: str,
+        graph: Optional[Dict] = None,
+        frustration_ratio: float = 0.0,
+        active_mode: str = "",
+    ) -> Dict:
         import random
         if "SYSTEM_BOOT" in text:
             text = ""
@@ -150,15 +156,25 @@ class QuantumObserver:
         def get_deep(key: str, default: float) -> float:
             return float(safe_get(deep_cfg, key, default))
 
-        if text.count("!") >= 3 or "ACCELERATE" in t_up or "FASTER" in t_up:
+        # Substring keywords, not word matches: "faster" pinned voltage at 160
+        # and the crucible's meltdown (voltage * 0.5 damage) killed a live
+        # conversation in three turns; "!!!" and "avoid" (contains VOID) do the
+        # same kind of thing. They belong to the game modes, so modes listed in
+        # CORTEX.KEYWORD_TRIGGERS_DISABLED_MODES never see them.
+        keywords_live = active_mode not in safe_get(
+            safe_get(self.cfg, "CORTEX", {}), "KEYWORD_TRIGGERS_DISABLED_MODES", []
+        )
+        if keywords_live and (
+            text.count("!") >= 3 or "ACCELERATE" in t_up or "FASTER" in t_up
+        ):
             avg_voltage = max(avg_voltage, get_deep("ACCELERATE_VOLTAGE", 160.0))
-        if "RECURSIVE" in t_up or "LOOP" in t_up:
+        if keywords_live and ("RECURSIVE" in t_up or "LOOP" in t_up):
             recursive_lq = max(loop_quotient, get_deep("RECURSIVE_LQ", 0.9))
             loop_quotient = recursive_lq
             beta = recursive_lq
-        if "VOID" in t_up or "ABYSS" in t_up:
+        if keywords_live and ("VOID" in t_up or "ABYSS" in t_up):
             geo.abstraction = max(geo.abstraction, get_deep("VOID_ABSTRACTION", 0.9))
-        if "POTATO BUN" in t_up or "NONSENSE" in t_up:
+        if keywords_live and ("POTATO BUN" in t_up or "NONSENSE" in t_up):
             silence = max(silence, get_deep("POTATO_BUN_DELTA", 0.85))
             avg_voltage = min(avg_voltage, get_deep("POTATO_BUN_VOLTAGE", 15.0))
         val = self.lex.get_valence(clean_words)

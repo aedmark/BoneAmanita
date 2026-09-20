@@ -335,6 +335,31 @@ class TopologicalPrimitivesTest(BoneTestCase):
         )
         self.assertEqual(observer.pending_drag, 10.0, "[FAIL] Cordyceps failed to apply the absolute narrative drag lock.")
 
+
+    def _voltage(self, text: str, mode: str) -> float:
+        observer = self.engine.phys.observer
+        observer.voltage_history.clear()
+        return observer.gaze(text, active_mode=mode)["physics"].voltage
+
+    def test_keyword_voltage_surge_is_off_in_conversation_mode(self):
+        """"faster" (substring match) and "!!!" pinned voltage at 160; the
+        crucible's meltdown (voltage * 0.5 damage) then killed a live
+        conversation in three turns. Ordinary speech must not do that."""
+        for text in (
+            "Apparently the news traveled faster than I did.",
+            "Thanks so much!!! That really helped!",
+        ):
+            with self.subTest(text=text):
+                self.assertLess(self._voltage(text, "CONVERSATION"), 20.0)
+
+    def test_keyword_voltage_surge_still_fires_in_a_game_mode(self):
+        for text in (
+            "Apparently the news traveled faster than I did.",
+            "Thanks so much!!! That really helped!",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self._voltage(text, "ADVENTURE"), 160.0)
+
     def test_r_base_ramp_up(self):
         from physics.observer import QuantumObserver
         from unittest.mock import MagicMock

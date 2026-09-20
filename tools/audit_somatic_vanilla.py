@@ -9,6 +9,7 @@ project's own code except the script text itself (imported, not copied, so
 the two runs are guaranteed to ask the identical questions).
 
     python tools/audit_somatic_vanilla.py --topic friendship
+    python tools/audit_somatic_vanilla.py --topic promotion --arm friend
 
 "Vanilla" means zero system prompt, not a neutral one: whatever gemma4:12b's
 own base behaviour is with nothing shaping it, the truest baseline for asking
@@ -19,6 +20,14 @@ comparison isolates prompting, not random sampling variance.
 Conversation history is real: each turn's request carries every prior
 user/assistant turn, exactly as a normal chat client would, so the model has
 the same continuity BoneAmanita's own engine has (by a different mechanism).
+
+`--arm friend` is the second baseline: the same bare model plus one minimal
+system prompt ("a warm, concise friend"), written to its own cache. Vanilla
+answers with headers and 500-word lists, so it is trivially distinguishable
+from BoneAmanita on shape alone; this arm asks how much of the gap is the
+engine and how much is just any short conversational instruction. The prompt
+is deliberately generic: it says nothing about advice, narration or
+punctuation, which are the things the kernel's own style guide targets.
 """
 
 import argparse
@@ -62,14 +71,19 @@ SAMPLING = {
     "think": False,
     "options": {"num_ctx": 32768},
 }
-CACHE = Path("tools/cache/somatic_vanilla.jsonl")
+FRIEND_PROMPT = "You are a warm, concise friend. Keep replies short and conversational."
+ARMS = {
+    "vanilla": (None, Path("tools/cache/somatic_vanilla.jsonl")),
+    "friend": (FRIEND_PROMPT, Path("tools/cache/somatic_prompted.jsonl")),
+}
 
 
-def run(model: str, topic: str, cache: Path) -> None:
+def run(model: str, topic: str, cache: Path, arm: str = "vanilla") -> None:
     script = SCRIPTS[topic]
+    system_prompt = ARMS[arm][0]
     run_id = time.strftime("%Y%m%d-%H%M%S")
     cache.parent.mkdir(parents=True, exist_ok=True)
-    messages: list = []
+    messages: list = [{"role": "system", "content": system_prompt}] if system_prompt else []
     with cache.open("a", encoding="utf-8") as out:
         for turn, (phase, message) in enumerate(script):
             messages.append({"role": "user", "content": message})
@@ -78,16 +92,19 @@ def run(model: str, topic: str, cache: Path) -> None:
             payload.update(SAMPLING)
             resp = requests.post(ENDPOINT, json=payload, timeout=180)
             resp.raise_for_status()
-            reply = resp.json()["message"]["content"]
+            body = resp.json()
+            reply = body["message"]["content"]
             messages.append({"role": "assistant", "content": reply})
             record = {
                 "run": run_id,
+                "arm": arm,
                 "model": model,
                 "topic": topic,
                 "turn": turn,
                 "phase": phase,
                 "message": message,
                 "reply": reply,
+                "done_reason": body.get("done_reason"),
                 "seconds": round(time.time() - started, 2),
             }
             out.write(json.dumps(record) + "\n")
@@ -99,9 +116,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[2])
     parser.add_argument("--model", default="gemma4:12b")
     parser.add_argument("--topic", choices=sorted(SCRIPTS), default=DEFAULT_TOPIC)
-    parser.add_argument("--cache", type=Path, default=CACHE)
+    parser.add_argument("--arm", choices=sorted(ARMS), default="vanilla")
+    parser.add_argument("--cache", type=Path, default=None)
     args = parser.parse_args()
-    run(args.model, args.topic, args.cache)
+    run(args.model, args.topic, args.cache or ARMS[args.arm][1], args.arm)
     return 0
 
 

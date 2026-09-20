@@ -64,3 +64,29 @@ class PreflightGatesAreNominationsNotHalts(BoneTestCase):
             any(n.gate == "POINT_OF_NO_RETURN" for n in ctx.nominations),
             "Explicit CONSENT must suppress the nomination entirely.",
         )
+
+
+class KeywordGatesAreQuietInConversation(BoneTestCase):
+    """The ops-style "deploy" gate waits for a literal CONSENT keyword. It held
+    a live conversation on "the deploy pipeline" (a person talking about their
+    job). Modes in CORTEX.KEYWORD_TRIGGERS_DISABLED_MODES never run it.
+    """
+
+    TEXT = "Tomasz got stuck on the deploy pipeline last week and I dropped everything for him"
+
+    def _nominated(self, mode: str) -> bool:
+        original = self.engine.cortex.active_mode
+        try:
+            self.engine.cortex.active_mode = mode
+            ctx = SimulationPreflightPhase(self.engine).run(
+                CycleContext(input_text=self.TEXT, physics=PhysicsPacket())
+            )
+        finally:
+            self.engine.cortex.active_mode = original
+        return any(n.gate == "POINT_OF_NO_RETURN" for n in ctx.nominations)
+
+    def test_conversation_mode_does_not_hold_on_the_word_deploy(self):
+        self.assertFalse(self._nominated("CONVERSATION"))
+
+    def test_the_gate_still_holds_in_a_game_mode(self):
+        self.assertTrue(self._nominated("ADVENTURE"))

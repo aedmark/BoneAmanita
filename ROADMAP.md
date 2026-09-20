@@ -51,7 +51,31 @@ preference, it is the precondition for the other two tracks. You cannot
 verify that a PDE is steering behaviour inside a system that cannot tell
 you whether it ran.
 
-## Status — reconciled 2026-09-19 (latest)
+## Status — reconciled 2026-09-20 (latest)
+
+**The DSPy critic could mutate the kernel mid-crisis; gated off in
+CONVERSATION mode, 2026-09-20:** reviewing the friendship census's five
+silences (Gordon: "was silence the correct choice, or the only choice
+because something silently failed?") found two already-known bugs
+(confirmed fixed), one genuine `TENSION_MAGNITUDE` arbitration (four
+voices, no fusion), and two `MOOG` holds whose real trigger - instrumented
+live before `MOOG`'s own reset erases the evidence - was `narrative_drag`
+at 55-56 against a limit of 12.8. Traced further: `DSPyCritic.evolve_prompt`
+(`mechanics/dspycritic.py`), triggered purely by Lexical Firewall
+rejections with zero awareness of mode or the person's state, had
+permanently injected an axiom forbidding the model from soothing or
+reassuring - right as the conversation moved into its most vulnerable
+turns - and confirmed that axiom does reach every subsequent prompt via
+`GLOBAL_BASELINE.EVOLVED_AXIOMS`. Gated off in CONVERSATION mode via a new
+config key. First attempt did nothing (verified live, made it worse:
+`narrative_drag` peaked at 999): the gate read `self.eng.cortex.active_mode`
+from inside `DreamEngine`, but `self.eng` there isn't the object that holds
+`.cortex` at all, so the check silently always saw `""`. Real fix threads
+`active_mode` in as a parameter from each of the five real call sites
+instead. Re-confirmed live: 29/30 turns generated (previously 26-28),
+`narrative_drag` max 6.42, `PINKER` total max 41.47 (was 5015.62). Full
+suite: 584 passed, 5 skipped, 138 subtests. See the
+[2026-09-20 handoff](SESSION_HANDOFF.md#dspy-critic-conversation-gate-2026-09-20).
 
 **A blind BoneAmanita-vs-vanilla comparison, and Ollama's silent 4096-token
 context default, 2026-09-19:** Gordon asked for a vanilla baseline (same

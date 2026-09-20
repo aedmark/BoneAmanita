@@ -1,8 +1,97 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+<a id="dspy-critic-conversation-gate-2026-09-20"></a>
+
+## Latest: the DSPy critic could mutate the kernel mid-crisis, gated off in CONVERSATION, and a broken first attempt at fixing it, 2026-09-20
+
+Follow-on from re-reading the friendship census closely (below): Gordon
+asked to review the five turns BoneAmanita held silence on, specifically
+whether silence was a genuine arbitrated choice or a symptom of something
+failing quietly. Two (turns 20, 22) turned out to be the already-known
+cursed-word bug, confirmed fixed by replaying the exact messages live. One
+(turn 16, `"idk"`) was a real `TENSION_MAGNITUDE` hold: four voices
+(GORDON, JESTER, ROBERTA, COLIN) genuinely fired at once with no fusion,
+confirmed by instrumenting `StageManager.negotiate` directly rather than
+trusting the census log - which can't be trusted for `MOOG`, because
+`TheCortex.nominate_toxicity` resets `narrative_drag` to `0.0` as a side
+effect of firing, so the post-turn snapshot the census records can never
+show the value that actually crossed the threshold.
+
+### The other two: `narrative_drag` really was over threshold, but not because of anything in the message
+
+Turns 27 and 28 (calm, resolved "recovering"-phase content) both held on
+`MOOG`. Instrumented before the reset: `narrative_drag` was genuinely at
+55-56 against a limit of 12.8 at decision time - not stale, not a snapshot
+artifact. Chasing where that came from surfaced something new: right at
+the turns 24-25 boundary, `[Epigenetic Mutation]` fired -
+`DSPyCritic.evolve_prompt` (`mechanics/dspycritic.py`), a second model
+(`gemma4:e4b`) that watches `trauma_buffer` (populated *only* by Lexical
+Firewall rejections, `brain/cortex.py:838`, with zero awareness of mode or
+the person's state) and periodically synthesizes a new permanent axiom to
+stop the firewall tripping again. What it produced: *"Tone must be
+enforced as volatile... forbidden to employ any linguistic structure
+designed to soothe, confirm, or reassure... default mode of failure is
+preferred over a default mode of success."* Confirmed live (`brain/mind.py`,
+`brain/composer.py:731`) that this axiom is not inert - it gets appended
+to `GLOBAL_BASELINE.EVOLVED_AXIOMS`, which the composer reads into every
+subsequent prompt regardless of mode. The distressed phase naturally
+produces hedging language ("I understand," "that makes sense") that the
+firewall exists to catch; the critic "fixed" that by permanently
+instructing the model to stop soothing, right as the conversation moved
+into its most vulnerable moment - directly contradicting the CONVERSATION
+kernel's whole direction this week (candor *with* warmth). The
+"malignancy" filter meant to catch bad axioms did not catch this one.
+
+### Fix, and a bug in the fix
+
+Gordon: *"Gate it off in CONVERSATION mode, or at the very least make it
+far less aggressive."* Added `CORTEX.EPIGENETIC_MUTATION_DISABLED_MODES`
+(`["CONVERSATION"]`, config-driven per the project's usual pattern) and
+checked it in `DreamEngine._run_biological_rem` before calling
+`evolve_prompt`; trauma still drains either way so it can't queue up and
+fire the moment the mode changes. Two new tests
+(`tests/test_biology.py`) passed, full suite green - and the fix did
+nothing. Re-running the friendship census to confirm it live showed the
+exact same axiom firing again, and `narrative_drag` peaking at **999**
+(`PINKER` total peaking at **5015**, against a normal single-digit-to-low-
+double-digit run) - worse than before, not fixed.
+
+Root cause: the check read `self.eng.cortex.active_mode` from inside
+`DreamEngine`, but `self.eng` there is not the same object that holds
+`.cortex` - confirmed live, `self.eng.cortex` does not exist on that
+reference at all. `active_mode` silently resolved to `""` every time,
+which is never in the disabled-modes list, so the gate never actually
+gated anything. The unit tests hadn't caught it because they built
+`eng_ref` as a `MagicMock()` and set `.cortex.active_mode` on it directly
+- that only proves the gating logic is correct in isolation, not that the
+real object graph delivers a real mode string to it.
+
+Real fix: `active_mode` is no longer read from inside `DreamEngine` at
+all. `enter_rem_cycle` and `_run_biological_rem` now take it as a
+parameter, and all five real call sites (`cycle.py`, `phases/biological.py`,
+`phases/environmental.py` x2, `mechanics/commands.py`) pass
+`self.eng.cortex.active_mode` (a reference that *is* reliably wired at
+each of those sites) explicitly. Confirmed live against the actual boot
+path, not a mock: `active_mode` resolves to `"CONVERSATION"` and the
+critic is not called. New regression test
+(`test_epigenetic_gate_reads_the_real_engines_active_mode`) exercises this
+against the real, fully-booted engine specifically because a hand-built
+mock is what let the first, broken fix pass. Mutation-tested: reintroducing
+the old `self.eng.cortex` read broke exactly the two tests that should
+catch it.
+
+### Re-confirmed live
+
+Same friendship script, same model, full fix in place: 29 of 30 turns
+generated (previously 26-28 depending on run), only turn 16 held (the
+genuine `TENSION_MAGNITUDE` case above). No epigenetic mutation fired.
+`narrative_drag` max **6.42** (was 999), `PINKER` total max **41.47** (was
+5015.62), mean 32.52 (was 529.89). Turns 27 and 28 both speak now. Full
+suite: 584 passed, 5 skipped, 138 subtests.
+
 <a id="vanilla-blind-comparison-2026-09-19"></a>
 
-## Latest: a blind BoneAmanita-vs-vanilla comparison, and Ollama's silent context default bit twice in one day, 2026-09-19
+## Earlier: a blind BoneAmanita-vs-vanilla comparison, and Ollama's silent context default bit twice in one day, 2026-09-19
 
 Gordon, reading the friendship census: "truly remarkable; but I am quite
 biased." Asked for a vanilla baseline (same script, same model, zero system

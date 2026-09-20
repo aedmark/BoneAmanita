@@ -649,8 +649,15 @@ class SimulationPreflightPhase(SimulationPhase):
                     ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
                     packet = self._build_refusal(ctx, phys_obj, "PREMISE_VIOLATION", msg)
                     ctx.nominations.append(Nomination(gate="PREMISE_VIOLATION", reason=msg, magnitude=100.0, packet=packet))
+        # An ops-style keyword gate that waits for a literal "CONSENT"; it held
+        # a person talking about "the deploy pipeline" at their job. Modes in
+        # CORTEX.KEYWORD_TRIGGERS_DISABLED_MODES never run it.
+        ops_gate_live = getattr(self.eng.cortex, "active_mode", "") not in safe_get(
+            safe_get(self.eng.config, "CORTEX", {}), "KEYWORD_TRIGGERS_DISABLED_MODES", []
+        )
         if (
-            any(
+            ops_gate_live
+            and any(
                 a in user_input_lower
                 for a in (
                     "deploy",
