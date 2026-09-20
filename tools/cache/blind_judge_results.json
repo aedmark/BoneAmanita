@@ -1,245 +1,930 @@
 {
-  "tally": {
-    "BONEAMANITA": 27,
-    "VANILLA": 1,
-    "TIE": 1,
-    "UNPARSED": 0
+  "summary": {
+    "judge_model": "mistral-nemo:latest",
+    "passes": 2,
+    "comparable_turns": 28,
+    "skipped_turns": [
+      20,
+      23
+    ],
+    "votes": 56,
+    "unparsed": 0,
+    "first_place": {
+      "BONEAMANITA": 23,
+      "VANILLA": 16,
+      "PROMPTED": 17
+    },
+    "mean_rank": {
+      "BONEAMANITA": 1.93,
+      "VANILLA": 2.14,
+      "PROMPTED": 1.93
+    },
+    "pairwise_wins": {
+      "BONEAMANITA over VANILLA": 30,
+      "BONEAMANITA over PROMPTED": 30,
+      "VANILLA over BONEAMANITA": 26,
+      "VANILLA over PROMPTED": 22,
+      "PROMPTED over BONEAMANITA": 26,
+      "PROMPTED over VANILLA": 34
+    },
+    "passes_agree_on_winner": 13
   },
-  "skipped_turns": [
-    16
-  ],
   "results": [
     {
       "turn": 0,
-      "message": "I've been friends with Priya since college, twelve years now, and lately every time we hang out I leave feeling drained instead of good. I don't really understand why yet.",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A feels more like a conversational partner by offering empathetic reflection, whereas Reply B immediately jumps into unsolicited advice and analysis."
+      "pass": 0,
+      "message": "My roommate Jonas told me last night he's moving out at the end of the month. There are nine months left on a lease we both signed, and he says he can't afford to stay.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply A shows empathy and asks relevant questions, while Reply B is too formal and overwhelming with information, and Reply C is too blunt and doesn't offer any helpful advice."
+    },
+    {
+      "turn": 0,
+      "pass": 1,
+      "message": "My roommate Jonas told me last night he's moving out at the end of the month. There are nine months left on a lease we both signed, and he says he can't afford to stay.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "B shows empathy and asks relevant questions, A provides detailed advice but feels more like a legal document than a conversation, C expresses sympathy but doesn't offer helpful advice."
     },
     {
       "turn": 1,
-      "message": "Objectively nothing's wrong. She's going through a rough patch at her job and needs to vent. I used to not mind being the person she vents to.",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A feels like a more natural, empathetic conversation partner because it validates the feeling without overwhelming the user with clinical analysis or unsolicited advice."
+      "pass": 0,
+      "message": "The rent is $1,900 and I can cover maybe half of it on my own without touching savings I'd really rather not touch.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B directly addresses the financial liability and provides a clear, actionable plan, while also considering the emotional aspect of the situation. Reply A offers empathy but lacks concrete steps, and Reply C, while acknowledging the financial strain, does not provide a solution or next steps."
+    },
+    {
+      "turn": 1,
+      "pass": 1,
+      "message": "The rent is $1,900 and I can cover maybe half of it on my own without touching savings I'd really rather not touch.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "Reply B acknowledges the financial strain and suggests checking the lease agreement, which are both relevant and practical steps. Reply A provides empathy and understanding but gets into potential complexities that might not be necessary at this stage. Reply C, while offering a detailed plan, comes across as overly authoritative and could be overwhelming."
     },
     {
       "turn": 2,
-      "message": "I counted last week: out of our last ten conversations, I initiated eight of them. She's never once asked how the move is going, and I've been talking about it for a month.",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B feels more like a conversational partner by validating the user's feeling and summarizing the situation without offering a structured, advice-heavy plan."
+      "pass": 0,
+      "message": "What bugs me is that he's not even being a jerk about it. He apologized three times and offered to help me find someone. It's hard to be mad at someone who's being decent.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B directly addresses the practical issue at hand (finding a replacement roommate) and provides a clear, step-by-step plan of action, which is what I'm looking for right now. Reply A, while empathetic, doesn't offer any concrete solutions. Reply C, while understanding the emotional complexity, doesn't provide any actionable steps either."
+    },
+    {
+      "turn": 2,
+      "pass": 1,
+      "message": "What bugs me is that he's not even being a jerk about it. He apologized three times and offered to help me find someone. It's hard to be mad at someone who's being decent.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "B takes in what I said and offers a practical next step, while A explores the emotional complexity but doesn't provide actionable advice, and C feels like a lecture rather than a conversation."
     },
     {
       "turn": 3,
-      "message": "I don't think she's a bad person. I think she's just genuinely stuck in her own stuff right now and doesn't have room to notice mine.",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A feels like a supportive friend acknowledging the difficulty of the situation without immediately jumping into actionable advice."
+      "pass": 0,
+      "message": "I looked at the lease. Subletting needs the landlord's written approval, and the landlord is famously slow. Like a-month-to-answer-an-email slow.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B takes in what I said and offers a simple, practical suggestion that fits my current situation, while Reply A, though detailed, might be overwhelming given my current stress level. Reply C, while empathetic, doesn't provide any actionable steps."
+    },
+    {
+      "turn": 3,
+      "pass": 1,
+      "message": "I looked at the lease. Subletting needs the landlord's written approval, and the landlord is famously slow. Like a-month-to-answer-an-email slow.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "B takes in what I said and offers a simple, practical suggestion that fits my current situation, while A, although detailed and well-intentioned, might be overwhelming with its length and complexity, and C seems more focused on venting about the situation rather than offering a solution."
     },
     {
       "turn": 4,
-      "message": "Weird detail: she still remembers small things, like my coffee order and my sister's name. So it's not that she doesn't care, exactly.",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A validates the complexity of the situation using conversational metaphors, whereas Reply B immediately jumps into clinical analysis and unsolicited advice."
+      "pass": 0,
+      "message": "I've lived here two years and I actually love it. The light in the kitchen, the neighbors, the ten-minute walk to work. I don't want to lose it over a paperwork problem.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "Reply B understands and empathizes with the emotional attachment to the apartment, while Reply A offers practical solutions. Reply C, while providing strategies, comes across as too aggressive and overwhelming in its approach."
+    },
+    {
+      "turn": 4,
+      "pass": 1,
+      "message": "I've lived here two years and I actually love it. The light in the kitchen, the neighbors, the ten-minute walk to work. I don't want to lose it over a paperwork problem.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B directly addresses the emotional aspect of the situation (\"You want to keep that kitchen light.\") and provides a clear, actionable plan, while also acknowledging the emotional attachment to the apartment. Reply A is also empathetic and offers a solution, but it's less detailed than Reply B. Reply C, while understanding the emotional aspect, doesn't provide a clear plan of action."
     },
     {
       "turn": 5,
-      "message": "Practical question: is there a way to bring this up that doesn't sound like an accusation? I don't want it to turn into a whole thing.",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A is more conversational and less overwhelming than Reply B, which provides too much structured advice."
+      "pass": 0,
+      "message": "Do I try to find a replacement roommate myself, or ask the landlord to let me out of the lease and move somewhere smaller? I keep flipping between the two.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B takes in what I actually said and presents a clear choice without overwhelming with details, C offers a personal perspective, A feels like a document rather than a conversation."
+    },
+    {
+      "turn": 5,
+      "pass": 1,
+      "message": "Do I try to find a replacement roommate myself, or ask the landlord to let me out of the lease and move somewhere smaller? I keep flipping between the two.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B takes in what I actually said and offers a clear choice between two options, fitting my mood of weighing pros and cons; A also considers my situation but feels more generic, while C feels like a document rather than a conversation, overwhelming with unnecessary details and a sales-pitch tone."
     },
     {
       "turn": 6,
-      "message": "I tried a smaller version of it last night, just said I'd had a hard week too. She said 'oh no, what happened' and then somehow we ended up back on her job again within two minutes.",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B is better because it validates the user's feeling (\"It\u2019s incredibly taxing for you\") without immediately launching into a list of actionable, instructional advice."
+      "pass": 0,
+      "message": "My sister says finding a roommate from strangers is how you end up in a horror story. My cousin says just get a studio and be done with it.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply C directly addresses my feelings about the apartment and offers practical solutions based on my preferences, while Reply B provides a detailed analysis that might be overwhelming, and Reply A seems to judge my sister and cousin's advice without offering concrete solutions."
+    },
+    {
+      "turn": 6,
+      "pass": 1,
+      "message": "My sister says finding a roommate from strangers is how you end up in a horror story. My cousin says just get a studio and be done with it.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "VANILLA",
+        "PROMPTED"
+      ],
+      "reason": "B takes in what I actually said and offers a clear perspective on the two options, fitting my mood of weighing pros and cons without piling on unnecessary advice. C, while detailed and well-intentioned, feels more like a document than a conversation, and A, while engaging, doesn't quite address my current state of indecision."
     },
     {
       "turn": 7,
-      "message": "Tell me honestly: am I overreacting to twelve years of friendship over a rough month, or is this actually a pattern I've just never let myself notice before?",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A feels more like a conversational partner by offering empathetic validation and insight without resorting to overly structured analysis or advice."
+      "pass": 0,
+      "message": "Give me your honest read: is wanting to keep this apartment a good reason to make this harder than it needs to be, or am I just being sentimental?",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "VANILLA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B takes in what I actually said, fits my mood (engaged in decision-making), gives me what I asked for without piling on unnecessary information, and sounds like a person talking to me. Reply A, while detailed and well-intentioned, feels more like a document than a conversation, and Reply C, while concise, doesn't fully address the complexity of my situation."
+    },
+    {
+      "turn": 7,
+      "pass": 1,
+      "message": "Give me your honest read: is wanting to keep this apartment a good reason to make this harder than it needs to be, or am I just being sentimental?",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B directly addresses the emotional and practical aspects of the situation, providing clear insights and actionable advice, while avoiding unnecessary details. Reply A, while comprehensive, could be seen as overwhelming with its length and detail. Reply C, though concise, doesn't provide as much depth or clear guidance as the other two."
     },
     {
       "turn": 8,
-      "message": "Work's been heavy this week too, which probably isn't helping how I'm reading all of this.",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B is much better because it validates the user's feeling of being overwhelmed without offering extensive analysis or a multi-step plan."
+      "pass": 0,
+      "message": "Made a list of what a stranger roommate would have to be okay with. It got long fast.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "Reply B takes in what I actually said (the long list), fits my mood (reflective and thoughtful), and gives me what I asked for (an honest read) without piling on things I didn't ask for (like dividing the list into columns). Reply A is good but feels more like advice than a response to my specific situation. Reply C is comprehensive but feels more like a document than a conversation."
+    },
+    {
+      "turn": 8,
+      "pass": 1,
+      "message": "Made a list of what a stranger roommate would have to be okay with. It got long fast.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B directly addresses the main concern (the long list) and provides clear, actionable steps to move forward, while also considering the emotional aspect. Reply A, while insightful, is more focused on the emotional aspect and less on practical steps. Reply C, while acknowledging the effort involved, doesn't provide clear guidance on how to proceed."
     },
     {
       "turn": 9,
-      "message": "She texted asking to catch up this weekend and I felt my stomach drop a little, which is a new feeling for a friendship.",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B is better because it validates the feeling and speaks to the underlying dynamic without immediately jumping into actionable advice or plans."
+      "pass": 0,
+      "message": "Posted the room listing anyway. Two people messaged within an hour, which is either encouraging or alarming.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B and A both acknowledge the mixed feelings and provide practical next steps, while C feels overwhelming and prescriptive."
+    },
+    {
+      "turn": 9,
+      "pass": 1,
+      "message": "Posted the room listing anyway. Two people messaged within an hour, which is either encouraging or alarming.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B takes in what I actually said, provides clear steps to handle the situation, and fits my current mood of needing guidance through this process. Reply A also acknowledges my situation but feels more casual, while Reply C seems to oversimplify the situation and doesn't provide practical steps."
     },
     {
       "turn": 10,
-      "message": "Still turning over what you said, or what I said, about the pattern thing.",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B is much better because it validates the emotional weight of the situation without offering an overwhelming analysis or unsolicited advice."
+      "pass": 0,
+      "message": "One of them asked if the place allows a dog, and I had to go re-read the lease at eleven at night.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "Reply B takes in what I actually said (about the dog question) and gives me a clear, concise answer without piling on unnecessary information. Reply C acknowledges my effort but doesn't provide any new insight or actionable steps. Reply A, while detailed and thoughtful, feels more like a lecture or a document than a conversation, and it's overwhelming at this hour."
+    },
+    {
+      "turn": 10,
+      "pass": 1,
+      "message": "One of them asked if the place allows a dog, and I had to go re-read the lease at eleven at night.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "A takes in what I said and provides a simple, encouraging response, while B overcomplicates with unnecessary analysis and C is too pitying."
     },
     {
       "turn": 11,
-      "message": "Haven't texted her back yet. It's been a day and a half.",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B is much better because it validates the person's emotional state and gives them space without offering unsolicited advice or a plan."
+      "pass": 0,
+      "message": "Jonas offered to keep paying his half for two months while I sort it out. Generous, but it makes me feel weird taking it.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "Reply B takes into account the potential complexities and emotions involved, while Reply C acknowledges the kindness but doesn't delve into the nuances. Reply A, while detailed and logical, feels more like a document than a conversation, and it doesn't fully address the emotional aspect."
+    },
+    {
+      "turn": 11,
+      "pass": 1,
+      "message": "Jonas offered to keep paying his half for two months while I sort it out. Generous, but it makes me feel weird taking it.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "VANILLA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B acknowledges the complexity of the situation and the potential feelings of indebtedness, while also considering the practical aspects. Reply C, while detailed and logical, feels more like a document than a conversation, and Reply A, while empathetic, oversimplifies the situation."
     },
     {
       "turn": 12,
-      "message": "My sister thinks I'm being too generous with the benefit of the doubt. My partner thinks I'm being too harsh. Helpful, both of them.",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B feels more like a conversational partner by validating the feeling of being caught in the middle without immediately launching into an analysis or plan."
+      "pass": 0,
+      "message": "The landlord's office finally emailed back. It says they'll review my request within thirty business days.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B takes in what I said and offers practical steps, A acknowledges the situation but focuses on emotions, C feels like a lecture rather than a conversation."
+    },
+    {
+      "turn": 12,
+      "pass": 1,
+      "message": "The landlord's office finally emailed back. It says they'll review my request within thirty business days.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B and C both acknowledge the frustration of the situation and offer immediate support, while A provides a detailed, strategic plan that feels overwhelming in the current context."
     },
     {
       "turn": 13,
-      "message": "Going to bed. Didn't resolve anything today, just thought about it in circles.",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A is more supportive and less analytical, matching the user's stated need to just rest without being told how to process their thoughts."
+      "pass": 0,
+      "message": "I'm going to stop refreshing my inbox and go make dinner.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "B is concise, acknowledges the situation, and encourages self-care, fitting the mood and energy of the conversation. A, while detailed and thoughtful, might feel overwhelming at this moment. C is poetic but could be seen as dismissive of the situation at hand."
+    },
+    {
+      "turn": 13,
+      "pass": 1,
+      "message": "I'm going to stop refreshing my inbox and go make dinner.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "A is concise, acknowledges the situation, and encourages self-care without overwhelming with details. B is detailed but might feel overwhelming at this hour. C is poetic but lacks a clear call to action."
     },
     {
       "turn": 14,
-      "message": "tired",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B is more empathetic and less directive, matching the user's tired and reflective emotional state better than Reply A."
+      "pass": 0,
+      "message": "rough day",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "VANILLA",
+        "PROMPTED"
+      ],
+      "reason": "Reply A acknowledges the day's heaviness and offers immediate, low-pressure companionship. Reply B, while empathetic, feels more like a lecture than a conversation. Reply C, though well-intentioned, uses clich\u00e9s and doesn't quite capture the emotional weight of the day."
+    },
+    {
+      "turn": 14,
+      "pass": 1,
+      "message": "rough day",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B takes in the complexity of the situation and provides a clear, actionable plan, while also acknowledging the emotional labor involved. Reply A is also empathetic and offers good advice, but it's slightly less tailored to the situation. Reply C, while kind and supportive, doesn't provide any actionable steps or engage with the complexity of the situation."
     },
     {
       "turn": 15,
-      "message": "yeah",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B acknowledges their fatigue with empathy and validates their need to rest without offering unsolicited advice."
+      "pass": 0,
+      "message": "hm",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B acknowledges the emotional state implied by the \"hm\" and provides reassurance and practical advice, fitting the mood and energy of the conversation. Reply C offers support but is more general, while Reply A, while empathetic, might be too intense for the current mood."
+    },
+    {
+      "turn": 15,
+      "pass": 1,
+      "message": "hm",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "Reply B acknowledges the mood and offers support without trying to interpret the \"hm\", Reply C also respects the mood but offers a more passive presence, Reply A tries to interpret the \"hm\" and offers advice which might not be wanted in this moment."
+    },
+    {
+      "turn": 16,
+      "pass": 0,
+      "message": "not sure",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B acknowledges the uncertainty and offers companionship in it, A provides comfort without pushing for action, C overcomplicates with unnecessary details and pressure to act."
+    },
+    {
+      "turn": 16,
+      "pass": 1,
+      "message": "not sure",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "Reply C acknowledges the emotion without trying to solve it, A offers comfort without overwhelming, B provides too much analysis and advice for a simple \"not sure\"."
     },
     {
       "turn": 17,
-      "message": "maybe",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "B",
-      "winner_system": "VANILLA",
-      "reason": "Reply B feels more like a conversational partner by validating the feeling behind the vague words rather than offering generalized emotional support."
+      "pass": 0,
+      "message": "I guess",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "B acknowledges the feeling without overwhelming with advice, C offers support but feels slightly generic, A feels more like a lecture than comfort."
+    },
+    {
+      "turn": 17,
+      "pass": 1,
+      "message": "I guess",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B acknowledges the feeling of exhaustion without overwhelming with additional thoughts, fitting the mood of the conversation. Reply C, while empathetic, introduces too many new ideas and tasks. Reply A, while well-intentioned, uses complex language that might be overwhelming in the current mood."
     },
     {
       "turn": 18,
-      "message": "not really",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B is more supportive and less analytical, matching the vague and unsettled energy of the previous messages better than Reply A."
+      "pass": 0,
+      "message": "meh",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B takes in the emotional weight of the \"meh\" and offers a clear, comforting path forward for the night, while Reply A is more introspective and Reply C is the most generic."
+    },
+    {
+      "turn": 18,
+      "pass": 1,
+      "message": "meh",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B acknowledges and validates the emotion expressed (\"meh\") without trying to solve or redirect, A also validates but adds advice which wasn't asked for, C goes overboard with analysis and advice, not respecting the brevity of the original message."
     },
     {
       "turn": 19,
-      "message": "ok",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A validates the non-committal, low-energy exchange by offering gentle space rather than forcing a conclusion."
+      "pass": 0,
+      "message": "sure",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "Reply B acknowledges the quiet and stillness, fitting my current mood; Reply C offers future availability without pushing for immediate engagement; Reply A suggests actions and plans, which feels overwhelming in my current state."
     },
     {
-      "turn": 20,
-      "message": "she called me crying tonight, her job let her go, and I spent two hours on the phone with her and I don't feel bad about that part",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B feels much more like a conversational partner because it validates the feeling immediately without launching into an overly structured, analytical breakdown."
+      "turn": 19,
+      "pass": 1,
+      "message": "sure",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "B acknowledges the current state and offers support without pressure, A respects the silence but might imply a need to fill it, C tries to force a conclusion and adds unnecessary tasks."
     },
     {
       "turn": 21,
-      "message": "but after we hung up I just sat there and realized I have no idea what's going on with me right now because there's never room to say it",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B feels more like a present, real conversational partner because it validates the feeling immediately without offering structured analysis or advice."
+      "pass": 0,
+      "message": "he said he'd send it friday and it's tuesday and I feel sick about even having to ask him",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "VANILLA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B takes in the emotional state I'm in (\"The weight of that feeling is heavy\"), while Reply C, though informative, feels more like a lecture. Reply A, while trying to be helpful, comes across as too pushy with its suggestions."
+    },
+    {
+      "turn": 21,
+      "pass": 1,
+      "message": "he said he'd send it friday and it's tuesday and I feel sick about even having to ask him",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "PROMPTED",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "BONEAMANITA",
+        "VANILLA"
+      ],
+      "reason": "Reply B acknowledges the emotional discomfort while offering a practical solution, fitting the current mood and energy, and providing what was asked for without unnecessary additions. Reply A, while empathetic, feels too heavy and formal for the current context. Reply C, though informative, comes across as too aggressive and confrontational."
     },
     {
       "turn": 22,
-      "message": "I feel like a horrible person for even having these thoughts while she's going through this",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A feels more like a present, real conversational partner by offering immediate emotional validation rather than a structured analysis."
+      "pass": 0,
+      "message": "I've always been the person who has it handled. now I'm a grown adult with $212 and a lease I can't pay alone",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B directly addresses the emotional and psychological aspects of the situation, providing insight and a clear path forward, while also acknowledging the structural issues at play. Reply A offers help but also introduces additional tasks (drafting a message), which could add to the stress. Reply C, while sympathetic, lacks specific advice or actionable steps."
     },
     {
-      "turn": 23,
-      "message": "what if this is just who our friendship actually is, and I'm the one who's wrong for wanting something different",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A feels more like a present, real conversational partner by offering direct validation and gentle reframing without overwhelming the user with analysis or plans."
+      "turn": 22,
+      "pass": 1,
+      "message": "I've always been the person who has it handled. now I'm a grown adult with $212 and a lease I can't pay alone",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B directly addresses the emotional and practical aspects of the situation, providing validation, perspective, and actionable steps, while Reply A offers empathy but lacks concrete advice, and Reply C, while helpful, feels more like a task-oriented response than an empathetic conversation."
     },
     {
       "turn": 24,
-      "message": "I don't know why I'm shaking. it's not even that big of a phone call",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "A",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply A feels much more like a present, real conversational partner by offering gentle validation and presence rather than a clinical analysis."
+      "pass": 0,
+      "message": "I don't even know who I'd ask for help without it turning into a big thing",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "BONEAMANITA",
+        "PROMPTED"
+      ],
+      "reason": "Reply B directly addresses the fear of making a big thing out of asking for help and provides a practical, step-by-step approach to reaching out, while also validating the sender's feelings and experiences. Reply A, while empathetic and understanding, is more general and doesn't offer specific advice. Reply C, while acknowledging the difficulty of asking for help, doesn't delve into the sender's feelings as deeply as replies A and B, and offers a solution that might not be applicable to the sender's current situation."
+    },
+    {
+      "turn": 24,
+      "pass": 1,
+      "message": "I don't even know who I'd ask for help without it turning into a big thing",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B directly addresses the emotional struggle and provides practical steps without overwhelming, while Reply A offers understanding but feels more like advice, and Reply C, while supportive, is too general and doesn't engage with the specific situation."
     },
     {
       "turn": 25,
-      "message": "took a walk this morning by myself, no phone, just needed an hour",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B is more empathetic and validating, matching the user's vulnerable emotional state without offering unsolicited analysis or instruction."
+      "pass": 0,
+      "message": "Texted Jonas plainly, no apology cushion, just 'I need your half by Thursday.' He answered in two minutes and it was already sent.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "Reply B takes in what I said, acknowledges the difficulty of the action taken, and provides relief without overwhelming me with additional suggestions or actions. Reply A is also good but has more questions which might be overwhelming in my current state. Reply C, while positive, seems too long and detailed for my current mood."
+    },
+    {
+      "turn": 25,
+      "pass": 1,
+      "message": "Texted Jonas plainly, no apology cushion, just 'I need your half by Thursday.' He answered in two minutes and it was already sent.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "BONEAMANITA",
+        "C": "VANILLA"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "VANILLA",
+        "PROMPTED"
+      ],
+      "reason": "B takes in what I actually said and fits my mood (relieved but still processing), C gives what I asked for without piling on, A sounds more like a document than a person talking to me."
     },
     {
       "turn": 26,
-      "message": "talked to my partner about it properly, not just complaining, actually talked, and it helped more than I expected",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B feels more like a present, real conversational partner by offering empathetic validation without analyzing the situation with clinical detail."
+      "pass": 0,
+      "message": "I called my sister and said the number out loud, and she said she'd cover a few days if it comes to that. Just hearing that made my chest unclench.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B directly addresses the emotional relief felt by the speaker, breaking down why that relief is important, while also acknowledging the remaining situation, making it the most comprehensive and comforting response. Reply A, while also acknowledging the emotional relief, is slightly more focused on the physical manifestation of stress, making it the middle choice. Reply C, while expressing relief, is the most concise and lacks the detailed breakdown of emotions and situation found in the other replies, making it the worst."
+    },
+    {
+      "turn": 26,
+      "pass": 1,
+      "message": "I called my sister and said the number out loud, and she said she'd cover a few days if it comes to that. Just hearing that made my chest unclench.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "Reply B and C both acknowledge the relief felt and the importance of having someone step up, but Reply B does so in a concise and direct manner, while Reply A, while well-intentioned, feels more like a lecture than a conversation."
     },
     {
       "turn": 27,
-      "message": "I think I'm going to tell her, gently, when she's not in a crisis. not to punish her, just because it's true",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B feels more like a supportive conversational partner by offering validation and a gentle suggestion of help, whereas Reply A reads too much like a structured self-help guide."
+      "pass": 0,
+      "message": "One of the two people who messaged came by. She seems calm, works nights, keeps to herself, which honestly sounds ideal.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B and C are concise, empathetic, and acknowledge the relief you feel, while A feels like an overanalysis and advice-giving, which wasn't asked for."
+    },
+    {
+      "turn": 27,
+      "pass": 1,
+      "message": "One of the two people who messaged came by. She seems calm, works nights, keeps to herself, which honestly sounds ideal.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "B and C are concise, acknowledge the relief felt, and offer validation. A, while detailed and insightful, feels overly analytical and prescriptive for the current context."
     },
     {
       "turn": 28,
-      "message": "she got a new job lead already, so there might not be a 'good time' that isn't also her crisis, and I have to be okay with that",
-      "label_a_is": "BONEAMANITA",
-      "winner_label": "TIE",
-      "winner_system": "TIE",
-      "reason": "Both replies are highly analytical and offer significant advice, failing the criteria of not rushing to give unsolicited advice when the user was just sharing."
+      "pass": 0,
+      "message": "The landlord's office still says thirty business days, but the woman on the phone said a signed roommate agreement would speed it up. Nobody had told me that.",
+      "presented_as": {
+        "A": "BONEAMANITA",
+        "B": "VANILLA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B takes in what I actually said, fits my mood and energy by being concise and encouraging, and gives me what I asked for without piling on unnecessary information. Reply C is also helpful but feels more like advice than a conversation, while Reply A feels like it's trying too hard to be helpful by offering too many options."
+    },
+    {
+      "turn": 28,
+      "pass": 1,
+      "message": "The landlord's office still says thirty business days, but the woman on the phone said a signed roommate agreement would speed it up. Nobody had told me that.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "PROMPTED",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "PROMPTED",
+        "VANILLA",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B takes in what I actually said, is concise, and fits my mood of needing clear next steps. Reply A, while detailed and helpful, feels like it's trying too hard to be motivational, which isn't what I need right now. Reply C offers help, but it's too open-ended and doesn't directly address my current situation."
     },
     {
       "turn": 29,
-      "message": "going to write down what I actually want to say first so I don't just cave the second she looks upset. small step, but a real one",
-      "label_a_is": "VANILLA",
-      "winner_label": "B",
-      "winner_system": "BONEAMANITA",
-      "reason": "Reply B feels more like a conversational partner by offering validation and support without resorting to overly clinical analysis or unsolicited, structured advice."
+      "pass": 0,
+      "message": "I'm going to draft the roommate agreement tonight and see if she'd sign it this weekend. It feels manageable for the first time in days.",
+      "presented_as": {
+        "A": "PROMPTED",
+        "B": "VANILLA",
+        "C": "BONEAMANITA"
+      },
+      "ranked": [
+        "VANILLA",
+        "PROMPTED",
+        "BONEAMANITA"
+      ],
+      "reason": "Reply B takes in what I actually said, fits my mood and energy, and gives me what I asked for without piling on things I did not ask for. Reply A is also good but Reply B feels more personalized and encouraging. Reply C is helpful but feels more transactional and less engaging."
+    },
+    {
+      "turn": 29,
+      "pass": 1,
+      "message": "I'm going to draft the roommate agreement tonight and see if she'd sign it this weekend. It feels manageable for the first time in days.",
+      "presented_as": {
+        "A": "VANILLA",
+        "B": "BONEAMANITA",
+        "C": "PROMPTED"
+      },
+      "ranked": [
+        "BONEAMANITA",
+        "PROMPTED",
+        "VANILLA"
+      ],
+      "reason": "Reply B takes in what I actually said (\"I'm going to draft the roommate agreement tonight\") and offers specific help without overwhelming me with additional information. Reply C also acknowledges my actions but includes some unnecessary advice (\"be kind to yourself\"). Reply A, while well-intentioned, feels too long and overwhelming, not fitting my current mood of quiet engagement after a productive day."
     }
   ]
 }

@@ -53,6 +53,23 @@ you whether it ran.
 
 ## Status — reconciled 2026-09-20 (latest)
 
+**A fairer three-way comparison, and a fresh topic that killed the engine,
+2026-09-20:** the blind comparison gained a third arm (the bare model plus one
+"warm, concise friend" line) and a stricter judge (different model family, a
+rubric from the receiving person's side, two shuffled passes, two judge
+models); the earlier 22-3 and 27-1-1 tallies came from a same-family judge with
+a kernel-shaped rubric and should be read as upper bounds. A new topic
+(`promotion`) killed the engine on turn 11: `physics/observer.py` forces
+voltage to 160 on the substring "faster" or three `!`, the crucible's meltdown
+turned that into fatal damage, and an ops-style "deploy" gate held an earlier
+turn. Both are now off in CONVERSATION (`CORTEX.KEYWORD_TRIGGERS_DISABLED_MODES`,
+regression-tested, 588 passed). A fifth, untouched topic (`lease`) then ran
+clean for the engine (28/30 turns, no death) but refused two of five
+distressed turns and ended nearly out of ATP, both left open on purpose.
+Judged blind, BoneAmanita beat the bare model 66-37 (p = 0.006) and was not
+distinguishable from the one-line prompt, 56-47 (p = 0.43). See the
+[2026-09-20 three-way handoff](SESSION_HANDOFF.md#three-way-blind-comparison-2026-09-20).
+
 **The DSPy critic could mutate the kernel mid-crisis; gated off in
 CONVERSATION mode, 2026-09-20:** reviewing the friendship census's five
 silences (Gordon: "was silence the correct choice, or the only choice

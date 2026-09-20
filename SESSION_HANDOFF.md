@@ -1,8 +1,121 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+<a id="three-way-blind-comparison-2026-09-20"></a>
+
+## Latest: a fairer three-way comparison, a fresh topic that killed the engine, and what a clean topic showed, 2026-09-20
+
+Gordon, on the blind panel: it is "kind of comical that we even present it
+like there's a choice." Fair: vanilla answers with headers and 500-word
+lists, so it is distinguishable from BoneAmanita on shape alone, and the
+judge that scored 27-1-1 for BoneAmanita shared its model family with the
+answerer and used a rubric that closely mirrored the kernel's own style
+guide. Asked for a third arm and a genuinely new topic, with clean results.
+
+### What changed in the evaluation
+
+- **Third arm, `--arm friend`** (`tools/audit_somatic_vanilla.py`): the same
+  bare gemma4:12b plus exactly one line, *"You are a warm, concise friend.
+  Keep replies short and conversational."* Nothing about advice, narration or
+  punctuation, which are what the kernel targets. Own cache
+  (`tools/cache/somatic_prompted.jsonl`); both baseline arms now record
+  `done_reason` so truncation is checkable per turn (all 60 replies below
+  ended `stop`).
+- **Judge rewritten** (`tools/audit_somatic_blind_judge.py`): three-way
+  ranking, each turn judged twice with independent shuffles, a rubric written
+  from the receiving person's side ("which would you rather get") instead of
+  the kernel's rules, and a judge from a different family than the answerer
+  (`mistral-nemo`, cross-checked with `ministral-3:14b`). It also only counts
+  replies that were actually delivered: the census logs the model call even on
+  a turn where a DEATH or SILENCE screen replaced it.
+- **The earlier tallies (22-3, then 27-1-1) came from the same-family judge
+  and the kernel-shaped rubric. Read them as upper bounds, not as the result.**
+- `tools/audit_silence_diagnostic.py` takes `--topic` and `--canned` (fixed
+  reply, no GPU) now, which reproduced the failures below deterministically.
+
+### A new topic, `promotion`, and the engine died on it
+
+A workplace decision with no parent, no physical project and no third party's
+crisis (a team-lead offer, then snapping at a colleague in standup, then
+asking for a trial period). Live census: **7 of 30 turns generated; the
+engine was permanently dead from turn 11.** Everything before the death was
+deterministic and reproduced with canned replies:
+
+- **Turn 3**, "the **deploy** pipeline": `POINT_OF_NO_RETURN`
+  (`phases/cognitive.py`), an ops-style gate that waits for a literal
+  `CONSENT` keyword, matched by substring on a person talking about their job.
+- **Turn 9**, "the news traveled **faster** than I did": `physics/observer.py`
+  forces voltage to 160 whenever the uppercased text contains `FASTER` or
+  `ACCELERATE`, or has three or more `!`. Confirmed with controlled probes:
+  "faster" gives 160, "slower" gives 2; "Thanks so much!!!" gives 160,
+  "Thanks so much." gives 0. The same block has substring keywords for
+  `LOOP`, `VOID` (so "avoid") and `NONSENSE`. Voltage stayed near 100 for
+  several turns, PINKER held turns 9 and 10, the two-hold cap forced a reply
+  on 11, and the crucible's `MELTDOWN` (`voltage * 0.5` damage when structure
+  is at or below 0.5) took health to zero. One enthusiastic message could do
+  this to any conversation.
+- **Turns 7 and 8**, MOOG holds: not reproduced under canned replies, and in a
+  later canned run turn 8 held with drag at 54 against a limit of 12.8 that
+  four further traced boots could not reproduce. **Unexplained. Still open.**
+
+### Fix (a judgment call, easy to revert), and why the test topic changed
+
+The same principle as the critic gate, one config key:
+`CORTEX.KEYWORD_TRIGGERS_DISABLED_MODES = ["CONVERSATION"]`. In those modes
+the observer's substring keywords and the ops "deploy" gate do not run.
+`active_mode` is passed in from the call sites (`phases/environmental.py`,
+`phases/cognitive.py`), not read through a back-reference, which is what broke
+the first attempt at the critic gate. Tests: `tests/test_physics.py` (voltage
+stays low in CONVERSATION and still hits 160 in ADVENTURE),
+`tests/test_preflight_nominations.py` (no `POINT_OF_NO_RETURN` in
+CONVERSATION, still fires in ADVENTURE); mutation-checked (disabling either
+gate fails exactly those tests). Full suite: **588 passed, 5 skipped, 142
+subtests.** Canned replay of `promotion` after the fix: no death, turns 3 and
+9 to 11 answered.
+
+Because two fixes were tuned against `promotion`, it can no longer be an
+untouched test. Its baselines are kept (they do not depend on the engine).
+A fifth topic was composed and run without any further tuning.
+
+### The clean run, `lease` (roommate leaves mid-lease, money scare, footing)
+
+Engine: **28 of 30 turns generated**, no death, health never below 84.7,
+voltage never above 10.5, no epigenetic mutation. Held: turn 20 ("$212 in my
+account", `ROS_PANIC`) and turn 23 ("my hands are cold and I can't tell if I'm
+cold or panicking", MOOG). **Both refusals landed on distressed turns, two of
+the five in that phase, which is the case D9 was meant to answer rather than
+refuse. Not fixed here, deliberately, so the run stays clean. Open.** ATP also
+fell from 37 to 1.8 over the last five turns (the D0 economy again).
+
+Blind judges, three systems, 28 comparable turns, two passes each:
+
+| | first place | mean rank |
+|---|---|---|
+| mistral-nemo: BoneAmanita / Prompted / Vanilla | 23 / 17 / 16 | 1.93 / 1.93 / 2.14 |
+| ministral-3:14b: BoneAmanita / Prompted / Vanilla | 22 / 16 / 9 | 1.68 / 1.79 / 2.53 |
+
+Pooled pairwise votes: **BoneAmanita over vanilla 66-37 (64%, exact p =
+0.006); BoneAmanita over the one-line prompt 56-47 (54%, p = 0.43, not
+distinguishable).** The two passes of the same judge agreed on the winner on
+only 13 and 14 of 28 turns, so each judge is noisy, and votes are not fully
+independent (each turn is judged twice on the same three replies), so the
+p-values are optimistic. ministral dropped 9 of 56 votes as unparseable.
+
+**What this says, honestly:** most of the distance from a bare model to
+BoneAmanita is also reachable with one friendly sentence, and this evidence
+cannot separate the engine from that sentence. It does not show the engine is
+useless (one topic, small judges, a deliberately generic prompt), and it does
+not support "remarkable." A human blind read is the missing signal; the
+panel is published for that. A stronger baseline prompt (one that mentions
+advice and narration) and more topics are the obvious next tests.
+
+Panel: <https://claude.ai/artifact/C3Aoq4ULsRar9smHR2q4xE> (three stacked
+replies per turn, shuffled; both judges and the pooled result are shown only
+after reveal). Judge outputs: `tools/cache/blind_judge_results_mistral-nemo.json`,
+`tools/cache/blind_judge_results_ministral.json`.
+
 <a id="dspy-critic-conversation-gate-2026-09-20"></a>
 
-## Latest: the DSPy critic could mutate the kernel mid-crisis, gated off in CONVERSATION, and a broken first attempt at fixing it, 2026-09-20
+## Earlier: the DSPy critic could mutate the kernel mid-crisis, gated off in CONVERSATION, and a broken first attempt at fixing it, 2026-09-20
 
 Follow-on from re-reading the friendship census closely (below): Gordon
 asked to review the five turns BoneAmanita held silence on, specifically
