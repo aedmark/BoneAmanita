@@ -350,7 +350,10 @@ class DreamEngine:
             )
 
     def enter_rem_cycle(
-        self, soul_snapshot: Dict[str, Any], bio_state: Dict[str, Any]
+        self,
+        soul_snapshot: Dict[str, Any],
+        bio_state: Dict[str, Any],
+        active_mode: str = "",
     ) -> Tuple[str, Dict[str, float]]:
         chem = safe_get(bio_state, "chem", {})
         cortisol = float(safe_get(chem, "cortisol", 0.0))
@@ -361,7 +364,7 @@ class DreamEngine:
             else {"cortisol": 0.1}
         )
         dream_text, consolidated_shift = self._run_biological_rem(
-            soul_snapshot, bio_state, available_atp
+            soul_snapshot, bio_state, available_atp, active_mode
         )
         shift.update(consolidated_shift)
         if not dream_text:
@@ -380,6 +383,7 @@ class DreamEngine:
         soul_snapshot: Dict[str, Any],
         bio_state: Dict[str, Any],
         available_atp: float,
+        active_mode: str = "",
     ) -> Tuple[Optional[str], Dict[str, Any]]:
         shift = {}
         dream_text = None
@@ -483,10 +487,12 @@ class DreamEngine:
                 # conversation regardless of how the person was doing. Modes
                 # listed here never reach evolve_prompt at all; the trauma is
                 # still cleared so it can't queue up and fire later once the
-                # mode changes.
-                active_mode = getattr(
-                    getattr(self.eng, "cortex", None), "active_mode", ""
-                )
+                # mode changes. active_mode is passed in by the caller
+                # (self.eng.cortex.active_mode there) rather than read via
+                # self.eng here: self.eng on this object is not the same
+                # engine instance that holds .cortex (confirmed live -
+                # self.eng.cortex does not exist), so reading it locally
+                # silently always saw "" and never gated anything.
                 disabled_modes = safe_get(
                     safe_get(self.cfg, "CORTEX", {}),
                     "EPIGENETIC_MUTATION_DISABLED_MODES",

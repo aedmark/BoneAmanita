@@ -177,7 +177,11 @@ class MetabolismPhase(SimulationPhase):
             msg_sleep = ux("cycle_strings", "metabolism_sleep")
             ctx.log(f"{Prisma.VIOLET}{msg_sleep}{Prisma.RST}")
             soul_snap = _safe_dict(self.eng.soul)
-            self.eng.mind.dreamer.enter_rem_cycle(soul_snap, bio_state={"atp": atp})
+            self.eng.mind.dreamer.enter_rem_cycle(
+                soul_snap,
+                bio_state={"atp": atp},
+                active_mode=getattr(self.eng.cortex, "active_mode", ""),
+            )
             defrag_msg = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             if defrag_msg:
                 ctx.log(f"{Prisma.CYN}{defrag_msg}{Prisma.RST}")

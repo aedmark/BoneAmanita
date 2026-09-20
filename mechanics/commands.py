@@ -531,7 +531,13 @@ class CommandProcessor:
                 bio_state["chem"] = bio.endo.get_state() if hasattr(bio, "endo") else {}
                 if hasattr(bio, "mito"):
                     bio_state["mito"] = {"atp": bio.mito.state.atp_pool, "ros": bio.mito.state.ros_buildup}
-            dream_text, effects = dreamer.enter_rem_cycle(snapshot, bio_state)
+            dream_text, effects = dreamer.enter_rem_cycle(
+                snapshot,
+                bio_state,
+                active_mode=getattr(
+                    getattr(self.interface.eng, "cortex", None), "active_mode", ""
+                ),
+            )
             if dream_text:
                 dream_log = f"\n\n{self.P.VIOLET}☁️ {dream_text}{self.P.RST}"
                 if effects and effects.get("glimmers"):

@@ -112,10 +112,11 @@ class BiologyTests(BoneTestCase):
 
         mock_lore = MagicMock()
         mock_lore.get.return_value = {"SYSTEM_PROMPTS": {}}
-        mock_eng = MagicMock()
-        mock_eng.cortex.active_mode = "CONVERSATION"
         dreamer = DreamEngine(
-            events=MagicMock(), lore_ref=mock_lore, eng_ref=mock_eng, mem_ref=MagicMock()
+            events=MagicMock(),
+            lore_ref=mock_lore,
+            eng_ref=MagicMock(),
+            mem_ref=MagicMock(),
         )
         dreamer.dspy_critic = MagicMock()
         dreamer.dspy_critic.enabled = True
@@ -123,7 +124,9 @@ class BiologyTests(BoneTestCase):
         dreamer.trauma_buffer.append("Critical failure: Generative slop detected.")
         bio_state = {"mito": {"atp": 50.0}, "chem": {"cortisol": 0.0}}
         msg, shift = dreamer.enter_rem_cycle(
-            soul_snapshot={"archetype": "THE_VOID"}, bio_state=bio_state
+            soul_snapshot={"archetype": "THE_VOID"},
+            bio_state=bio_state,
+            active_mode="CONVERSATION",
         )
         dreamer.dspy_critic.evolve_prompt.assert_not_called()
         self.assertNotIn(
@@ -147,10 +150,11 @@ class BiologyTests(BoneTestCase):
 
         mock_lore = MagicMock()
         mock_lore.get.return_value = {"SYSTEM_PROMPTS": {}}
-        mock_eng = MagicMock()
-        mock_eng.cortex.active_mode = "ADVENTURE"
         dreamer = DreamEngine(
-            events=MagicMock(), lore_ref=mock_lore, eng_ref=mock_eng, mem_ref=MagicMock()
+            events=MagicMock(),
+            lore_ref=mock_lore,
+            eng_ref=MagicMock(),
+            mem_ref=MagicMock(),
         )
         dreamer.dspy_critic = MagicMock()
         dreamer.dspy_critic.enabled = True
@@ -158,7 +162,9 @@ class BiologyTests(BoneTestCase):
         dreamer.trauma_buffer.append("Critical failure: Generative slop detected.")
         bio_state = {"mito": {"atp": 50.0}, "chem": {"cortisol": 0.0}}
         msg, shift = dreamer.enter_rem_cycle(
-            soul_snapshot={"archetype": "THE_VOID"}, bio_state=bio_state
+            soul_snapshot={"archetype": "THE_VOID"},
+            bio_state=bio_state,
+            active_mode="ADVENTURE",
         )
         dreamer.dspy_critic.evolve_prompt.assert_called_once()
         self.assertIn(
@@ -166,6 +172,37 @@ class BiologyTests(BoneTestCase):
             msg,
             "[FAIL] The gate should only apply to CONVERSATION, not other modes.",
         )
+
+    def test_epigenetic_gate_reads_the_real_engines_active_mode(self):
+        """Regression for the actual production bug: the gate originally
+        read self.eng.cortex.active_mode from inside DreamEngine, but
+        self.eng there is not the same object that holds .cortex (confirmed
+        live - self.eng.cortex did not exist), so it silently always saw ""
+        and never gated anything. Every real call site now reads
+        active_mode off its own self.eng.cortex and passes it in; this
+        exercises that against the real, fully-booted engine rather than a
+        hand-built mock, which is exactly what let the original bug pass."""
+        self.assertTrue(
+            hasattr(self.engine.cortex, "active_mode"),
+            "[FAIL] The real engine's cortex has no active_mode; the call "
+            "sites' getattr(self.eng.cortex, 'active_mode', '') would fail open.",
+        )
+        dreamer = self.engine.mind.dreamer
+        dreamer.dspy_critic = MagicMock()
+        dreamer.dspy_critic.enabled = True
+        dreamer.dspy_critic.evolve_prompt.return_value = "NEW_SCAR_AXIOM"
+        dreamer.trauma_buffer.append("Critical failure: Generative slop detected.")
+        original_mode = self.engine.cortex.active_mode
+        try:
+            self.engine.cortex.active_mode = "CONVERSATION"
+            dreamer.enter_rem_cycle(
+                soul_snapshot={"archetype": "THE_VOID"},
+                bio_state={"mito": {"atp": 50.0}, "chem": {"cortisol": 0.0}},
+                active_mode=self.engine.cortex.active_mode,
+            )
+        finally:
+            self.engine.cortex.active_mode = original_mode
+        dreamer.dspy_critic.evolve_prompt.assert_not_called()
 
     def test_config_glimmer_yield(self):
         target_cfg = getattr(self.engine, "config")

@@ -992,7 +992,9 @@ class GeodesicOrchestrator:
                     },
                 }
                 dream_text, _ = self.eng.mind.dreamer.enter_rem_cycle(
-                    snapshot_soul, bio_state=bio_packet
+                    snapshot_soul,
+                    bio_state=bio_packet,
+                    active_mode=getattr(self.eng.cortex, "active_mode", ""),
                 )
                 if dream_text:
                     dream_log = f"\n{Prisma.MAG}☁️ {dream_text}{Prisma.RST}"
