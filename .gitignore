@@ -22,6 +22,7 @@ memories/
 saves/
 scratch/
 output/
+tools/cache/
 /legacy.json
 /fractal_adventure.json
 
