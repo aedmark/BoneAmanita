@@ -795,7 +795,9 @@ class TheCortex:
                             f"CRITICAL FAILURE: {judge_reason} Prioritize presence over output. Stay in character."
                         )
             if not val_res.get("feedback_instruction"):
-                gate_pass, gate_txt = gk.audit_generation(final_text, self.svc.bio.mito)
+                gate_pass, gate_txt = gk.audit_generation(
+                    final_text, self.svc.bio.mito, attempt=attempt
+                )
                 if not gate_pass or "IMMUNOSUPPRESSION ENGAGED" in gate_txt:
                     val_res.update(
                         {
@@ -827,9 +829,6 @@ class TheCortex:
                     else 2.0
                 )
                 self.svc.bio.mito.adjust_atp(-penalty, lbl)
-                self.svc.bio.mito.state.ros_buildup = (
-                    float(self.svc.bio.mito.state.ros_buildup) + penalty
-                )
             if attempt == cognitive_retries - 1:
                 fallback_msg = "I'm sorry. My thoughts are tangling and I'm burning too much energy trying to piece this together. I'm dropping the tension. Can we take a breath and try a simpler path?"
                 final_output = ux("brain_strings", "cortex_tangled") or fallback_msg

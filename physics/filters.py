@@ -225,7 +225,7 @@ class TheGatekeeper:
         }
 
     def audit_generation(
-        self, generated_text: str, mito_state: Any
+        self, generated_text: str, mito_state: Any, attempt: int = 0
     ) -> Tuple[bool, str]:
         gen_txt = self.hla.mitigate_rejection(
             generated_text, current_psi=1.0, mito_state=mito_state
@@ -252,10 +252,17 @@ class TheGatekeeper:
                     break
         if trigger:
             bio_cfg = safe_get(self.cfg, "BIO", {})
+            # Repeat rejections within the same turn are the same style miss, not
+            # independent toxic exposure - full tax once, then diminishing.
+            repeat_scale = (
+                1.0
+                if attempt == 0
+                else float(safe_get(bio_cfg, "GATEKEEPER_REPEAT_TAX_SCALE", 0.4))
+            )
             apply_metabolic_tax(
                 mito_state,
-                atp_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_TAX", 5.0)),
-                ros_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_ROS", 8.0)),
+                atp_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_TAX", 5.0)) * repeat_scale,
+                ros_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_ROS", 8.0)) * repeat_scale,
             )
             rejection_msg = random.choice(self._default_rejections).replace(
                 "{trigger}", trigger

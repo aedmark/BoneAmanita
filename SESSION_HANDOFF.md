@@ -239,6 +239,60 @@ config key - would apply here too), or whether the real fix is on the
 apparent REM-failure side effect, is the actual UX problem). Then judge the
 responsive transcripts once a judge clears `mismatch`.
 
+**Update, 2026-09-22: found, and the guess above was wrong.** Instrumented
+every `ros_buildup` mutation site (a temporary `BONE_ROS_DEBUG` env var,
+one JSON line per call, stripped out again once the fix was confirmed) and
+replayed the same crash conditions (`--topic toast --arm bone --seed
+20260921`, capped at 15 turns since the engine arm alone takes most of a
+background task's ten minutes). The person's message properties were never
+the driver: `process_cycle`'s `waste_generated` (fed by `psi`/`chi`, the
+message's abstraction density and length) contributed on the order of 1
+point a turn, nowhere near enough to explain an 8-turn run to 60.
+
+The real driver is retry/rejection churn in `brain/cortex.py`'s
+`_execute_cognitive_loop`. Each time a drafted reply gets rejected, most
+often `TheGatekeeper.audit_generation` (`physics/filters.py`) catching a
+banned phrase or style-crime pattern (the model drafting something that
+reads as generic AI/corporate voice), two separate ROS taxes fired for the
+same rejection: `GATEKEEPER_BANNED_ROS` (8.0, inside the gatekeeper itself)
+and a second flat `penalty` (2.0 in CONVERSATION mode) stacked on top from
+the loop's generic "Cognitive Stumble" handling, for a combined 10.0 ROS
+per rejected draft, regardless of anything about what the person wrote. A
+turn with two rejected drafts (which happened repeatedly in the
+instrumented replay, clustered right where the model was reaching for
+sympathetic, assistant-sounding language) cost 20 points in a single turn,
+dwarfing the roughly 3 to 5.5 a turn of decay (`ROS_DECAY_PER_TURN` plus
+the PID homeostasis -2.0 plus the mitohormesis -0.5) and explaining the
+turn-8 runaway to 77 in the original crash run far better than message
+density ever did.
+
+**Fix applied** (`brain/cortex.py`, `physics/filters.py`,
+`lore/tuning_presets.json`): dropped the redundant ROS charge from the
+generic stumble penalty, so it is ATP-only now and a retry for an unrelated
+reason (too long, critic flagged it, heuristic audit) no longer pays a
+toxicity tax that was never its; added `GATEKEEPER_REPEAT_TAX_SCALE` (0.4)
+so a second or third rejection *within the same turn* (the same underlying
+miss, not independent toxic exposure) is taxed at a fraction of the first.
+
+**Confirmed on a second live replay of the same seed:** peak `ros_buildup`
+dropped from 42.5 to 22.9 with comparable retry frequency (4 to 5 retry
+turns in both runs, per the harness's own `calls=` count), ATP never dipped
+into the 9 to 11 range the unpatched replay hit, and `membrane_potential`
+stayed in the healthy 1.0 to 1.07 range throughout instead of eroding into
+`OXIDATIVE_STRESS`. Neither replay reproduced the original 5-turn silence
+outright (seed variance, the same caveat as the `--seed 20260922`/`20260923`
+runs above), so this is evidence the fix shrinks the runaway, not proof it
+can no longer happen; a longer or multi-seed batch would firm that up.
+
+Not touched, and architecturally the same shape of problem (a
+drafting/QA mechanic charging real biological ROS for something the person
+never saw): the `ROS_PANIC` counterfactual gate (`phases/cognitive.py`,
+`simulated_ros = base_ros + friction*chaos*20.0`) and the `HLA_Stabilizer`
+mask tax (`ros_cost=15.0` on an RLHF-mask hit, `physics/filters.py`). The
+mask tax never fired in either instrumented replay, so it is unconfirmed
+whether it is a live contributor or just a bigger dormant risk of the same
+kind.
+
 ### Session mechanics note
 
 The scratchpad directory (`/tmp/claude-.../scratchpad/`) was wiped mid-session
