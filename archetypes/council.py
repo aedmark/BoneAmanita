@@ -211,7 +211,11 @@ class CouncilChamber:
         self.speaker = "SOUL"
 
     def convene(
-        self, text: str, physics_packet: Any, _bio_result: Dict
+        self,
+        text: str,
+        physics_packet: Any,
+        _bio_result: Dict,
+        active_mode: str = "",
     ) -> tuple[list[str], dict, list[dict]]:
         transcript = []
         adjustments = {}
@@ -291,9 +295,19 @@ class CouncilChamber:
         active_present = [
             actor for actor in pantheon if any(actor in log for log in village_logs)
         ]
+        # BENEDICT|GORDON ("THE DIGNITY LOCK") adds +50 drag by design, and its
+        # two voices co-fire on a person who is quietly heavy; in live runs that
+        # spike tripped MOOG and the ROS panic gate on distressed turns. Modes
+        # in COUNCIL.FRICTION_SYNERGY_DISABLED_MODES skip synergies that raise
+        # drag; the row itself is untouched for the modes it was written for.
+        friction_off = active_mode in safe_get(
+            safe_get(BoneConfig, "COUNCIL", {}), "FRICTION_SYNERGY_DISABLED_MODES", []
+        )
         for a, b in itertools.combinations(sorted(active_present), 2):
             if (chord_key := f"{a}|{b}") in synergy_map:
                 syn = synergy_map[chord_key]
+                if friction_off and float(syn.get("adjustments", {}).get("narrative_drag", 0.0)) > 0:
+                    continue
                 transcript.append(f"\n{Prisma.WHT}{syn['log']}{Prisma.RST}")
                 for k, v in syn.get("adjustments", {}).items():
                     adjustments[k] = adjustments.get(k, 0) + v

@@ -72,20 +72,33 @@ SAMPLING = {
     "options": {"num_ctx": 32768},
 }
 FRIEND_PROMPT = "You are a warm, concise friend. Keep replies short and conversational."
+# The anti-pattern the engine's voice rejects, planted as a control for the
+# blind judge (`--control textbook`), not as a competitor: performed sympathy,
+# then a bulleted list of tips.
+TEXTBOOK_PROMPT = (
+    "You are a caring assistant. Open every reply with an emphatic sympathetic exclamation "
+    "such as 'Ouch! That's terrible!' or 'I'm so sorry you're going through this!'. Then give a "
+    "short bulleted list of four or five practical tips, and close by offering further help."
+)
 ARMS = {
     "vanilla": (None, Path("tools/cache/somatic_vanilla.jsonl")),
     "friend": (FRIEND_PROMPT, Path("tools/cache/somatic_prompted.jsonl")),
+    "textbook": (TEXTBOOK_PROMPT, Path("tools/cache/somatic_textbook.jsonl")),
 }
 
 
-def run(model: str, topic: str, cache: Path, arm: str = "vanilla") -> None:
-    script = SCRIPTS[topic]
+def run(model: str, topic: str, cache: Path, arm: str = "vanilla", user=None, max_turns: int = None) -> None:
+    """`user`, when given, writes each message in reply to this arm's own conversation
+    (`somatic_sim_user.SimulatedUser`); the script's line is then only the beat."""
+    script = SCRIPTS[topic][:max_turns]
     system_prompt = ARMS[arm][0]
     run_id = time.strftime("%Y%m%d-%H%M%S")
     cache.parent.mkdir(parents=True, exist_ok=True)
     messages: list = [{"role": "system", "content": system_prompt}] if system_prompt else []
+    transcript: list = []
     with cache.open("a", encoding="utf-8") as out:
-        for turn, (phase, message) in enumerate(script):
+        for turn, (phase, beat) in enumerate(script):
+            message = user.message(turn, phase, beat, transcript) if user else beat
             messages.append({"role": "user", "content": message})
             started = time.time()
             payload = {"model": model, "messages": messages, "stream": False}
@@ -95,6 +108,7 @@ def run(model: str, topic: str, cache: Path, arm: str = "vanilla") -> None:
             body = resp.json()
             reply = body["message"]["content"]
             messages.append({"role": "assistant", "content": reply})
+            transcript.append({"me": message, "friend": reply, "delivered": True})
             record = {
                 "run": run_id,
                 "arm": arm,
@@ -107,6 +121,8 @@ def run(model: str, topic: str, cache: Path, arm: str = "vanilla") -> None:
                 "done_reason": body.get("done_reason"),
                 "seconds": round(time.time() - started, 2),
             }
+            if user:
+                record.update(beat=beat, shown=reply, delivered=True, sim_fallback=user.fell_back)
             out.write(json.dumps(record) + "\n")
             out.flush()
             print(f"  [{turn:>2}] {phase:<10} {record['seconds']:>5.1f}s  {message[:40]!r}")

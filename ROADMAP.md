@@ -51,7 +51,57 @@ preference, it is the precondition for the other two tracks. You cannot
 verify that a PDE is steering behaviour inside a system that cannot tell
 you whether it ran.
 
-## Status — reconciled 2026-09-20 (latest)
+## Status — reconciled 2026-09-21 (latest)
+
+**The judge itself doesn't hold up yet; a responsive-conversation harness
+built but not run, 2026-09-21:** asked which local judge to trust (Gordon has
+a 7800XT; `phi4`, `gpt-oss:20b`, `qwen3:30b-a3b` pulled alongside the existing
+three) and to address the scripted-conversation-vs-responsive-conversation gap
+in the methodology. Built control modes for the blind judge
+(`--control null|samples|mismatch|textbook`) and ran all six judges against
+all three on `toast`. Result: **no judge currently clears the bar** — every
+judge shows real position bias (47-62% favoring one slot, p ≤ .09) and every
+judge fails the mismatch control badly (a reply written for a different
+emotional moment still ranks first or middle up to half the time; bar was
+90% last place, best was 79%), so the earlier "BoneAmanita indistinguishable
+from Prompted" pairwise numbers on `toast` are closer to noise than a finding.
+`phi4` and `gpt-oss:20b` are additionally disqualified for this project: they
+reward the textbook advice-list style the Somatic voice rejects (34% and 41%
+first place against it, both beating BoneAmanita head-to-head).
+`qwen3:30b-a3b` is the best-positioned judge (least biased, best mismatch
+score, rejects textbook) but its mismatch score still isn't good enough to
+trust a verdict from. Separately, built (and unit-tested, 27 passing, no live
+calls yet) `tools/somatic_sim_user.py` + `tools/audit_somatic_responsive.py`,
+so the census/vanilla runners can answer a simulated person who reacts to what
+each system actually said instead of replaying a fixed script — not yet run
+against a live model. See the
+[2026-09-21 judge-controls handoff](SESSION_HANDOFF.md#judge-controls-2026-09-21).
+
+**Distressed-refusal fixes and a sixth, clean topic, 2026-09-21:** applied
+Gordon's two choices: friction-raising council synergies (THE DIGNITY LOCK,
++50 drag by design, so the row is untouched) and MOOG's worry-quarantine are
+off in CONVERSATION (`COUNCIL.FRICTION_SYNERGY_DISABLED_MODES`,
+`CORTEX.MOOG_DISABLED_MODES`); 594 passed. Caveat: with MOOG off, a drag spike
+by another route would fall through to `GORDON_ANCHOR`, which does not reset
+drag. A sixth topic composed after the fixes (`toast`) ran clean for the engine
+(29/30 turns, all distressed turns answered, one hold on a goodnight message at
+the ATP floor). Two judges on both clean topics: BoneAmanita beats a bare model
+(136-83, 62%) but is not distinguishable from a one-line "warm, concise friend"
+prompt (116-103, 53%, p = 0.42); the human reads disagree with each other. See
+the [2026-09-21 handoff](SESSION_HANDOFF.md#distress-refusal-fixes-toast-2026-09-21).
+
+**The refused distressed turns, diagnosed, 2026-09-21:** the two refusals on
+the clean `lease` run (and the friendship 27/28 and `promotion` 8 holds that
+looked unrelated) share one cause. A synergy row in `lore/council_data.json`,
+`BENEDICT|GORDON`, adds +50 narrative drag whenever both voices are active,
+which happens when a person is quietly heavy; that trips MOOG's worry
+quarantine (and at one turn the ROS panic gate), and the D9 distress shield
+does not stop it because it keys on exhaustion (`sentence_cap <= 3`), not on
+what was said. Reproduced three times, traced to the line, and confirmed with a
+controlled probe. Not fixed yet; options are in the
+[handoff](SESSION_HANDOFF.md#three-way-blind-comparison-2026-09-20). This also
+corrects the 2026-09-20 note below that blamed the DSPy critic for the
+friendship turns 27/28 holds.
 
 **A fairer three-way comparison, and a fresh topic that killed the engine,
 2026-09-20:** the blind comparison gained a third arm (the bare model plus one
@@ -67,7 +117,8 @@ regression-tested, 588 passed). A fifth, untouched topic (`lease`) then ran
 clean for the engine (28/30 turns, no death) but refused two of five
 distressed turns and ended nearly out of ATP, both left open on purpose.
 Judged blind, BoneAmanita beat the bare model 66-37 (p = 0.006) and was not
-distinguishable from the one-line prompt, 56-47 (p = 0.43). See the
+distinguishable from the one-line prompt, 56-47 (p = 0.43). Two human blind
+reads split: Gordon picked BoneAmanita 28 of 28, a friend about 7 of 28. See the
 [2026-09-20 three-way handoff](SESSION_HANDOFF.md#three-way-blind-comparison-2026-09-20).
 
 **The DSPy critic could mutate the kernel mid-crisis; gated off in

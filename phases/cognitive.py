@@ -411,7 +411,10 @@ class SoulPhase(SimulationPhase):
                 ctx.log(mandate["log"])
                 self._execute_mandate(ctx, mandate)
         council_advice, adjustments, mandates = self.eng.council.convene(
-            ctx.input_text, ctx.physics, ctx.bio_result
+            ctx.input_text,
+            ctx.physics,
+            ctx.bio_result,
+            active_mode=getattr(self.eng.cortex, "active_mode", ""),
         )
         if mandates:
             ctx.council_mandates.extend(mandates)

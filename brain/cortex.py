@@ -572,7 +572,14 @@ class TheCortex:
         
         from archetypes.stage import Nomination
         
-        if (f_drag > drag_limit or chi_val > chi_limit) and m_a < 0.3:
+        # MOOG tells the person their concern has "undefined parameters" and
+        # shelves it. That is wrong for someone talking about their own life, so
+        # modes in CORTEX.MOOG_DISABLED_MODES skip this branch and fall through
+        # to the remaining drag gates unchanged.
+        moog_live = getattr(self, "active_mode", "") not in safe_get(
+            c_cfg, "MOOG_DISABLED_MODES", []
+        )
+        if moog_live and (f_drag > drag_limit or chi_val > chi_limit) and m_a < 0.3:
             worry_text = ctx.input_text
             self.worry_ledger.append(worry_text)
             setattr(ctx.physics, "narrative_drag", 0.0)

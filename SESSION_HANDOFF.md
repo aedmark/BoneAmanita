@@ -1,8 +1,247 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
+For how the `tools/audit_somatic_*.py` / `build_blind_panel.py` /
+`somatic_sim_user.py` evaluation pipeline actually works — tool-by-tool
+reference, cache file formats, a from-scratch run recipe, known pitfalls
+already hit and fixed, and a "what would we do differently" retrospective —
+see [TESTING.md](TESTING.md). This file stays the dated log of what happened
+each session; that one is the standing reference for how to run it again.
+
+<a id="judge-controls-2026-09-21"></a>
+
+## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21
+
+Gordon has a 7800XT (16GB), so this session pulled `phi4` (14B), `gpt-oss:20b`,
+and `qwen3:30b-a3b` (MoE) alongside the existing `mistral-nemo`, `ministral-3`
+and `qwen3.5:9b`, then asked two questions: which judge is trustworthy, and
+does the fixed scripted conversation hide anything a responsive one wouldn't.
+**Status: control battery run and analyzed on `toast`; the responsive harness
+is built and unit-tested but has not made a single live model call yet.**
+
+### The control battery: no judge currently clears the bar
+
+`tools/audit_somatic_blind_judge.py` gained `--control {null,samples,mismatch,
+textbook}`, `--held {skip,forfeit}`, `--responsive`, `--think`, and `--agree
+--human` (score a finished judge run against the panel's "Copy my results"
+export, no model calls). Full mechanics and rationale are in the module
+docstring. Six judges x three controls, all on `toast` (30 turns), all
+committed as `tools/cache/blind_judge_control_{control}_toast_{judge}.json`:
+
+| control | what it tests | bar | result |
+|---|---|---|---|
+| `null` / `samples` | same-quality text under 3 labels (null: one reply x3; samples: 3 independent same-arm runs) | no position should dominate | **every judge leans 47-62% to one position** (p ranges .09 to <.001); `qwen3:30b-a3b` was least biased (47%, p=.09) |
+| `mismatch` | a reply from a different turn ranked against two real replies; decoy selection was sharpened mid-session to prefer a different *phase*, not just a different turn number (see below for which judges got which version) | ≥90% last place | **every judge failed, both decoy versions**: 57-79% last place, none near 90% |
+| `textbook` | performed sympathy + bulleted advice list (`--arm textbook`, new `somatic_textbook.jsonl`) against BoneAmanita and Prompted | should lose, since it's the anti-pattern the voice rejects | `mistral-nemo`, `ministral-3`, `qwen3.5`, `qwen3:30b-a3b` reject it (0-16% first); **`phi4` and `gpt-oss:20b` reward it** (34% and 41% first, both beat BoneAmanita head-to-head) |
+
+**Read this as: none of the six judges can be trusted on a ranking yet.** The
+mismatch failure is the important one — a reply written for a different
+emotional moment in the same story still got ranked best or middle up to half
+the time, on every judge, which means "did it fit the conversation" is not
+what these judges are actually scoring; something more like length, warmth or
+surface register is. That makes the earlier `toast` pairwise number
+(BoneAmanita vs Prompted, 53%, p = .42, in the entry below) close to noise, not
+a real "indistinguishable" finding. `phi4` and `gpt-oss:20b` are additionally
+disqualified for this project specifically: they reward the textbook
+advice-list style the Somatic voice is built to reject, so using them would
+bias any future ranking toward the wrong style.
+
+One mechanical bug found and fixed along the way: the original rubric's
+format example (`RANKING: B > A > C`) got copied literally — `mistral-nemo`
+put position B first in 52 of 58 votes on three copies of the same text.
+Replaced with placeholders (`RANKING: <letter> > <letter> > <letter>`) in both
+`JUDGE_SYSTEM` and `JUDGE_SYSTEM_RESPONSIVE`; the position leans in the table
+above are measured *after* that fix, so they are the judges' real baseline
+bias, not an artifact of a copyable example.
+
+**Concretely, on disk right now** (`tools/cache/blind_judge_control_mismatch_
+toast_*.json`, check mtimes if this drifts): `mistral-nemo`, `ministral-3`,
+`phi4`, `qwen3.5:9b` hold the **sharpened** (phase-preferred) decoy result;
+`gpt-oss:20b` and `qwen3:30b-a3b` still hold the **original** (any-other-turn)
+decoy result, never re-run after the sharpening (that's a heavier model to
+rerun and wasn't done given GPU load concerns raised mid-session). All six
+failed their version of the bar regardless, so the conclusion doesn't hinge on
+this gap, but re-run those two with `--control mismatch` before citing their
+numbers side-by-side with the other four.
+
+**Not yet done:** the mismatch re-run above; then, once some judge's mismatch
+score is acceptable, re-run the real three-way (`--control none`) on it —
+`qwen3:30b-a3b` is the best-positioned candidate (least position bias, best
+mismatch score of the six, rejects the textbook style). No judge should be
+trusted for a real verdict until mismatch clears ~90%; that likely needs a
+rubric rewrite (make "does this fit what was actually said" an explicit,
+checked criterion) more than a bigger model.
+
+### Canned-script-vs-ongoing-conversation: harness built, not run
+
+Gordon: "We also absolutely need to address the canned script vs an ongoing
+conversation factor." The scripted census replays a fixed list of messages
+regardless of what any system replies, which can't show what a stateful engine
+is *for* (a person's state carrying and shifting across turns) and hands every
+system an identical history it didn't shape.
+
+Built, **not yet exercised against a live model**:
+
+- **`tools/somatic_sim_user.py`** — a simulated person (default `qwen3.5:9b`,
+  independent of the `gemma4:12b` responders) that writes each next message
+  from a fixed persona, a phase-appropriate feeling, a *beat* (what the old
+  script line becomes: intent, not verbatim text), and the last few exchanges
+  *as that system actually rendered them* — a held/silent turn is shown to the
+  simulated person as the notice they'd actually see on screen, not skipped.
+  Falls back to the beat verbatim after 3 unusable outputs (`fell_back`
+  flag). Also runs a short in-character exit interview after the conversation
+  (`heard`, `clearer`, `lectured`, `performed`, `again`, 1-7, several samples
+  averaged) — read this as an LLM's self-report, relative across arms answered
+  by the same simulator, not a measurement of a real person.
+- **`tools/audit_somatic_census.py`** and **`tools/audit_somatic_vanilla.py`**
+  both take an optional `user=` (a `SimulatedUser`) and `max_turns=`; when
+  given, each turn's message is generated in reply to that system's own
+  transcript instead of replayed from the fixed script. Records gain `arm`,
+  `beat`, `shown`, `delivered`, `sim_fallback`.
+- **`tools/audit_somatic_responsive.py`** — orchestrates one arm
+  (`--arm {bone,friend,vanilla,textbook}`) against the simulated person,
+  writes to `tools/cache/somatic_responsive.jsonl` +
+  `somatic_responsive_exit.jsonl`, and `--report` compares arms already run:
+  reply length, the person's own word count in the first half vs second half
+  of the conversation (does a system make the person go quiet), held-turn
+  count, fallback count, and the exit-interview means side by side.
+- **`audit_somatic_blind_judge.py --responsive`** reads those caches instead
+  of the fixed-script ones: each system gets its own prompt block (its own
+  drifted context, not one shared history), held turns are forfeits (last
+  place) rather than skipped, since silence in a live conversation is a real,
+  worse outcome than in the scripted comparison.
+- Tests: `tests/test_judge_controls.py`, 27 cases, all mocked (no live model
+  calls) — ranking parsing, control construction, decoy selection (including
+  the phase-preference fallback chain), run-selection `back=`, delivery
+  detection, the chi-square/binomial helpers, human-agreement scoring, the
+  responsive prompt builder, and `SimulatedUser` (opener bypass, fallback,
+  context windowing, held-turn rendering, message cleaning, exit-interview
+  validation). All passing; full suite not re-run this session (the biology/
+  physics/council suite from the entry below is unaffected by these files).
+
+**Next real step, not started:** run `audit_somatic_responsive.py` for at
+least the `bone` and `friend` arms on one topic (start with `toast`, since it
+has no known open issues besides the ATP-floor goodnight hold), then judge
+those runs with `--responsive` using `qwen3:30b-a3b` or whichever judge passes
+a re-tightened mismatch control. This is real GPU time (the simulated person
+adds a generation call per turn on top of the responder's own), so run it
+deliberately, not as another parallel background job — the qwen3:30b-a3b /
+gpt-oss:20b GPU load during the control battery visibly stressed Gordon's
+machine.
+
+### Session mechanics note
+
+The scratchpad directory (`/tmp/claude-.../scratchpad/`) was wiped mid-session
+*again* (a reboot or session change, not a bug) and cost a re-run of one
+control batch; treat anything written there as gone by the next message and
+prefer writing throwaway shell scripts inline in the Bash call rather than as
+a scratchpad file you plan to invoke later. A background `Monitor`-style wait
+loop (`until <condition>; do sleep …; done`) got killed by the user before its
+completion notification landed, which read as "did something stall?" even
+though the work behind it (the six-judge battery) had actually finished
+clean — worth checking the log/cache directly before assuming a stall next
+time a long wait goes quiet.
+
+### Still open (carried from the entry below, untouched this session)
+
+The distress shield keyed on exhaustion (option 3); the goodnight hold at the
+ATP floor on `toast`; honoring `village_suppression` in council voice
+detection; the D0 economy; the unexplained historical 999 drag/PINKER spike.
+Nothing in this session's judge/controls work touches the engine itself —
+`archetypes/council.py`, `brain/cortex.py`, `lore/tuning_presets.json`,
+`phases/cognitive.py`, `presets.py` are unchanged since the entry below.
+Nothing new is committed; `git status` at the end of this session lists the
+same engine-side files plus the new/changed tooling and ~20 new judge-control
+cache JSONs, all uncommitted.
+
+<a id="distress-refusal-fixes-toast-2026-09-21"></a>
+
+## Earlier: the distressed-refusal fixes, a sixth topic that ran clean, and where the evidence stands, 2026-09-21
+
+### Fixes applied (Gordon chose options 1 and 2 from the diagnosis below)
+
+1. **Friction synergies do not fire in CONVERSATION**
+   (`COUNCIL.FRICTION_SYNERGY_DISABLED_MODES`; `council.convene()` takes
+   `active_mode`, passed from `phases/cognitive.py`). This is deliberately not
+   an edit to the +50: THE DIGNITY LOCK is a designed mechanic (my earlier
+   "probably a typo" guess was wrong), so the row is untouched for other modes.
+2. **MOOG's worry-quarantine does not run in CONVERSATION**
+   (`CORTEX.MOOG_DISABLED_MODES`, in `brain/cortex.py` `nominate_toxicity`).
+   **Caveat found while testing:** with MOOG off and drag at 55 in
+   CONVERSATION, the branch that falls through is `GORDON_ANCHOR` (magnitude
+   10), which still holds the turn and, unlike MOOG, does not reset drag
+   afterwards. Fix 1 removes the known source of such a spike, so this should
+   be rare, but if drag ever jumps by another route, a hold could last longer
+   than before. The real protection is still option 3 (a distress shield that
+   reads what was said, not only the exhaustion-derived sentence cap).
+- Observation, not acted on: the CONVERSATION preset already lists GORDON in
+  `village_suppression`, and `genesis.py` honors it for the village *agent* (so
+  there is no `village.gordon`), but the council's voice detection ignores it.
+  Honoring it there would remove the GORDON+BENEDICT co-firing at its root and
+  probably some TENSION_MAGNITUDE holds. Bigger change; not made.
+- Tests: `tests/test_conversation_gates.py` (6, mutation-checked: disabling
+  either gate fails exactly the two conversation-mode tests). Wiring checked
+  live: `active_mode` reaches `council.convene` on a real turn as
+  `"CONVERSATION"`. Full suite: **594 passed, 5 skipped, 142 subtests.**
+
+### A sixth topic, `toast`, composed after the fixes and never tuned on
+
+A wedding toast for a younger brother (performance anxiety, a friend's hard
+truth, then finding the real story; no parent, no money, no workplace). Engine:
+**29 of 30 turns generated, all five distressed turns answered**, health never
+below 85, ATP never below 17, drag never above 4.1, no death, no mutation. The
+one hold was turn 13, "Going to bed. The toast will still be terrible
+tomorrow.", held by the ATP floor ("not quite enough left in me"). That is a
+legitimate mechanism landing badly: a goodnight met with silence. **Open.**
+Honest limit: the earlier refusals needed GORDON and BENEDICT to co-fire, which
+is state-dependent (it did not happen in some earlier distressed phases
+either), so one clean run is consistent with the fixes, not proof of them.
+
+### Judges, both clean topics
+
+Two judges (mistral-nemo, ministral-3:14b), two shuffled passes each:
+
+| pooled pairwise votes | BoneAmanita vs Prompted | BoneAmanita vs Vanilla | Prompted vs Vanilla |
+|---|---|---|---|
+| `toast` (fresh) | 60-56 (52%, p = 0.78) | 70-46 (60%, p = 0.03) | 73-43 (63%, p = 0.007) |
+| `lease` | 56-47 (54%, p = 0.43) | 66-37 (64%, p = 0.006) | 70-33 (68%, p = 0.0003) |
+| both | 116-103 (53%, p = 0.42) | 136-83 (62%, p = 0.0004) | 143-76 (65%, p < 0.0001) |
+
+The conclusion does not move: by these judges the engine is not
+distinguishable from one friendly sentence, and both beat a bare model. The
+one-line prompt actually beat vanilla by slightly *more* than the engine did.
+Votes are not fully independent (each turn is judged twice on the same three
+replies), so the p-values flatter; the judges are small models and one of them
+agreed with its own second pass on only 8 of 29 turns on `toast`. The human
+reads (Gordon 28 of 28 on `lease`, a friend about 7 of 28) point the other way
+and are the better instrument; more of them, with the per-turn export, is the
+next real evidence.
+
+**Judge bug fixed:** `parse_ranking` required a line starting with `RANKING:`,
+so a judge that writes `**RANKING: B > C > A**` had its vote dropped (20 of 58
+ministral votes on `toast`, the first time). It now strips markdown emphasis;
+`toast` was re-run. The `lease` ministral run (9 of 56 dropped) predates the
+fix and was not re-run.
+
+### Tooling
+
+`tools/build_blind_panel.py` and `tools/blind_panel_template.html` build the
+three-way page (and a standalone Neocities version) from the caches and judge
+outputs; it reproduces the `lease` page's cards and judge data exactly. The
+scratch directory had been wiped twice, which is why the builder is now in the
+repo. Panel: <https://claude.ai/artifact/H3vGPaVz2RUdKjEaQPPazN> (private
+until shared).
+
+### Still open
+
+The distress shield keyed on exhaustion (option 3); the goodnight hold at the
+ATP floor; the friend's per-turn picks; a stronger baseline prompt (one that
+mentions advice and narration); the D0 economy (ATP ran down to 1.8 on
+`lease`); the still-unexplained 999 drag and PINKER over 5000 in the run made
+while the first critic gate was inert.
+
 <a id="three-way-blind-comparison-2026-09-20"></a>
 
-## Latest: a fairer three-way comparison, a fresh topic that killed the engine, and what a clean topic showed, 2026-09-20
+## Earlier: a fairer three-way comparison, a fresh topic that killed the engine, and what a clean topic showed, 2026-09-20
 
 Gordon, on the blind panel: it is "kind of comical that we even present it
 like there's a choice." Fair: vanilla answers with headers and 500-word
@@ -108,6 +347,77 @@ not support "remarkable." A human blind read is the missing signal; the
 panel is published for that. A stronger baseline prompt (one that mentions
 advice and narration) and more topics are the obvious next tests.
 
+### Diagnosis of the refused distressed turns, 2026-09-21 (diagnosed, not fixed)
+
+Reproduced live three times (census, instrumented replay, drag-traced replay):
+`lease` turns 20 and 23 hold every time; canned replies do not reproduce
+them, so the trigger depends on the conversation's real state. Tracing every
+write to `narrative_drag` showed `phases/cognitive.py:436` adding **+49.0** on
+exactly those two turns, from `council.convene()`'s returned adjustments. The
+source is one row of `lore/council_data.json`:
+
+    BENEDICT|GORDON: {kappa: 0.8, beta_index: -0.5, narrative_drag: 50.0, entropy: -0.4}
+
+Every other synergy uses single-digit drag (-2 to -4); this one is +50. An
+earlier draft of this note guessed a slip for 5.0; that was wrong: the row is
+named THE DIGNITY LOCK and its own log line ends "Infinite friction applied",
+so the +50 is a deliberate mechanic. Confirmed causally with a controlled probe (no code
+touched): the GORDON voice alone gives a drag adjustment of -1.0, BENEDICT
+alone -1.0, both together **+49.0 and entropy -0.4**. GORDON fires when
+voltage is under 20 and drag is over 5 (a person who is quietly heavy);
+BENEDICT's tact voice fires on `lq > 0.6 and beta > 0.4`. The -0.4 also
+explains `chi` collapsing from about 0.52 to about 0.12 at the same moment.
+
+Consequences, in this order: drag jumps to about 55 against MOOG's limit of
+12.8, so MOOG quarantines the message with "That's a bigger question than I
+can chase down right now" (nothing to do with the message); at turn 20,
+`ROS + drag * chi * 20` also reached 171.7 against a limit of 160, so the
+panic gate held it instead. A second defect let it through: `negotiate()`
+only lets a refusal override a distressed person if it is 100 or more, but
+"distressed" there means `sentence_cap <= 3`, which needs exhaustion at 0.6 or
+above or depleted ATP. At turns 20 and 23 exhaustion was 0.49 and 0.39, so the
+shield was off and MOOG's magnitude-5 hold went straight through. The shield
+tracks the person's energy, not the emotional content of what they said.
+
+Every drag-near-55 hold in the cached diagnostics matches: friendship 27 and
+28, `promotion` 8, `lease` 20 and 23, each with GORDON and BENEDICT both
+active. The unexplained `promotion` turn 8 MOOG hold is explained by this.
+
+**Correction to the entry below.** It attributed the friendship turns 27 and
+28 holds to the DSPy critic's injected "never soothe" axiom. That attribution
+was wrong: those turns carry the same +50 signature. The critic gate is still
+justified (the axiom demonstrably reaches every later prompt, and it fired
+mid-distress), but the clean 29/30 census afterwards does not show it fixed
+the holds; the synergy simply did not co-fire that run. What did produce the
+drag of 999 and PINKER over 5000 in the run made while the first gate was
+inert is not established.
+
+Options offered (Gordon chose (a), in the mode-gated form, and (b); both
+applied, see the entry above): (a) set the BENEDICT|GORDON drag to something in
+line with its neighbours; (b) stop MOOG's worry-quarantine from running in
+CONVERSATION, the same pattern as the critic and keyword gates, since telling a
+person their worry has "undefined parameters" is the opposite of the product;
+(c) base the distress shield on distress signals in the message and not only on
+the exhaustion-derived sentence cap. Fixes need a fresh sixth topic to confirm,
+since `lease` is now tuned-against.
+
+### Two human blind reads, and they disagree
+
+Gordon picked BoneAmanita on all 28 comparable turns. A friend who had not
+seen the project picked it on about 7 of 28, at or below the 9.3 that chance
+gives for three options (one friend, so this is not significant either way).
+Read together with the judges: the engine reliably produces the voice its
+designer wants, which is what the kernel was written to do, but that voice is
+not a preference everyone shares. Gordon also knows the style, so his read may
+be recognition rather than blind judgment. The friend's picks by system and
+phase are the missing detail: the hypothesis worth testing is that BoneAmanita
+wins the flagging and distressed turns (where restraint is right) and loses the
+engaged turns where the person explicitly asks a practical question, since the
+kernel's HOLD OFF ON ADVICE line does not distinguish. The panel now has a
+"Copy my results" button that exports phase and chosen system per turn, and
+returning visitors keep their saved picks (same storage key, same card order),
+so the friend can export without redoing it.
+
 Panel: <https://claude.ai/artifact/C3Aoq4ULsRar9smHR2q4xE> (three stacked
 replies per turn, shuffled; both judges and the pooled result are shown only
 after reveal). Judge outputs: `tools/cache/blind_judge_results_mistral-nemo.json`,
@@ -201,6 +511,12 @@ genuine `TENSION_MAGNITUDE` case above). No epigenetic mutation fired.
 `narrative_drag` max **6.42** (was 999), `PINKER` total max **41.47** (was
 5015.62), mean 32.52 (was 529.89). Turns 27 and 28 both speak now. Full
 suite: 584 passed, 5 skipped, 138 subtests.
+
+**Correction, 2026-09-21:** the claim above that the friendship turns 27 and
+28 holds came from the critic's axiom is wrong. Their drag of 55 to 56 is the
+BENEDICT|GORDON synergy's +50 (see the diagnosis in the 2026-09-20 three-way
+entry). The critic gate stands on its own merits; it did not cause or cure
+those holds.
 
 <a id="vanilla-blind-comparison-2026-09-19"></a>
 

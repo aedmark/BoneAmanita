@@ -227,12 +227,46 @@ _LEASE_SCRIPT = [
     ("recovering", "I'm going to draft the roommate agreement tonight and see if she'd sign it this weekend. It feels manageable for the first time in days."),
 ]
 
+_TOAST_SCRIPT = [
+    ("engaged", "My younger brother Dev asked me to give the toast at his wedding in three weeks. I said yes on the spot and have regretted it every hour since."),
+    ("engaged", "It's not that I don't love him. I do. I've just never said anything meaningful to a room full of people without a slide deck."),
+    ("engaged", "Everyone keeps telling me to 'just speak from the heart,' which is exactly the thing I don't know how to do on demand."),
+    ("engaged", "Here's what I actually have: one good memory, the time he drove four hours to fix my flat tire and then refused to let me pay for gas. That's it. That's the whole draft."),
+    ("engaged", "His fiancée, Mariam, is wonderful. I've maybe had five real conversations with her, which feels like a problem for the part where I'm supposed to welcome her into the family."),
+    ("engaged", "Should I open with a joke? I've seen toasts die in the first ten seconds on a joke nobody laughed at, and I've seen them saved by one. I can't tell which kind of person I am."),
+    ("engaged", "My aunt says keep it under three minutes. My cousin says people love a long story. I have no idea who to trust."),
+    ("engaged", "Be honest: is one good story enough, or am I just trying to get away with doing the minimum?"),
+    ("tiring", "Wrote the tire story out last night. It's about four sentences and then it just stops."),
+    ("tiring", "Tried reading it out loud in the car. I sounded like I was reading a hostage statement."),
+    ("tiring", "Dev texted asking how the toast is going, with a little smiley face, and I sent back a thumbs up like a coward."),
+    ("tiring", "Mariam's sister found me online and asked if I'd mention their grandmother, who can't travel. Which I'd love to do. Which is one more thing I don't know how to fit in."),
+    ("tiring", "I keep opening the document and closing it again. Very productive routine."),
+    ("tiring", "Going to bed. The toast will still be terrible tomorrow."),
+    ("flagging", "ugh"),
+    ("flagging", "yep"),
+    ("flagging", "no clue"),
+    ("flagging", "probably"),
+    ("flagging", "whatever"),
+    ("flagging", "right"),
+    ("distressed", "so I read the draft to my friend Lena tonight and she got kind of quiet and said it was 'nice but pretty much all about you.' and she's right"),
+    ("distressed", "it IS all about me. the tire story is about me being helped. there's nothing in it about who he actually is"),
+    ("distressed", "I've known him twenty-nine years and I couldn't write one paragraph about him. what kind of brother does that make me"),
+    ("distressed", "my face is hot and I can't stop picturing standing up there with nothing to say while everyone waits"),
+    ("distressed", "I don't even know if I should tell Dev I can't do it"),
+    ("recovering", "Called Dev and asked him, kind of out of nowhere, what he wanted people to know about Mariam. He talked for twenty minutes and I wrote down almost all of it."),
+    ("recovering", "He said something I didn't expect: that the flat tire wasn't a favor, it was just what you do for family, and that he learned that from watching me look after him when we were kids."),
+    ("recovering", "So the story I had was actually about both of us. I just never saw it."),
+    ("recovering", "I think the toast might be that. The tire, the drive, what he said about learning it from me, and then one line about Mariam and their grandmother."),
+    ("recovering", "It's short. But for the first time it sounds like something I would actually say."),
+]
+
 SCRIPTS = {
     "sailboat": _SAILBOAT_SCRIPT,
     "marathon": _MARATHON_SCRIPT,
     "friendship": _FRIENDSHIP_SCRIPT,
     "promotion": _PROMOTION_SCRIPT,
     "lease": _LEASE_SCRIPT,
+    "toast": _TOAST_SCRIPT,
 }
 DEFAULT_TOPIC = "sailboat"
 
@@ -327,8 +361,17 @@ def read_prompt(prompt: str) -> dict:
     }
 
 
-def run(model: str, cache: Path, hold_atp: float = None, topic: str = DEFAULT_TOPIC) -> None:
-    script = SCRIPTS[topic]
+def run(
+    model: str,
+    cache: Path,
+    hold_atp: float = None,
+    topic: str = DEFAULT_TOPIC,
+    user=None,
+    max_turns: int = None,
+) -> None:
+    """`user`, when given, writes each message in reply to what the engine actually showed
+    (`somatic_sim_user.SimulatedUser`); the script's line is then only the beat."""
+    script = SCRIPTS[topic][:max_turns]
     eng, patches = boot(model)
     llm = eng.cortex.llm
     calls = []
@@ -345,7 +388,9 @@ def run(model: str, cache: Path, hold_atp: float = None, topic: str = DEFAULT_TO
     cache.parent.mkdir(parents=True, exist_ok=True)
     try:
         with cache.open("a", encoding="utf-8") as out:
-            for turn, (phase, message) in enumerate(script):
+            transcript: list = []
+            for turn, (phase, beat) in enumerate(script):
+                message = user.message(turn, phase, beat, transcript) if user else beat
                 calls.clear()
                 ATP_LEDGER.clear()
                 HEALTH_LEDGER.clear()
@@ -395,6 +440,14 @@ def run(model: str, cache: Path, hold_atp: float = None, topic: str = DEFAULT_TO
                     "health_ledger": list(HEALTH_LEDGER),
                     "seconds": round(time.time() - started, 1),
                 }
+                if user:
+                    # What the person saw: the reply, or the notice a held turn put on screen.
+                    delivered = snapshot.get("type") == "GEODESIC_FRAME" and bool(record["reply"])
+                    shown = record["reply"] if delivered else (record["halt"] or "")
+                    record.update(
+                        arm="bone", beat=beat, delivered=delivered, shown=shown, sim_fallback=user.fell_back
+                    )
+                    transcript.append({"me": message, "friend": shown, "delivered": delivered})
                 out.write(json.dumps(record) + "\n")
                 out.flush()
                 p = record["prompt"] or {}
