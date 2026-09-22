@@ -70,12 +70,31 @@ reward the textbook advice-list style the Somatic voice rejects (34% and 41%
 first place against it, both beating BoneAmanita head-to-head).
 `qwen3:30b-a3b` is the best-positioned judge (least biased, best mismatch
 score, rejects textbook) but its mismatch score still isn't good enough to
-trust a verdict from. Separately, built (and unit-tested, 27 passing, no live
-calls yet) `tools/somatic_sim_user.py` + `tools/audit_somatic_responsive.py`,
-so the census/vanilla runners can answer a simulated person who reacts to what
-each system actually said instead of replaying a fixed script — not yet run
-against a live model. See the
-[2026-09-21 judge-controls handoff](SESSION_HANDOFF.md#judge-controls-2026-09-21).
+trust a verdict from. Built `tools/somatic_sim_user.py` +
+`tools/audit_somatic_responsive.py` so the census/vanilla runners can answer a
+simulated person reacting to what each system actually said, instead of
+replaying a fixed script; found and fixed three failure modes in the
+simulator itself along the way (verbatim self-repeat, repeat-then-append,
+prompt-scaffold echo — all three tested, `tests/test_judge_controls.py`, 32
+passing). Once clean, it found something the fixed script never showed: on
+`toast`, the `bone` (full engine) arm hit a **5-turn ATP crash**
+(`PARITY GATE FAILED`, ATP pinned at 0.9, 6 of 30 turns held total) that never
+happened across any fixed-script run of the same topic. Root-caused and
+reproduced 1 of 3 (a close second): `ros_buildup` (a "wear" metric) crossing
+`BIO.ROS_PURGE` (60.0) triggers a *designed* reset, `_trigger_mitophagy`,
+which pays for itself out of ATP and left the engine at ~1.0 when the pool
+couldn't cover the full cost — every subsequent action then failed
+`PARITY GATE` until an apparent failed-REM-cycle side effect abruptly refilled
+ATP six turns later. Not rare: `ros_buildup` by turn 8 was 77.0 (crashed),
+56.1 (within 4 points, didn't), and 37.5 (not close) across three runs
+differing only in the simulated person's actual wording. Still open: what
+drives `ros_buildup` turn to turn, and whether the fix belongs at the
+threshold (mode-gate `ROS_PURGE` for CONVERSATION, the same pattern as the
+earlier distress-refusal fixes) or at recovery (the multi-turn silence with no
+faster recovery path than an apparent REM-failure side effect). Not yet
+judged (no judge clears `mismatch`). See the
+[2026-09-21 judge-controls handoff](SESSION_HANDOFF.md#judge-controls-2026-09-21)
+and [TESTING.md](TESTING.md) for the tooling itself.
 
 **Distressed-refusal fixes and a sixth, clean topic, 2026-09-21:** applied
 Gordon's two choices: friction-raising council synergies (THE DIGNITY LOCK,

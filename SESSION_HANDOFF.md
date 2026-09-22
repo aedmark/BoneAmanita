@@ -118,15 +118,126 @@ Built, **not yet exercised against a live model**:
   validation). All passing; full suite not re-run this session (the biology/
   physics/council suite from the entry below is unaffected by these files).
 
-**Next real step, not started:** run `audit_somatic_responsive.py` for at
-least the `bone` and `friend` arms on one topic (start with `toast`, since it
-has no known open issues besides the ATP-floor goodnight hold), then judge
-those runs with `--responsive` using `qwen3:30b-a3b` or whichever judge passes
-a re-tightened mismatch control. This is real GPU time (the simulated person
-adds a generation call per turn on top of the responder's own), so run it
-deliberately, not as another parallel background job — the qwen3:30b-a3b /
-gpt-oss:20b GPU load during the control battery visibly stressed Gordon's
-machine.
+**Update, later the same session: run, and it found something real.**
+`bone` and `friend` on `toast`, three attempts before the result was trustworthy:
+
+- **Attempt 1** exposed `SimulatedUser`'s first failure mode: given a
+  longish transcript, `qwen3.5:9b` sometimes re-emits the previous "Me:" line
+  byte-for-byte instead of reacting to the new beat (6 of 59 turn-pairs
+  across both arms). Exit interview was consequently unusable (`bone`
+  `lectured=7.0`, but partly an artifact of the engine answering the same
+  stuck complaint three turns running).
+- **Attempt 2**, after a repeat-detection retry, exposed two more: the model
+  "obeying" the no-repeat nudge by *appending* new text after the old message
+  instead of replacing it (messages growing turn over turn), and at least one
+  turn where the model's entire output was our own prompt scaffolding
+  ("Right now you are feeling: ... What is on your mind: ...") echoed back
+  verbatim. Both guarded: `.message()` now also rejects an output that
+  *starts with* the last person line, and `clean_message()` rejects literal
+  scaffold-phrase echoes. All three failure modes have tests in
+  `tests/test_judge_controls.py`'s `SimulatedUser` class (32 passing) and are
+  documented as a pattern, not individually, in `TESTING.md`.
+- **Attempt 3** came back clean of all three (checked directly: zero
+  consecutive messages that match or prefix-match the previous turn, either
+  arm) and surfaced a real engine finding instead of a harness bug:
+
+  **`bone` hit a 5-turn `PARITY GATE FAILED` ATP crash** (turns 10-14, ATP
+  pinned at 0.9, `Action Cost` exceeding it every turn, ended by a
+  `SILENCE` hold at turn 16 too - 6 of 30 turns held, 20%) that **never
+  happened in any fixed-script run of `toast`** (the scripted comparison's
+  worst case was one hold, at the ATP floor, and ATP never below 17). The
+  simulated person's actual replies in this stretch were shorter and more
+  repetitive ("ugh", "ugh i keep opening the doc and closing it") than the
+  script's corresponding lines, which apparently drove a different, worse
+  economic trajectory. This is exactly the class of thing the responsive
+  track was built to find: **the fixed-script comparison was hiding a real
+  failure mode**, not just failing to show a benefit. One internal oddity
+  seen in the raw log at the same stretch - a `TERMINAL SLEEP FAILURE` /
+  "Apoptotic cascade" with garbled hallucination text from a failed REM
+  cycle - did **not** reach the person (`shown` for that turn is an ordinary,
+  coherent reply); worth knowing the DreamEngine can produce corrupted
+  internal narration under starvation, but the person-facing layer held.
+  Full turn-by-turn detail (what was actually shown, including the person
+  reacting to the on-screen `PARITY GATE FAILED` notice itself) is in
+  `tools/cache/somatic_responsive.jsonl`, run `20260921-213921` (bone) /
+  `20260921-215231` (friend).
+
+  Topline (this run, `--report`):
+
+  | arm | turns | held | avg reply words | my words 1st half | my words 2nd half | sim fallbacks |
+  |---|---|---|---|---|---|---|
+  | bone | 30 | **6** | 66 | 27.0 | 16.6 | 1 |
+  | friend | 30 | 0 | 90 | 33.9 | 25.4 | 0 |
+
+  Exit interview (1-7, same simulator both rows - read the gap, not the raw numbers):
+
+  | arm | heard | clearer | lectured | performed | again |
+  |---|---|---|---|---|---|
+  | bone | 4.00 | 5.67 | **7.00** | 5.00 | 3.33 |
+  | friend | 5.33 | 6.33 | 4.67 | 1.67 | 4.67 |
+
+  `bone` lost on every axis this run except being marginally close on
+  `clearer`. **Caveat that matters more than the numbers:** across the three
+  attempts (bug-affected, then fixed), `bone`'s `lectured` score was 7.0,
+  4.67, then 7.0 again, and `again` was 2.0, 5.67, then 3.33 - substantial
+  swing between two clean (post-fix) runs of the *same* topic and arm, which
+  means one exit-interview run is noise-dominated even with the harness bugs
+  gone; the 6-held-turn ATP crash is the trustworthy finding here, not the
+  self-report numbers. **Not judged yet** with `--responsive` (no judge
+  currently clears the mismatch control - see above - so a ranking of these
+  transcripts would carry the same caveat as everything else in this entry).
+
+**Update, later still: root-caused, and reproduced 1 of 3 (a close call on a
+second).** Two more `bone`/`toast` responsive runs (`--seed 20260922`,
+`--seed 20260923`) did not crash: `min ATP` 5.96 and 19.42 respectively,
+against 0.88 (with a full 5-turn hold) on the original. Comparing the three
+runs' `atp_ledger`s at the turn where they diverge (turn 9) found one extra
+entry unique to the crash run: `-21.48 @ metabolism.py:317 _trigger_mitophagy
+("Mitophagy (Cellular Reset)")` - every other ledger entry that turn is
+consistent in size across all three runs.
+
+**Root cause:** `body/metabolism.py`'s `_apply_adaptive_dynamics` fires
+`_trigger_mitophagy()` whenever `ros_buildup` (a running "wear" metric)
+crosses `BIO.ROS_PURGE` (60.0, `lore/tuning_presets.json`). Mitophagy is a
+*designed* reset - it zeroes `ros_buildup`, resets `membrane_potential` to
+0.6, and pays for itself out of ATP (`MITOPHAGY_COST` 30.0, or, per
+`_trigger_mitophagy`'s own fallback, `atp_pool - 1.0` when the pool can't
+cover the full cost - which is exactly what happened: ATP was ~22 when it
+fired, so it paid ~21 and left ~1). **This is not a bug**; it did exactly
+what it's coded to do. The bug, if it is one, is downstream: at ATP≈1, every
+subsequent action's cost exceeds what's available, so `PARITY GATE FAILED`
+holds every turn until something restores ATP - here, an abrupt jump to 87.8
+at turn 15, lining up with the internally-logged (never delivered)
+`TERMINAL SLEEP FAILURE` / apoptosis event at the same turn, suggesting a
+failed-REM-cycle fallback force-refills ATP as a side effect. Not chased
+further - would need its own instrumented run to confirm.
+
+**Why this run and not the other two:** `ros_buildup` by turn 8 was 77.0
+(crash run, already over the 60 threshold, mitophagy fires the next process
+cycle), 56.1 (`--seed 20260922`, came within 4 points, did not fire), and
+37.5 (`--seed 20260923`, not close). **This is not rare** - one of three runs
+crossed the threshold outright and a second nearly did, all on the same topic
+and arm, differing only in the simulated person's actual wording. Something
+about a sustained `engaged`-phase responsive conversation (this engine, this
+topic) can run `ros_buildup` up fast enough to trip a reset mechanism whose
+real-world effect is several turns of total silence right as the conversation
+moves into `tiring`/`flagging` - arguably the worst possible moment for it.
+
+**Next real step, not started:** find what specifically drives `ros_buildup`
+turn to turn (which `process_cycle` contributors feed it, and whether it
+tracks something about the *person's* engaged, elaborating messages - the
+crash run's `engaged`-phase messages may simply have been longer/denser) -
+`tools/somatic_sim_user.py`-generated messages vary in length and intensity
+run to run, unlike the fixed script, so this is plausibly a genuine
+byproduct of responsive variation rather than a fluke. Then decide whether
+`ROS_PURGE` at 60 is too tight for a sustained emotionally-engaged
+conversation in CONVERSATION mode specifically (the fix-1/fix-2 pattern
+already used elsewhere in this doc - a `*_DISABLED_MODES`/threshold-mod
+config key - would apply here too), or whether the real fix is on the
+*recovery* side (mitophagy's ATP-crash floor is fine; the multi-turn
+`PARITY GATE` silence that follows it, with no faster recovery path than an
+apparent REM-failure side effect, is the actual UX problem). Then judge the
+responsive transcripts once a judge clears `mismatch`.
 
 ### Session mechanics note
 

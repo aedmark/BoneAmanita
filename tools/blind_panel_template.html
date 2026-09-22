@@ -1,0 +1,419 @@
+<title>__TITLE__</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Newsreader:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#e9ede9;
+    --paper-raised:#f4f6f3;
+    --ink:#1c2624;
+    --ink-soft:#4b5652;
+    --line:#c7d0c9;
+    --gold:#a97a2c;
+    --gold-soft:#e7d3ac;
+    --bone:#2f6e63;
+    --bone-soft:#d9ece7;
+    --vanilla:#4c5a78;
+    --vanilla-soft:#dfe3ee;
+    --prompted:#86506f;
+    --prompted-soft:#efdde8;
+    --focus:#1c2624;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#171d1b;
+      --paper-raised:#1f2724;
+      --ink:#e7ece9;
+      --ink-soft:#a8b3ae;
+      --line:#3a4642;
+      --gold:#d9a856;
+      --gold-soft:#3a2f18;
+      --bone:#6fb8a8;
+      --bone-soft:#1c332d;
+      --vanilla:#8f9fc4;
+      --vanilla-soft:#232a3a;
+      --prompted:#cf9bb9;
+      --prompted-soft:#372430;
+      --focus:#e7ece9;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#171d1b;
+    --paper-raised:#1f2724;
+    --ink:#e7ece9;
+    --ink-soft:#a8b3ae;
+    --line:#3a4642;
+    --gold:#d9a856;
+    --gold-soft:#3a2f18;
+    --bone:#6fb8a8;
+    --bone-soft:#1c332d;
+    --vanilla:#8f9fc4;
+    --vanilla-soft:#232a3a;
+    --prompted:#cf9bb9;
+    --prompted-soft:#372430;
+    --focus:#e7ece9;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Newsreader", Georgia, serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.25rem 6rem;}
+
+  h1{
+    font-family:"Fraunces", Georgia, serif;
+    font-weight:600;
+    font-size:clamp(1.9rem, 4vw, 2.6rem);
+    letter-spacing:-0.01em;
+    text-wrap:balance;
+    margin:0 0 .35rem;
+  }
+  .eyebrow{
+    font-family:"IBM Plex Mono", ui-monospace, monospace;
+    font-size:.72rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:0 0 .6rem;
+  }
+  .lede{max-width:62ch;color:var(--ink-soft);font-size:1.02rem;margin:0 0 1rem;}
+  .lede strong{color:var(--ink);font-weight:500;}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:1.5rem;margin-bottom:1.5rem;}
+
+  .bar{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line);margin-bottom:2rem;}
+  .bar-inner{
+    max-width:760px;margin:0 auto;padding:.7rem 1.25rem;
+    display:flex;align-items:center;gap:1.1rem;
+    font-family:"IBM Plex Mono", monospace;font-size:.78rem;color:var(--ink-soft);
+  }
+  .bar .count{color:var(--ink);font-weight:600;}
+  .bar .fill{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden;}
+  .bar .fill i{display:block;height:100%;background:var(--gold);width:0%;transition:width .25s ease;}
+  .bar .tallybit{display:flex;gap:.4rem;align-items:center;white-space:nowrap;}
+  .swatch{width:.55rem;height:.55rem;border-radius:1px;display:inline-block;background:var(--gold);}
+
+  .turn{margin:0 0 2.6rem;}
+  .turn .meta{
+    display:flex;align-items:baseline;gap:.6rem;
+    font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:.55rem;
+  }
+  .turn .meta .num{color:var(--gold);}
+  .msg{
+    background:var(--paper-raised);border-left:2px solid var(--line);
+    padding:.85rem 1.05rem;border-radius:0 6px 6px 0;font-style:italic;margin-bottom:1rem;
+  }
+  .msg::before{content:"\201C";font-style:normal;color:var(--ink-soft);}
+  .msg::after{content:"\201D";font-style:normal;color:var(--ink-soft);}
+
+  .stack{display:flex;flex-direction:column;gap:.8rem;}
+  .card{
+    background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;
+    padding:1rem 1.15rem;display:flex;flex-direction:column;
+  }
+  .card .label{
+    font-family:"IBM Plex Mono", monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:.55rem;display:flex;justify-content:space-between;align-items:center;
+  }
+  .reply{font-size:.98rem;}
+  .reply p{margin:0 0 .7rem;}
+  .reply p:last-child,.reply ul:last-child{margin-bottom:0;}
+  .reply ul{margin:0 0 .7rem;padding-left:1.25rem;}
+  .reply li{margin:0 0 .3rem;}
+  .reply .h{font-family:"IBM Plex Mono", monospace;font-size:.78rem;letter-spacing:.04em;font-weight:600;margin:.9rem 0 .4rem;}
+  .reply hr{border:none;border-top:1px solid var(--line);margin:.9rem 0;}
+
+  .pick{
+    margin-top:.9rem;align-self:flex-start;border:1px solid var(--line);background:transparent;color:var(--ink);
+    font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+    padding:.5rem .8rem;border-radius:6px;cursor:pointer;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .pick:hover{border-color:var(--ink-soft);}
+  .pick:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+  .card.picked{border-color:var(--gold);}
+  .card.picked .pick{background:var(--gold-soft);border-color:var(--gold);}
+  .card.picked .pick::after{content:" \2713";}
+  .card.revealed.is-boneamanita{border-color:var(--bone);}
+  .card.revealed.is-vanilla{border-color:var(--vanilla);}
+  .card.revealed.is-prompted{border-color:var(--prompted);}
+  .tag{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;padding:.15rem .45rem;border-radius:4px;}
+  .tag.boneamanita{background:var(--bone-soft);color:var(--bone);}
+  .tag.vanilla{background:var(--vanilla-soft);color:var(--vanilla);}
+  .tag.prompted{background:var(--prompted-soft);color:var(--prompted);}
+
+  .held{
+    background:var(--paper-raised);border:1px dashed var(--line);border-radius:8px;padding:1rem 1.15rem;
+    color:var(--ink-soft);font-family:"IBM Plex Mono", monospace;font-size:.78rem;
+  }
+  .held .why{margin-top:.5rem;font-family:"Newsreader", Georgia, serif;font-size:.95rem;color:var(--ink);font-style:italic;}
+  .held details{margin-top:.8rem;font-family:"Newsreader", Georgia, serif;color:var(--ink);}
+  .held summary{cursor:pointer;font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+  .held .other{margin-top:.7rem;}
+  .held .other .tag{display:inline-block;margin-bottom:.4rem;}
+
+  .phase-shift{
+    font-family:"IBM Plex Mono", monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-soft);text-align:center;margin:2.8rem 0 1.6rem;display:flex;align-items:center;gap:.8rem;
+  }
+  .phase-shift::before,.phase-shift::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  .reveal-all{margin-top:3rem;padding-top:2rem;border-top:1px solid var(--line);}
+  .reveal-all button{
+    font-family:"IBM Plex Mono", monospace;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;
+    background:var(--ink);color:var(--paper);border:none;padding:.75rem 1.3rem;border-radius:6px;cursor:pointer;
+  }
+  .reveal-all button:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  .verdict{display:none;margin-top:1.6rem;}
+  .verdict.shown{display:block;}
+  .verdict h2{
+    font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-soft);margin:1.8rem 0 .3rem;font-weight:500;
+  }
+  .verdict h2:first-child{margin-top:0;}
+  .verdict .row{
+    display:flex;justify-content:space-between;align-items:center;gap:1rem;
+    padding:.65rem 0;border-bottom:1px solid var(--line);
+    font-family:"IBM Plex Mono", monospace;font-size:.85rem;
+  }
+  .verdict .row:last-child{border-bottom:none;}
+  .verdict .num{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .note{font-size:.9rem;color:var(--ink-soft);max-width:62ch;margin:.8rem 0 0;}
+  .export{width:100%;margin-top:.8rem;font-family:"IBM Plex Mono", monospace;font-size:.75rem;background:var(--paper-raised);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:.7rem;}
+  .note code{font-family:"IBM Plex Mono", monospace;font-size:.8rem;color:var(--ink);}
+  footer{margin-top:3rem;color:var(--ink-soft);font-size:.85rem;font-family:"IBM Plex Mono", monospace;}
+</style>
+
+<div class="bar">
+  <div class="bar-inner">
+    <span class="tallybit"><span class="swatch"></span> picked: <span class="count" id="pickedCount">0</span>/<span id="pickedTotal">0</span></span>
+    <div class="fill"><i id="fillBar"></i></div>
+    <span id="barHint">read blind, pick as you go</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">Three responders &middot; one 30-turn conversation &middot; gemma4:12b behind all of them</p>
+    <h1>__TITLE__</h1>
+    <p class="lede">
+      __STORY__
+      Three responders answer every message. <strong>Replies A, B and C</strong> are reshuffled
+      at random each turn, so position tells you nothing. Pick the one you would rather receive,
+      turn by turn, before revealing who wrote what. Your picks are saved in this browser as you
+      go, so you can leave and come back.
+    </p>
+    <p class="lede">
+      What is being compared: a full BoneAmanita engine, the bare model with no instructions at all,
+      and the bare model with a single line asking it to be a warm, concise friend. The third one is
+      there so the engine has to beat a cheap prompt, not just a model left to its own devices.
+    </p>
+  </header>
+
+  <div id="turns"></div>
+
+  <div class="reveal-all">
+    <button id="revealBtn" type="button">Reveal everything</button>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const TURNS = DATA.turns;
+const SYS_NAME = {boneamanita: "BoneAmanita", prompted: "Prompted", vanilla: "Vanilla"};
+const SYS_ORDER = ["boneamanita", "prompted", "vanilla"];
+const STORE_KEY = DATA.storeKey;
+const container = document.getElementById('turns');
+
+function loadPicks(){
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }
+  catch(e){ return {}; }
+}
+function savePicks(p){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(p)); }
+  catch(e){ /* storage blocked: picks just will not persist */ }
+}
+let picks = loadPicks();
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function inline(s){
+  return esc(s)
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*(?!\*)/g,'$1<em>$2</em>');
+}
+// Same minimal markdown for every responder, so nobody's formatting is shown raw.
+function render(text){
+  const out = []; let list = null;
+  const flush = () => { if (list){ out.push('<ul>' + list.join('') + '</ul>'); list = null; } };
+  text.split(/\n/).forEach(line => {
+    const t = line.trim();
+    let m;
+    if (!t){ flush(); return; }
+    if (/^-{3,}$/.test(t)){ flush(); out.push('<hr>'); return; }
+    if ((m = t.match(/^#{1,6}\s+(.*)$/))){ flush(); out.push('<div class="h">' + inline(m[1]) + '</div>'); return; }
+    if ((m = t.match(/^[*\-]\s+(.*)$/)) || (m = t.match(/^\d+[.)]\s+(.*)$/))){
+      (list = list || []).push('<li>' + inline(m[1]) + '</li>'); return;
+    }
+    flush(); out.push('<p>' + inline(t) + '</p>');
+  });
+  flush();
+  return out.join('');
+}
+
+function renderTurn(t, prevPhase){
+  if (t.phase !== prevPhase){
+    const shift = document.createElement('div');
+    shift.className = 'phase-shift';
+    shift.textContent = t.phase;
+    container.appendChild(shift);
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'turn';
+  wrap.innerHTML = `
+    <div class="meta"><span class="num">#${String(t.turn).padStart(2,'0')}</span><span>${t.phase}</span></div>
+    <div class="msg">${esc(t.message)}</div>`;
+
+  if (!t.comparable){
+    const held = document.createElement('div');
+    held.className = 'held';
+    const others = t.heldContext.map(o =>
+      `<div class="other"><span class="tag ${o.sys}">${SYS_NAME[o.sys]} replied</span><div class="reply">${render(o.text)}</div></div>`
+    ).join('');
+    held.innerHTML = `BoneAmanita held silence on this turn.
+      <div class="why">${esc(t.haltReason || '')}</div>
+      <details><summary>What the other two said</summary>${others}</details>`;
+    wrap.appendChild(held);
+    container.appendChild(wrap);
+    return;
+  }
+
+  const stack = document.createElement('div');
+  stack.className = 'stack';
+  t.cards.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.turn = t.turn;
+    card.dataset.letter = c.letter;
+    card.dataset.sys = c.sys;
+    card.innerHTML = `
+      <div class="label"><span>Reply ${c.letter}</span><span class="reveal-tag" hidden></span></div>
+      <div class="reply">${render(c.text)}</div>
+      <button class="pick" type="button">Pick this one</button>`;
+    stack.appendChild(card);
+  });
+  wrap.appendChild(stack);
+  container.appendChild(wrap);
+}
+
+let prevPhase = null;
+TURNS.forEach(t => { renderTurn(t, prevPhase); prevPhase = t.phase; });
+
+const comparable = TURNS.filter(t => t.comparable);
+document.getElementById('pickedTotal').textContent = comparable.length;
+const heldCount = TURNS.length - comparable.length;
+document.getElementById('foot').textContent = heldCount
+  ? `${heldCount} of the ${TURNS.length} scripted turns ${heldCount === 1 ? 'is' : 'are'} not scored: BoneAmanita held silence ` +
+    `${heldCount === 1 ? 'on it' : 'on them'}, which is a real behaviour and not a missing data point, so there is nothing to rank against.`
+  : '';
+
+function updateBar(){
+  const n = Object.keys(picks).filter(k => comparable.some(t => String(t.turn) === k)).length;
+  document.getElementById('pickedCount').textContent = n;
+  document.getElementById('fillBar').style.width = (100 * n / comparable.length).toFixed(0) + '%';
+  document.getElementById('barHint').textContent = n >= comparable.length ? 'all picked, reveal below' : 'read blind, pick as you go';
+}
+function applyStoredPick(turn){
+  const letter = picks[turn];
+  if (letter === undefined) return;
+  document.querySelectorAll(`.card[data-turn="${turn}"]`).forEach(card => {
+    card.classList.toggle('picked', card.dataset.letter === letter);
+  });
+}
+comparable.forEach(t => applyStoredPick(t.turn));
+updateBar();
+
+container.addEventListener('click', e => {
+  const btn = e.target.closest('.pick');
+  if (!btn) return;
+  const card = btn.closest('.card');
+  const turn = card.dataset.turn;
+  picks[turn] = card.dataset.letter;
+  savePicks(picks);
+  document.querySelectorAll(`.card[data-turn="${turn}"]`).forEach(c => c.classList.toggle('picked', c === card));
+  updateBar();
+});
+
+function row(label, value){
+  return `<div class="row"><span>${label}</span><span class="num">${value}</span></div>`;
+}
+
+document.getElementById('revealBtn').addEventListener('click', () => {
+  document.querySelectorAll('.card[data-sys]').forEach(card => {
+    const sys = card.dataset.sys;
+    card.classList.add('revealed', 'is-' + sys);
+    const tag = card.querySelector('.reveal-tag');
+    tag.hidden = false;
+    tag.innerHTML = `<span class="tag ${sys}">${SYS_NAME[sys]}</span>`;
+  });
+
+  const mine = {boneamanita: 0, prompted: 0, vanilla: 0};
+  comparable.forEach(t => {
+    const letter = picks[t.turn];
+    if (letter === undefined) return;
+    const c = t.cards.find(x => x.letter === letter);
+    if (c) mine[c.sys]++;
+  });
+  const unpicked = comparable.length - mine.boneamanita - mine.prompted - mine.vanilla;
+  const key = {boneamanita: 'BONEAMANITA', prompted: 'PROMPTED', vanilla: 'VANILLA'};
+  let html = '<h2>Your picks</h2>';
+  SYS_ORDER.forEach(s => { html += row(SYS_NAME[s], mine[s]); });
+  html += row('Unpicked', unpicked);
+  DATA.judges.forEach(J => {
+    const pw = (a, b) => `${J.pairwise[`${a} over ${b}`]} &ndash; ${J.pairwise[`${b} over ${a}`]}`;
+    html += `<h2>Judge: ${esc(J.model)}</h2>`;
+    html += row(`First place, of ${J.votes} votes`, '');
+    SYS_ORDER.forEach(s => { html += row('&nbsp;&nbsp;' + SYS_NAME[s], `${J.first[key[s]]} &middot; mean rank ${J.meanRank[key[s]]}`); });
+    html += row('BoneAmanita vs Prompted', pw('BONEAMANITA', 'PROMPTED'));
+    html += row('BoneAmanita vs Vanilla', pw('BONEAMANITA', 'VANILLA'));
+    html += row('Prompted vs Vanilla', pw('PROMPTED', 'VANILLA'));
+    html += `<p class="note">Ranked ${J.passes} times per turn with independent shuffles; both passes picked the same winner on ${J.agree} of ${J.turns} turns` +
+      (J.unparsed ? `, and ${J.unparsed} of ${J.unparsed + J.votes} votes could not be parsed and were dropped.` : '.') + `</p>`;
+  });
+  html += `<p class="note">${esc(DATA.pooledNote)}</p>`;
+  html += `<h2>What each one was</h2>
+    <p class="note"><strong>BoneAmanita:</strong> the full engine on gemma4:12b (physics, somatic budget, Lexical Firewall, the CONVERSATION style guide).</p>
+    <p class="note"><strong>Prompted:</strong> gemma4:12b with exactly one instruction, <code>${esc(DATA.friendPrompt)}</code></p>
+    <p class="note"><strong>Vanilla:</strong> gemma4:12b with no instructions, and no cap on how long it could go.</p>`;
+  html += `<h2>Send your picks back</h2>
+    <p class="note">Copies your result for each turn, with the phase and which responder you chose, so it can be read as text.</p>
+    <button id="copyBtn" type="button">Copy my results</button>
+    <textarea id="copyOut" class="export" readonly hidden rows="8"></textarea>`;
+  const v = document.getElementById('verdict');
+  v.innerHTML = html;
+  const summary = [
+    document.title + ' \u2014 my picks',
+    `BoneAmanita ${mine.boneamanita} | Prompted ${mine.prompted} | Vanilla ${mine.vanilla} | no pick ${unpicked}`,
+  ].concat(comparable.map(t => {
+    const c = picks[t.turn] === undefined ? null : t.cards.find(x => x.letter === picks[t.turn]);
+    return `#${String(t.turn).padStart(2, '0')} ${t.phase}: ${c ? SYS_NAME[c.sys] : 'no pick'}`;
+  })).join('\n');
+  document.getElementById('copyBtn').addEventListener('click', () => {
+    const out = document.getElementById('copyOut');
+    out.value = summary;
+    const showManual = () => { out.hidden = false; out.focus(); out.select(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(summary).then(
+        () => { document.getElementById('copyBtn').textContent = 'Copied'; },
+        showManual
+      );
+    } else { showManual(); }
+  });
+  v.classList.add('shown');
+  v.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+});
+</script>
