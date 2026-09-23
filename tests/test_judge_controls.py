@@ -7,11 +7,12 @@ again. These cover the parts that decide that without a live model.
 
 import json
 import random
+import re
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
@@ -83,9 +84,24 @@ class ControlConstruction(unittest.TestCase):
         }
         vectors = {"gonna sleep": [1, 0], "gonna sleep now": [1, 0], "the tire story": [0, 1],
                    "night": [1, 0], "sweet dreams": [1, 0], "love the tire story": [0, 1]}
-        sim_fn = bj.decoy_similarity(records, lambda texts: [vectors[t] for t in texts])
+        sim_fn, _ = bj.decoy_similarity(records, lambda texts: [vectors[t] for t in texts])
         self.assertEqual(sim_fn(0, 1), 1)
         self.assertEqual(sim_fn(0, 2), 0)
+
+    def test_a_reply_that_fits_anywhere_is_not_anchored(self):
+        # Replies 0-2 each answer their own message; 3 ("Exactly.") leans on none of them.
+        records = {t: {"message": f"m{t}", "reply": f"r{t}"} for t in range(4)}
+        vectors = {f"m{t}": [1.0 if i == t else 0.0 for i in range(4)] for t in range(4)}
+        vectors.update({f"r{t}": vectors[f"m{t}"] for t in range(3)})
+        vectors["r3"] = [0.5, 0.5, 0.5, 0.0]
+        _, anchored = bj.decoy_similarity(records, lambda texts: [vectors[t] for t in texts])
+        self.assertNotIn(3, anchored)
+        self.assertEqual(len(anchored), 2)
+
+    def test_only_eligible_candidates_become_decoys(self):
+        turns = list(range(10))
+        decoys = bj.pick_decoys(turns, turns, random.Random(2), eligible={7, 8})
+        self.assertTrue(set(decoys.values()) <= {7, 8})
 
     def test_decoys_still_exist_when_only_near_turns_are_available(self):
         decoys = bj.pick_decoys([1, 2], [1, 2], random.Random(1))
@@ -194,6 +210,49 @@ class ResponsivePrompt(unittest.TestCase):
         )
         self.assertIn("Conversation B", text)
         self.assertIn("There are 2; use only A and B.", text)
+
+
+class Pairwise(unittest.TestCase):
+    def test_every_pair_appears_once_per_pass_in_opposite_orders(self):
+        first, second = bj.pair_orders(["X", "Y", "Z"], random.Random(4))
+        self.assertEqual(len(first), 3)
+        self.assertEqual(second, [p[::-1] for p in first])
+        self.assertEqual({frozenset(p) for p in first}, {frozenset("XY"), frozenset("XZ"), frozenset("YZ")})
+
+    def test_a_transitive_set_of_outcomes_is_a_ranking_and_a_cycle_is_not(self):
+        slots = ["X", "Y", "Z"]
+        self.assertEqual(bj.tournament([("X", "Y"), ("X", "Z"), ("Y", "Z")], slots), ["X", "Y", "Z"])
+        self.assertIsNone(bj.tournament([("X", "Y"), ("Y", "Z"), ("Z", "X")], slots))
+
+    def test_a_held_system_loses_its_pairs_without_a_call(self):
+        self.assertEqual(bj.tournament([("Y", "X"), ("X", "H"), ("Y", "H")], ["X", "Y", "H"]), ["Y", "X", "H"])
+
+    def test_the_format_line_asks_for_two_letters(self):
+        for system in (bj.JUDGE_SYSTEM, bj.JUDGE_SYSTEM_RESPONSIVE):
+            self.assertIn("RANKING: <letter> > <letter>\n", bj.pairwise_system(system))
+
+    def test_a_consistent_judge_splits_position_wins_evenly(self):
+        quality = {"best": 2, "fine": 1, "poor": 0}
+        arms = {"bone": "best", "friend": "fine", "vanilla": "poor"}
+
+        def fake_judge(model, system, prompt, n, think=None):
+            blocks = re.split(r"^Conversation ([AB])$", prompt, flags=re.M)[1:]
+            score = {blocks[i]: max(q for w, q in quality.items() if w in blocks[i + 1]) for i in range(0, len(blocks), 2)}
+            return {"order": sorted(score, key=lambda l: -score[l]), "reason": "r", "raw": ""}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache, out = Path(tmp) / "r.jsonl", Path(tmp) / "out.json"
+            rows = [{"run": "1", "topic": "toast", "arm": arm, "turn": t, "message": f"said {t}",
+                     "reply": f"{word} {t}", "delivered": True} for arm, word in arms.items() for t in range(4)]
+            cache.write_text("\n".join(json.dumps(r) for r in rows))
+            argv = ["x", "--topic", "toast", "--responsive", "--pairwise", "--responsive-cache", str(cache), "--out", str(out)]
+            with patch.object(bj, "judge", fake_judge), patch.object(sys, "argv", argv), patch("builtins.print"):
+                self.assertEqual(bj.main(), 0)
+            summary = json.loads(out.read_text())["summary"]
+        self.assertEqual((summary["votes"], summary["cycles"]), (8, 0))
+        self.assertEqual(summary["first_place"]["BONEAMANITA"], 8)
+        self.assertEqual(summary["last_place"]["VANILLA"], 8)
+        self.assertEqual(summary["first_by_position"]["A"], summary["first_by_position"]["B"])
 
 
 class SimulatedUser(unittest.TestCase):

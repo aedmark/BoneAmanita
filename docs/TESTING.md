@@ -174,6 +174,12 @@ route rather than the underlying tendency:
    own prompt template text ("Right now you are feeling: ... What is on your
    mind: ...") copied back as if it were the character's line.
 
+4. **Paraphrased scaffold echo** (`mistral-nemo`, 2026-09-23, 1 turn in 90):
+   the simulator answers its own prompt headings in prose ("As for how I'm
+   feeling... I guess what's on my mind is"). **Not guarded**: any regex for
+   it would also reject a person naturally saying how they feel. Grep a run
+   for it and judge by eye.
+
 `.message()` now rejects an output that (a) exactly matches the transcript's
 last person line, or (b) *starts with* it (catches the append pattern too),
 case/whitespace-insensitively, and retries once with an explicit "say only
@@ -281,14 +287,27 @@ responsive `MISMATCH` view keeps Prompted's own real context and last message
 and swaps in Prompted's own reply from a decoyed turn of the same
 conversation.
 
-**Responsive decoys are chosen by similarity** (2026-09-23). A simulated
+**Responsive decoys are anchored and dissimilar** (2026-09-23). A simulated
 person repeats themselves ("gonna sleep" at turn 17 and again at 29), so a
 decoy from elsewhere in the same conversation can genuinely fit ("Sweet
-dreams!"). With `--responsive --control mismatch`, `pick_decoys` narrows the
-usual phase/distance pool to its least similar half, by the larger of two
-embedding cosines (`decoy_similarity`: this turn's message against the
-candidate's message, and against the candidate's reply). It needs the real
-embedder and refuses to run on hash. Scripted decoys are untouched.
+dreams!"). With `--responsive --control mismatch`, `pick_decoys` first keeps
+only *anchored* candidates (reply similarity to its own message minus its
+mean similarity to the other messages, top half: stock agreement that fits
+anywhere is out), then narrows the usual phase/distance pool to its least
+similar half, by the larger of two embedding cosines (this turn's message
+against the candidate's message, and against the candidate's reply). Both
+from `decoy_similarity`. Without the anchoring step, low similarity alone
+selected stock agreement for half the turns. It needs the real embedder and
+refuses to run on hash. Scripted decoys are untouched.
+
+**`--pairwise`** splits each turn into its three pairs, each shown in both
+orders across the two passes, so position bias cancels exactly and the judge
+holds two replies (or conversations) at a time. Each pass reads as a
+tournament: last means losing both pairs; a cycle has no first or last and
+counts against a control's bar. It helped every judge tried on responsive
+`mismatch` (see `SESSION_HANDOFF.md`, 2026-09-23 evening). Note the bar is
+steep in call terms: losing both pairs 90% of the time needs about 95%
+accuracy per call.
 
 **Responsive rubric: v2, and v3 was tried and reverted.** v3 (2026-09-23)
 asked for a per-conversation `FIT X: yes|no` before the ranking. On the same
@@ -297,13 +316,15 @@ to 66%) and `qwen3.5:9b` (80% to 62%): the judges followed their own yes/no
 calls exactly, and an absolute "does this fit" call proved noisier for them
 than v2's side-by-side comparison. Details in `SESSION_HANDOFF.md`, 2026-09-23.
 
-**Responsive `mismatch`, v2 with similarity decoys, `toast`:** `qwen3.5:9b`
+**Responsive `mismatch` history, v2 with similarity decoys, `toast`:** `qwen3.5:9b`
 91% last (51/56), **PASS by one vote**; `ministral-3:14b` 86%, FAIL.
 That pass was on arms where `qwen3.5:9b` was also the simulated person, so it
-read conversations where it wrote the person's half. The simulated person is
-now `mistral-nemo` (a family neither the responders nor this judge share);
-the pass has to be re-earned on arms generated that way. Keep the simulated
-person and the responsive judge on different models.
+read conversations where it wrote the person's half. **On arms regenerated
+with `mistral-nemo` as the person it fell to 68% (`ministral-3:14b` 63%)**:
+no judge is currently validated for a responsive ranking (best since:
+`qwen3.5:9b`, pairwise with anchored decoys, 85%). Keep the simulated
+person and the responsive judge on different models; a pass earned with them
+the same is not a pass.
 
 ### `build_blind_panel.py` + `blind_panel_template.html` — the human blind read
 
@@ -407,7 +428,7 @@ single GPU.
 |---|---|---|---|
 | `gemma4:12b` | responder (all arms) | 7.6GB | engine sets `think: False` itself; vanilla.py's `SAMPLING` does too |
 | `gemma4:e4b` | the engine's own DSPy critic (not swappable from these tools) | 9.6GB | n/a |
-| `qwen3.5:9b` | responsive judge (only one to clear responsive `mismatch`, 91%, 2026-09-23, on arms it also simulated the person for); simulated person until 2026-09-23 | 6.6GB | `off` |
+| `qwen3.5:9b` | judge (cleared responsive `mismatch` at 91% only on arms it also simulated the person for; 68% once the person was `mistral-nemo`, not validated); simulated person until 2026-09-23 | 6.6GB | `off` |
 | `mistral-nemo` | simulated person (default since 2026-09-23; family differs from the responders and from `qwen3.5:9b`, shared with `ministral-3:14b`, so if that becomes the judge pull a third family such as `llama3.1:8b` for the person); judge (default, controls-only as of 2026-09-22: fast, but the rubric v2 fix did not clear `mismatch` for it) | 7.1GB | none (no reasoning mode) |
 | `ministral-3:14b` | judge (unconfirmed: improved on `mismatch` under rubric v2, still fails) | 9.1GB | none |
 | `phi4` | judge (textbook-biased, see above) | 9.1GB | none |

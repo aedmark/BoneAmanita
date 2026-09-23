@@ -165,11 +165,94 @@ still cross-family, but it may favour replies to lines phrased the way it
 would phrase them. Cleanest fix: run the simulated person on a different
 model for any run `qwen3.5:9b` judges, or validate `ministral-3:14b` further.
 
-**Next:** decide on the simulated-person/judge overlap above; then the real
-responsive ranking (`--responsive`, no control) on a validated judge; then
+**Update, same day: the pass did not survive removing the overlap.** The
+simulated person is now `mistral-nemo` (`SIM_MODEL`), and all three `toast`
+responsive arms were regenerated with it (live embeddings, 0 held turns in
+any arm, 0 repeats, 0 fallbacks, 0 literal scaffold echoes; one paraphrased
+echo, `vanilla` turn 12, "As for how I'm feeling... what's on my mind is",
+the simulator answering its own prompt headings; left unguarded because a
+regex for it would reject natural speech). Responsive `mismatch`, v2,
+similarity decoys:
+
+| judge | qwen3.5 as person | mistral-nemo as person |
+|---|---|---|
+| `qwen3.5:9b` | 91%, PASS | **68%, FAIL** |
+| `ministral-3:14b` | 86% | **63%, FAIL** |
+
+The real ranking was gated on this control and did not run. Both judges
+dropped by a similar margin, so it is not only `qwen3.5:9b` losing a
+self-authorship advantage (though that likely contributed): the new arms are
+somewhat more homogeneous (mean pairwise decoy similarity 0.539 against
+0.514; chosen decoys 0.483 against 0.431), a modestly harder test. But the
+decoys that most often escaped last place are plainly wrong (turn 19, the
+person cutting a ribs joke because Mariam is vegetarian, against a decoy
+about boardroom presentations), so this is judge failure, not a contaminated
+control. **No judge is validated for responsive ranking.** Results:
+`tools/cache/nemo_mismatch_{judge}.json`; the qwen-simulated arms are kept
+as `tools/cache/somatic_responsive_qwensim.jsonl`.
+
+**Next:** try `qwen3:30b-a3b` (the only scripted pass; heavy) on responsive
+`mismatch` with v2 and similarity decoys on these arms, or rethink the
+responsive prompt shape (three full conversations in one prompt may simply
+be past what these judges can hold); then the real responsive ranking on a
+validated judge; then
 re-measure the scripted three-way ranking on a non-degraded census (and
 `qwen3:30b-a3b`'s scripted controls, since the census it was validated on was
 degraded too; the arms it ranked are what changed, not the judge).
+
+### 2026-09-23, evening: pairwise judging, anchored decoys, and where to stop tuning
+
+**Pairwise mode** (`--pairwise`, Gordon's idea): each turn is split into its
+three pairs, each judged in both orders across the two passes (which order
+comes first is seeded per pair), so position bias cancels exactly and the
+judge only holds two conversations at a time. A pass reads its three pair
+results as a tournament: a reply that loses both its pairs is last; a cycle
+has no first or last and still counts as a vote, so it counts against a
+control's bar. Six small calls per turn instead of two big ones. Tests in
+`tests/test_judge_controls.py` (`Pairwise`), including an end-to-end `main()`
+run with a mocked judge that must split position wins exactly evenly
+(mutation checked by breaking the order reversal).
+
+**My similarity-decoy fix had a flaw, now fixed.** Picking the least
+embedding-similar candidates favours stock agreement ("Exactly. That's the
+move."), which is about nothing and so scores low against everything, and
+fits anywhere: on the mistral-nemo arms, 15 of 30 turns got a decoy opening
+with stock agreement, and every decoy that fooled both judges was one. Now a
+decoy must also be *anchored*: its reply's similarity to its own message,
+minus its mean similarity to the other messages, in the top half
+(`decoy_similarity` returns `(similarity, anchored)`; `pick_decoys(eligible=)`).
+Checked by reading the picks, not by pass rates: turn 26 ("keep it simple,
+say how Dev looked out for me") now gets "if you don't know her name, don't
+use it". Trade-off: a smaller pool, so one decoy (turn 23's) is reused 7
+times.
+
+**Responsive `mismatch`, mistral-nemo as the person, v2 rubric:**
+
+| judge | three-way, similarity decoys | pairwise, similarity decoys | pairwise, anchored decoys |
+|---|---|---|---|
+| `qwen3.5:9b` | 68% | 75% | **85%** (wrong-turn reply lost 111 of 120 calls, first 0 times) |
+| `ministral-3:14b` | 63% | 72% | 80% |
+
+Still no pass (bar 90%), so the real responsive ranking stayed gated off.
+Both improvements were fixes to the test, not the judge, but **this is the
+place to stop tuning the control**: adjusting it further until a judge passes
+would make the pass meaningless. Results: `tools/cache/pw_*` and `pwa_*`.
+
+**Side finding worth keeping:** the one-line "warm friend" arm opens 7 of 30
+replies with stock agreement ("Spot on", "Exactly", "That is perfect");
+BoneAmanita opens 1 of 30 that way, vanilla 1 of 30. The Lexical Firewall's
+opener pattern plausibly accounts for BoneAmanita's number. Not yet a
+quality verdict, just a measured difference in style.
+
+**Decided with Gordon, next:** (1) the scripted track, where a judge is
+already validated: regenerate the scripted arms on the fixed engine (memory
+and CD graph live, confirmed from the census log), recheck
+`qwen3:30b-a3b` on scripted `mismatch`, then the real scripted three-way
+ranking; the first valid BoneAmanita-vs-baseline number since the census bug.
+(2) The responsive track gets a human judge: adapt the blind panel to show
+responsive conversations (each system's own context), Gordon reads it blind,
+and his picks become the standard any AI judge is checked against
+(`--agree`), in place of further control tuning.
 
 <a id="judge-controls-2026-09-21"></a>
 
@@ -833,7 +916,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.5 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.6 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.

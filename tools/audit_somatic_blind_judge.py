@@ -35,10 +35,11 @@ trusting a judge's ranking of the real systems, run it against the controls:
   --control mismatch   BoneAmanita, Prompted, and a reply written for a turn in
                        a different phase. A judge that ranks the wrong-moment
                        reply above a real one is not reading the conversation.
-                       With --responsive the decoy is also kept to the half of
-                       candidates least similar (by embedding) to the current
-                       line, since a simulated person repeats themselves and a
-                       decoy from the same conversation can genuinely fit.
+                       With --responsive the decoy must also be anchored (its
+                       reply answers its own turn more than turns in general,
+                       so stock agreement that fits anywhere is out) and is kept
+                       to the half least similar to the current line, since a
+                       simulated person repeats themselves.
   --control textbook   BoneAmanita, Prompted, and the anti-pattern the engine
                        is built to avoid (performed sympathy, then a bulleted
                        list of tips; `audit_somatic_vanilla.py --arm textbook`).
@@ -51,6 +52,13 @@ trusting a judge's ranking of the real systems, run it against the controls:
 Held turns: by default a turn where any system delivered no reply is skipped,
 so the win rates are conditional on the engine having spoken. `--held forfeit`
 ranks a held system last instead (silence is a delivered non-answer).
+
+`--pairwise` splits each turn into its three pairs, each shown in both orders
+across the two passes (which order comes first is seeded), so position bias
+cancels exactly and the judge only ever holds two conversations. A pass is the
+three pair results read as a tournament: a reply that loses both its pairs is
+last. A cycle (A over B over C over A) has no first or last, and still counts
+as a vote, so it counts against a control's bar.
 
 `--responsive` judges the runs made against a simulated person
 (`audit_somatic_responsive.py`), where each system's conversation has drifted
@@ -287,19 +295,20 @@ def is_delivered(rec: dict) -> bool:
 
 
 def pick_decoys(
-    turns: list, valid: list, rng: random.Random, phases: dict = None, min_gap: int = 3, similarity=None
+    turns: list, valid: list, rng: random.Random, phases: dict = None, min_gap: int = 3, similarity=None,
+    eligible: set = None,
 ) -> dict:
     """For each turn, another turn whose reply cannot fit it.
 
     Prefers a different phase (a reply from an engaged turn can fit another engaged
     turn on the same topic), then distance, then anything but the turn itself.
-    `similarity(turn, candidate)`, when given, narrows that pool to its least
-    similar half.
+    `eligible` limits candidates up front; `similarity(turn, candidate)`, when
+    given, narrows the pool to its least similar half.
     """
     phases = phases or {}
     decoys = {}
     for t in turns:
-        others = [v for v in valid if v != t]
+        others = [v for v in valid if v != t and (eligible is None or v in eligible)]
         pool = (
             [v for v in others if phases.get(v) != phases.get(t) and abs(v - t) >= min_gap]
             or [v for v in others if phases.get(v) != phases.get(t)]
@@ -314,10 +323,14 @@ def pick_decoys(
 
 
 def decoy_similarity(records: dict, embed_batch):
-    """similarity(turn, candidate): how well the candidate's message or reply matches this turn's message.
+    """(similarity, anchored) for responsive decoys.
 
-    Both, because a decoy fits either when the person said much the same thing
-    then, or when the reply happens to answer what they say now.
+    similarity(turn, candidate): how well the candidate's message or reply matches
+    this turn's message; both, because a decoy fits either when the person said
+    much the same thing then, or when the reply happens to answer what they say now.
+    anchored: the turns whose reply answers its own message more than the others,
+    top half. Low similarity alone favours stock agreement ("Exactly. That's the
+    move."), which is about nothing and so fits anywhere.
     """
     turns = sorted(records)
     vecs = embed_batch([records[t]["message"] for t in turns] + [records[t]["reply"] or "" for t in turns])
@@ -327,7 +340,13 @@ def decoy_similarity(records: dict, embed_batch):
     def cos(a, b):
         return sum(x * y for x, y in zip(a, b))
 
-    return lambda t, v: max(cos(msg[t], msg[v]), cos(msg[t], rep[v]))
+    anchoring = {
+        v: cos(rep[v], msg[v]) - sum(cos(rep[v], msg[t]) for t in turns if t != v) / max(1, len(turns) - 1)
+        for v in turns
+    }
+    ranked = sorted(turns, key=lambda v: -anchoring[v])
+    anchored = set(ranked[: max(1, len(ranked) // 2)])
+    return (lambda t, v: max(cos(msg[t], msg[v]), cos(msg[t], rep[v]))), anchored
 
 
 def candidate_replies(control: str, turn: int, runs: dict, decoys: dict) -> dict:
@@ -365,6 +384,30 @@ def build_responsive_view(runs: dict, decoys: dict, exchanges_before, name: str,
         "message": runs[source][turn]["message"],
         "reply": runs[source][reply_turn]["reply"],
     }
+
+
+def pair_orders(present: list, rng: random.Random) -> tuple:
+    """Two passes of every pair; each pass shows a pair in the other's reverse order."""
+    passes = ([], [])
+    for a, b in itertools.combinations(present, 2):
+        shown = (a, b) if rng.random() < 0.5 else (b, a)
+        passes[0].append(shown)
+        passes[1].append(shown[::-1])
+    return passes
+
+
+def tournament(outcomes: list, slots: list):
+    """Pairwise (winner, loser) outcomes read as a ranking, or None when they cycle."""
+    wins = {s: 0 for s in slots}
+    for winner, _ in outcomes:
+        wins[winner] += 1
+    if len(set(wins.values())) < len(slots):
+        return None
+    return sorted(slots, key=lambda s: -wins[s])
+
+
+def pairwise_system(system: str) -> str:
+    return system.replace("RANKING: <letter> > <letter> > <letter>", "RANKING: <letter> > <letter>")
 
 
 def chi_square_p_df2(counts: list) -> float:
@@ -477,6 +520,7 @@ def main() -> int:
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
     parser.add_argument("--think", choices=sorted(THINK_VALUES), default="off", help="reasoning judges")
     parser.add_argument("--passes", type=int, default=2)
+    parser.add_argument("--pairwise", action="store_true", help="judge pairs, each in both orders (two passes)")
     parser.add_argument("--seed", type=int, default=20260920)
     parser.add_argument("--human", type=Path, help="a person's picks, the panel's copied text")
     parser.add_argument("--agree", type=Path, help="with --human: score a finished judge JSON, no model calls")
@@ -536,7 +580,7 @@ def main() -> int:
     if control == "mismatch":
         valid = [t for t in all_turns if delivered("PROMPTED", t)]
         phases = {t: runs["PROMPTED"][t].get("phase") for t in all_turns if t in runs["PROMPTED"]}
-        similarity = None
+        similarity = anchored = None
         if args.responsive:
             from spores.embeddings import SemanticEmbedder
 
@@ -544,13 +588,18 @@ def main() -> int:
             if embedder.backend == "hash" or embedder.degraded:
                 print(f"Responsive mismatch needs real embeddings to pick decoys; got {embedder.describe()}.")
                 return 1
-            similarity = decoy_similarity(
+            similarity, anchored = decoy_similarity(
                 {t: runs["PROMPTED"][t] for t in valid}, embedder.embed_batch
             )
-        decoys = pick_decoys(comparable, valid, random.Random(args.seed + 1), phases, similarity=similarity)
+        decoys = pick_decoys(
+            comparable, valid, random.Random(args.seed + 1), phases, similarity=similarity, eligible=anchored
+        )
         comparable = [t for t in comparable if t in decoys]
 
     system_prompt = JUDGE_SYSTEM_RESPONSIVE if args.responsive else JUDGE_SYSTEM
+    if args.pairwise:
+        system_prompt = pairwise_system(system_prompt)
+        args.passes = 2
     rng = random.Random(args.seed)
     history: list = []
     results = []
@@ -558,15 +607,43 @@ def main() -> int:
     last = {s: 0 for s in slots}
     rank_sum = {s: 0 for s in slots}
     pair = {(a, b): 0 for a in slots for b in slots if a != b}
-    first_by_position = {letter: 0 for letter in letters(len(slots))}
+    first_by_position = {letter: 0 for letter in letters(2 if args.pairwise else len(slots))}
     unparsed_raw = []
-    votes = unparsed = agree = forfeited = 0
+    votes = unparsed = agree = forfeited = cycles = 0
 
     def exchanges_before(name: str, turn: int) -> list:
         return build_exchanges_before(runs, name, turn, args.context_exchanges)
 
     def responsive_view(name: str, turn: int) -> dict:
         return build_responsive_view(runs, decoys, exchanges_before, name, turn)
+
+    def prompt_for(order: list, turn: int, texts) -> str:
+        if args.responsive:
+            return build_prompt_responsive([responsive_view(s, turn) for s in order])
+        return build_prompt(history, [texts[s] for s in order])
+
+    def record(turn: int, p: int, message: str, ranked: list, held: list, presented, reason: str) -> None:
+        nonlocal votes, forfeited
+        votes += 1
+        forfeited += len(held)
+        first[ranked[0]] += 1
+        last[ranked[-1]] += 1
+        for pos, s in enumerate(ranked):
+            rank_sum[s] += pos + 1
+            for lower in ranked[pos + 1:]:
+                pair[(s, lower)] += 1
+        results.append(
+            {
+                "turn": turn,
+                "pass": p,
+                "message": message,
+                "presented_as": presented,
+                "ranked": ranked,
+                "held": held,
+                "reason": reason,
+            }
+        )
+        print(f"  [{turn:>2}.{p}] {' > '.join(r[:5] for r in ranked):<24} {reason[:70]}")
 
     for turn in all_turns:
         message = next(runs[s][turn]["message"] for s in sources if turn in runs[s])
@@ -577,42 +654,50 @@ def main() -> int:
         held = [s for s in slots if s not in present]
         texts = None if args.responsive else candidate_replies(control, turn, runs, decoys)
         firsts = []
-        for p in range(args.passes):
+        if args.pairwise:
+            for p, shown in enumerate(pair_orders(present, rng)):
+                outcomes, calls = [(s, h) for s in present for h in held], []
+                for order in shown:
+                    verdict = judge(args.judge_model, system_prompt, prompt_for(list(order), turn, texts), 2, think)
+                    if verdict["order"] is None:
+                        break
+                    first_by_position[verdict["order"][0]] += 1
+                    winner = order[letters(2).index(verdict["order"][0])]
+                    outcomes.append((winner, order[1] if winner == order[0] else order[0]))
+                    calls.append({"shown": list(order), "winner": winner, "reason": verdict["reason"]})
+                else:
+                    ranked = tournament(outcomes, present + held)
+                    if ranked is not None:
+                        record(turn, p, message, ranked, held, calls, calls[-1]["reason"])
+                        firsts.append(ranked[0])
+                        continue
+                    # A cycle: a vote with no first or last; each call still counts head to head.
+                    votes += 1
+                    cycles += 1
+                    for s in slots:
+                        rank_sum[s] += 2
+                    for w, l in outcomes:
+                        pair[(w, l)] += 1
+                    results.append({"turn": turn, "pass": p, "message": message, "presented_as": calls,
+                                    "ranked": [], "cycle": True, "held": held, "reason": ""})
+                    print(f"  [{turn:>2}.{p}] CYCLE")
+                    continue
+                unparsed += 1
+                unparsed_raw.append({"turn": turn, "pass": p, "raw": verdict["raw"]})
+                print(f"  [{turn:>2}.{p}] UNPARSED  {verdict['raw'][:80]!r}")
+        for p in range(0 if args.pairwise else args.passes):
             order = rng.sample(present, len(present))
-            if args.responsive:
-                views = [responsive_view(s, turn) for s in order]
-                prompt = build_prompt_responsive(views)
-            else:
-                prompt = build_prompt(history, [texts[s] for s in order])
-            verdict = judge(args.judge_model, system_prompt, prompt, len(order), think)
+            verdict = judge(args.judge_model, system_prompt, prompt_for(order, turn, texts), len(order), think)
             if verdict["order"] is None:
                 unparsed += 1
                 unparsed_raw.append({"turn": turn, "pass": p, "raw": verdict["raw"]})
                 print(f"  [{turn:>2}.{p}] UNPARSED  {verdict['raw'][:80]!r}")
                 continue
             ranked = [order[letters(len(order)).index(l)] for l in verdict["order"]] + held
-            forfeited += len(held)
-            votes += 1
-            first[ranked[0]] += 1
-            last[ranked[-1]] += 1
             first_by_position[verdict["order"][0]] += 1
             firsts.append(ranked[0])
-            for pos, s in enumerate(ranked):
-                rank_sum[s] += pos + 1
-                for lower in ranked[pos + 1:]:
-                    pair[(s, lower)] += 1
-            results.append(
-                {
-                    "turn": turn,
-                    "pass": p,
-                    "message": message,
-                    "presented_as": {letters(len(order))[i]: s for i, s in enumerate(order)},
-                    "ranked": ranked,
-                    "held": held,
-                    "reason": verdict["reason"],
-                }
-            )
-            print(f"  [{turn:>2}.{p}] {' > '.join(r[:5] for r in ranked):<24} {verdict['reason'][:70]}")
+            presented = {letters(len(order))[i]: s for i, s in enumerate(order)}
+            record(turn, p, message, ranked, held, presented, verdict["reason"])
         if len(firsts) == args.passes and len(set(firsts)) == 1:
             agree += 1
 
@@ -634,6 +719,8 @@ def main() -> int:
         "mean_rank": {s: round(rank_sum[s] / votes, 2) if votes else None for s in slots},
         "pairwise_wins": {f"{a} over {b}": n for (a, b), n in pair.items()},
         "passes_agree_on_winner": agree,
+        "pairwise": args.pairwise,
+        "cycles": cycles,
     }
     if picks:
         summary["human_agreement"] = human_agreement(results, picks, len(slots))
@@ -663,6 +750,8 @@ def main() -> int:
         print(f"    {a} {pair[(a, b)]} - {pair[(b, a)]} {b}")
     print(f"  both passes picked the same winner on {agree} of {len(comparable)} turns; unparsed {unparsed}")
     print(f"  first place by shown position: {first_by_position}")
+    if args.pairwise:
+        print(f"  pairwise: each pair judged in both orders; cycles (no first or last) {cycles}")
     if forfeited:
         print(f"  Held turns scored as last place: {forfeited} slots.")
     if skipped:
