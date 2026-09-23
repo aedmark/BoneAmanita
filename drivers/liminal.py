@@ -1,7 +1,7 @@
 from typing import Dict
 
-from presets import BoneConfig
-from struts import safe_get
+from engine.presets import BoneConfig
+from engine.struts import safe_get
 
 class LiminalModule:
     _PHYS_SET = {"heavy", "kinetic"}

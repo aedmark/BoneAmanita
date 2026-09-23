@@ -1,8 +1,8 @@
 import random
 from typing import Dict, Union
 
-from core import LoreManifest
-from presets import BoneConfig
+from engine.core import LoreManifest
+from engine.presets import BoneConfig
 
 class SoulDriver:
     def __init__(self, soul_ref, config_ref=None):

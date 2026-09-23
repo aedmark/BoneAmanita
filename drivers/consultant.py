@@ -3,8 +3,8 @@ from typing import Any, Dict, Optional
 from drivers.liminal import LiminalModule
 from drivers.registry import VSLState
 from drivers.syntax import SyntaxModule
-from presets import BoneConfig
-from struts import safe_get, ux, ux_format
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux, ux_format
 
 class BoneConsultant:
     def __init__(self, config_ref=None, lexicon_ref=None):

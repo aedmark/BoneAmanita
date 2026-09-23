@@ -9,8 +9,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import faiss
 import numpy as np
 
-from core import EventBus
-from receipts import issue as issue_receipt
+from engine.core import EventBus
+from engine.receipts import issue as issue_receipt
 
 class HippocampalCache:
     DEFAULT_EDGE_THRESHOLD = 0.50

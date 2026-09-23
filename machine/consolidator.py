@@ -1,4 +1,4 @@
-from constants import Prisma
+from engine.constants import Prisma
 
 class TheConsolidator:
     def __init__(self, events_ref, memory_ref, akashic_ref):

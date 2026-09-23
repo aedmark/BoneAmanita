@@ -228,7 +228,7 @@ class TopologicalPrimitivesTest(BoneTestCase):
         )
 
     def test_navi_fractal_quality_gate(self):
-        from cycle import _native_quality_gate
+        from engine.cycle import _native_quality_gate
 
         log_r_perfect = [1.0, 2.0, 3.0, 4.0]
         log_m_perfect = [2.0, 4.0, 6.0, 8.0]
@@ -256,7 +256,7 @@ class TopologicalPrimitivesTest(BoneTestCase):
         )
 
     def test_navi_fractal_null_model(self):
-        from cycle import _native_configuration_model
+        from engine.cycle import _native_configuration_model
 
         adj = {0: {1, 2, 3, 4}, 1: {0}, 2: {0}, 3: {0}, 4: {0}}
         null_adj = _native_configuration_model(adj)
@@ -300,7 +300,7 @@ class TopologicalPrimitivesTest(BoneTestCase):
         self.assertLess(p, 0.55, "[FAIL] Top P failed to damp towards 0.5.")
 
     def test_cd_cycle_snapshot_saturation(self):
-        from cycle import GeodesicOrchestrator
+        from engine.cycle import GeodesicOrchestrator
 
         orch = GeodesicOrchestrator(self.engine)
         self.engine.observer.last_physics_packet = PhysicsPacket()
@@ -364,7 +364,7 @@ class TopologicalPrimitivesTest(BoneTestCase):
         from physics.observer import QuantumObserver
         from unittest.mock import MagicMock
 
-        from presets import BoneConfig
+        from engine.presets import BoneConfig
         # Mock the engine config and events
         config_ref = BoneConfig()
         lex_mock = MagicMock()

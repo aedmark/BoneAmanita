@@ -10,15 +10,15 @@ from archetypes.symbiosis import SymbiosisManager
 from brain.composer import LLMInterface, PromptComposer, ResponseValidator
 from brain.linear_cortex import LinearCortexRouter
 from brain.mind import DreamEngine, NeurotransmitterModulator
-from constants import Prisma
-from core import DecisionCrystal, EventBus, LoreManifest, TelemetryService
-from receipts import issue as issue_receipt
+from engine.constants import Prisma
+from engine.core import DecisionCrystal, EventBus, LoreManifest, TelemetryService
+from engine.receipts import issue as issue_receipt
 from mechanics.dspycritic import DSPyCritic
 from mechanics.pragmatics import ThePragmatist
 from mechanics.projector import beautify_thoughts, parse_spatial_reality
 from mechanics.tools import LibraryGraph, RandomRetrievalNavigator
-from presets import BoneConfig, BonePresets
-from struts import dump_state, safe_get, safe_set, ux
+from engine.presets import BoneConfig, BonePresets
+from engine.struts import dump_state, safe_get, safe_set, ux
 
 _EXAMINE_VERBS = re.compile(
     r"\b(?:look(?:\s+closer)?\s+at|examine|inspect|check\s+out|study|observe)\b"
@@ -429,7 +429,7 @@ class TheCortex:
 
         if somatic_budget:
             from body.somatic_metrics import measure
-            from receipts import issue
+            from engine.receipts import issue
             import math
             
             metrics = measure(final_output, val_res.get("valid", False))

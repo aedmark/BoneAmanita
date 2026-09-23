@@ -1,12 +1,12 @@
 import random
 
-from constants import Prisma
-from core import CycleContext, LoreManifest
+from engine.constants import Prisma
+from engine.core import CycleContext, LoreManifest
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _deep_update, _safe_dict
 from physics import QuantumObserver
-from presets import BonePresets
-from struts import safe_get, safe_set, ux
+from engine.presets import BonePresets
+from engine.struts import safe_get, safe_set, ux
 
 class NavigationPhase(SimulationPhase):
     def _cross_doorway(self, ctx, stabilized_zone: str) -> None:

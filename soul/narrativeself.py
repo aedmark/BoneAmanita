@@ -5,12 +5,12 @@ from dataclasses import dataclass, field, fields
 from typing import Any, Dict, List, Optional, Tuple
 
 from brain.akashic import TheAkashicRecord
-from constants import Prisma
-from core import EventBus
-from presets import BoneConfig
+from engine.constants import Prisma
+from engine.core import EventBus
+from engine.presets import BoneConfig
 from soul import SchurProtocol, TheEditor
 from soul.traitvector import TraitVector
-from struts import safe_get, safe_set, ux, ux_format
+from engine.struts import safe_get, safe_set, ux, ux_format
 
 logger = logging.getLogger("bone")
 

@@ -16,9 +16,9 @@ declared.
 import unittest
 
 from machine.crucible import TheCrucible
-from presets import BonePresets
+from engine.presets import BonePresets
 from tests.base import BoneTestCase
-from core import CycleContext
+from engine.core import CycleContext
 from physics.models import PhysicsPacket, EnergyState
 
 
@@ -84,7 +84,7 @@ class ToleranceReachesTheGates(BoneTestCase):
         self.assertEqual(len(ctx3.nominations), 1)
         self.assertEqual(ctx3.nominations[0].gate, "PINKER")
         self.assertFalse(ctx3.refusal_triggered)
-        from cycle import ArbitrationPhase
+        from engine.cycle import ArbitrationPhase
 
         ctx3 = ArbitrationPhase(self.engine).run(ctx3)
         self.assertTrue(ctx3.refusal_triggered)

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 from brain.akashic import TheAkashicRecord
 from brain.cortex import CortexServices, TheCortex
 from brain.mind import DreamEngine, NeurotransmitterModulator
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from spores.memory import SubconsciousStrata
 
 try:

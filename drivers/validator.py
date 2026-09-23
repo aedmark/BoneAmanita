@@ -1,9 +1,9 @@
 import math
 from typing import Any
 
-from core import LoreManifest
-from presets import BoneConfig
-from struts import safe_get
+from engine.core import LoreManifest
+from engine.presets import BoneConfig
+from engine.struts import safe_get
 
 class CongruenceValidator:
     def __init__(self, config_ref=None):

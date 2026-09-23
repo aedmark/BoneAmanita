@@ -7,11 +7,11 @@ import unicodedata
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
-    from core import CycleContext
-from constants import Prisma
+    from engine.core import CycleContext
+from engine.constants import Prisma
 from physics.observer import apply_metabolic_tax
-from presets import BoneConfig
-from struts import safe_get, ux
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux
 
 logger = logging.getLogger("bone")
 
@@ -50,7 +50,7 @@ class CerebrospinalFluidFilter:
 
 class HLA_Stabilizer:
     def __init__(self, config_ref=None):
-        from core import LoreManifest
+        from engine.core import LoreManifest
 
         self.cfg = config_ref or BoneConfig
         style_crimes = LoreManifest.get_instance().get("STYLE_CRIMES")
@@ -112,7 +112,7 @@ class TheGatekeeper:
     )
 
     def __init__(self, lexicon_ref, config_ref=None):
-        from core import LoreManifest
+        from engine.core import LoreManifest
 
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig

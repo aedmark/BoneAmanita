@@ -14,7 +14,7 @@ similarity real embeddings produce.
 import unittest
 
 from brain.ann import HippocampalCache
-from cycle import _native_freeze_graph
+from engine.cycle import _native_freeze_graph
 from tests.base import BoneTestCase
 
 

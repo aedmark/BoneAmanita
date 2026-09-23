@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from main import BoneAmanita
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from tests.base import BoneTestCase
 
 
@@ -59,7 +59,7 @@ class MacroLifecycleTests(BoneTestCase):
             "Village SimpleNamespace failed to re-hydrate.",
         )
 
-    @patch("core.LoreManifest.save")
+    @patch("engine.core.LoreManifest.save")
     def test_akashic_glimmer_pipeline(self, mock_save):
         import time
         import uuid

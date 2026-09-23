@@ -269,7 +269,7 @@ resolved the final known failures, successfully bringing all 525 unit tests to
 passing status (`525 passed, 5 skipped, 29 subtests passed` in ~4m53s). Live-model
 behavioral audits will commence next to ensure the D9 track plays correctly in production.
 
-See the [latest session handoff](SESSION_HANDOFF.md#refusal-test-repair-2026-09-18)
+See the [latest session handoff](docs/SESSION_HANDOFF.md#refusal-test-repair-2026-09-18)
 for the tested changes, remaining validation steps, and next-round work.
 
 Earlier audits found disconnected components, hash-based memory coordinates,

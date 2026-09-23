@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List
 
 from drivers.enneagram import EnneagramDriver
-from presets import BoneConfig
+from engine.presets import BoneConfig
 
 
 @dataclass

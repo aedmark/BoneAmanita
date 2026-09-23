@@ -13,11 +13,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from constants import Prisma, RealityLayer
+from engine.constants import Prisma, RealityLayer
 from physics.models import PhysicsPacket, SharedDynamics, UserInferredState
-from presets import BoneConfig
-from receipts import issue as issue_receipt
-from struts import safe_get, ux, ux_format
+from engine.presets import BoneConfig
+from engine.receipts import issue as issue_receipt
+from engine.struts import safe_get, ux, ux_format
 
 logger = logging.getLogger("bone")
 if not logger.handlers:
@@ -345,7 +345,7 @@ class LoreManifest:
 
     def __init__(self, data_dir: Optional[str] = None, config_ref: Any = None):
         self.cfg = config_ref or BoneConfig
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.DATA_DIR: str = data_dir or os.path.join(base_dir, "lore")
         self._cache: Dict[str, Any] = {}
 
@@ -636,7 +636,7 @@ class CyberneticGovernor:
         self._cached_vectorizer = self._resolve_vectorizer()
 
     def _resolve_vectorizer(self):
-        from struts import _word_to_vector
+        from engine.struts import _word_to_vector
 
         return _word_to_vector
 

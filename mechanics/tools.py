@@ -7,7 +7,7 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from constants import Prisma
+from engine.constants import Prisma
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -285,7 +285,7 @@ class TheSubstrate:
         self.events = events_ref
         self.pending_writes: List[Dict[str, Any]] = []
         self._cords_instance = None
-        from core import LoreManifest
+        from engine.core import LoreManifest
 
         self.config = LoreManifest.get_instance().get("SUBSTRATE_CONFIG") or {
             "ATP_COST_PER_CHAR": 0.02,

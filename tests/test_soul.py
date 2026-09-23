@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from soul.narrativeself import CoreMemory, NarrativeSelf
 from soul.oroboros import TheOroboros
 from soul.traitvector import TraitVector

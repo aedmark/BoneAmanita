@@ -223,7 +223,7 @@ class TestSilenceIsARealOutcome(BoneTestCase):
         self.assertGreater(spent, 0.0, "silence was free, which makes it the lazy path")
 
     def test_a_receipt_records_what_the_stage_manager_decided(self):
-        from receipts import CORE_SUBSYSTEMS, ReceiptLedger
+        from engine.receipts import CORE_SUBSYSTEMS, ReceiptLedger
 
         self.assertIn("stage.negotiate", CORE_SUBSYSTEMS)
         ledger = ReceiptLedger.get_instance()
@@ -276,7 +276,7 @@ class TestSilenceReasonsAreHumanSafe(unittest.TestCase):
     )
 
     def setUp(self):
-        from core import LoreManifest
+        from engine.core import LoreManifest
 
         self.reasons = LoreManifest.get_instance().get("ux_strings", "silence_reasons")
 

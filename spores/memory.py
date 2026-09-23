@@ -11,10 +11,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from core import ORDVEC_AVAILABLE, JSONEncoder
-from presets import BoneConfig
+from engine.core import ORDVEC_AVAILABLE, JSONEncoder
+from engine.presets import BoneConfig
 from spores.spore_utils import _word_to_vector, _words_to_matrix
-from struts import safe_get, ux, ux_format
+from engine.struts import safe_get, ux, ux_format
 
 logger = logging.getLogger("bone")
 

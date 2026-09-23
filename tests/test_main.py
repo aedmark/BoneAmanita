@@ -2,7 +2,7 @@
 
 import unittest
 
-from constants import Prisma
+from engine.constants import Prisma
 from main import BoneAmanita
 
 try:

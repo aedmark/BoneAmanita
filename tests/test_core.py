@@ -14,7 +14,7 @@ except ImportError:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from tests.base import BoneTestCase
 
-from core import (
+from engine.core import (
     ArchetypeArbiter,
     CyberneticGovernor,
     EventBus,
@@ -85,7 +85,7 @@ class CoreArchitectureTests(unittest.TestCase):
         self.assertEqual(call_count["B"], 1, "[FAIL] Event B should only fire once.")
 
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
-    @patch("core.logger")
+    @patch("engine.core.logger")
     def test_lore_manifest_bedrock_protection(self, mock_logger, mock_file):
         """Proves the Manifest physically refuses to overwrite core system weights."""
         manifest = LoreManifest(data_dir="/tmp/dummy")
@@ -97,7 +97,7 @@ class CoreArchitectureTests(unittest.TestCase):
         self.assertIn("system_prompts.json", error_msg)
         mock_file.assert_not_called()
 
-    @patch("core.ux")
+    @patch("engine.core.ux")
     def test_observer_judgment_states(self, mock_ux):
         """Proves TheObserver correctly maps latency deltas to behavioral judgments."""
         mock_ux.side_effect = lambda cat, key, default=None: default
@@ -125,7 +125,7 @@ class CoreArchitectureTests(unittest.TestCase):
         self.assertAlmostEqual(beth_exhausted, 0.33, places=2)
         self.assertEqual(gov.get_policy_shift(), "CO_REGULATION")
 
-    @patch("core.ux")
+    @patch("engine.core.ux")
     def test_archetype_arbiter_lockdown_override(self, mock_ux):
         """Proves the Council's Martial Law mandate overwrites standard physics lenses."""
         mock_ux.side_effect = lambda cat, key, default=None: default

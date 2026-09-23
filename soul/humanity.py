@@ -1,10 +1,10 @@
 import random
 from typing import Any, List, Optional
 
-from constants import Prisma
-from core import EventBus, LoreManifest
-from presets import BoneConfig
-from struts import safe_get, ux, ux_format
+from engine.constants import Prisma
+from engine.core import EventBus, LoreManifest
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux, ux_format
 
 class SchurProtocol:
     _LEXICAL_ANCHORS = ("sacred", "play", "social", "abstract")

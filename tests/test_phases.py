@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch
 
-from core import CycleContext
+from engine.core import CycleContext
 from phases.biological import IntrusionPhase, MetabolismPhase, SensationPhase
 from phases.cognitive import CognitionPhase
 from phases.environmental import SanctuaryPhase

@@ -1,8 +1,8 @@
-from presets import BoneConfig
+from engine.presets import BoneConfig
 
 class ThePacemaker:
     def __init__(self, config_ref=None):
-        from struts import safe_get
+        from engine.struts import safe_get
 
         self.cfg = config_ref or BoneConfig
         self.boredom_level = 0.0

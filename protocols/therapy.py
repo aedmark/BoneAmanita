@@ -1,7 +1,7 @@
 from typing import Any, Dict
 
-from presets import BoneConfig
-from struts import safe_get
+from engine.presets import BoneConfig
+from engine.struts import safe_get
 
 class TherapyProtocol:
     def __init__(self, config_ref=None):

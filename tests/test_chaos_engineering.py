@@ -149,7 +149,7 @@ class TestChaosEngineering(BoneTestCase):
         )
 
     def test_linehan_radical_acceptance(self):
-        from struts import safe_set
+        from engine.struts import safe_set
 
         if not getattr(self.engine.cortex, "last_physics", None):
             self.engine.cortex.last_physics = {}
@@ -179,7 +179,7 @@ class TestChaosEngineering(BoneTestCase):
         )
 
     def test_governor_macro_policy_shift(self):
-        from struts import safe_set
+        from engine.struts import safe_set
 
         if not getattr(self.engine, "shared_lattice", None):
             from drivers import SharedLatticeDriver
@@ -347,7 +347,7 @@ class TestChaosEngineering(BoneTestCase):
     def test_telemetry_serialization_survival(self):
         import threading
 
-        from core import TelemetryService
+        from engine.core import TelemetryService
 
         telemetry = TelemetryService.get_instance()
         telemetry.disabled = False

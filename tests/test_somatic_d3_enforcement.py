@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from brain.composer import ResponseValidator
 from body.somatic_budget import SomaticBudget
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     def test_cortex_d3_sentence_cap_trim_real_path(self):
         from brain.cortex import TheCortex
-        from core import CycleContext
+        from engine.core import CycleContext
         
         mock_svc = MagicMock()
         mock_svc.bio.mito.state.voltage = 30.0

@@ -8,11 +8,11 @@ from dataclasses import asdict, dataclass, field
 from itertools import chain
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from constants import Prisma
-from core import EventBus, LoreManifest, safe_get, ux
+from engine.constants import Prisma
+from engine.core import EventBus, LoreManifest, safe_get, ux
 from physics import PhysicsDelta
 from physics.models import PhysicsPacket
-from presets import BoneConfig
+from engine.presets import BoneConfig
 
 logger = logging.getLogger("bone")
 
@@ -501,7 +501,7 @@ class TownHall:
     def diagnose_condition(
         session_data: dict, _host_health: Any = None, soul: Any = None, config_ref=None
     ) -> Tuple[str, str]:
-        from struts import ux_format
+        from engine.struts import ux_format
 
         trauma = session_data.get("trauma_vector") or {}
         if soul and float(safe_get(soul, "obsession_neglect", 0.0)) > _cfg_val(

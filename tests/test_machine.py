@@ -8,7 +8,7 @@ from machine.forge import TheForge
 from machine.pacemaker import ThePacemaker
 from machine.panic import PanicRoom
 from machine.theremin import TheTheremin
-from presets import BoneConfig
+from engine.presets import BoneConfig
 
 try:
     from tests.base import BoneTestCase

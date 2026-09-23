@@ -2,8 +2,8 @@ import itertools
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple
 
-from presets import BoneConfig
-from struts import safe_get
+from engine.presets import BoneConfig
+from engine.struts import safe_get
 
 SPEAK = "SPEAK"
 PAIR = "PAIR"

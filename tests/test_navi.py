@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from core import CyberneticGovernor
+from engine.core import CyberneticGovernor
 from tests.base import BoneTestCase
 
 

@@ -4,9 +4,9 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Tuple
 
-from core import LoreManifest, Prisma
-from presets import BoneConfig
-from struts import safe_get, safe_set, ux
+from engine.core import LoreManifest, Prisma
+from engine.presets import BoneConfig
+from engine.struts import safe_get, safe_set, ux
 
 if TYPE_CHECKING:
     from body.system import BioSystem

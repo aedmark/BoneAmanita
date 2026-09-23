@@ -3,10 +3,10 @@ import shlex
 import time
 from typing import Callable, Dict, List, Optional
 
-from constants import RealityLayer
-from core import LoreManifest
-from presets import BoneConfig, BonePresets
-from struts import safe_get, safe_set, ux, ux_format
+from engine.constants import RealityLayer
+from engine.core import LoreManifest
+from engine.presets import BoneConfig, BonePresets
+from engine.struts import safe_get, safe_set, ux, ux_format
 
 class CommandStateInterface:
     def __init__(self, engine_ref, prisma_ref, config_ref):
@@ -73,7 +73,7 @@ class CommandStateInterface:
             return ux("command_state", "unreachable_error")
 
     def get_vitals(self) -> Dict[str, float]:
-        from struts import safe_get
+        from engine.struts import safe_get
         metrics = self.eng.get_metrics()
         cmd_cfg = safe_get(self.Config, "COMMANDS", {})
         return {"health": metrics.get("health", 0.0), "stamina": metrics.get("stamina", 0.0),
@@ -130,7 +130,7 @@ class CommandRegistry:
         self.help_text[name] = help_str
 
     def execute(self, text: str) -> bool:
-        from struts import ux_format
+        from engine.struts import ux_format
         clean_text = text.strip()
         try:
             parts = shlex.split(clean_text)
@@ -160,7 +160,7 @@ class CommandProcessor:
     }
 
     def __init__(self, engine, prisma_ref, _lexicon_ref=None, config_ref=None, _cartographer_ref=None):
-        from struts import safe_get
+        from engine.struts import safe_get
         real_config = config_ref if config_ref else BoneConfig
         self.interface = CommandStateInterface(engine, prisma_ref, real_config)
         self.tax = ResourceTax(self.interface)
@@ -320,7 +320,7 @@ class CommandProcessor:
         illnesses that produce the same symptom (fluent prose), which is why
         they are listed separately rather than rolled into one health score.
         """
-        from receipts import ReceiptLedger
+        from engine.receipts import ReceiptLedger
 
         P = self.P
         card = ReceiptLedger.get_instance().scorecard()

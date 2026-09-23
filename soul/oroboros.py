@@ -5,11 +5,11 @@ import tempfile
 from dataclasses import dataclass
 from typing import Any, List
 
-from constants import Prisma
-from core import LoreManifest
-from presets import BoneConfig
+from engine.constants import Prisma
+from engine.core import LoreManifest
+from engine.presets import BoneConfig
 from soul import NarrativeSelf
-from struts import safe_get, safe_set, ux, ux_format
+from engine.struts import safe_get, safe_set, ux, ux_format
 
 @dataclass
 class Scar:

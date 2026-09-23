@@ -5,9 +5,9 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from body.models import SemanticSignal
-from core import LoreManifest
-from presets import BoneConfig
-from struts import safe_get
+from engine.core import LoreManifest
+from engine.presets import BoneConfig
+from engine.struts import safe_get
 
 @dataclass
 class EndocrineSystem:

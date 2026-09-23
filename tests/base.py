@@ -9,9 +9,9 @@ import unittest
 import warnings
 from unittest.mock import MagicMock, patch
 
-from constants import Prisma
-from core import LoreManifest, TelemetryService
-from receipts import ReceiptLedger
+from engine.constants import Prisma
+from engine.core import LoreManifest, TelemetryService
+from engine.receipts import ReceiptLedger
 from main import BoneAmanita
 from spores.embeddings import SemanticEmbedder
 
@@ -71,7 +71,7 @@ class BoneTestCase(unittest.TestCase):
         self.addCleanup(self._restore_stdout)
         print(f"\n{Prisma.CYN}>>> STARTING TEST: {self.id()}{Prisma.RST}")
         self.lore_logger = AppendLogger("test_saves.log")
-        self.lore_patcher = patch("core.LoreManifest.save")
+        self.lore_patcher = patch("engine.core.LoreManifest.save")
         self.mock_lore_save = self.lore_patcher.start()
         self.addCleanup(self.lore_patcher.stop)
         self.mock_lore_save.side_effect = lambda *a, **k: self.lore_logger.log(
@@ -91,7 +91,7 @@ class BoneTestCase(unittest.TestCase):
             self.memory_logger.log(self.id(), f"SPORE SAVE: {filename}", data=data)
         )
         self.telemetry_logger = AppendLogger("test_telemetry.log")
-        self.telemetry_patcher = patch("core.TelemetryService.get_instance")
+        self.telemetry_patcher = patch("engine.core.TelemetryService.get_instance")
         self.mock_telemetry_get = self.telemetry_patcher.start()
         self.addCleanup(self.telemetry_patcher.stop)
         self.test_telemetry_dir = "test_telemetry_logs"

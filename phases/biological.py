@@ -4,14 +4,14 @@ import random
 import time
 from typing import Any
 
-from constants import Prisma
-from core import CycleContext
+from engine.constants import Prisma
+from engine.core import CycleContext
 from body.somatic_budget import SomaticBudget
 from mechanics.tools import TheTclWeaver
 from phases.base import SimulationPhase, _safe_dict
 from physics import apply_somatic_feedback
-from presets import BoneConfig
-from struts import safe_get, safe_set, ux
+from engine.presets import BoneConfig
+from engine.struts import safe_get, safe_set, ux
 
 class MetabolismPhase(SimulationPhase):
     def __init__(self, engine_ref):

@@ -5,10 +5,10 @@ import subprocess
 import sys
 import time
 
-from core import Prisma
+from engine.core import Prisma
 from mechanics.terminal import typewriter
-from presets import BoneConfig
-from struts import ux
+from engine.presets import BoneConfig
+from engine.struts import ux
 
 class ConfigWizard:
     CONFIG_FILE = "config.json"

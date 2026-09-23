@@ -11,8 +11,8 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from constants import Prisma
-from core import CycleContext, LoreManifest
+from engine.constants import Prisma
+from engine.core import CycleContext, LoreManifest
 from drivers import CongruenceValidator
 from machine import PanicRoom
 from mechanics.reporter import CycleReporter
@@ -36,9 +36,9 @@ from phases import (
     _safe_dict,
 )
 from physics import CycleStabilizer
-from receipts import ReceiptLedger
+from engine.receipts import ReceiptLedger
 from physics.models import PhysicsPacket
-from struts import safe_get, ux, ux_format
+from engine.struts import safe_get, ux, ux_format
 
 _CRASH_COMPONENT_MAP = {"OBSERVE": "PHYSICS", "METABOLISM": "BIO", "COGNITION": "MIND"}
 
@@ -896,7 +896,7 @@ class GeodesicOrchestrator:
                         )
                         active_phys = getattr(self.eng, "active_physics", None)
                         if active_phys:
-                            from struts import safe_set
+                            from engine.struts import safe_set
 
                             safe_set(
                                 active_phys,

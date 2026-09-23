@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from main import BoneAmanita
-from constants import RealityLayer
+from engine.constants import RealityLayer
 from tests.base import BoneTestCase
 
 class TestImmuneCrucible(BoneTestCase):

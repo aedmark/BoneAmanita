@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from struts import safe_get, safe_set, ux, ux_format
+from engine.struts import safe_get, safe_set, ux, ux_format
 from tests.base import BoneTestCase
 
 
@@ -16,7 +16,7 @@ class DummyObject:
 
 
 class StrutsUtilityTests(BoneTestCase):
-    @patch("core.LoreManifest")
+    @patch("engine.core.LoreManifest")
     def test_ux_retrieval(self, mock_manifest_class):
         mock_instance = MagicMock()
         mock_instance.get.return_value = {
@@ -39,7 +39,7 @@ class StrutsUtilityTests(BoneTestCase):
             "[FAIL] ux() failed to return the default value on a missing key.",
         )
 
-    @patch("core.LoreManifest")
+    @patch("engine.core.LoreManifest")
     def test_ux_format_degradation(self, mock_manifest_class):
         mock_instance = MagicMock()
         mock_instance.get.return_value = {"greet": "Hello {name}!"}
@@ -95,7 +95,7 @@ class StrutsUtilityTests(BoneTestCase):
             target.health, 20.0, "[FAIL] safe_set failed to mutate object attribute."
         )
 
-    @patch("struts.logger")
+    @patch("engine.struts.logger")
     def test_safe_set_none_noop(self, mock_logger):
         safe_set(None, "voltage", 10.0)
         mock_logger.debug.assert_called_once_with("Ignored safe_set for 'voltage'; target object is None.")

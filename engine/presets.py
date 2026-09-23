@@ -4,7 +4,7 @@ import os
 from types import SimpleNamespace
 from typing import Any, Dict, List
 
-from struts import ux
+from engine.struts import ux
 
 
 class BonePresets:
@@ -358,7 +358,7 @@ class BoneConfig:
 
     @classmethod
     def _load_class_defaults(cls):
-        base_dir = str(os.path.dirname(os.path.abspath(__file__)))
+        base_dir = str(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         preset_path = os.path.join(base_dir, "lore", "tuning_presets.json")
         tuning_data = {}
         if os.path.exists(preset_path):
@@ -457,7 +457,7 @@ class BoneConfig:
         return errors
 
     def reconcile_state(self, physics_packet: Any):
-        from struts import safe_get, safe_set
+        from engine.struts import safe_get, safe_set
 
         def _clamp(key, sub_key, default, floor_val, ceil_val):
             val = safe_get(physics_packet, key)

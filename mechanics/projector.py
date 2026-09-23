@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional
 
 import markdown
 
-from core import Prisma
-from presets import BoneConfig
-from struts import safe_get, ux
+from engine.core import Prisma
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux
 
 logger = logging.getLogger("bone")
 

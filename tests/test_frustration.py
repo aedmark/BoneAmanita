@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from core import CyberneticGovernor
+from engine.core import CyberneticGovernor
 from math import isclose
 
 class TestFrustration(unittest.TestCase):

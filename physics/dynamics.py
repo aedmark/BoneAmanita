@@ -5,9 +5,9 @@ import time
 from collections import Counter, deque
 from typing import Any, Deque, Dict, List, Optional, Tuple
 
-from constants import Prisma
-from presets import BoneConfig
-from struts import safe_get, ux
+from engine.constants import Prisma
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux
 
 
 class SurfaceTension:
@@ -38,7 +38,7 @@ class ChromaScope:
     @staticmethod
     def modulate(text: str, vector: Dict[str, float]) -> str:
         if ChromaScope._T_MAP_CACHE is None:
-            from core import LoreManifest
+            from engine.core import LoreManifest
 
             ChromaScope._T_MAP_CACHE = (
                 LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "TRIGRAM_MAP")

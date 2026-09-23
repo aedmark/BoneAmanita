@@ -7,11 +7,11 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, Optional
 
-from core import EventBus, JSONEncoder, Prisma
-from presets import BoneConfig
+from engine.core import EventBus, JSONEncoder, Prisma
+from engine.presets import BoneConfig
 from mechanics.providers import CLOUD_ENDPOINTS, KEY_ENV, normalize_provider
-from receipts import issue as issue_receipt
-from struts import safe_get, ux, ux_format
+from engine.receipts import issue as issue_receipt
+from engine.struts import safe_get, ux, ux_format
 from body.somatic_metrics import STAGE_DIRECTION, trim_to_sentence_cap
 
 
@@ -465,7 +465,7 @@ class PromptComposer:
         )
         banned = self.lore.get("style_crimes", "BANNED_CLICHES") or []
         ban_string = ", ".join(set(banned))
-        from struts import safe_get
+        from engine.struts import safe_get
 
         phys_ref = state.get("physics", {})
         voltage = float(safe_get(phys_ref, "voltage", 30.0))

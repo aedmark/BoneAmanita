@@ -2,8 +2,8 @@ import math
 from dataclasses import dataclass
 from typing import Dict, List
 
-from presets import BoneConfig
-from struts import safe_get
+from engine.presets import BoneConfig
+from engine.struts import safe_get
 
 @dataclass
 class GeodesicVector:
@@ -70,7 +70,7 @@ class GeodesicEngine:
             return float(safe_get(cfg, key, default))
 
         if GeodesicEngine._GC_CACHE is None:
-            from core import LoreManifest
+            from engine.core import LoreManifest
 
             GeodesicEngine._GC_CACHE = (
                 LoreManifest.get_instance().get(

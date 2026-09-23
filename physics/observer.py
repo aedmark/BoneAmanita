@@ -4,7 +4,7 @@ from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Any, Deque, Dict, List, Optional
 
-from constants import Prisma
+from engine.constants import Prisma
 from physics.geodesics import GeodesicEngine
 from physics.maths import (
     CreativeDeterminantEngine,
@@ -13,9 +13,9 @@ from physics.maths import (
     _native_permutation_entropy,
 )
 from physics.models import EnergyState, MaterialState, PhysicsPacket, SpatialState
-from presets import BoneConfig
-from receipts import issue as issue_receipt
-from struts import safe_get, safe_set, ux
+from engine.presets import BoneConfig
+from engine.receipts import issue as issue_receipt
+from engine.struts import safe_get, safe_set, ux
 
 @dataclass
 class PhysicsDelta:
@@ -37,7 +37,7 @@ def apply_metabolic_tax(mito_state: Any, atp_cost: float, ros_cost: float) -> No
 def apply_somatic_feedback(
     physics_packet: PhysicsPacket, qualia: Any, config_ref=None
 ) -> PhysicsPacket:
-    from core import LoreManifest
+    from engine.core import LoreManifest
 
     t_cfg = config_ref or BoneConfig
     fb = physics_packet.snapshot()

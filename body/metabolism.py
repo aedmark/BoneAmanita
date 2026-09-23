@@ -4,9 +4,9 @@ from collections import Counter
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 from body.models import MetabolicReceipt, MitochondrialState
-from core import LoreManifest, Prisma
-from presets import BoneConfig
-from struts import safe_get, ux, ux_format
+from engine.core import LoreManifest, Prisma
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux, ux_format
 
 if TYPE_CHECKING:
     from body.system import BioSystem

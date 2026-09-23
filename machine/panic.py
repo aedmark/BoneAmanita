@@ -1,8 +1,8 @@
 from typing import Any, Dict
 
-from constants import Prisma
+from engine.constants import Prisma
 from physics.models import PhysicsPacket
-from struts import ux
+from engine.struts import ux
 
 class PanicRoom:
     _SAFE_VECTOR = {

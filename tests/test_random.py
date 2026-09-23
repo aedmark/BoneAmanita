@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 from archetypes.village import DeathGen
 from brain.composer import PromptComposer
-from core import CycleContext, LoreManifest
-from cycle import MetabolismPhase, SimulationPreflightPhase
+from engine.core import CycleContext, LoreManifest
+from engine.cycle import MetabolismPhase, SimulationPreflightPhase
 from drivers import SharedLatticeDriver
 from mechanics.reporter import CycleReporter
 from physics import ChromaScope
@@ -15,13 +15,13 @@ from tests.base import BoneTestCase
 
 class RandomTest(BoneTestCase):
     def setUp(self):
-        from core import LoreManifest
+        from engine.core import LoreManifest
 
         LoreManifest.get_instance().flush_cache()
         super().setUp()
 
     def tearDown(self):
-        from core import LoreManifest
+        from engine.core import LoreManifest
 
         LoreManifest.get_instance().flush_cache()
         super().tearDown()
@@ -370,9 +370,9 @@ class RandomTest(BoneTestCase):
         )
 
     def test_productive_worry_godel_scar_math(self):
-        from cycle import ArbitrationPhase
-        from receipts import ReceiptLedger
-        from struts import safe_get
+        from engine.cycle import ArbitrationPhase
+        from engine.receipts import ReceiptLedger
+        from engine.struts import safe_get
 
         phase = SimulationPreflightPhase(self.engine)
         phys = PhysicsPacket()
@@ -410,8 +410,8 @@ class RandomTest(BoneTestCase):
         self.assertEqual(receipt.detail, ros.reason)
 
     def test_democratic_tie_breaker_gestalt(self):
-        from core import CycleContext
-        from cycle import ArbitrationPhase
+        from engine.core import CycleContext
+        from engine.cycle import ArbitrationPhase
         from physics.models import EnergyState, PhysicsPacket
 
         phase = ArbitrationPhase(self.engine)
@@ -486,7 +486,7 @@ class RandomTest(BoneTestCase):
         if hasattr(self.engine.cortex, "llm"):
             self.engine.cortex.llm.generate = MagicMock(return_value="Bad output")
 
-        from core import CycleContext
+        from engine.core import CycleContext
         from physics.models import PhysicsPacket
 
         ctx = CycleContext(

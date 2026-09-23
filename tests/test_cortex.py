@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from brain.akashic import TheAkashicRecord
 from brain.cortex import CortexServices, TheCortex
 from spores.network import MycelialNetwork
-from presets import BoneConfig
+from engine.presets import BoneConfig
 
 
 def _drag_over_limit() -> float:
@@ -17,8 +17,8 @@ def _drag_over_limit() -> float:
     that constant means retuning the threshold moves the test with it, instead
     of leaving a literal that once cleared a limit nobody uses any more.
     """
-    from presets import BoneConfig
-    from struts import safe_get
+    from engine.presets import BoneConfig
+    from engine.struts import safe_get
 
     return float(safe_get(safe_get(BoneConfig(), "CORTEX", {}), "DRAG_STRESS_THRESHOLD", 8.0)) + 1.0
 
@@ -94,7 +94,7 @@ class CortexArchitectTests(BoneTestCase):
         }
         sim_result = {"ui": "Standard interface output."}
 
-        from core import CycleContext, PhysicsPacket
+        from engine.core import CycleContext, PhysicsPacket
         ctx = CycleContext(input_text="test", clean_words="test")
         ctx.physics = PhysicsPacket()
         ctx.physics.narrative_drag = phys_state.get("narrative_drag", 1.0)
@@ -123,7 +123,7 @@ class CortexArchitectTests(BoneTestCase):
         sim_result = {"ui": ""}
         self.mock_services.bio.mito.state.ros_buildup = 0.0
 
-        from core import CycleContext, PhysicsPacket
+        from engine.core import CycleContext, PhysicsPacket
         ctx = CycleContext(input_text="test", clean_words="test")
         ctx.physics = PhysicsPacket()
         ctx.physics.narrative_drag = phys_state.get("narrative_drag", 1.0)

@@ -7,10 +7,10 @@ import random
 import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from constants import Prisma
-from core import JSONEncoder, LoreManifest
-from presets import BoneConfig
-from struts import safe_get, safe_set, ux
+from engine.constants import Prisma
+from engine.core import JSONEncoder, LoreManifest
+from engine.presets import BoneConfig
+from engine.struts import safe_get, safe_set, ux
 
 logger = logging.getLogger("bone")
 

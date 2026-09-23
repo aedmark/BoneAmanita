@@ -21,7 +21,7 @@ import sys
 
 sys.path.insert(0, ".")
 
-from receipts import CORE_SUBSYSTEMS, ReceiptLedger  # noqa: E402
+from engine.receipts import CORE_SUBSYSTEMS, ReceiptLedger  # noqa: E402
 
 PROBE_TEXT = (
     "the heavy iron hammer fell on the anvil and the whole forge rang, "

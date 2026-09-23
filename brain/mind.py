@@ -9,9 +9,9 @@ _ALPHA_RE = re.compile(r"[^a-z]")
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
-from constants import Prisma
-from presets import BoneConfig
-from struts import safe_get, ux
+from engine.constants import Prisma
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux
 
 
 @dataclass

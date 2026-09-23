@@ -41,7 +41,7 @@ class TestDrivers(BoneTestCase):
             },
             "LENSES": {"OBSERVER": {"vocab": "watch,see", "keywords": ["witness"]}},
         }
-        self.patcher = patch("core.LoreManifest.get_instance")
+        self.patcher = patch("engine.core.LoreManifest.get_instance")
         self.mock_manifest = self.patcher.start()
         self.mock_manifest.return_value.get.side_effect = lambda *args: (
             self.mock_manifest_data.get(args[0], {})

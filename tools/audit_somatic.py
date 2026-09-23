@@ -92,7 +92,7 @@ from body.somatic_budget import SomaticBudget  # noqa: E402
 from body.somatic_metrics import (
     MEASURES, visible_text, split_sentences, measure
 )
-from presets import BoneConfig  # noqa: E402
+from engine.presets import BoneConfig  # noqa: E402
 
 _SB_CFG = BoneConfig().SOMATIC_BUDGET
 _E_U_FLAGGING = float(_SB_CFG.E_U_FLAGGING)
@@ -581,7 +581,7 @@ def main() -> int:
     if args.compare:
         return compare(load_cache(args.cache))
 
-    from presets import BoneConfig
+    from engine.presets import BoneConfig
 
     model = args.model or BoneConfig.MODEL
     reasoning = "none" if args.no_reasoning else "default"

@@ -495,7 +495,7 @@ class TestMetabolicRouting(BoneTestCase):
                 mock_soul.eng.trauma_accum = {"event_1": 4.0, "event_2": 3.0}
                 mock_soul.core_memories = []
 
-                with patch("core.LoreManifest.get_instance") as mock_lore:
+                with patch("engine.core.LoreManifest.get_instance") as mock_lore:
                     mock_lore.return_value.get.return_value = {"TEST_DEATH": ["Test", "voltage", 1.0, "desc"]}
                     oro.crystallize("TEST_DEATH", mock_soul)
 

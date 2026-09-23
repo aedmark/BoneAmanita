@@ -5,7 +5,7 @@ import os
 from unittest.mock import patch
 
 from main import BoneAmanita
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
@@ -18,8 +18,8 @@ def _drag_over_limit() -> float:
     that constant means retuning the threshold moves the test with it, instead
     of leaving a literal that once cleared a limit nobody uses any more.
     """
-    from presets import BoneConfig
-    from struts import safe_get
+    from engine.presets import BoneConfig
+    from engine.struts import safe_get
 
     return float(safe_get(safe_get(BoneConfig(), "CORTEX", {}), "DRAG_STRESS_THRESHOLD", 8.0)) + 1.0
 
@@ -56,7 +56,7 @@ class ArchitectureTests(BoneTestCase):
         from unittest.mock import MagicMock
 
         from brain.cortex import TheCortex
-        from core import CycleContext
+        from engine.core import CycleContext
 
         mock_svc = MagicMock()
         mock_svc.config_ref = None
@@ -130,7 +130,7 @@ class ArchitectureTests(BoneTestCase):
         from unittest.mock import MagicMock
 
         from brain.cortex import TheCortex
-        from core import CycleContext
+        from engine.core import CycleContext
 
         mock_svc = MagicMock()
         mock_svc.config_ref = None
@@ -274,7 +274,7 @@ class ArchitectureTests(BoneTestCase):
                                 pass
 
         def test_telemetry_anchoring(self):
-            from core import TelemetryService
+            from engine.core import TelemetryService
 
             telemetry = TelemetryService(self.test_config)
             telemetry.kernel_hash = "SESSION_77"
@@ -331,7 +331,7 @@ class ArchitectureTests(BoneTestCase):
             "[FAIL] Panic Room failed to apply the 0.2 Serotonin survival floor.",
         )
 
-    @patch("cycle.CongruenceValidator.__init__", return_value=None)
+    @patch("engine.cycle.CongruenceValidator.__init__", return_value=None)
     def test_arch_hot_loop_validator_singleton(self, mock_validator_init):
         if hasattr(self.engine, "cortex") and hasattr(self.engine.cortex, "dspy_critic"):
             self.engine.cortex.dspy_critic.enabled = False

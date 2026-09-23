@@ -4,9 +4,9 @@ import re
 from typing import Any, Dict
 
 from archetypes.symbiosis import get_symbiont
-from constants import Prisma
-from core import LoreManifest, safe_get, ux, ux_format
-from presets import BoneConfig
+from engine.constants import Prisma
+from engine.core import LoreManifest, safe_get, ux, ux_format
+from engine.presets import BoneConfig
 
 class TheVillageCouncil:
     @staticmethod

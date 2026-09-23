@@ -1,8 +1,8 @@
 import random
 
-from constants import Prisma
+from engine.constants import Prisma
 
-from core import LoreManifest
+from engine.core import LoreManifest
 
 class TheEditor:
     @staticmethod

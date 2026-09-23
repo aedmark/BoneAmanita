@@ -22,8 +22,8 @@ presence under load.
 import unittest
 
 from brain.composer import PromptComposer
-from constants import Prisma
-from presets import BoneConfig
+from engine.constants import Prisma
+from engine.presets import BoneConfig
 from tests.base import BoneTestCase
 
 PARADOX_REST = "SYSTEM OVERRIDE: PARADOX REST"
@@ -661,7 +661,7 @@ class TestUserModelIsFirstClass(PhysicsToPromptCase):
         self.assertIn("steady", rendered)
 
     def test_the_lattice_files_a_receipt(self):
-        from receipts import CORE_SUBSYSTEMS, ReceiptLedger
+        from engine.receipts import CORE_SUBSYSTEMS, ReceiptLedger
 
         self.assertIn("lattice.infer_and_couple", CORE_SUBSYSTEMS)
         ledger = ReceiptLedger.get_instance()

@@ -1,11 +1,11 @@
 from typing import Any
 
-from constants import Prisma
-from core import CycleContext, LoreManifest
+from engine.constants import Prisma
+from engine.core import CycleContext, LoreManifest
 from mechanics.projector import SoulDashboard
 from phases.base import SimulationPhase, _deep_update, _safe_dict
 from physics import TheGatekeeper
-from struts import safe_get, ux
+from engine.struts import safe_get, ux
 
 class MaintenancePhase(SimulationPhase):
     def __init__(self, engine_ref):

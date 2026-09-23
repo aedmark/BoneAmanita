@@ -2,9 +2,9 @@ import json
 import logging
 import random
 from typing import Dict, Tuple
-from core import LoreManifest
-from presets import BoneConfig
-from struts import safe_get, ux
+from engine.core import LoreManifest
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux
 
 logger = logging.getLogger("bone")
 

@@ -3,10 +3,10 @@ import random
 from collections import deque
 from typing import Any, Dict
 
-from constants import Prisma
-from core import LoreManifest
-from presets import BoneConfig
-from struts import safe_get, ux
+from engine.constants import Prisma
+from engine.core import LoreManifest
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux
 
 
 class LimboLayer:
@@ -58,7 +58,7 @@ class LimboLayer:
         return f"{Prisma.CYN}{err_msg.format(thought=intended_thought, horror=horror)}{Prisma.RST}"
 
     def haunt(self, text):
-        from struts import safe_get
+        from engine.struts import safe_get
 
         cfg = safe_get(self.cfg, "LIMBO", {})
         l_chance = float(safe_get(cfg, "LEAK_DECAY_CHANCE", 0.2))

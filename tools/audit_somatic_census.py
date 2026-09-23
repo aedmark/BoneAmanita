@@ -50,8 +50,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import numpy as np  # noqa: E402
 
-from constants import Prisma  # noqa: E402
-from struts import safe_get  # noqa: E402
+from engine.constants import Prisma  # noqa: E402
+from engine.struts import safe_get  # noqa: E402
 from audit_somatic import measure  # noqa: E402
 
 # ROADMAP D1/D2: the old separate anaerobic/exhaustion/engine-depletion
@@ -317,7 +317,7 @@ def boot(model: str):
     from main import BoneAmanita
 
     patches = [
-        patch("core.LoreManifest.save"),
+        patch("engine.core.LoreManifest.save"),
         patch("protocols.chronos.ChronosKeeper.save_checkpoint"),
         patch("spores.io.LocalFileSporeLoader.save_spore"),
         patch("brain.akashic.TheAkashicRecord.save_to_disk"),
@@ -604,7 +604,7 @@ def main() -> int:
     parser.add_argument("--cache", type=Path, default=CACHE)
     args = parser.parse_args()
 
-    from presets import BoneConfig
+    from engine.presets import BoneConfig
 
     model = args.model or BoneConfig.MODEL
     if not args.report_only:

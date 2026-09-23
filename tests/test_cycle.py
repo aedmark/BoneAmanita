@@ -2,7 +2,7 @@
 
 import unittest
 
-from cycle import CycleSimulator, _native_permutation_entropy, _native_wls
+from engine.cycle import CycleSimulator, _native_permutation_entropy, _native_wls
 
 try:
     from tests.base import BoneTestCase

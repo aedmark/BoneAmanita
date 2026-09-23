@@ -25,7 +25,7 @@ class TestArchetypes(BoneTestCase):
             "BIO": {"ATP_STARVATION": "0.0"},
             "PHYSICS": {"VOLTAGE_CRITICAL": "100.0", "DRAG_HALT": "10.0"},
         }
-        self.patcher = patch("core.LoreManifest.get_instance")
+        self.patcher = patch("engine.core.LoreManifest.get_instance")
         self.mock_manifest = self.patcher.start()
         self.mock_manifest.return_value.get.side_effect = lambda *args: {}
 

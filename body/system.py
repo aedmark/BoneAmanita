@@ -6,10 +6,10 @@ from body.endocrine import SemanticEndocrinologist
 from body.metabolism import DigestiveTrack
 from body.regulation import BioFeedback, EndocrineRegulator
 from body.somatic import SynestheticCortex
-from core import LoreManifest, Prisma
-from presets import BoneConfig
+from engine.core import LoreManifest, Prisma
+from engine.presets import BoneConfig
 from spores import BioLichen, BioParasite
-from struts import safe_get, safe_set, ux
+from engine.struts import safe_get, safe_set, ux
 
 from .models import Biometrics
 

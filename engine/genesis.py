@@ -10,12 +10,12 @@ from archetypes.village import (
     TownHall,
 )
 from brain.akashic import TheAkashicRecord
-from constants import Prisma
-from core import EventBus, LoreManifest
+from engine.constants import Prisma
+from engine.core import EventBus, LoreManifest
 from drivers import BoneConsultant, DriverRegistry
 from machine import BoneArchitect, TheConsolidator
 from mechanics.inventory import GordonKnot
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from protocols import (
     KintsugiProtocol,
     LimboLayer,
@@ -26,7 +26,7 @@ from protocols import (
 )
 from soul import NarrativeSelf, TheOroboros
 from spores import LiteraryReproduction
-from struts import audit_cfg, safe_get, safe_set, ux, ux_format
+from engine.struts import audit_cfg, safe_get, safe_set, ux, ux_format
 
 class BoneGenesis:
     @staticmethod

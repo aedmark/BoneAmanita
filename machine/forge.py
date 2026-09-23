@@ -1,7 +1,7 @@
 import random
 from typing import Tuple, Optional, List
-from core import LoreManifest
-from struts import ux
+from engine.core import LoreManifest
+from engine.struts import ux
 
 class TheForge:
     def __init__(self, lex_ref=None):

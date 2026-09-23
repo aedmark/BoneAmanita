@@ -29,8 +29,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 
 from brain.composer import LLMInterface, PromptComposer
-from core import CyberneticGovernor, InsufficientCorpus
-from presets import BoneConfig
+from engine.core import CyberneticGovernor, InsufficientCorpus
+from engine.presets import BoneConfig
 from tests.base import BoneTestCase
 
 
@@ -108,7 +108,7 @@ class RegimeSignal(unittest.TestCase):
                 self.assertEqual(gov.last_sol, "diffuse")
 
     def test_the_null_baseline_tracks_corpus_size(self):
-        from core import CyberneticGovernor as G
+        from engine.core import CyberneticGovernor as G
 
         self.assertLess(G._null_z(32), G._null_z(1000))
         self.assertLess(G._null_z(1000), G._null_z(20000))
@@ -131,8 +131,8 @@ class RegimeSignal(unittest.TestCase):
 
 class GateTemperature(unittest.TestCase):
     def setUp(self):
-        from core import CyberneticGovernor
-        from presets import BoneConfig
+        from engine.core import CyberneticGovernor
+        from engine.presets import BoneConfig
         self.gov = CyberneticGovernor()
         self.gate = BoneConfig().GATE
 
@@ -173,7 +173,7 @@ class DeclineIsNotFailure(BoneTestCase):
     """A declined measurement must read differently from a broken one."""
 
     def test_declining_files_an_honest_receipt_and_falls_back(self):
-        from receipts import ReceiptLedger
+        from engine.receipts import ReceiptLedger
 
         gov = self.engine.governor
         gov._sync_ordvec_indices = lambda _c: True

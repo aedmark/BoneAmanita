@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from brain.akashic import TheAkashicRecord
-from core import EventBus
+from engine.core import EventBus
 from machine.consolidator import TheConsolidator
 from tests.base import BoneTestCase
 

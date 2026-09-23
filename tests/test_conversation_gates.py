@@ -14,7 +14,7 @@ skip them; the game modes keep them exactly as written.
 """
 
 from archetypes.council import TheVillageCouncil
-from core import CycleContext
+from engine.core import CycleContext
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 

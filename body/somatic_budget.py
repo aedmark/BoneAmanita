@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Tuple, Dict, Any
 
-from presets import BoneConfig
-from struts import safe_get
+from engine.presets import BoneConfig
+from engine.struts import safe_get
 
 @dataclass
 class SomaticBudget:

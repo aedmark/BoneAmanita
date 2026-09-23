@@ -14,8 +14,8 @@ from body import SomaticLoop
 from brain.composer import LLMInterface
 from brain.cortex import TheCortex, _room_slug
 from brain.mind import NoeticLoop
-from constants import Prisma, RealityLayer
-from core import (
+from engine.constants import Prisma, RealityLayer
+from engine.core import (
     CyberneticGovernor,
     EventBus,
     LoreManifest,
@@ -24,8 +24,8 @@ from core import (
     TelemetryService,
     TheObserver,
 )
-from cycle import GeodesicOrchestrator
-from genesis import BoneGenesis
+from engine.cycle import GeodesicOrchestrator
+from engine.genesis import BoneGenesis
 from mechanics.commands import CommandProcessor
 from mechanics.lexicon import LexiconService
 from mechanics.setup import ConfigWizard
@@ -34,11 +34,11 @@ from mechanics.terminal import SessionGuardian, typewriter
 from mechanics.tools import TheSubstrate
 from physics import NaviSADProtocol, ZoneInertia
 from physics.models import PhysicsPacket
-from presets import BoneConfig, BonePresets
-from receipts import CORE_SUBSYSTEMS, ReceiptLedger
+from engine.presets import BoneConfig, BonePresets
+from engine.receipts import CORE_SUBSYSTEMS, ReceiptLedger
 from machine.pacemaker import ThePacemaker
 from protocols import ChronosKeeper, GriefProtocol
-from struts import dump_state, safe_get, safe_set, ux
+from engine.struts import dump_state, safe_get, safe_set, ux
 
 @dataclass
 class HostStats:

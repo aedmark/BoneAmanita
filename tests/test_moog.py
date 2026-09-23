@@ -5,9 +5,9 @@ from collections import deque
 from unittest.mock import MagicMock
 
 from brain.cortex import CortexServices, TheCortex
-from cycle import GeodesicOrchestrator
-from presets import BoneConfig
-from core import CycleContext
+from engine.cycle import GeodesicOrchestrator
+from engine.presets import BoneConfig
+from engine.core import CycleContext
 from physics.models import PhysicsPacket, EnergyState
 
 try:

@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from brain.composer import LLMInterface, PromptComposer, ResponseValidator
-from constants import Prisma
+from engine.constants import Prisma
 from tests.base import BoneTestCase
 
 

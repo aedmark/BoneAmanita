@@ -1,7 +1,7 @@
 import random
 from typing import List, Optional, Tuple
 
-from struts import ux
+from engine.struts import ux
 
 class TheParadoxEngine:
     _DEFAULT_TEMPLATES = (

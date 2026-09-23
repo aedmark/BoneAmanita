@@ -2,9 +2,9 @@ import random
 from collections import Counter, deque
 from typing import Any, Dict, Optional, Tuple
 
-from constants import Prisma
-from presets import BoneConfig
-from struts import safe_get, ux, ux_format
+from engine.constants import Prisma
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux, ux_format
 
 class TheFolly:
     def __init__(self, config_ref=None):

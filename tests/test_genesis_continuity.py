@@ -28,7 +28,7 @@ class GenesisContinuityTests(BoneTestCase):
         mock_soul = MagicMock()
         mock_soul.eng.trauma_accum = {"THERMAL": 8.0, "SEPTIC": 5.0}
         mock_soul.core_memories = []
-        with patch("core.LoreManifest.get", return_value={}):
+        with patch("engine.core.LoreManifest.get", return_value={}):
             oro.crystallize("STARVATION", mock_soul)
         dread_scar = next((s for s in oro.scars if s.name == "Existential Dread"), None)
         self.assertIsNotNone(

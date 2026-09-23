@@ -1,6 +1,6 @@
 import sys, os, collections, traceback
 sys.path.insert(0,'/home/gordonk/PycharmProjects/BoneAmanita'); os.chdir('/home/gordonk/PycharmProjects/BoneAmanita')
-import struts
+from engine import struts
 _orig = struts.safe_get
 hits=collections.Counter(); misses=collections.Counter(); mock_frames=collections.Counter()
 def spy(obj, key, default=None):

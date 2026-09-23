@@ -1,7 +1,7 @@
 from typing import Dict
 
-from constants import Prisma
-from struts import safe_get, safe_set
+from engine.constants import Prisma
+from engine.struts import safe_get, safe_set
 
 
 class GriefProtocol:

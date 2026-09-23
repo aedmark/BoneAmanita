@@ -14,7 +14,7 @@ import ast
 import os
 import unittest
 
-from receipts import CORE_SUBSYSTEMS, Receipt, ReceiptLedger
+from engine.receipts import CORE_SUBSYSTEMS, Receipt, ReceiptLedger
 from tests.base import BoneTestCase
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -226,7 +226,7 @@ class TestRealSubsystemsReport(unittest.TestCase):
         """The handler that swallowed a TypeError every turn for the project's life."""
         from unittest.mock import patch as mock_patch
 
-        from core import CyberneticGovernor
+        from engine.core import CyberneticGovernor
 
         governor = CyberneticGovernor()
         physics = {"voltage": 30.0, "narrative_drag": 0.6}
@@ -249,7 +249,7 @@ class TestRealSubsystemsReport(unittest.TestCase):
         turn, because the utterance was read back out of a dialogue buffer that
         is not written until after the model has already replied.
         """
-        from core import CyberneticGovernor
+        from engine.core import CyberneticGovernor
 
         governor = CyberneticGovernor()
         governor.regulate({"voltage": 30.0}, 1.0, memory_core=object(), user_text="")
@@ -266,7 +266,7 @@ class TestRealSubsystemsReport(unittest.TestCase):
         where one of the two inputs really did go missing, which is the only
         thing this receipt is for.
         """
-        from core import CyberneticGovernor
+        from engine.core import CyberneticGovernor
 
         governor = CyberneticGovernor()
         governor.regulate({"voltage": 30.0}, 1.0, memory_core=None, user_text="")
@@ -337,7 +337,7 @@ class TestRollCallOnARealTurn(BoneTestCase):
         """
         ledger = ReceiptLedger.get_instance()
         from unittest.mock import patch as mock_patch
-        with mock_patch("core.CyberneticGovernor.regulate", return_value=(0.0, 0.0)):
+        with mock_patch("engine.core.CyberneticGovernor.regulate", return_value=(0.0, 0.0)):
             self.engine.governor.last_z = 2.0
             self.engine.orchestrator.run_turn("a rich and coherent thing to say")
         composed = ledger.for_subsystem("composer.compose")

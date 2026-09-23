@@ -7,14 +7,14 @@ from typing import Any, Dict, List, Optional, Tuple
 from archetypes.village import ParadoxSeed
 from brain.ann import CerebralIndex, HippocampalCache
 from spores.spore_utils import _word_to_vector, _words_to_matrix
-from constants import Prisma
-from core import EventBus, LoreManifest
-from presets import BoneConfig
-from receipts import issue as issue_receipt
+from engine.constants import Prisma
+from engine.core import EventBus, LoreManifest
+from engine.presets import BoneConfig
+from engine.receipts import issue as issue_receipt
 from spores.genetics import LiteraryReproduction
 from spores.io import LocalFileSporeLoader
 from spores.memory import MemoryCore, SubconsciousStrata
-from struts import safe_get, safe_set, ux, ux_format
+from engine.struts import safe_get, safe_set, ux, ux_format
 
 logger = logging.getLogger("bone")
 

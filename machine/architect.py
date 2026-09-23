@@ -2,15 +2,15 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
 from body import BioSystem
-from constants import Prisma
-from core import LoreManifest, MindSystem, PhysSystem
+from engine.constants import Prisma
+from engine.core import LoreManifest, MindSystem, PhysSystem
 from machine.crucible import TheCrucible
 from machine.forge import TheForge
 from machine.pacemaker import ThePacemaker
 from machine.theremin import TheTheremin
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from protocols import LimboLayer
-from struts import safe_get, ux
+from engine.struts import safe_get, ux
 
 
 @dataclass

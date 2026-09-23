@@ -3,11 +3,11 @@ from collections import Counter, deque
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
-from constants import Prisma
-from core import LoreManifest
+from engine.constants import Prisma
+from engine.core import LoreManifest
 from physics.models import SharedDynamics, UserInferredState
-from presets import BoneConfig
-from struts import safe_get, safe_set, ux, ux_format
+from engine.presets import BoneConfig
+from engine.struts import safe_get, safe_set, ux, ux_format
 
 _MODE_TAGS = {
     "[!l]": "literal_mode",

@@ -6,9 +6,9 @@ import time
 import traceback
 from typing import Optional
 
-from core import Prisma
-from presets import BoneConfig
-from struts import ux
+from engine.core import Prisma
+from engine.presets import BoneConfig
+from engine.struts import ux
 
 ANSI_SPLIT = re.compile(r"(\x1b\[[0-9;]*m)")
 
@@ -16,7 +16,7 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
     if not text:
         print(end=end, flush=True)
         return
-    from struts import safe_get
+    from engine.struts import safe_get
 
     cfg = safe_get(BoneConfig, "GUI", {})
     actual_speed = (
@@ -54,7 +54,7 @@ class SessionGuardian:
         subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
         for key, default in self._HEADERS:
             print(Prisma.paint(ux("main_strings", key, default), "M"))
-        from struts import safe_get
+        from engine.struts import safe_get
 
         base_config = (
             self.engine_instance.config if self.engine_instance else BoneConfig

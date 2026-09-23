@@ -10,8 +10,8 @@ import unicodedata
 from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from core import LoreManifest, Prisma
-from struts import safe_get, ux
+from engine.core import LoreManifest, Prisma
+from engine.struts import safe_get, ux
 
 logger = logging.getLogger("bone")
 
@@ -20,8 +20,8 @@ class LexiconStore:
     _TRANSLATOR = str.maketrans(_PUNCTUATION, " " * len(_PUNCTUATION))
 
     def __init__(self):
-        from presets import BoneConfig
-        from struts import safe_get
+        from engine.presets import BoneConfig
+        from engine.struts import safe_get
 
         akashic_cfg = safe_get(BoneConfig, "AKASHIC", {})
         self.save_dir = safe_get(akashic_cfg, "SAVE_DIR", "saves")

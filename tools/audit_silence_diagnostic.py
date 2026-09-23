@@ -34,7 +34,7 @@ from unittest.mock import patch
 sys.path.insert(0, ".")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from struts import safe_get, dump_state  # noqa: E402
+from engine.struts import safe_get, dump_state  # noqa: E402
 from audit_somatic_census import boot, SCRIPTS, trace_field  # noqa: E402
 import archetypes.council as council_mod  # noqa: E402
 import archetypes.stage as stage_mod  # noqa: E402

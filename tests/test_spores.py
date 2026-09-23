@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from spores.biome import BioLichen, BioParasite
 from spores.genetics import LiteraryReproduction
 from spores.io import LocalFileSporeLoader

@@ -1,8 +1,8 @@
 import math
 from typing import Optional, Tuple
 
-from presets import BoneConfig
-from struts import safe_get, ux, ux_format
+from engine.presets import BoneConfig
+from engine.struts import safe_get, ux, ux_format
 
 class TheCrucible:
     def __init__(self, config_ref=None):

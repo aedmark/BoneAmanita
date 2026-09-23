@@ -10,7 +10,7 @@ from tests.base import BoneTestCase
 
 
 class ProtocolLifecycleTests(BoneTestCase):
-    @patch("core.LoreManifest.get_instance")
+    @patch("engine.core.LoreManifest.get_instance")
     def test_bureau_hydration_and_mercy(self, mock_manifest):
         mock_data = {
             "BUREAU_FORMS": ["Test Form 101"],
@@ -56,7 +56,7 @@ class ProtocolLifecycleTests(BoneTestCase):
             "[FAIL] System was taxed despite the Mercy override.",
         )
 
-    @patch("core.LoreManifest.get_instance")
+    @patch("engine.core.LoreManifest.get_instance")
     def test_zen_garden_milestones(self, mock_manifest):
 
         def zen_side_effect(cat, section=None):

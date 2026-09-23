@@ -7,7 +7,7 @@ from unittest.mock import mock_open, patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from core import LoreManifest
+from engine.core import LoreManifest
 from tests.base import BoneTestCase
 
 
@@ -21,7 +21,7 @@ class LoreManifestTests(BoneTestCase):
             "[FAIL] LoreManifest is not acting as a strict singleton.",
         )
 
-    @patch("core.LoreManifest._load_from_disk")
+    @patch("engine.core.LoreManifest._load_from_disk")
     def test_cache_miss_loads_from_disk(self, mock_load):
         mock_load.return_value = {"greeting": "Welcome to the Bone Engine"}
 

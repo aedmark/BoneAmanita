@@ -6,7 +6,7 @@ import tempfile
 from unittest.mock import MagicMock
 
 from brain.akashic import TheAkashicRecord
-from core import LoreManifest
+from engine.core import LoreManifest
 from tests.base import BoneTestCase
 
 

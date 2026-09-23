@@ -2,11 +2,11 @@ import random
 import re
 from typing import Any, Dict, List
 
-from constants import Prisma
-from core import ArchetypeArbiter, LoreManifest
+from engine.constants import Prisma
+from engine.core import ArchetypeArbiter, LoreManifest
 from phases.base import SimulationPhase, _deep_update, _safe_dict
-from receipts import issue as issue_receipt
-from struts import safe_get, safe_set, ux
+from engine.receipts import issue as issue_receipt
+from engine.struts import safe_get, safe_set, ux
 
 class CognitionPhase(SimulationPhase):
     def __init__(self, engine_ref):

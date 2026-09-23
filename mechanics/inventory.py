@@ -4,11 +4,11 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from constants import Prisma
-from core import LoreManifest
+from engine.constants import Prisma
+from engine.core import LoreManifest
 from mechanics.tools import TheTclWeaver
-from presets import BoneConfig
-from struts import safe_get, safe_set, ux, ux_format
+from engine.presets import BoneConfig
+from engine.struts import safe_get, safe_set, ux, ux_format
 
 @dataclass
 class Item:

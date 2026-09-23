@@ -1,6 +1,6 @@
 import logging
 from typing import Any
-from constants import Prisma
+from engine.constants import Prisma
 
 logger = logging.getLogger("bone")
 
@@ -36,7 +36,7 @@ def audit_cfg(manifest: dict, resolver) -> list:
 
 
 def ux(section: str, key: str, default: Any = "") -> Any:
-    from core import LoreManifest
+    from engine.core import LoreManifest
     data = LoreManifest.get_instance().get("ux_strings", section)
     return data.get(key, default) if isinstance(data, dict) else default
 

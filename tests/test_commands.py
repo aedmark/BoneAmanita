@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from constants import Prisma
+from engine.constants import Prisma
 from main import BoneAmanita
 from mechanics.commands import CommandProcessor, CommandStateInterface, ResourceTax
 from tests.base import BoneTestCase
@@ -27,7 +27,7 @@ class CommandSystemTests(BoneTestCase):
         )
 
     def test_gordon_reality_stack_lockout(self):
-        from constants import RealityLayer
+        from engine.constants import RealityLayer
 
         engine = BoneAmanita({})
         processor = CommandProcessor(engine, Prisma)

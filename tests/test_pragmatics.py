@@ -1,6 +1,6 @@
 """tests/test_pragmatics.py"""
 
-from core import EventBus
+from engine.core import EventBus
 from mechanics.pragmatics import ThePragmatist
 from tests.base import BoneTestCase
 

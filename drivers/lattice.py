@@ -2,12 +2,12 @@ import time
 from collections import deque
 from typing import Any, Deque, List
 
-from constants import Prisma
-from presets import BoneConfig
-from receipts import ReceiptLedger
+from engine.constants import Prisma
+from engine.presets import BoneConfig
+from engine.receipts import ReceiptLedger
 from physics.models import PhysicsPacket, SharedDynamics, UserInferredState
-from receipts import issue as issue_receipt
-from struts import safe_get, ux
+from engine.receipts import issue as issue_receipt
+from engine.struts import safe_get, ux
 
 class SharedLatticeDriver:
     def __init__(self, config_ref=None):

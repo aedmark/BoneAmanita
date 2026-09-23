@@ -12,7 +12,7 @@ import subprocess
 import unittest
 from unittest.mock import MagicMock
 
-from core import EventBus
+from engine.core import EventBus
 
 SEVERITIES = {"CRIT", "CRITICAL", "ERROR", "WARN", "WARNING"}
 
@@ -133,7 +133,7 @@ class SilentExceptionHandlers(unittest.TestCase):
     # This is an allowlist rather than a budget because every entry has to be
     # argued for in writing, and a reviewer can disagree with a line of it.
     PASS_ONLY_ALLOWED = {
-        "core.py": (
+        "engine/core.py": (
             "JSONEncoder.default walks __slots__, and a declared-but-unset slot "
             "raises AttributeError by design. Skipping it IS the algorithm."
         ),
@@ -216,8 +216,8 @@ class ConfigStrictness(unittest.TestCase):
     nothing. The manifest makes that state detectable at boot."""
 
     def test_shipped_manifest_fully_resolves(self):
-        from genesis import BoneGenesis
-        from presets import BoneConfig
+        from engine.genesis import BoneGenesis
+        from engine.presets import BoneConfig
 
         missing = BoneGenesis._audit_config(BoneConfig, EventBus())
         self.assertEqual(
@@ -229,14 +229,14 @@ class ConfigStrictness(unittest.TestCase):
         )
 
     def test_audit_reports_every_miss_at_once(self):
-        from struts import audit_cfg
+        from engine.struts import audit_cfg
 
         manifest = {"BLOCK": ["PRESENT", "GONE_A", "GONE_B"]}
         missing = audit_cfg(manifest, lambda _b: {"PRESENT": 1})
         self.assertEqual(missing, ["BLOCK.GONE_A", "BLOCK.GONE_B"])
 
     def test_require_cfg_raises_instead_of_defaulting(self):
-        from struts import ConfigError, require_cfg
+        from engine.struts import ConfigError, require_cfg
 
         self.assertEqual(require_cfg({"K": 5}, "K", where="test"), 5)
         with self.assertRaises(ConfigError):
@@ -244,8 +244,8 @@ class ConfigStrictness(unittest.TestCase):
 
     def test_the_previously_missing_keys_now_resolve(self):
         """Regression for the specific ten found by tools/audit_safe_get.py."""
-        from presets import BoneConfig
-        from struts import safe_get
+        from engine.presets import BoneConfig
+        from engine.struts import safe_get
 
         expected = {
             "CORTEX": ["BASE_TOKENS", "MAX_TOKENS", "SELF_CARE_THRESHOLD",
@@ -265,7 +265,7 @@ class ConfigStrictness(unittest.TestCase):
     def test_governor_shift_resolves_from_the_lore_manifest(self):
         """Regression: regulation.py read BODY_CONFIG off BoneConfig, where it
         has never lived, so GOVERNOR_SHIFT was always {}."""
-        from core import LoreManifest
+        from engine.core import LoreManifest
 
         body_cfg = LoreManifest.get_instance().get("BODY_CONFIG") or {}
         self.assertTrue(

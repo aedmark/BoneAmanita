@@ -1,6 +1,6 @@
 from typing import Any
 
-from constants import Prisma
+from engine.constants import Prisma
 
 try:
     import dspy
@@ -57,8 +57,8 @@ class DSPyCritic:
         self.cfg = config_ref
         if self.enabled:
             try:
-                from presets import BoneConfig
-                from struts import safe_get
+                from engine.presets import BoneConfig
+                from engine.struts import safe_get
 
                 def get_cfg(key: str, default: Any) -> Any:
                     val_upper = safe_get(self.cfg, key.upper())

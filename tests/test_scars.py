@@ -14,7 +14,7 @@ enough to accept a method it does not have.
 import unittest
 
 from tests.base import BoneTestCase
-from core import CycleContext
+from engine.core import CycleContext
 from physics.models import PhysicsPacket, EnergyState
 
 

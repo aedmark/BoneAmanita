@@ -13,7 +13,7 @@ from body.models import BiologicalImpulse, Biometrics, MitochondrialState
 from body.regulation import BioFeedback, MetabolicGovernor, PIDController
 from body.somatic import SynestheticCortex
 from body.system import BioSystem
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from tests.base import BoneTestCase
 
 

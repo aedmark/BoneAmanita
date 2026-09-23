@@ -6,7 +6,7 @@ import unittest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from presets import BoneConfig
+from engine.presets import BoneConfig
 from tests.base import BoneTestCase
 
 

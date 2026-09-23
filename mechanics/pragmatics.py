@@ -1,7 +1,7 @@
 import re
 from typing import Any, Dict, Tuple
 
-from core import Prisma
+from engine.core import Prisma
 
 
 class ThePragmatist:

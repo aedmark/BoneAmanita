@@ -3,8 +3,8 @@
 from unittest.mock import MagicMock, patch
 
 from archetypes.village import DeathGen
-from core import CycleContext
-from cycle import ObservationPhase, SensationPhase
+from engine.core import CycleContext
+from engine.cycle import ObservationPhase, SensationPhase
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 
@@ -282,7 +282,7 @@ class BiologyTests(BoneTestCase):
                 self.engine.shared_lattice = shared_lattice_backup
 
     def test_bio_physical_coupling(self):
-        from core import CyberneticGovernor
+        from engine.core import CyberneticGovernor
 
         gov = CyberneticGovernor()
         gov.recalibrate(target_voltage=50.0, target_drag=5.0)

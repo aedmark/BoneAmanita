@@ -21,7 +21,7 @@ class TestGates(BoneTestCase):
         )
 
     def test_gate_1_parity_starvation(self):
-        from struts import safe_set
+        from engine.struts import safe_set
 
         if not getattr(self.engine, "bio", None):
             self.fail("Bio module missing.")
@@ -94,7 +94,7 @@ class TestGates(BoneTestCase):
                 )
 
     def test_permutation_entropy_slop_detection(self):
-        from cycle import _native_permutation_entropy
+        from engine.cycle import _native_permutation_entropy
 
         flat_signal = [0.1, 0.2, 0.1, 0.2, 0.1, 0.2, 0.1, 0.2, 0.1, 0.2]
         pe_low = _native_permutation_entropy(flat_signal, m=3, tau=1)

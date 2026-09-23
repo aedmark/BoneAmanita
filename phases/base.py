@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
 
-from core import CycleContext
+from engine.core import CycleContext
 
 def _safe_dict(obj):
     return (

@@ -30,7 +30,7 @@ class FractureEngineTest(BoneTestCase):
         )
 
     def test_native_freeze_graph_preserves_node_identities(self):
-        from cycle import _native_freeze_graph
+        from engine.cycle import _native_freeze_graph
 
         mock_graph = {
             "NODE_ALPHA": ["NODE_BETA", "NODE_GAMMA"],
@@ -45,7 +45,7 @@ class FractureEngineTest(BoneTestCase):
         self.assertIn("NODE_BETA", alpha_node[1])
 
     def test_fracture_dual_null_topology_baseline(self):
-        from cycle import _native_configuration_model, _native_rewire
+        from engine.cycle import _native_configuration_model, _native_rewire
 
         adj = {
             "center": ["n1", "n2", "n3", "n4"],
