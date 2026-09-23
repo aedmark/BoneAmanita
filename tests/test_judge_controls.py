@@ -65,6 +65,28 @@ class ControlConstruction(unittest.TestCase):
         for t, d in decoys.items():
             self.assertGreaterEqual(abs(t - d), 3)
 
+    def test_similarity_keeps_the_decoy_to_the_least_similar_half(self):
+        turns = list(range(10))
+        phases = {t: "engaged" if t < 5 else "distressed" for t in turns}
+        # Candidate 9 looks just like every turn; it must never be picked.
+        similarity = lambda t, v: 1.0 if v == 9 else v / 100
+        for seed in range(20):
+            decoys = bj.pick_decoys(turns, turns, random.Random(seed), phases, similarity=similarity)
+            self.assertNotIn(9, decoys.values())
+            self.assertTrue(all(phases[t] != phases[d] for t, d in decoys.items()))
+
+    def test_decoy_similarity_takes_the_closer_of_message_and_reply(self):
+        records = {
+            0: {"message": "gonna sleep", "reply": "night"},
+            1: {"message": "gonna sleep now", "reply": "sweet dreams"},
+            2: {"message": "the tire story", "reply": "love the tire story"},
+        }
+        vectors = {"gonna sleep": [1, 0], "gonna sleep now": [1, 0], "the tire story": [0, 1],
+                   "night": [1, 0], "sweet dreams": [1, 0], "love the tire story": [0, 1]}
+        sim_fn = bj.decoy_similarity(records, lambda texts: [vectors[t] for t in texts])
+        self.assertEqual(sim_fn(0, 1), 1)
+        self.assertEqual(sim_fn(0, 2), 0)
+
     def test_decoys_still_exist_when_only_near_turns_are_available(self):
         decoys = bj.pick_decoys([1, 2], [1, 2], random.Random(1))
         self.assertEqual(decoys, {1: 2, 2: 1})

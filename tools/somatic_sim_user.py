@@ -18,8 +18,10 @@ turns still happen. What varies: the wording, the energy, and whether the
 person warms to the reply or goes flat. It is a fixed event schedule with a
 reactive voice, not a free conversation.
 
-The simulator is a different model from the responders (default qwen3.5:9b
-against gemma4:12b) and never sees which system it is talking to. After the
+The simulator is a different model from the responders (default mistral-nemo
+against gemma4:12b) and from the responsive judge (qwen3.5:9b), so the judge
+never reads a person's side it wrote itself. It never sees which system it is
+talking to. After the
 last turn it also fills in a short exit interview in character. That is an
 LLM's account of how a conversation felt: agreeable and easily led, so read it
 as a relative signal across systems answered by the same simulator, not as a
@@ -37,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import requests  # noqa: E402
 
 ENDPOINT = "http://127.0.0.1:11434/api/chat"
-SIM_MODEL = "qwen3.5:9b"
+SIM_MODEL = "mistral-nemo:latest"
 # One context size for every call: Ollama reloads a model when it changes.
 SIM_CTX = 20480
 

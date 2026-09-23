@@ -6,6 +6,8 @@ because each one below is a way the experiment would report a confident number
 about prose the model did not write, or obedience it did not show.
 """
 
+import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -103,6 +105,20 @@ class TestSomaticMeasures(unittest.TestCase):
         leaked = dict(prompts, BOTH=(leaked_text, {}, {}, prompts["BOTH"][3]))
         with self.assertRaises(AssertionError):
             audit_somatic.check_arms(leaked)
+
+
+class TestCensusEmbedder(unittest.TestCase):
+    def test_importing_the_census_leaves_the_embedder_as_configured(self):
+        # audit_somatic pins hash at import; the census must not inherit it,
+        # since hash vectors break the graph solve it is there to measure.
+        root = Path(__file__).resolve().parent.parent
+        env = {k: v for k, v in os.environ.items() if k != "BONE_EMBED_BACKEND"}
+        code = "import os, audit_somatic_census; print(os.environ.get('BONE_EMBED_BACKEND'))"
+        out = subprocess.run(
+            [sys.executable, "-c", code], cwd=root, env={**env, "PYTHONPATH": f"{root}:{root / 'tools'}"},
+            capture_output=True, text=True, check=True,
+        )
+        self.assertEqual(out.stdout.strip().splitlines()[-1], "None")
 
 
 if __name__ == "__main__":

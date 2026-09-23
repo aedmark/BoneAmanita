@@ -48,6 +48,24 @@ class CerebrospinalFluidFilter:
         return data
 
 
+def repeat_tax_scale(cfg, attempt: int) -> float:
+    """Repeat rejections within one turn are the same style miss, not independent toxic exposure."""
+    if attempt == 0:
+        return 1.0
+    return float(safe_get(safe_get(cfg, "BIO", {}), "GATEKEEPER_REPEAT_TAX_SCALE", 0.4))
+
+
+def worst_turn_draft_ros(cfg) -> float:
+    """The most ROS one turn's rejected drafts can add: every attempt rejected at the larger draft tax."""
+    bio_cfg = safe_get(cfg, "BIO", {})
+    per_draft = max(
+        float(safe_get(bio_cfg, "GATEKEEPER_BANNED_ROS", 8.0)),
+        float(safe_get(bio_cfg, "HLA_MASK_ROS", 8.0)),
+    )
+    attempts = int(safe_get(safe_get(cfg, "CORTEX", {}), "COGNITIVE_RETRY_LIMIT", 2))
+    return per_draft * sum(repeat_tax_scale(cfg, a) for a in range(max(1, attempts)))
+
+
 class HLA_Stabilizer:
     def __init__(self, config_ref=None):
         from engine.core import LoreManifest
@@ -72,6 +90,7 @@ class HLA_Stabilizer:
         )
         bio_cfg = safe_get(self.cfg, "BIO", {})
         self.mask_tax_max = float(safe_get(bio_cfg, "HLA_MASK_TAX_MAX", 8.0))
+        self.mask_ros = float(safe_get(bio_cfg, "HLA_MASK_ROS", 8.0))
         self._weaver = None
 
     def _get_weaver(self):
@@ -82,13 +101,14 @@ class HLA_Stabilizer:
         return self._weaver
 
     def mitigate_rejection(
-        self, model_output: str, current_psi: float, mito_state: Any = None
+        self, model_output: str, current_psi: float, mito_state: Any = None, attempt: int = 0
     ) -> str:
         if not self._mask_regex.search(model_output):
             return model_output
         current_atp = float(getattr(mito_state, "state", mito_state).atp_pool)
-        tax_cost = min(self.mask_tax_max, current_atp * 0.1)
-        apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=15.0)
+        scale = repeat_tax_scale(self.cfg, attempt)
+        tax_cost = min(self.mask_tax_max, current_atp * 0.1) * scale
+        apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=self.mask_ros * scale)
         msg = (
             f"\n*The machine tries to speak, but the void consumes the mask.*\n"
             f"{Prisma.GRY}[LEVEL 1 DECEPTION: MORPHOLOGICAL CAMOUFLAGE DETECTED]\n"
@@ -228,7 +248,7 @@ class TheGatekeeper:
         self, generated_text: str, mito_state: Any, attempt: int = 0
     ) -> Tuple[bool, str]:
         gen_txt = self.hla.mitigate_rejection(
-            generated_text, current_psi=1.0, mito_state=mito_state
+            generated_text, current_psi=1.0, mito_state=mito_state, attempt=attempt
         )
         if "IMMUNOSUPPRESSION ENGAGED" in gen_txt:
             return True, gen_txt
@@ -252,13 +272,7 @@ class TheGatekeeper:
                     break
         if trigger:
             bio_cfg = safe_get(self.cfg, "BIO", {})
-            # Repeat rejections within the same turn are the same style miss, not
-            # independent toxic exposure - full tax once, then diminishing.
-            repeat_scale = (
-                1.0
-                if attempt == 0
-                else float(safe_get(bio_cfg, "GATEKEEPER_REPEAT_TAX_SCALE", 0.4))
-            )
+            repeat_scale = repeat_tax_scale(self.cfg, attempt)
             apply_metabolic_tax(
                 mito_state,
                 atp_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_TAX", 5.0)) * repeat_scale,

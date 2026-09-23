@@ -116,7 +116,9 @@ class AgentTests(BoneTestCase):
             "It used to be a flat 50, which emptied the pool on one hit.",
         )
         self.assertEqual(
-            mito.ros_buildup, 15.0, "HLA Stabilizer failed to spike ROS Toxicity."
+            mito.ros_buildup,
+            self.engine.config.BIO.HLA_MASK_ROS,
+            "HLA Stabilizer failed to spike ROS Toxicity.",
         )
 
     def test_hla_tax_reads_the_real_forge(self):
@@ -146,6 +148,19 @@ class AgentTests(BoneTestCase):
         scrubbed = gatekeeper.hla.mitigate_rejection(text, current_psi=1.0, mito_state=forge)
         self.assertEqual(scrubbed, text)
         self.assertEqual(forge.state.atp_pool, 40.0)
+
+    def test_a_mask_costs_the_configured_ros_and_less_on_a_retry(self):
+        """The person never sees a masked draft; it was a flat 15 ROS every time."""
+        bio = self.engine.config.BIO
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        forge.state.ros_buildup = 0.0
+        gatekeeper.audit_generation("As an AI, I cannot say.", forge, attempt=0)
+        self.assertAlmostEqual(forge.state.ros_buildup, bio.HLA_MASK_ROS)
+        gatekeeper.audit_generation("As an AI, I cannot say.", forge, attempt=1)
+        self.assertAlmostEqual(
+            forge.state.ros_buildup, bio.HLA_MASK_ROS * (1 + bio.GATEKEEPER_REPEAT_TAX_SCALE)
+        )
 
     def test_paradox_engine_ignition(self):
         engine = TheParadoxEngine(events_ref=None)

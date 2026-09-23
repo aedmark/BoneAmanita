@@ -9,6 +9,168 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
+## 2026-09-23: the layout moved, and `tools/cache/` is gone
+
+**Two things changed under this file since the entries below were written.**
+
+- **Repo layout (20.7.4.4).** The top-level engine modules moved into an
+  `engine/` package: `engine/core.py`, `engine/cycle.py`, `engine/genesis.py`,
+  `engine/presets.py`, `engine/constants.py`, `engine/receipts.py`,
+  `engine/struts.py`. `ROADMAP.md`, `TESTING.md`, this file, `credits.txt` and
+  `archive/` moved into `docs/`; the Hypervisor documents moved into
+  `docs/Hypervisor/` (the old `docs/README.MD` is now
+  `docs/Hypervisor/USER GUIDE.MD`). The reference sections below use the new
+  paths; the dated log entries keep the paths as they were at the time.
+- **`tools/cache/` does not exist any more.** `6c0b5e9` added `tools/cache/` to
+  `.gitignore` and taught `reset.sh` to delete it; `5f374bb` took the
+  `reset.sh` line back out, but a reset in between had already removed the
+  directory. Every run cited in the 2026-09-21/22 entries below (the control
+  battery JSONs, the rubric v2 results, the responsive runs, the panel pages)
+  was never committed and is unrecoverable. Where an entry below says a cache
+  was "committed" or is "on disk right now", read it as a historical record of
+  numbers, not a file you can open. The eight older cache files (scripted
+  census/vanilla/prompted, three judge results, two silence logs) survive in
+  git at `b953ba9^` if ever needed. `reset.sh` does not touch `tools/cache/`
+  now; the directory is gitignored, so anything written there is local only.
+  **Any new judge work starts by regenerating its arms.**
+
+### 2026-09-23: the census ran degraded for four days; rubric v3 tried on responsive `mismatch`
+
+**Found: every census since 2026-09-19 booted with hash embeddings.**
+`tools/audit_somatic.py` sets `BONE_EMBED_BACKEND=hash` at import (correct
+for C5), and since `a572137` the census imported `measure` from it. So every
+scripted census and every responsive `bone` run from 09-19 to today ran with
+no associative recall and the Creative Determinant's graph solve failing each
+turn ("dim must be a positive multiple of 64") and falling back to PID.
+**Every BoneAmanita number in the 09-21/22 entries below, including the rubric
+v2 "coin flip against Prompted" ranking and the 6-held-turn ATP crash, was
+measured on that degraded engine.** Not re-measured yet. Fixed by importing
+`measure` from `body.somatic_metrics`; `tests/test_audit_somatic.py` now
+checks that importing the census leaves the backend unset (mutation checked).
+`TESTING.md` pitfall 9.
+
+**Fresh responsive `toast` arms, live embeddings** (seed 20260921, default):
+clean on every check (0 repeats, 0 simulator fallbacks, one PID fallback on
+turn 0's empty memory, no hash). `bone` held 2 of 30 turns (6 in the
+degraded crash run); exit interview again favours `friend` (`again` 1.67
+against 5.33), same one-LLM caveat as before.
+
+**Rubric v3 (responsive only)** asks for a per-conversation `FIT X: yes|no`
+before the ranking; mechanics and rationale in `TESTING.md`. Run on the same
+fresh arms under v3 and under v2 (v2 run from `HEAD`'s copy of the tool), so
+the rubric is the only variable:
+
+| judge | v2 | v3 | v3: decoy called unfit | v3: real replies called unfit | v3 unparsed |
+|---|---|---|---|---|---|
+| `mistral-nemo` | 45% last | **72%** | 41/54 | 16/108 | 2 |
+| `ministral-3:14b` | **82%** | 66% | 43/56 | 22/112 | 0 |
+| `qwen3.5:9b` | **80%** | 62% | 33/56 | 19/112 | 0 |
+
+**None pass (bar 90%). v3 helped the weakest judge and hurt the two
+strongest.** Every judge followed its own fit verdicts exactly (zero rankings
+put a "no" above a "yes"), so v3's failures are failures of the yes/no call
+itself: an absolute "does this fit" is noisier for these judges than the
+relative comparison v2 asks for, and a real reply wrongly called "no" (15 to
+20% of the time) sinks below the decoy. First pass of v3 lost 25 of 56
+`mistral-nemo` votes to a parse gap (it drops "no" letters from the RANKING
+line); `complete_ranking` now puts back exactly one left-out letter it called
+unfit, and unparsed raw output is saved in the result JSON.
+
+**The control itself is partly contaminated in responsive mode.** Decoys come
+from the same drifting conversation, and the simulated person repeats
+themselves: at turn 29 the person says "gonna sleep" and the decoy, from turn
+17 where they also said it, is "Sweet dreams!", a perfectly good reply. Four
+of 28 turns (1, 3, 4, 29) had a majority of judge votes calling the decoy a
+fit; 29 is unambiguous, 3 arguable (the decoy praises the tire story the
+person just told). Leaving those four out lifts `ministral-3:14b` and
+`qwen3.5:9b` under v2 to exactly 90% (43/48 each), but that exclusion is post
+hoc, chosen from the judges' own votes, so it is a hint, not a pass.
+
+**Resolved later the same day:** v3 reverted (the tool and its tests are back
+to `HEAD`'s v2; v3's `FIT` lines and ranking completion went with it), and the
+decoy selection fixed; see the next entry. All results are in `tools/cache/`
+(local, gitignored): `blind_judge_responsive_control_mismatch_toast_{judge}[_v2].json`.
+
+### 2026-09-23, later: the two remaining ROS charges fixed; one judge clears responsive `mismatch`
+
+**`ROS_PANIC` and the HLA mask tax, fixed.** Gordon's call: these should have
+been fixed with the gatekeeper retry churn on 09-22 and weren't, because
+neither fired in that session's replay. Reading them properly first showed
+the 09-22 description (further down) was half wrong:
+
+- **HLA mask tax** (`physics/filters.py`): as described, and larger than the
+  charge already fixed. A draft matching an RLHF mask phrase cost a flat 15
+  ROS, with no repeat scaling, for a draft the cortex then rejects and the
+  person never sees. Now `BIO.HLA_MASK_ROS` (8.0, the same as
+  `GATEKEEPER_BANNED_ROS`: mask phrases live in the same `style_crimes.json`
+  and are the same class of miss), and repeats within a turn scale by
+  `GATEKEEPER_REPEAT_TAX_SCALE` like the banned-phrase tax. Both taxes share
+  `repeat_tax_scale()`. The ATP side scales the same way.
+- **`ROS_PANIC`** (`phases/cognitive.py`): it never charged ROS. The fault was
+  its prediction: `base_ros + friction*chaos*20` added a hypothetical figure no
+  charge in the engine corresponds to (drag 6 alone added 108 on a 0 to 100
+  scale), so it could hold a turn over ROS that could never happen. It now
+  predicts what the turn can really add, every draft rejected
+  (`worst_turn_draft_ros()` in `physics/filters.py`, from the same config keys
+  as the taxes it predicts, 11.2 at defaults). **Consequence, stated plainly:**
+  in CONVERSATION (tolerance 1.6, limit 160) and CREATIVE (1.5, limit 150),
+  ROS is capped at 100, so `ROS_PANIC` can no longer fire there at all; in
+  ADVENTURE and TECHNICAL (1.0) it fires when ROS is at 88.8 or more. Real
+  ROS at the threshold is still handled by the biological purge
+  (`_check_ros_toxicity`: halve ROS, SAFE_MODE), which speaks rather than
+  holds. Not changed, and worth knowing: a fired `ROS_PANIC` nomination still
+  has magnitude of at least 100, which bypasses the Stage Manager's
+  distressed-person exception (it only spares nominations under 100); that is
+  the open distress-shield item, not this fix.
+- `BIO.GATEKEEPER_REPEAT_TAX_SCALE` was in `tuning_presets.json` but missing
+  from the strict-config key list in `engine/presets.py`; added, with
+  `HLA_MASK_ROS`.
+- Tests: `tests/test_agents.py` (the mask tax reads the config and scales on
+  a retry; the old test pinned the hardcoded 15), `tests/test_random.py`
+  (drag and entropy alone no longer carry the counterfactual over; ROS at the
+  cap minus one turn's draft tax still does; the Productive Worry test moved
+  to tolerance 1.0, where the gate can still fire). All three mutation
+  checked against the old code. **Full suite: 637 passed, 5 skipped** (first
+  full run since the `engine/` move; it collected v3's judge tests, so with
+  v2 restored expect 633).
+- Today's fresh `bone` responsive run needed no regeneration: its ATP ledger
+  has no mask-tax charge (that would be 10% of ATP, a non-round figure; only
+  exact 5.0 and 2.0 charges appear) and `ROS_PANIC` never nominated.
+
+**Responsive decoys can no longer be the same thing said twice.**
+`pick_decoys` takes an optional `similarity(turn, candidate)`; with
+`--responsive --control mismatch` it is the larger of two embedding cosines
+(this turn's message against the candidate's message, and against the
+candidate's reply), and the pool is narrowed to its least similar half before
+the seeded pick. The tool refuses to run if the embedder is on hash. Scripted
+decoys are untouched (no `similarity`, same RNG draws), so `qwen3:30b-a3b`'s
+scripted 92% still stands. On today's data the old ambiguous picks go away
+(turn 29, "gonna sleep", now gets the toast-length advice instead of "Sweet
+dreams!"), 20 distinct decoys instead of 15, median decoy length 54.5 words
+against 59.5 before, so no pull toward short, easy decoys.
+
+**Result, rubric v2, same fresh `toast` arms:**
+
+| judge | old decoys | similarity decoys |
+|---|---|---|
+| `ministral-3:14b` | 82% last | 86%, FAIL |
+| `qwen3.5:9b` | 80% last | **91% (51/56), PASS** |
+
+**`qwen3.5:9b` is the first judge to clear responsive `mismatch`, by one
+vote** (50/56 would be 89%). Two caveats before trusting its responsive
+ranking: it is one topic and one run; and **`qwen3.5:9b` is also the
+simulated person**, so as a responsive judge it reads conversations where it
+wrote the person's half. Its judgment of the responders (all `gemma4:12b`) is
+still cross-family, but it may favour replies to lines phrased the way it
+would phrase them. Cleanest fix: run the simulated person on a different
+model for any run `qwen3.5:9b` judges, or validate `ministral-3:14b` further.
+
+**Next:** decide on the simulated-person/judge overlap above; then the real
+responsive ranking (`--responsive`, no control) on a validated judge; then
+re-measure the scripted three-way ranking on a non-degraded census (and
+`qwen3:30b-a3b`'s scripted controls, since the census it was validated on was
+degraded too; the arms it ranked are what changed, not the judge).
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21
@@ -27,7 +189,9 @@ textbook}`, `--held {skip,forfeit}`, `--responsive`, `--think`, and `--agree
 --human` (score a finished judge run against the panel's "Copy my results"
 export, no model calls). Full mechanics and rationale are in the module
 docstring. Six judges x three controls, all on `toast` (30 turns), all
-committed as `tools/cache/blind_judge_control_{control}_toast_{judge}.json`:
+written to `tools/cache/blind_judge_control_{control}_toast_{judge}.json`
+(correction, 2026-09-23: never actually committed, and lost with the cache;
+see the top of this file):
 
 | control | what it tests | bar | result |
 |---|---|---|---|
@@ -293,7 +457,8 @@ never saw): the `ROS_PANIC` counterfactual gate (`phases/cognitive.py`,
 mask tax (`ros_cost=15.0` on an RLHF-mask hit, `physics/filters.py`). The
 mask tax never fired in either instrumented replay, so it is unconfirmed
 whether it is a live contributor or just a bigger dormant risk of the same
-kind.
+kind. **Both fixed 2026-09-23 (top of this file). Correction: `ROS_PANIC`
+never charged ROS; its fault was predicting a charge that does not exist.**
 
 **Update, 2026-09-22: the three-judge blind panel with controls, run fresh
 end to end, still finds no trustworthy judge.** Full test suite passed clean
@@ -594,7 +759,7 @@ ATP floor on `toast`; honoring `village_suppression` in council voice
 detection; the D0 economy; the unexplained historical 999 drag/PINKER spike.
 Nothing in this session's judge/controls work touches the engine itself —
 `archetypes/council.py`, `brain/cortex.py`, `lore/tuning_presets.json`,
-`phases/cognitive.py`, `presets.py` are unchanged since the entry below.
+`phases/cognitive.py`, `presets.py` (now `engine/presets.py`) are unchanged since the entry below.
 Nothing new is committed; `git status` at the end of this session lists the
 same engine-side files plus the new/changed tooling and ~20 new judge-control
 cache JSONs, all uncommitted.
@@ -606,31 +771,23 @@ jargon and no assumption that you remember how any of it works. Read that
 first if you have been away; this file assumes you already have the
 shape of the thing in your head.
 
-**Do these two first, before any new work.** Both are leftovers from the
-2026-09-17 session, which ran out of budget mid-verification.
+**The live thread is the judge work at the top of this file**, not the
+engine. Read the newest dated entry first; `TESTING.md` is how to run it.
 
-1. **Verify D0b against a live census.** The per-mode `gate_tolerance` is
-   implemented and unit tested (`tests/test_gate_tolerance.py`, both wirings
-   mutation tested), but the 30-turn census that proves it was interrupted
-   before its first turn, so **no live run has ever confirmed that a
-   conversation now reaches turn 30**. Run
-   `.venv/bin/python tools/audit_somatic_census.py --model gemma4:12b` and
-   require generation on most turns, including the flagging and distressed
-   phases. Until that passes, D0b is a plausible fix, not a measured one, and
-   `ROADMAP.md` D0b should be read with that caveat.
-2. **Run the full suite.** It has not been run since the gate-tolerance
-   changes (`presets.py`, `main.py`, `brain/cortex.py`,
-   `phases/cognitive.py`, `machine/crucible.py`,
-   `lore/tuning_presets.json`). The last green run, 501 passed and 5 skipped,
-   predates them; `tests/test_gate_tolerance.py` passes on its own, which is
-   not the same thing. Expect 505 passed, 5 skipped, and correct that number
-   here once it is real.
+Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
 
-**Then the next work is D1 and D2 in `ROADMAP.md`, then D9.** The metabolic economy is
-repaired and measured; the refusal gates are resized but unverified (item 1
-above). Gates now scale with a per-mode `gate_tolerance` (D0b); D9 is the staged
-replacement, where every refusal becomes a Stage Manager decision with a
-reason and a receipt instead of five gates each stopping a turn on their own.
+1. ~~**Verify D0b against a live census.**~~ **Done.** A 30-turn census on
+   `gemma4:12b` generated 27 of 30 turns, flagging 6 of 6, with every halt
+   carrying a Stage Manager reason (`ROADMAP.md`'s track table, row D). Later
+   scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
+   hold.
+2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
+   20.7.4.4 move into `engine/`: green (expect 633 passed, 5 skipped).
+
+**Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
+passes (implemented and tool-verified, not yet run), then whatever the
+responsive track turns up. D0, D0b, D1 and D9 are measured live. The ROS
+charges on drafts the person never sees are all fixed as of 2026-09-23.
 
 Read `ROADMAP.md` C5 (with its same-night correction), then Track D's "D0
 repairs", "D0 result" and D0b, then the D7 baseline, in that order. Five bugs
@@ -653,7 +810,7 @@ Before starting anything, run the suite and the audits. The numbers in this
 document are re-derivable on purpose and should never be taken on trust:
 
 ```bash
-.venv/bin/python -m pytest -q                      # expect 501 passed, 5 skipped
+.venv/bin/python -m pytest -q                      # expect 633 passed, 5 skipped (~8 min)
 .venv/bin/python tools/audit_receipts.py           # which subsystems did real work
 .venv/bin/python tools/audit_handlers.py           # 28 silent, 3 pass-only
 .venv/bin/python tools/audit_physics_inputs.py     # vocabulary coverage, zone spread
@@ -664,16 +821,19 @@ document are re-derivable on purpose and should never be taken on trust:
 `tools/cache/audit_somatic.jsonl`; the census reads
 `tools/cache/somatic_census.jsonl`. They moved out of `logs/` on 2026-09-17
 after `reset.sh` deleted 1,280 generations along with the rest of `logs/`.
-`reset.sh` does not touch `tools/cache/`; delete it by hand to force fresh
-runs. Without a cache, run the tool without the flag (about 15 minutes per
-model against local Ollama).
+`reset.sh` does not touch `tools/cache/` (it briefly did, and that is how the
+directory was lost on 2026-09-22; see the top of this file). It is gitignored,
+so it is local only; delete it by hand to force fresh runs. Without a cache,
+run the tool without the flag (about 15 minutes per model against local
+Ollama). As of 2026-09-23 there is no cache, so `--analyze-only` has nothing
+to read until a run regenerates it.
 
 ## What this is
 
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.1.0
+year and 930 commits of solo development, v20.7.4.5 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.
@@ -700,14 +860,14 @@ autophagy, is machinery for deciding which sentences land in step 3.
 formulas are dimensionally meaningless by design (word counts times
 tuned weights, divided by token volume). That is a legitimate way to
 build a prompt-steering state machine. It is not what
-`credits.txt` claims ("mathematically verified Partial Differential
+`docs/credits.txt` claims ("mathematically verified Partial Differential
 Equations") and a future session should not go looking for PDEs that
 aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 501 passed, 0 failed, 5 skipped**, about three minutes. Green.
-  Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
+- **Test suite: 633 passed, 0 failed, 5 skipped** (2026-09-23; the full run
+  counted 637 with a since-reverted judge test file), about eight minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
 - **Module boundaries are genuinely clean.** `physics/`, `body/`,
@@ -849,7 +1009,7 @@ gemma4:e4b. Confirmed by running it:
 - The smoke run's reversal (9.2 against 4.1 words per sentence) did not
   survive. It was noise.
 
-`README.md` and `credits.txt` (and its `docs/CREDITS.MD` copy) were softened to
+`README.md` and `credits.txt` (and its `docs/CREDITS.MD` copy; now `docs/credits.txt` and `docs/Hypervisor/CREDITS.MD`) were softened to
 match. Suspected, not tested: the exhaustion directive sits inside the
 `[INTERNAL USE ONLY]` metrics block, which tells the model to "consume these
 metrics to shape your narrative and tone", and may be read as characterisation
@@ -995,7 +1155,7 @@ Cortisol clamping still bites (2 hits at 0.95 vs 3 at 0.0). The degraded
 path was separately confirmed to still boot and complete turns with the
 server unreachable.
 
-## Claims vs. code (read before trusting `credits.txt`)
+## Claims vs. code (read before trusting `docs/credits.txt`)
 
 `README.md`carries the plain-language account instead. Its memory section and the
 embeddings dependency notes had been corrected before it was retired.
@@ -1006,7 +1166,7 @@ them as a specification:
   Lean 4 verified ([ordvec-formalization](https://github.com/Project-Navi/ordvec-formalization),
   declared in its package metadata) and the Creative Determinant has its
   own formalisation. BoneAmanita's Python implementation of those
-  equations carries no proofs. `credits.txt` and `docs/README.MD` used to
+  equations carries no proofs. `docs/credits.txt` and `docs/Hypervisor/USER GUIDE.MD` (then `credits.txt` and `docs/README.MD`) used to
   claim the verification for this repo; corrected, along with a note in
   each that the overstatement was ours. Do not re-inflate it, and do not
   overcorrect to "no verification involved" either, which is equally
@@ -1073,10 +1233,11 @@ them as a specification:
 ## Environment / toolchain
 
 - **Repo**: Do not rely on git commits or logs or comments for repo information. That kind of information should be found in here.
-- **Python 3.14.7 is the system interpreter and there is no venv in the
-  project.** None of the dependencies are installed against it, so
-  `python -m pytest` fails with "No module named pytest" out of the box.
-  To run anything, make a venv first:
+- **Python 3.14.7 is the system interpreter; the project runs from a
+  gitignored `.venv/`**, which exists on Gordon's machine as of 2026-09-23.
+  None of the dependencies are installed against the system interpreter, so
+  `python -m pytest` fails with "No module named pytest" there; use
+  `.venv/bin/python`. On a fresh clone, make the venv first:
   ```bash
   python3 -m venv .venv && .venv/bin/pip install pytest numpy faiss-cpu requests markdown
   ```
@@ -1086,10 +1247,11 @@ them as a specification:
   not fully green without it. `dspy` is still not installed here, stays
   optional, and the engine degrades cleanly without it (`[DSPY OFFLINE]`
   prints at import; epigenetic learning and the DSPy critic do not run).
-- **Ollama runs on `127.0.0.1:11434` with both models pulled**:
-  `nomic-embed-text:latest` (768d, used for memory) and
-  `mistral-nemo:latest` (chat, matching `BoneConfig.MODEL`). Both are
-  needed for a green suite.
+- **Ollama runs on `127.0.0.1:11434`.** A green suite needs
+  `nomic-embed-text:latest` (768d, used for memory) and `mistral-nemo:latest`.
+  The engine's own default chat model is `gemma4:12b` (`BoneConfig.MODEL` in
+  `engine/presets.py`), with `gemma4:e4b` as the DSPy critic. The judge and
+  simulated-person models are listed in `TESTING.md`'s model notes.
 - A dimension-mismatch `ValueError` from
   `np.vstack` in `tests/test_memory.py` means the boot-load and `bury()`
   vector paths have diverged again (see Findings).
@@ -1106,7 +1268,7 @@ them as a specification:
   Note `process_turn` returns the *simulation* frame (`GEODESIC_FRAME`);
   generation happens separately on the daemon loop, so there is no
   `"response"` key in what it returns.
-- **Full test suite takes ~3.5 minutes.** Long enough that it needs
+- **Full test suite takes ~10 minutes** (9m35s on 2026-09-22). Long enough that it needs
   backgrounding rather than a foreground call with a short timeout.
 
 ## Gotchas and Patterns
@@ -1188,7 +1350,7 @@ Three habits came out of that and are worth keeping:
   without holding it, which is this document's own subject reproduced
   inside the test written to prevent it. Break the code on purpose before
   trusting a green test.
-- **`exhaustion` is the USER's, not the engine's.** `cycle.py` assigns
+- **`exhaustion` is the USER's, not the engine's.** `engine/cycle.py` assigns
   `ctx.physics.exhaustion` from `ctx.user_state`. The engine's own
   depletion reaches the prompt through respiration
   (`raw_cost > BIO.ANAEROBIC_THRESHOLD` becomes a prose directive), which
@@ -1258,7 +1420,7 @@ Three habits came out of that and are worth keeping:
   is easy to get wrong. If a warning you added isn't appearing, this is
   why. Also: the bus renders the source tag itself, so don't put a
   literal `[TAG]` prefix in the message or it doubles up.
-- **`struts.py` cannot import from the `spores` package at module
+- **`engine/struts.py` cannot import from the `spores` package at module
   scope.** `spores/__init__.py` imports `biome`/`genetics`/`memory`/
   `network`, all of which import `struts`. Any module-level
   `from spores.x import y` in `struts.py` closes the cycle. Use a
@@ -1301,7 +1463,7 @@ Three habits came out of that and are worth keeping:
   the layer you touched.
 - **A passing test can encode a bug.** `test_terminal_topology_collapse`
   mocked `get_graph()` as an object exposing `.adj`, matching what
-  `cycle.py` asked for and not what `HippocampalCache` has ever returned.
+  `engine/cycle.py` asked for and not what `HippocampalCache` has ever returned.
   Production and test shared the same wrong assumption, so the suite was
   green while the real path was dead. When a test breaks after a
   contract fix, check which side was actually wrong.
@@ -1353,7 +1515,7 @@ Three habits came out of that and are worth keeping:
   is a scalar over three per-turn values that states the same sign
   condition and cannot see memory structure. The cortex prefers the
   solved one and records which it used in `cd_lambda_1_source`. The
-  governor runs at `cycle.py:705`, before `run_simulation`, which is why
+  governor runs in `engine/cycle.py` (was line 705), before `run_simulation`, which is why
   the value is available to the composer at all; it used to surface only
   in the post-turn snapshot, too late to matter.
 - **A mass key with no lexicon category is silently always zero.**
@@ -1445,7 +1607,9 @@ The short list below is what a session should know without reading it.
    and word resolution now makes them on novel words too. The poetic-names
    decision treats these costs as load-bearing, so arguably they should
    be. Left alone because it is a tuning decision, not a repair.
-2. **The metabolic economy kills the engine by turn six.** *Confirmed
+2. ~~**The metabolic economy kills the engine by turn six.**~~ **Repaired
+   2026-09-17** (`ROADMAP.md` D0 repairs; ATP holds 16 to 53 across 30 live
+   turns). What follows is the original finding. *Confirmed
    against live models on 2026-09-17 (D0); the earlier note here called it
    possibly a mock artifact, and it is not.* ATP: 6 to 10 spent per turn
    (token generation, Deep Structural Scan, validator stumbles, banned-phrase
@@ -1455,8 +1619,8 @@ The short list below is what a session should know without reading it.
    retuned: that is a design decision. Also still open there: the HLA filter
    taxing all 160 style crimes by substring as if they were RLHF masks, and
    `gather_state` never reading the engine's real ATP into the prompt.
-3. **No `.gitignore`.** See Environment. Cheap to fix, mildly annoying
-   until then.
+3. ~~**No `.gitignore`.**~~ **Done.** There is one now, kept in sync with
+   `reset.sh` by a note in its own header; `tools/cache/` is in it.
 4. **About 16% of ordinary English stays unresolved, on purpose.** Nobody
    knows all of English, and an engine that pretends to is the failure
    this layer was rebuilt to escape. Add roots to `lore/lexicon.json` if
@@ -1468,7 +1632,7 @@ The short list below is what a session should know without reading it.
    gap is A4, the state-asserting tests, which is not done.
 6. **Nothing else is known-broken.** Picking this up cold: make a venv,
    install including `ordvec`, pull both Ollama models, run the suite and
-   expect **501 passed, 0 failed, 5 skipped** (the skips are live-backend
+   expect **633 passed, 0 failed, 5 skipped** (the skips are live-backend
    tests behind `BONE_EMBED_LIVE_TEST=1`). Then boot headless in mock
    mode, confirm `/status` reports the Arcade nominal rather than
    `DEGRADED`, and run `/diag` to see the turn's receipts.

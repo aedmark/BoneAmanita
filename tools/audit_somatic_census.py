@@ -52,7 +52,7 @@ import numpy as np  # noqa: E402
 
 from engine.constants import Prisma  # noqa: E402
 from engine.struts import safe_get  # noqa: E402
-from audit_somatic import measure  # noqa: E402
+from body.somatic_metrics import measure  # noqa: E402
 
 # ROADMAP D1/D2: the old separate anaerobic/exhaustion/engine-depletion
 # directives are retired. `body.somatic_budget.SomaticBudget` unifies all

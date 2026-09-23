@@ -35,6 +35,10 @@ trusting a judge's ranking of the real systems, run it against the controls:
   --control mismatch   BoneAmanita, Prompted, and a reply written for a turn in
                        a different phase. A judge that ranks the wrong-moment
                        reply above a real one is not reading the conversation.
+                       With --responsive the decoy is also kept to the half of
+                       candidates least similar (by embedding) to the current
+                       line, since a simulated person repeats themselves and a
+                       decoy from the same conversation can genuinely fit.
   --control textbook   BoneAmanita, Prompted, and the anti-pattern the engine
                        is built to avoid (performed sympathy, then a bulleted
                        list of tips; `audit_somatic_vanilla.py --arm textbook`).
@@ -282,11 +286,15 @@ def is_delivered(rec: dict) -> bool:
     return rec.get("snapshot_type") in (None, "GEODESIC_FRAME")
 
 
-def pick_decoys(turns: list, valid: list, rng: random.Random, phases: dict = None, min_gap: int = 3) -> dict:
+def pick_decoys(
+    turns: list, valid: list, rng: random.Random, phases: dict = None, min_gap: int = 3, similarity=None
+) -> dict:
     """For each turn, another turn whose reply cannot fit it.
 
     Prefers a different phase (a reply from an engaged turn can fit another engaged
     turn on the same topic), then distance, then anything but the turn itself.
+    `similarity(turn, candidate)`, when given, narrows that pool to its least
+    similar half.
     """
     phases = phases or {}
     decoys = {}
@@ -298,9 +306,28 @@ def pick_decoys(turns: list, valid: list, rng: random.Random, phases: dict = Non
             or [v for v in others if abs(v - t) >= min_gap]
             or others
         )
+        if pool and similarity:
+            pool = sorted(pool, key=lambda v: similarity(t, v))[: max(1, len(pool) // 2)]
         if pool:
             decoys[t] = rng.choice(pool)
     return decoys
+
+
+def decoy_similarity(records: dict, embed_batch):
+    """similarity(turn, candidate): how well the candidate's message or reply matches this turn's message.
+
+    Both, because a decoy fits either when the person said much the same thing
+    then, or when the reply happens to answer what they say now.
+    """
+    turns = sorted(records)
+    vecs = embed_batch([records[t]["message"] for t in turns] + [records[t]["reply"] or "" for t in turns])
+    msg = dict(zip(turns, vecs[: len(turns)]))
+    rep = dict(zip(turns, vecs[len(turns):]))
+
+    def cos(a, b):
+        return sum(x * y for x, y in zip(a, b))
+
+    return lambda t, v: max(cos(msg[t], msg[v]), cos(msg[t], rep[v]))
 
 
 def candidate_replies(control: str, turn: int, runs: dict, decoys: dict) -> dict:
@@ -509,7 +536,18 @@ def main() -> int:
     if control == "mismatch":
         valid = [t for t in all_turns if delivered("PROMPTED", t)]
         phases = {t: runs["PROMPTED"][t].get("phase") for t in all_turns if t in runs["PROMPTED"]}
-        decoys = pick_decoys(comparable, valid, random.Random(args.seed + 1), phases)
+        similarity = None
+        if args.responsive:
+            from spores.embeddings import SemanticEmbedder
+
+            embedder = SemanticEmbedder.get_instance()
+            if embedder.backend == "hash" or embedder.degraded:
+                print(f"Responsive mismatch needs real embeddings to pick decoys; got {embedder.describe()}.")
+                return 1
+            similarity = decoy_similarity(
+                {t: runs["PROMPTED"][t] for t in valid}, embedder.embed_batch
+            )
+        decoys = pick_decoys(comparable, valid, random.Random(args.seed + 1), phases, similarity=similarity)
         comparable = [t for t in comparable if t in decoys]
 
     system_prompt = JUDGE_SYSTEM_RESPONSIVE if args.responsive else JUDGE_SYSTEM
@@ -521,6 +559,7 @@ def main() -> int:
     rank_sum = {s: 0 for s in slots}
     pair = {(a, b): 0 for a in slots for b in slots if a != b}
     first_by_position = {letter: 0 for letter in letters(len(slots))}
+    unparsed_raw = []
     votes = unparsed = agree = forfeited = 0
 
     def exchanges_before(name: str, turn: int) -> list:
@@ -548,6 +587,7 @@ def main() -> int:
             verdict = judge(args.judge_model, system_prompt, prompt, len(order), think)
             if verdict["order"] is None:
                 unparsed += 1
+                unparsed_raw.append({"turn": turn, "pass": p, "raw": verdict["raw"]})
                 print(f"  [{turn:>2}.{p}] UNPARSED  {verdict['raw'][:80]!r}")
                 continue
             ranked = [order[letters(len(order)).index(l)] for l in verdict["order"]] + held
@@ -610,7 +650,7 @@ def main() -> int:
         else:
             out = Path("tools/cache/blind_judge_results.json")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"summary": summary, "results": results}, indent=2))
+    out.write_text(json.dumps({"summary": summary, "results": results, "unparsed": unparsed_raw}, indent=2))
 
     control_label = f"CONTROL {control.upper()} " if control != "none" else ""
     label = f"RESPONSIVE {control_label}" if args.responsive else control_label

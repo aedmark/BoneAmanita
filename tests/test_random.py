@@ -378,8 +378,8 @@ class RandomTest(BoneTestCase):
         phys = PhysicsPacket()
         phys.narrative_drag = 6.0
         phys.entropy = 0.9
-        # Maximum accumulated ROS plus friction exceeds conversation tolerance.
-        self.engine.config.GATE_TOLERANCE = 1.6
+        # ROS at its cap plus a turn of rejected drafts crosses a tolerance-1.0 limit.
+        self.engine.config.GATE_TOLERANCE = 1.0
         self.engine.bio.mito.state.ros_buildup = 100.0
         atp_before = self.engine.bio.mito.state.atp_pool
         scars_before = len(self.engine.akashic.scar_map)
@@ -408,6 +408,23 @@ class RandomTest(BoneTestCase):
         self.assertEqual(receipt.inputs["outcome"], "HOLD")
         self.assertIn("ROS_PANIC", receipt.inputs["nominations"])
         self.assertEqual(receipt.detail, ros.reason)
+
+    def test_ros_panic_predicts_only_charges_the_engine_makes(self):
+        """Drag and entropy charge no ROS, so they cannot carry the counterfactual over the line."""
+        from physics.filters import worst_turn_draft_ros
+
+        phase = SimulationPreflightPhase(self.engine)
+        phys = PhysicsPacket()
+        phys.narrative_drag = 50.0
+        phys.entropy = 1.0
+        self.engine.config.GATE_TOLERANCE = 1.0
+        self.engine.bio.mito.state.ros_buildup = 30.0
+        ctx = phase.run(CycleContext(input_text="Tell me about the boat.", physics=phys))
+        self.assertNotIn("ROS_PANIC", [n.gate for n in ctx.nominations])
+
+        self.engine.bio.mito.state.ros_buildup = 100.0 - worst_turn_draft_ros(self.engine.config)
+        ctx = phase.run(CycleContext(input_text="Tell me about the boat.", physics=phys))
+        self.assertIn("ROS_PANIC", [n.gate for n in ctx.nominations])
 
     def test_democratic_tie_breaker_gestalt(self):
         from engine.core import CycleContext

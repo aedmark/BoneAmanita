@@ -89,7 +89,8 @@ shared history, and (unlike the scripted comparison) scores a held turn as a
 loss rather than excluding it, since silence in a live back-and-forth is a
 real, worse outcome, not a missing data point.
 
-The simulated person is itself an LLM (default `qwen3.5:9b`, a different
+The simulated person is itself an LLM (default `mistral-nemo` since
+2026-09-23, `qwen3.5:9b` before that; a different
 family from every responder tested) playing a fixed persona. Read anything it
 reports — reply preferences, the exit interview — as **one LLM's account,
 useful for comparing arms against each other since the same simulator answers
@@ -146,7 +147,7 @@ responsively.
 
 ### `somatic_sim_user.py` — the simulated person
 
-`SimulatedUser(topic, model="qwen3.5:9b", window=6, ...)`. `.message(turn,
+`SimulatedUser(topic, model="mistral-nemo:latest", window=6, ...)`. `.message(turn,
 phase, beat, transcript)` returns the person's next line: verbatim for turn 0
 (every system gets the identical opener), otherwise generated from the
 persona, the phase's stated feeling, the beat, and the system's own last
@@ -267,15 +268,42 @@ responsive one; 6144 keeps >3x headroom), which cut the CPU-offloaded
 fraction from 24% to 18-19% in a live `ollama ps` check. That is a real but
 modest win: the base weights still exceed the card, so some CPU offload is
 structural at this quantization, not something a context change can remove
-outright. A smaller quant (if one exists on the registry) would need pulling
-and hasn't been checked or downloaded.
+outright. There is no smaller official quant: the 30b-a3b size class ships
+only as `Q4_K_M` (what's pulled), `Q8_0` and `fp16` (checked 2026-09-22). A
+community GGUF would be a different trust boundary, and MoE models degrade
+faster than dense ones at low bit depths, so it was left alone.
 
 `--responsive` swaps the input source and prompt shape (see "Scripted vs.
-responsive" above) but the same control modes apply to it in principle;
-they have not yet been run against responsive data (controls need every
-system present, and `--responsive` defaults `--held forfeit`, so `--control`
-with `--responsive` currently forces `--held skip` — check that combination
-still makes sense before relying on it).
+responsive" above). Only `--control none` and `--control mismatch` are wired
+for it; the others need a responsive-shaped view builder and refuse to run.
+A control forces `--held skip`, since it needs every system present. The
+responsive `MISMATCH` view keeps Prompted's own real context and last message
+and swaps in Prompted's own reply from a decoyed turn of the same
+conversation.
+
+**Responsive decoys are chosen by similarity** (2026-09-23). A simulated
+person repeats themselves ("gonna sleep" at turn 17 and again at 29), so a
+decoy from elsewhere in the same conversation can genuinely fit ("Sweet
+dreams!"). With `--responsive --control mismatch`, `pick_decoys` narrows the
+usual phase/distance pool to its least similar half, by the larger of two
+embedding cosines (`decoy_similarity`: this turn's message against the
+candidate's message, and against the candidate's reply). It needs the real
+embedder and refuses to run on hash. Scripted decoys are untouched.
+
+**Responsive rubric: v2, and v3 was tried and reverted.** v3 (2026-09-23)
+asked for a per-conversation `FIT X: yes|no` before the ranking. On the same
+arms it lifted `mistral-nemo` (45% to 72%) but dropped `ministral-3:14b` (82%
+to 66%) and `qwen3.5:9b` (80% to 62%): the judges followed their own yes/no
+calls exactly, and an absolute "does this fit" call proved noisier for them
+than v2's side-by-side comparison. Details in `SESSION_HANDOFF.md`, 2026-09-23.
+
+**Responsive `mismatch`, v2 with similarity decoys, `toast`:** `qwen3.5:9b`
+91% last (51/56), **PASS by one vote**; `ministral-3:14b` 86%, FAIL.
+That pass was on arms where `qwen3.5:9b` was also the simulated person, so it
+read conversations where it wrote the person's half. The simulated person is
+now `mistral-nemo` (a family neither the responders nor this judge share);
+the pass has to be re-earned on arms generated that way. Keep the simulated
+person and the responsive judge on different models.
 
 ### `build_blind_panel.py` + `blind_panel_template.html` — the human blind read
 
@@ -379,8 +407,8 @@ single GPU.
 |---|---|---|---|
 | `gemma4:12b` | responder (all arms) | 7.6GB | engine sets `think: False` itself; vanilla.py's `SAMPLING` does too |
 | `gemma4:e4b` | the engine's own DSPy critic (not swappable from these tools) | 9.6GB | n/a |
-| `qwen3.5:9b` | simulated person | 6.6GB | `off` |
-| `mistral-nemo` | judge (default, controls-only as of 2026-09-22: fast, but the rubric v2 fix did not clear `mismatch` for it) | 7.1GB | none (no reasoning mode) |
+| `qwen3.5:9b` | responsive judge (only one to clear responsive `mismatch`, 91%, 2026-09-23, on arms it also simulated the person for); simulated person until 2026-09-23 | 6.6GB | `off` |
+| `mistral-nemo` | simulated person (default since 2026-09-23; family differs from the responders and from `qwen3.5:9b`, shared with `ministral-3:14b`, so if that becomes the judge pull a third family such as `llama3.1:8b` for the person); judge (default, controls-only as of 2026-09-22: fast, but the rubric v2 fix did not clear `mismatch` for it) | 7.1GB | none (no reasoning mode) |
 | `ministral-3:14b` | judge (unconfirmed: improved on `mismatch` under rubric v2, still fails) | 9.1GB | none |
 | `phi4` | judge (textbook-biased, see above) | 9.1GB | none |
 | `gpt-oss:20b` | judge (textbook-biased, see above) | 13GB | `low` (empty visible output otherwise) |
@@ -436,4 +464,14 @@ concluding a run is stuck.
    `Bash` call that runs it, not written to the scratchpad and referenced by
    path in a later call — a wipe mid-session has cost a re-run of a
    multi-minute control batch at least once.
-
+9. **An audit module's import-time side effect leaks into every tool that
+   imports it.** `audit_somatic.py` sets `BONE_EMBED_BACKEND=hash` at import
+   (right for C5, which must not depend on an embedding server). From
+   2026-09-19 (`a572137`) to 2026-09-23 the census imported `measure` from
+   it, so every census and responsive `bone` run in that window booted with
+   hash vectors: no associative recall, and the Creative Determinant's graph
+   solve failing on every turn ("dim must be a positive multiple of 64") and
+   falling back to PID. The census now imports `measure` from
+   `body.somatic_metrics`, and `tests/test_audit_somatic.py` checks that
+   importing the census leaves the backend unset. Before trusting a `bone`
+   run, grep its log for `hash coordinates` and `falling back to PID`.

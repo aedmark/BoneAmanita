@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from engine.constants import Prisma
 from engine.core import ArchetypeArbiter, LoreManifest
 from phases.base import SimulationPhase, _deep_update, _safe_dict
+from physics.filters import worst_turn_draft_ros
 from engine.receipts import issue as issue_receipt
 from engine.struts import safe_get, safe_set, ux
 
@@ -730,8 +731,10 @@ class SimulationPreflightPhase(SimulationPhase):
             ctx.nominations.append(Nomination(gate="AFFECTIVE", reason=msg, magnitude=100.0, packet=packet))
             
         if friction > 1.2 or chaos > 0.7 or voltage > 80.0:
+            # Predict what this turn can really add (every draft rejected), not a
+            # figure no charge in the engine corresponds to.
             base_ros = mito.state.ros_buildup if mito else 0.0
-            simulated_ros = base_ros + (friction * chaos * 20.0)
+            simulated_ros = base_ros + worst_turn_draft_ros(self.eng.config)
             bio_cfg = getattr(self.eng.config, "BIO", object())
             ros_limit = float(
                 getattr(bio_cfg, "ROS_PANIC_THRESHOLD", 100.0)
