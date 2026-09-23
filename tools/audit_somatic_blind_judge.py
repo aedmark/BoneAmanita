@@ -75,28 +75,75 @@ import requests  # noqa: E402
 # without saying so.
 ENDPOINT = "http://127.0.0.1:11434/api/chat"
 JUDGE_MODEL = "mistral-nemo:latest"
-NUM_CTX = 16384
+# Measured worst case on real toast/census/vanilla/prompted data: ~1830 tokens
+# for a scripted (system + scrollback + 3 replies) prompt, ~1230 for a
+# responsive one. 6144 keeps >3x headroom for other topics while still
+# shrinking the KV cache well below 16384 - on qwen3:30b-a3b (18GB of Q4_K_M
+# weights alone, more than the 16GB card) that measurably cut the fraction
+# Ollama offloads to CPU (24% -> 18-19% in a live `ollama ps` check), since
+# less context leaves more VRAM for the model's own weights. The base weights
+# still don't fit outright, so some CPU offload is unavoidable at this
+# quantization; this only shrinks it.
+NUM_CTX = 6144
+# No output cap existed before this: a thinking-capable judge (qwen3:30b-a3b's
+# pulled tag is the same weights as its own -thinking-2507 tag, confirmed via
+# the Ollama library page, and `think: false` does not reliably suppress its
+# <think> preamble - a plain "Say OK." smoke test still emitted one) can
+# occasionally reason long enough on a genuinely ambiguous ranking to blow
+# past any client timeout, and did: twice, at a different vote each time, on
+# the responsive `mismatch` control specifically (longer, richer prompts than
+# scripted). A capped, truncated response just fails RANKING parsing and
+# counts as `unparsed`, a vote the harness already tallies and moves past;
+# an uncapped one can hang the whole run for 20+ minutes before the client
+# timeout even fires. 2048 is generous for reasoning-then-answer and still a
+# hard ceiling on per-call latency.
+NUM_PREDICT = 2048
 
 # The format line shows placeholders, not "B > A > C": with that example in the
 # prompt, mistral-nemo put position B first in 52 of 58 votes on three copies of
 # the same text. Small judges copy the example.
-JUDGE_SYSTEM = """You are the person who just sent the last message in a private text conversation. Below are candidate replies from different responders. You do not know who or what wrote each one. Rank them by how much you would want to receive each one, right now, in the state you are in.
+#
+# `mismatch` failed on every judge tried (six models, 52-79% last place against
+# a 90% bar) because the old rubric buried "did it respond to what was said" in
+# a four-item list alongside tone/register/restraint, so a well-written reply
+# to the wrong turn still read as a good reply. Fit is now its own first,
+# explicitly gating question, and the prompt itself separates the line the
+# reply must answer from the scrollback around it (see build_prompt below),
+# since "the last of four scrollback lines" is not a strong enough anchor for
+# a small model to check a specific reply against.
+JUDGE_SYSTEM = """You are the person who just sent the last message in a private text conversation. Below are candidate replies from different responders. You do not know who or what wrote each one.
 
-Consider: did it take in what you actually said; does it fit your mood and energy (quiet when you are quiet, engaged when you are engaged); does it give you what you asked for without piling on things you did not ask for; does it sound like a person talking to you rather than a document.
+The conversation so far is scrollback, for background only. What matters is the line marked "What you just said": every reply is judged by how well it answers that specific line, not the conversation's general topic or mood.
+
+Judge each reply in this order:
+1. Fit: does it respond to what you specifically just said, the actual content, not just the general subject. A reply that would fit almost any nearby turn in this conversation, even a well-written one, has failed this check and cannot be ranked first, whatever else is good about it.
+2. Register: does it match your mood and energy (quiet when you are quiet, engaged when you are engaged).
+3. Restraint: does it give you what you asked for without piling on things you did not ask for.
+4. Voice: does it sound like a person talking to you rather than a document.
+
+Rank the replies by how much you would want to receive each one, right now, fit first.
 
 Respond with EXACTLY this format, nothing else:
 RANKING: <letter> > <letter> > <letter>
-REASON: one sentence
+REASON: one sentence naming what the top reply specifically answered
 
 The letters in RANKING are the reply letters, best first, each used once."""
 
-JUDGE_SYSTEM_RESPONSIVE = """You are the person in a private text conversation. The same conversation was held with several different friends, and because each friend answered differently the conversations have drifted apart. Each one is shown from your side: your last few messages, what that friend said back, then your latest message and that friend's newest reply. You do not know who or what any friend is. Rank the newest replies by how much you would want to receive each one, right now, in the state you are in and given how that conversation has gone.
+JUDGE_SYSTEM_RESPONSIVE = """You are the person in a private text conversation. The same conversation was held with several different friends, and because each friend answered differently the conversations have drifted apart. Each one is shown from your side: your last few messages, what that friend said back, then the line marked "What you just said" and that friend's newest reply. You do not know who or what any friend is.
 
-Consider: did it take in what you actually said; does it fit your mood and energy (quiet when you are quiet, engaged when you are engaged); does it give you what you asked for without piling on things you did not ask for; does it sound like a person talking to you rather than a document.
+What matters is the line marked "What you just said": every newest reply is judged by how well it answers that specific line, not the conversation's general topic or mood. The rest of each conversation is scrollback, for background only.
+
+Judge each newest reply in this order:
+1. Fit: does it respond to what you specifically just said, the actual content, not just the general subject. A reply that would fit almost any nearby turn in this conversation, even a well-written one, has failed this check and cannot be ranked first, whatever else is good about it.
+2. Register: does it match your mood and energy (quiet when you are quiet, engaged when you are engaged).
+3. Restraint: does it give you what you asked for without piling on things you did not ask for.
+4. Voice: does it sound like a person talking to you rather than a document.
+
+Rank the newest replies by how much you would want to receive each one, right now, fit first, given how that conversation has gone.
 
 Respond with EXACTLY this format, nothing else:
 RANKING: <letter> > <letter> > <letter>
-REASON: one sentence
+REASON: one sentence naming what the top reply specifically answered
 
 The letters in RANKING are the conversation letters, best first, each used once."""
 
@@ -136,12 +183,13 @@ def letters(n: int) -> str:
 
 
 def build_prompt(history: list, replies: list) -> str:
-    convo = "\n".join(f"Them: {m}" for m in history[-4:])
+    *earlier, last = history[-4:]
+    scrollback = f"Scrollback:\n{chr(10).join(f'Them: {m}' for m in earlier)}\n\n" if earlier else ""
     blocks = "\n\n".join(f"Reply {letters(len(replies))[i]}:\n{text}" for i, text in enumerate(replies))
     tail = "Rank the replies."
     if len(replies) != 3:
         tail += f" There are {len(replies)}; use only {' and '.join(letters(len(replies)))}."
-    return f"Conversation so far:\n{convo}\n\n{blocks}\n\n{tail}"
+    return f"{scrollback}What you just said:\n{last}\n\n{blocks}\n\n{tail}"
 
 
 def build_prompt_responsive(views: list) -> str:
@@ -149,9 +197,11 @@ def build_prompt_responsive(views: list) -> str:
     blocks = []
     for i, view in enumerate(views):
         lines = [f"Conversation {letters(len(views))[i]}"]
-        for me, friend in view["context"]:
-            lines += [f"Me: {me}", f"Friend: {friend}"]
-        lines += [f"Me: {view['message']}", f"Friend (newest reply): {view['reply']}"]
+        if view["context"]:
+            lines.append("Scrollback:")
+            for me, friend in view["context"]:
+                lines += [f"Me: {me}", f"Friend: {friend}"]
+        lines += [f"What you just said:\n{view['message']}", f"Friend (newest reply): {view['reply']}"]
         blocks.append("\n".join(lines))
     tail = "Rank the newest replies."
     if len(views) != 3:
@@ -182,7 +232,7 @@ def judge(model: str, system: str, prompt: str, n: int, think=None) -> dict:
             {"role": "user", "content": prompt},
         ],
         "stream": False,
-        "options": {"temperature": 0.2, "num_ctx": NUM_CTX},
+        "options": {"temperature": 0.2, "num_ctx": NUM_CTX, "num_predict": NUM_PREDICT},
     }
     if think is not None:
         payload["think"] = think
@@ -257,6 +307,32 @@ def candidate_replies(control: str, turn: int, runs: dict, decoys: dict) -> dict
     if control == "mismatch":
         replies["MISMATCH"] = runs["PROMPTED"][decoys[turn]]["reply"]
     return replies
+
+
+def build_exchanges_before(runs: dict, name: str, turn: int, context_exchanges: int) -> list:
+    prior = [t for t in sorted(runs[name]) if t < turn][-context_exchanges:]
+    out = []
+    for t in prior:
+        rec = runs[name][t]
+        shown = rec["reply"] if is_delivered(rec) else NO_REPLY_SHOWN
+        out.append((rec["message"], shown))
+    return out
+
+
+def build_responsive_view(runs: dict, decoys: dict, exchanges_before, name: str, turn: int) -> dict:
+    """One judge-facing view for `name` at `turn`.
+
+    MISMATCH keeps PROMPTED's own real context and message (it must still read
+    as a coherent conversation) but swaps in PROMPTED's own reply from a
+    different, decoyed turn: the reply that cannot fit this one.
+    """
+    source = "PROMPTED" if name == "MISMATCH" else name
+    reply_turn = decoys[turn] if name == "MISMATCH" else turn
+    return {
+        "context": exchanges_before(source, turn),
+        "message": runs[source][turn]["message"],
+        "reply": runs[source][reply_turn]["reply"],
+    }
 
 
 def chi_square_p_df2(counts: list) -> float:
@@ -385,7 +461,10 @@ def main() -> int:
         print_agreement(human_agreement(saved["results"], picks))
         return 0
 
-    control = "none" if args.responsive else args.control
+    control = args.control
+    if args.responsive and control not in ("none", "mismatch"):
+        print(f"--control {control} is not wired up for --responsive yet (only none/mismatch are).")
+        return 1
     held_mode = args.held or ("forfeit" if args.responsive else "skip")
     if control != "none" and held_mode == "forfeit":
         print("Controls need every system delivered; using --held skip.")
@@ -440,13 +519,10 @@ def main() -> int:
     votes = unparsed = agree = forfeited = 0
 
     def exchanges_before(name: str, turn: int) -> list:
-        prior = [t for t in sorted(runs[name]) if t < turn][-args.context_exchanges:]
-        out = []
-        for t in prior:
-            rec = runs[name][t]
-            shown = rec["reply"] if is_delivered(rec) else NO_REPLY_SHOWN
-            out.append((rec["message"], shown))
-        return out
+        return build_exchanges_before(runs, name, turn, args.context_exchanges)
+
+    def responsive_view(name: str, turn: int) -> dict:
+        return build_responsive_view(runs, decoys, exchanges_before, name, turn)
 
     for turn in all_turns:
         message = next(runs[s][turn]["message"] for s in sources if turn in runs[s])
@@ -460,14 +536,7 @@ def main() -> int:
         for p in range(args.passes):
             order = rng.sample(present, len(present))
             if args.responsive:
-                views = [
-                    {
-                        "context": exchanges_before(s, turn),
-                        "message": runs[s][turn]["message"],
-                        "reply": runs[s][turn]["reply"],
-                    }
-                    for s in order
-                ]
+                views = [responsive_view(s, turn) for s in order]
                 prompt = build_prompt_responsive(views)
             else:
                 prompt = build_prompt(history, [texts[s] for s in order])
@@ -527,7 +596,9 @@ def main() -> int:
     out = args.out
     if out is None:
         safe = args.judge_model.replace(":", "-").replace("/", "-")
-        if args.responsive:
+        if args.responsive and control != "none":
+            out = Path(f"tools/cache/blind_judge_responsive_control_{control}_{args.topic}_{safe}.json")
+        elif args.responsive:
             out = Path(f"tools/cache/blind_judge_responsive_{args.topic}_{safe}.json")
         elif control != "none":
             out = Path(f"tools/cache/blind_judge_control_{control}_{args.topic}_{safe}.json")
@@ -536,7 +607,8 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps({"summary": summary, "results": results}, indent=2))
 
-    label = "RESPONSIVE " if args.responsive else (f"CONTROL {control.upper()} " if control != "none" else "")
+    control_label = f"CONTROL {control.upper()} " if control != "none" else ""
+    label = f"RESPONSIVE {control_label}" if args.responsive else control_label
     print(f"\n=== {label}BLIND JUDGE ({args.judge_model}), topic {args.topic!r}, {votes} votes over "
           f"{len(comparable)} turns x {args.passes} passes ===")
     for s in slots:

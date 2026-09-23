@@ -135,6 +135,29 @@ class HumanAgreement(unittest.TestCase):
         self.assertEqual(got["votes"], 0)
 
 
+class ResponsiveMismatch(unittest.TestCase):
+    def _runs(self):
+        return {
+            "BONEAMANITA": {t: {"reply": f"bone {t}", "message": f"me {t}"} for t in range(10)},
+            "PROMPTED": {t: {"reply": f"friend {t}", "message": f"me {t}"} for t in range(10)},
+        }
+
+    def test_mismatch_view_keeps_real_context_but_decoys_the_reply(self):
+        runs = self._runs()
+        exchanges_before = lambda name, turn: bj.build_exchanges_before(runs, name, turn, 1)
+        view = bj.build_responsive_view(runs, {4: 9}, exchanges_before, "MISMATCH", 4)
+        self.assertEqual(view["message"], "me 4")
+        self.assertEqual(view["reply"], "friend 9")
+        self.assertEqual(view["context"], [("me 3", "friend 3")])
+
+    def test_non_mismatch_view_is_just_that_systems_own_turn(self):
+        runs = self._runs()
+        exchanges_before = lambda name, turn: bj.build_exchanges_before(runs, name, turn, 1)
+        view = bj.build_responsive_view(runs, {}, exchanges_before, "BONEAMANITA", 4)
+        self.assertEqual(view["message"], "me 4")
+        self.assertEqual(view["reply"], "bone 4")
+
+
 class ResponsivePrompt(unittest.TestCase):
     def test_each_conversation_shows_its_own_context_and_hides_who_wrote_it(self):
         views = [
@@ -142,7 +165,11 @@ class ResponsivePrompt(unittest.TestCase):
             {"context": [("hi", "(no reply came back)")], "message": "ok", "reply": "sure"},
         ]
         text = bj.build_prompt_responsive(views)
-        self.assertIn("Conversation A\nMe: hi\nFriend: hello there\nMe: tired\nFriend (newest reply): rest", text)
+        self.assertIn(
+            "Conversation A\nScrollback:\nMe: hi\nFriend: hello there\n"
+            "What you just said:\ntired\nFriend (newest reply): rest",
+            text,
+        )
         self.assertIn("Conversation B", text)
         self.assertIn("There are 2; use only A and B.", text)
 

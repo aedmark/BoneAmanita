@@ -293,6 +293,151 @@ mask tax never fired in either instrumented replay, so it is unconfirmed
 whether it is a live contributor or just a bigger dormant risk of the same
 kind.
 
+**Update, 2026-09-22: the three-judge blind panel with controls, run fresh
+end to end, still finds no trustworthy judge.** Full test suite passed clean
+first (626 passed, 5 skipped, 142 subtests, 9m35s; the ROS fix above did not
+regress anything). Then, per the "full run, from scratch" recipe in
+`TESTING.md`: fresh `census` (bone), `vanilla`, three independent `friend`
+runs (for the `samples` control), and `textbook` arms generated for `toast`,
+judged by `mistral-nemo:latest`, `ministral-3:14b`, and `qwen3:30b-a3b`
+(`phi4` and `gpt-oss:20b` skipped: not pulled locally, and already
+disqualified last session for rewarding the textbook anti-pattern), each
+validated against all four controls before the real ranking, 2 passes,
+`--seed 20260920` (the tool's default). Full results and the built panel are
+in `tools/cache/` (`blind_judge_control_*_toast_*.json`,
+`blind_judge_results_*.json`, `panel.html` / `panel-standalone.html`), none
+committed (matches how the earlier control battery's caches were left).
+
+| judge | `null` (fair 33%) | `samples` (fair 33%) | `mismatch` (bar: 90% last) | `textbook` |
+|---|---|---|---|---|
+| `mistral-nemo` | 52% one position, p<.001 | 55% one position, p<.001 | 52% last, **FAIL** | rejected (9/60 first) |
+| `ministral-3:14b` | 93% one position, p<.001 | 62% one position, p<.001 | 62% last, **FAIL** | rejected (1/60 first) |
+| `qwen3:30b-a3b` | 100% one position, p<.001 | 40% one position, p=.52 (passes) | 65% last, **FAIL** | rejected (0/60 first) |
+
+**All three fail `mismatch` again**, this time by a wider margin than the
+six-judge battery two sessions ago (52-65% last-place here vs. 57-79% then;
+same conclusion, "did it fit the conversation" is still not what any of
+these judges actually score). **`qwen3:30b-a3b`'s `null` result inverted**:
+"least biased" (47%, p=.09) two sessions ago, 100% position-A this time,
+worse than the other two judges it previously beat. Nothing in the harness
+changed between those runs; the census/vanilla/friend/textbook arms are
+freshly generated each time (`gemma4:12b` at its own sampling temperature,
+not seeded), so the specific reply text in each labeled slot differs run to
+run, and per `TESTING.md`'s own caveat, a control result is about the
+rubric-plus-judge-plus-content pairing, not the judge model alone. Read
+`qwen3:30b-a3b`'s prior "best of six" label as unearned rather than update
+it outright; a third `null` run on yet another fresh census would say
+whether 47% or 100% is closer to how this judge actually behaves. The real
+three-way rankings (`BONEAMANITA` first-place, of 60 votes: `mistral-nemo`
+25, `ministral-3` 23 tied with `PROMPTED`'s 23, `qwen3:30b-a3b` 31) are in
+`tools/cache/blind_judge_results_*.json` for the record, but per the
+`mismatch` failure above, none of the three should be read as a real
+quality verdict, same caveat as every ranking before `2026-09-21`.
+
+**Update, later the same day: the `null` swing was content, not noise, and
+an explicit rubric fix clears `mismatch` for one judge.** Reran
+`qwen3:30b-a3b`'s `null` control on the exact same cached census reply as
+above: identical result to the decimal (`COPY_1` 17 / `COPY_2` 18 / `COPY_3`
+25 first-place, mean ranks 2.07/2.0/1.93, position lean still 100% A). So
+this judge's tie-breaking on a `null` control is fully deterministic given
+fixed content, not run-to-run randomness; the 47% from two sessions ago came
+from a *different* census reply (freshly regenerated text each run), meaning
+its bias is content-dependent, not a stable trait you can average away. That
+makes it less predictable than a judge with a flat, consistent lean, not more
+trustworthy.
+
+Rewrote the judge rubric (`tools/audit_somatic_blind_judge.py`,
+`JUDGE_SYSTEM` / `JUDGE_SYSTEM_RESPONSIVE` / `build_prompt` /
+`build_prompt_responsive`): fit to the specific last message is now an
+explicit, first, gating criterion ("a reply that would fit almost any nearby
+turn... cannot be ranked first, whatever else is good about it") instead of
+one item in a four-item list, and the prompt now separates "What you just
+said" from "Scrollback" instead of leaving the line that matters as the last
+of four undifferentiated history lines. `tests/test_judge_controls.py`
+updated for the new prompt shape; full suite still green (626 passed, 5
+skipped, 142 subtests).
+
+Reran `--control mismatch` on all three judges with the new rubric, same
+`toast` arms as above:
+
+| judge | old rubric | new rubric | bar |
+|---|---|---|---|
+| `mistral-nemo` | 52% last | 50% last | FAIL, unchanged within noise |
+| `ministral-3:14b` | 62% last | 78% last | FAIL, but a real improvement |
+| `qwen3:30b-a3b` | 65% last | **92% last** | **PASS** (bar: 90%) |
+
+`qwen3:30b-a3b` is the first judge, of nine tried across two sessions, to
+clear `mismatch`. This sits in tension with writing it off as "too big, too
+unhelpful" on cost alone (18-20GB, MoE with partial CPU offload, loads the
+whole machine, ~13-20 min per control run vs. ~1-2 min for the other two):
+it is also the only one that has actually demonstrated it can tell a reply
+answering the right turn from a well-written reply to the wrong one, which
+is the entire thing this control battery exists to check for. Its `null`
+weakness is narrower than it first looked: it only shows up when replies are
+genuinely tied (no real signal to rank by), not when they actually differ,
+and `mismatch`/the real ranking are both signal-bearing. Not yet rerun:
+`null` and `samples` under the new rubric for `qwen3:30b-a3b` (to see
+whether the explicit fit framing also steadies its tie-breaking), and
+`textbook` under the new rubric for all three (the old rubric's textbook
+numbers were already clean, no reason yet to expect the rewrite broke them,
+but not confirmed). **Decided and acted on:** `qwen3:30b-a3b` stays as the
+validated judge for the real three-way ranking (ties are rare there and fit
+is the whole question), `mistral-nemo` is downgraded to controls-only (the
+rubric fix did not move its `mismatch` score, do not trust its ranking).
+Full table and reasoning moved to `TESTING.md`'s judge sections, the standing
+reference; this file keeps the pointer.
+
+Checked whether `qwen3:30b-a3b`'s weight can be trimmed rather than just
+accepted: its `Q4_K_M` weights alone are 18GB, more than the 16GB card, so
+some CPU offload is structural at this quantization, not fixable from this
+repo. `NUM_CTX` for this tool *was* fixable and was oversized for the job
+(16384, measured worst case on real `toast` data ~1830 tokens scripted,
+~1230 responsive); dropped it to 6144 (`tools/audit_somatic_blind_judge.py`),
+confirmed via a live `ollama ps` check that this cuts the CPU-offloaded
+fraction from 24% to 18-19% and shrinks total resident size (20GB -> 18-19GB).
+Real but modest: it thins the KV cache, it does not change how much of the
+model's own weights fit on a 16GB card. A smaller quant would remove the
+floor outright but needs a fresh pull (a few GB download), not done without
+asking first.
+
+Checked the Ollama library for a smaller quant of `qwen3:30b-a3b` before
+accepting the floor above: there isn't one. The 30b-a3b size class only
+ships as `Q4_K_M` (19GB, what's pulled), `Q8_0` (33GB), or `fp16` (61GB); our
+tag is already the smallest official option. A lower-bit quant would mean a
+community GGUF off Hugging Face, a different trust boundary, and MoE models
+degrade faster than dense ones at low bit-depths, so it would risk the exact
+judgment quality that just earned this model the validated-judge label.
+Left alone.
+
+**Update, later still: the real ranking, rerun with rubric v2 and the
+validated judge, does not repeat the old headline.** Under the old rubric
+(two updates up), `qwen3:30b-a3b` had `BONEAMANITA` ahead 31 first-place to
+`PROMPTED`'s 24, and beating it head-to-head 32-28. Same arms, same judge,
+rubric v2 only:
+
+    BONEAMANITA  first place 26   mean rank 1.77
+    PROMPTED     first place 28   mean rank 1.63
+    VANILLA      first place  6   mean rank 2.60
+    head-to-head: BONEAMANITA 29-31 PROMPTED, BONEAMANITA 45-15 VANILLA,
+                  PROMPTED 51-9 VANILLA
+
+`BONEAMANITA` vs. `PROMPTED` is 29-31 of 60, indistinguishable from a coin
+flip, and `PROMPTED`'s mean rank is now slightly *better* (1.63 vs. 1.77).
+**Both clearly beat bare `VANILLA`** (no system prompt at all), by nearly
+identical margins. So on the one judge validated to actually check fit to
+the conversation, on this topic, in scripted (not responsive) mode: the
+engine's edge is over having no framing at all, not over a single generic
+"warm, concise friend" line. That is a materially more honest, less
+flattering result than every number produced by a judge that failed
+`mismatch`, which is exactly the point of having validated one. Full results:
+`tools/cache/blind_judge_results_qwen3-30b-a3b_rubric2.json`. Not yet done:
+the same rerun on other topics (only `toast` has been touched this cycle)
+and on the responsive track, where the doc has argued from the start that
+the real difference, if there is one, should show up. `--responsive`
+`mismatch` has still never been run at all; per the "not yet acted on" note
+several updates up, this is the natural next control to clear before trusting
+a responsive ranking the same way.
+
 ### Session mechanics note
 
 The scratchpad directory (`/tmp/claude-.../scratchpad/`) was wiped mid-session

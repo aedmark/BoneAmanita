@@ -232,11 +232,41 @@ system produced no visible reply, `--held forfeit` (default for
 one failed `mismatch` (57-79% last place, bar is ~90%), and every one showed
 real position bias on `null`/`samples` (47-62% toward one slot, `qwen3:30b-a3b`
 least biased). `phi4` and `gpt-oss:20b` additionally reward the `textbook`
-style. No local judge currently clears the bar to trust a real verdict from.**
-Full numbers: `SESSION_HANDOFF.md#judge-controls-2026-09-21` and
-`tools/cache/blind_judge_control_*_toast_*.json`. Rerun the controls whenever
-the rubric, the judge model, or the decoy logic changes — a control result is
-about the judge-plus-rubric pairing, not a fact about the judge model alone.
+style.**
+
+**Update, 2026-09-22: rubric rewrite clears `mismatch` for one judge.** The
+old rubric buried "did it respond to what was said" in a four-item list
+alongside tone/register/restraint; `JUDGE_SYSTEM` now makes fit an explicit,
+first, gating question ("a reply that would fit almost any nearby turn...
+cannot be ranked first"), and `build_prompt`/`build_prompt_responsive`
+separate the line a reply must answer ("What you just said") from
+"Scrollback" instead of leaving it as the last of four undifferentiated
+history lines. Re-tested `mismatch` on the three judges still locally
+available (`phi4`/`gpt-oss:20b` were never repulled, already disqualified on
+`textbook`): `mistral-nemo` 50% last (unchanged, still FAIL), `ministral-3:14b`
+78% last (up from 62%, still FAIL), **`qwen3:30b-a3b` 92% last, PASS** (up
+from 65%). **Current read: `qwen3:30b-a3b` is the validated judge for a real
+ranking** (its `null`/`samples` position bias is real but only shows up when
+replies are genuinely tied, which a real ranking or `mismatch` is not);
+`mistral-nemo` is controls-only from here (fast, but the rubric fix did not
+move its `mismatch` score, do not trust its ranking); `ministral-3:14b` is a
+maybe, improved but unconfirmed. Full numbers in `SESSION_HANDOFF.md` (search
+`the three-judge blind panel` and the two updates after it) and
+`tools/cache/blind_judge_control_*_toast_*_rubric2.json`. Rerun the controls
+whenever the rubric, the judge model, or the decoy logic changes again, a
+control result is about the judge-plus-rubric pairing, not the judge model
+alone, which is exactly what changed here.
+
+`qwen3:30b-a3b` is also the heaviest judge to run (MoE, 18GB of `Q4_K_M`
+weights alone, more than the 16GB card, so some of it always offloads to
+CPU): `NUM_CTX` in this file dropped from 16384 to 6144 (measured worst case
+on real `toast` data is ~1830 tokens for a scripted prompt, ~1230 for a
+responsive one; 6144 keeps >3x headroom), which cut the CPU-offloaded
+fraction from 24% to 18-19% in a live `ollama ps` check. That is a real but
+modest win: the base weights still exceed the card, so some CPU offload is
+structural at this quantization, not something a context change can remove
+outright. A smaller quant (if one exists on the registry) would need pulling
+and hasn't been checked or downloaded.
 
 `--responsive` swaps the input source and prompt shape (see "Scripted vs.
 responsive" above) but the same control modes apply to it in principle;
@@ -348,11 +378,11 @@ single GPU.
 | `gemma4:12b` | responder (all arms) | 7.6GB | engine sets `think: False` itself; vanilla.py's `SAMPLING` does too |
 | `gemma4:e4b` | the engine's own DSPy critic (not swappable from these tools) | 9.6GB | n/a |
 | `qwen3.5:9b` | simulated person | 6.6GB | `off` |
-| `mistral-nemo` | judge (default) | 7.1GB | none (no reasoning mode) |
-| `ministral-3:14b` | judge | 9.1GB | none |
+| `mistral-nemo` | judge (default, controls-only as of 2026-09-22: fast, but the rubric v2 fix did not clear `mismatch` for it) | 7.1GB | none (no reasoning mode) |
+| `ministral-3:14b` | judge (unconfirmed: improved on `mismatch` under rubric v2, still fails) | 9.1GB | none |
 | `phi4` | judge (textbook-biased, see above) | 9.1GB | none |
 | `gpt-oss:20b` | judge (textbook-biased, see above) | 13GB | `low` (empty visible output otherwise) |
-| `qwen3:30b-a3b` | judge (best of six, still fails mismatch) | 18-20GB, MoE (partial CPU offload) | `off` |
+| `qwen3:30b-a3b` | **validated judge for a real ranking as of 2026-09-22** (rubric v2, `mismatch` 92%); slow and heavy regardless | 18-19GB, MoE (partial CPU offload even at `NUM_CTX` 6144) | `off` |
 
 `gpt-oss:20b` and `qwen3:30b-a3b` visibly load the whole machine, not just the
 GPU (confirmed live) — don't run either alongside another heavy job, and
