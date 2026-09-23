@@ -12,7 +12,6 @@ rm -f ./lore/akashic_discovered_words.json
 rm -f ./legacy.json
 rm -f ./fractal_adventure.json
 rm -rf ./output
-rm -rf ./tools/cache
 rm -rf ./test_telemetry_logs
 rm -rf ./test_output_full.log
 rm -rf ./test_memories.log
