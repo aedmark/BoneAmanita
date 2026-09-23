@@ -238,7 +238,12 @@ def judge(model: str, system: str, prompt: str, n: int, think=None) -> dict:
         payload["think"] = think
     resp = requests.post(ENDPOINT, json=payload, timeout=600)
     resp.raise_for_status()
-    text = resp.json()["message"]["content"].strip()
+    # think: false does not reliably suppress a reasoning model's <think> block
+    # (somatic_sim_user.py already strips it for the same Qwen family; this
+    # tool never had the same treatment, and a judge that spends its whole
+    # NUM_PREDICT budget reasoning on every vote instead of just the rare hard
+    # one is not a hang, just ~2048 tokens/vote x 60 votes of dead weight).
+    text = re.sub(r"<think>.*?</think>", "", resp.json()["message"]["content"], flags=re.S).strip()
     reason = next(
         (
             l.replace("*", "").strip().split(":", 1)[1].strip()
@@ -443,7 +448,7 @@ def main() -> int:
     parser.add_argument("--textbook-cache", type=Path, default=Path("tools/cache/somatic_textbook.jsonl"))
     parser.add_argument("--responsive-cache", type=Path, default=Path("tools/cache/somatic_responsive.jsonl"))
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
-    parser.add_argument("--think", choices=sorted(THINK_VALUES), default="default", help="reasoning judges")
+    parser.add_argument("--think", choices=sorted(THINK_VALUES), default="off", help="reasoning judges")
     parser.add_argument("--passes", type=int, default=2)
     parser.add_argument("--seed", type=int, default=20260920)
     parser.add_argument("--human", type=Path, help="a person's picks, the panel's copied text")

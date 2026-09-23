@@ -438,6 +438,140 @@ the real difference, if there is one, should show up. `--responsive`
 several updates up, this is the natural next control to clear before trusting
 a responsive ranking the same way.
 
+**Update, later still: wiring up `--responsive --control mismatch`, and a
+long chain of self-inflicted trouble getting it to actually run.** Worth its
+own entry: every failure below was a real, fixable thing, not hardware or
+model quality, and the last one wasted the most time for the dumbest reason.
+
+*The actual wiring.* `audit_somatic_blind_judge.py`'s `main()` had
+`control = "none" if args.responsive else args.control`: `--responsive`
+silently discarded whatever `--control` was, every time, regardless of the
+docstring's "the same control modes apply to it in principle." Fixed:
+`control = args.control`, plus a guard that only `none`/`mismatch` are
+actually wired (null/samples/textbook still aren't - they'd need a
+responsive-shaped view builder too, not done). Built `MISMATCH` for the
+responsive prompt shape: `build_responsive_view()` keeps `PROMPTED`'s own
+real context and current message (must still read as a coherent
+conversation) but swaps in `PROMPTED`'s own reply from a different, decoyed
+turn in the *same* conversation, mirroring exactly what the scripted control
+already does. Hoisted the two closures this needed (`exchanges_before`,
+the view builder) to module level, top-level-testable, matching
+`candidate_replies`'s existing style; `tests/test_judge_controls.py` gained
+`ResponsiveMismatch` covering both. Generated fresh full 30-turn `bone` /
+`friend` / `vanilla` responsive runs for `toast` (only a 15-turn debug `bone`
+existed, from the `ros_buildup` investigation above).
+
+*Failure 1, a process-discipline bug.* First validation attempt crashed
+with a 600s `ReadTimeout` after 22 of 60 votes, no verdict, no output file.
+It was chained into a script with the real ranking run *after* it and no
+`set -e` / exit-code check between steps, so the crash was silently ignored
+and the ranking ran anyway, unvalidated - exactly the shortcut this whole
+session has been refusing to take, done by accident through carelessness.
+Lesson: any chained sequence of `tool A; tool B` where B should not run if A
+failed needs `set -e` or an explicit check, every time, not just when it
+seems important.
+
+*Failure 2, a red herring chased for too long.* Reran standalone: crashed at
+the identical vote again (same seed, same data, so a deterministic replay).
+Tried `--think off`, reasoning that Qwen's `think: false` might not fully
+suppress reasoning (confirmed separately: a plain "Say OK." smoke test still
+emitted a `<think>` preamble). That run was *worse* - stuck at vote zero for
+20+ minutes - which in hindsight was already evidence the theory was
+incomplete, not confirmed. Diagnosed via `vmstat` (77-92% io-wait, real swap
+thrashing) and pinned it on a burst of Discord processes with recent start
+times in `ps aux`. **That diagnosis was wrong**: Gordon had *closed* Discord
+at that moment, not opened it, so the young-looking PIDs were its own
+shutdown/crash-handler children exiting, not a fresh launch competing for
+RAM. Lesson: a process's `ps` start time alone does not tell you whether it
+is arriving or leaving; check before building a causal story on it.
+
+*The real bug.* Tried a lighter, non-MoE judge (`qwen3.5:9b`, dense, 6.6GB)
+on Gordon's read that the 7800XT just isn't suited to a 30B MoE - a
+reasonable call given the evidence so far. It **also** hung indefinitely,
+which finally pointed at something shared by both models rather than a
+qwen3:30b-a3b-specific or hardware-specific cause: `judge()`'s payload never
+set `num_predict` at all, uncapped, and `somatic_sim_user.py` already knew
+(and defensively handles, with a `re.sub(r"<think>.*?</think>", ...)` strip)
+that Qwen-family models emit real `<think>` reasoning content even under
+`think: false`. `audit_somatic_blind_judge.py` never got the same treatment.
+An uncapped judge occasionally reasoning at length on a genuinely ambiguous
+ranking, with no output ceiling, is a slow-motion hang waiting to happen -
+not always, which is exactly why it passed on shorter scripted prompts and
+only surfaced on the longer responsive ones. Fixed both gaps: `NUM_PREDICT
+= 2048` added to the payload (measured: exactly caps generation, `done_reason:
+"length"`, ~41s for a full 2048 tokens under normal load), and `judge()` now
+unconditionally strips `<think>...</think>` before parsing, matching
+`somatic_sim_user.py`'s own pattern. `--think` CLI default changed from
+`"default"` to `"off"`. Retested `qwen3.5:9b`: full 60-vote control in under
+2 minutes, versus never finishing before. Its numbers, now real: `null` 100%
+position-A (identical first-place counts and mean ranks to `qwen3:30b-a3b`'s
+own `null` runs - not a bug, a fixed `--seed` reproduces the same shuffle for
+every judge, so if two models share the same "default to whatever's in
+position A" habit on genuinely tied content, as these two Qwen-family models
+apparently do, the aggregated stats converge exactly), `textbook` clean
+(1/60 first place), `mismatch` **80% last, FAIL** (close, not a pass).
+Standings under rubric v2 now: `mistral-nemo` 50%, `ministral-3:14b` 78%,
+`qwen3.5:9b` 80%, `qwen3:30b-a3b` 92% (still the only pass).
+
+*Failure 3, the dumbest one.* Retried `qwen3:30b-a3b` responsive `mismatch`
+with both real fixes in place. After 32 minutes with zero votes printed to
+the piped log file, killed it as apparently stuck - consistent with the
+whole night's pattern, so a reasonable-*seeming* call. **It was wrong, and
+provably so**: `journalctl -u ollama` for that window showed dozens of
+clean `200`-status completions, 10-66 seconds apart, steady and healthy,
+right up to the `kill` (the very last log line is that request being
+cancelled mid-flight after 27.6s - every request before it had succeeded).
+The run was never stuck. The actual bug: piping a Python script's stdout to
+a file, when that file is not a TTY, gets fully block-buffered rather than
+line-buffered, so `print()`-ed vote lines sat in an internal buffer and
+never reached the log being watched, for the entire run. A genuinely
+finished process would have flushed on exit; a killed one never got the
+chance. **Lesson, the one worth remembering:** run any backgrounded script
+whose live progress matters with `PYTHONUNBUFFERED=1` (or `python -u`) from
+the start, and before killing anything that looks stuck, check server-side
+evidence (`journalctl -u ollama`, `ollama ps`'s CPU%, `vmstat`) rather than
+trusting a client-side log that may simply not have flushed yet. Every
+earlier crash tonight was a real bug worth finding and fixing; this one
+wasted the most time and was never a bug in the thing being tested at all.
+
+*The actual result, once the tooling stopped getting in the way.* Reran
+`qwen3:30b-a3b` on responsive `mismatch` with `PYTHONUNBUFFERED=1` and both
+real fixes (the output cap, the `<think>` strip) in place. It finished
+clean, no crash, real progress visible throughout: 39 votes over 28 turns x
+2 passes (2 turns skipped, a system produced no reply; 17 of the 56 possible
+votes unparsed, notably higher than any scripted run, consistent with the
+harder responsive prompt pushing more replies past `NUM_PREDICT` before an
+answer forms).
+
+    BONEAMANITA  first place  7   mean rank 2.18
+    PROMPTED     first place 25   mean rank 1.38
+    MISMATCH     first place  7   mean rank 2.44
+    MISMATCH ranked last in 24 of 39 (62%). FAIL (bar: 90%).
+
+**This is a real result, not another artifact.** The judge validated on
+scripted `mismatch` at 92% does not clear it on the responsive format: 62%
+last-place, and tellingly, `BONEAMANITA` and the `MISMATCH` decoy tied at 7
+first-place votes each, mean ranks close (2.18 vs. 2.44) - the judge is not
+clearly telling a genuine on-turn reply from a wrong-turn one here, which is
+exactly the failure `mismatch` exists to catch. `PROMPTED` dominating (25,
+mean rank 1.38) regardless of whether it's being compared to a real
+`BONEAMANITA` turn or its own wrong-turn self suggests something about
+`PROMPTED`'s responsive replies (shorter, more consistent register from a
+one-line system prompt, maybe) reads as generically preferable to this
+judge independent of fit, in this format specifically.
+
+**Where this leaves the responsive track: nowhere validated yet.** No judge
+has cleared responsive `mismatch` (only `qwen3:30b-a3b` has even been tried
+against it). The scripted rubric-v2 win does not transfer format for
+format; the real responsive ranking still should not be trusted from any
+judge tried so far. Not done: try the other three judges on responsive
+`mismatch` (fast to check now that the tooling bugs are fixed - `mistral-nemo`
+and `ministral-3:14b` in particular, both light, both quick), or write a
+second-generation rubric specifically for the responsive shape (three full
+parallel conversations may need a different framing than "what you just
+said" separated from one scrollback, since here there are three separate
+scrollbacks to keep straight, one per conversation, not one shared history).
+
 ### Session mechanics note
 
 The scratchpad directory (`/tmp/claude-.../scratchpad/`) was wiped mid-session
