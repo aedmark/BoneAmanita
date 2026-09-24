@@ -113,7 +113,7 @@ this uploaded build, never a committed file):
 .venv/bin/python tools/build_blind_panel.py --responsive --topic toast \
   --title "Which Reply Would You Rather Get?" \
   --story "Someone has to give the toast at their brother's wedding, and they're dreading it. Over thirty messages they go from putting it off, to a first draft, to a bad night, and back again." \
-  --disclose "BoneAmanita was fixed over the last two days after reading its earlier runs of this same conversation (same character, same wedding): its style filters, its temperature control, a reply-length cap, its context window and a prompt that was carrying unrelated text. Those fixes are in this run. The friend prompt and the plain AI got no such attention, so this page favours BoneAmanita on this particular story." \\
+  --disclose "BoneAmanita was fixed over the last two days after reading its earlier runs of this same conversation (same character, same wedding): its style filters, its temperature control, a reply-length cap, its context window and a prompt that was carrying unrelated text. Those fixes are in this run. The friend prompt and the plain AI got no such attention, so this page favours BoneAmanita on this particular story." \
   --contact-email "<Gordon's address>" \
   --out tools/cache/panel_public.html --standalone tools/cache/panel_public_standalone.html
 ```
