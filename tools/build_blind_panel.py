@@ -95,8 +95,11 @@ def method_lines(runs: dict, responsive: bool, disclosures: list = ()) -> list:
                 f"internal state (this run, over the {len(temps)} turns it called the model: {min(temps):.2f} to "
                 f"{max(temps):.2f}, median {sorted(temps)[len(temps) // 2]:.2f}")
         line += f", with {greedy} turns at 0, the model's single most likely wording)" if greedy else ")"
-        line += (f" and caps reply length ({', '.join(map(str, caps))} tokens). The other two sampled at temperature "
-                 f"{SAMPLING['temperature']} every turn with no length cap.")
+        cap_text = f"{caps[0]:,}" if len(caps) == 1 else f"{caps[0]:,} to {caps[-1]:,}"
+        longest = max((r["usage"].get("output_tokens") or 0 for r in bone if r.get("usage")), default=0)
+        line += (f" and a reply-length ceiling of {cap_text} tokens"
+                 + (f", which no reply came near (the longest was {longest:,})" if longest and longest < caps[0] * 0.8 else "")
+                 + f". The other two sampled at temperature {SAMPLING['temperature']} every turn with no length cap.")
         lines.append(line)
     usage = [r["usage"] for r in bone if r.get("usage") and r["usage"].get("prompt_tokens")]
     if usage:

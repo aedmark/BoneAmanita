@@ -526,6 +526,63 @@ the `/mode` warning; `--save` with a test that it never touches `lore/`.
 **Not in scope:** tuning mid-panel-run. The census boots a stock engine and
 must keep doing so.
 
+## A8. Right-size the context window (plan, not started; drafted 2026-09-24)
+
+20.7.4.20 made the engine ask Ollama for its own window (`CORTEX.NUM_CTX`,
+native `/api/chat`) and set it to 32768 to match the baseline arms. That
+fixed the truncation, but it is far bigger than the engine needs: with the
+source-code sweep scoped to TECHNICAL, a conversation prompt is about 1.3k
+tokens (turns 0 and 1 of the first run after the fix, which were 4k and 7.8k
+before). Gordon: "That's a lot of weight to carry around each turn,
+especially at boot."
+
+**Why the window costs even when the prompt is small:** Ollama reserves the
+KV cache for the whole `num_ctx` when it loads the model, whatever a prompt
+uses. On `gemma4:12b` that was 8.1 GB at 4096 and 8.4 GB at 32768 (its
+sliding-window attention keeps the difference small; a model without it pays
+far more), and it is VRAM the critic (`gemma4:e4b`) and the simulated person
+share. A bigger reservation also means a slower load at boot.
+
+**The trap:** sizing the window per call. A request with a different
+`num_ctx` makes Ollama reload the model (verify on 0.32 before relying on
+it), so a window that tracks each prompt would reload on most turns. The
+window has to be one size per session, chosen from measurement.
+
+**Plan:**
+
+- **Measure what prompts actually need.** Census records carry
+  `usage.prompt_tokens` per turn from Ollama's own count. Take the largest
+  across a responsive run in each mode that matters (CONVERSATION,
+  ADVENTURE, TECHNICAL with the sweep, a boot turn), plus the largest reply
+  the engine allows, plus a margin.
+- **Measure what a window costs**: VRAM (`ollama ps`) and cold load time at
+  4096, 8192, 16384 and 32768 on the shipped model, so the choice is a
+  trade-off with numbers on both sides.
+- **Pick the smallest bucket that fits** (likely 8192) as `NUM_CTX`, fixed
+  per session. Keep the per-call warning when a prompt fills the window.
+- **Never let Ollama truncate.** When a prompt plus reply room would
+  overflow, Ollama cuts from the *start*, which is the system kernel. The
+  composer knows its blocks' priorities; it should drop or shorten the
+  lowest-priority ones (oldest dialogue first) itself, and file a receipt
+  saying what it cut, so an overflow is visible and ordered, never silent.
+- **Weigh the prompt's standing blocks.** On a typical turn "BOOT
+  DIRECTIVES" is still about 2.6k characters and "RECENT DIALOGUE" grows to
+  about 4k. Find out what BOOT DIRECTIVES carries after boot and whether it
+  must ride along every turn. The `composer.compose` receipt already lists
+  the blocks; add each block's size so this is measurable per turn.
+
+**Fairness:** the baseline arms need a large window for a different reason:
+they carry the whole transcript, and vanilla's replies run to 340 words. The
+panel's fine print states each side's context from the records, so the two
+can differ as long as neither truncates.
+
+**Deliverables:** the prompt-size table by mode; the VRAM/load table by
+window; `NUM_CTX` set from them; composer-side overflow trimming with a
+receipt and a test that the system kernel survives an oversized dialogue;
+block sizes in the compose receipt.
+
+**Not in scope:** changing the baseline arms' window.
+
 # Track B: The Creative Determinant
 
 **Correction (2026-09-17):** The graph Laplacian and Picard solver described in earlier versions of this document have been removed. Following a recommendation from Nelson Spence, who pointed out the Laplacian term was contributing only ~1.5% of the eigenvalue, the governor no longer builds a memory subgraph or solves an elliptic BVP. Instead, `CyberneticGovernor._bitmap_regulation` reads `SignBitmap.score_all(q)` in one pass to compute a standard deviation score over the corpus mean, gating temperature directly. The prompt tag is now `<thermal_gate>`. B0 through B3 below have been updated to reflect the current design.

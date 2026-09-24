@@ -89,9 +89,18 @@ in `tools/cache/somatic_responsive.jsonl` (gitignored, local only).
   `tests/test_memory.py` was indented inside another test method, so pytest
   never collected it. Moved to module level; all four pass.
 
-**The panel run still predates every fix since 20.7.4.15** (token cap,
-context, source sweep). One more `bone` run after `reset.sh`, rebuild, then
-upload.
+**The panel run on 20.7.4.20** (`20260924-074939`, fresh, paced, after
+`reset.sh`): 30 turns, 0 held, 1 redraft ("tapestry", fixed on the second
+draft), 0 cuts, 0 pauses. Prompts 1,283 to 2,207 tokens (median 2,096) in a
+32,768 window, every reply `done_reason: stop`, the longest 147 tokens, so
+the ceiling (3,638 to 3,996) never bound. Temperature 0.48 to 0.90, median
+0.87, none at 0. Mean reply 83 words. Exit interview: heard 4.0, clearer
+5.0, lectured 2.67, performed 2.0, again 6.0. Both panels are rebuilt from
+it (the public copy, with the address, only in gitignored `tools/cache/`),
+and the fine print now states the context and the largest prompt from the
+records, and the cap as a range with the longest reply. **This is the run
+to upload.** Gordon: the window is "a lot of weight to carry around each
+turn, especially at boot"; `ROADMAP.md` A8 is the plan to right-size it.
 
 **Next (Gordon's plan):** upload `tools/cache/panel_public_standalone.html`
 to Neocities, hand the link out, collect picks by email, and score each
@@ -104,7 +113,7 @@ this uploaded build, never a committed file):
 .venv/bin/python tools/build_blind_panel.py --responsive --topic toast \
   --title "Which Reply Would You Rather Get?" \
   --story "Someone has to give the toast at their brother's wedding, and they're dreading it. Over thirty messages they go from putting it off, to a first draft, to a bad night, and back again." \
-  --disclose "BoneAmanita's style filters and its temperature control were fixed today after reading its earlier runs of this same conversation (same character, same wedding), and those fixes are in this run. The friend prompt and the plain AI got no such attention, so this page favours BoneAmanita on this particular story." \
+  --disclose "BoneAmanita was fixed over the last two days after reading its earlier runs of this same conversation (same character, same wedding): its style filters, its temperature control, a reply-length cap, its context window and a prompt that was carrying unrelated text. Those fixes are in this run. The friend prompt and the plain AI got no such attention, so this page favours BoneAmanita on this particular story." \\
   --contact-email "<Gordon's address>" \
   --out tools/cache/panel_public.html --standalone tools/cache/panel_public_standalone.html
 ```
