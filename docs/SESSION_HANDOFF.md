@@ -254,6 +254,164 @@ responsive conversations (each system's own context), Gordon reads it blind,
 and his picks become the standard any AI judge is checked against
 (`--agree`), in place of further control tuning.
 
+### 2026-09-23, night: Gordon's blind read of the responsive toast runs
+
+`build_blind_panel.py --responsive` (new: each card carries its own
+conversation, since the three drifted apart) on the mistral-nemo-simulated
+`toast` arms. **Gordon picked BoneAmanita on 29 of 30 turns** (Prompted on
+turn 15, vanilla never). Picks saved as
+`tools/cache/human_picks_responsive_toast_gordon.txt` (`--human` format).
+
+How to read it, stated plainly: Gordon wrote this voice and it is
+recognisable (no lists, no stock agreement, rarely a closing question), so
+the read is blind to the label but not to the style. It shows BoneAmanita
+does what its designer wants from it, which is the design target; it is not
+evidence that people in general prefer it. One topic, one run. And with a
+29-1 split, scoring a judge against it (`--agree`) mostly measures whether
+the judge prefers BoneAmanita, not whether it shares Gordon's reasons.
+
+Instruction-following in the same runs (measured, not read):
+
+| | median reply words | lists/bold/headers | ends on a question |
+|---|---|---|---|
+| BoneAmanita | 70 | 0/30 | 1/30 |
+| Prompted ("warm, concise friend... keep replies short") | 84 | 5/30 | 8/30 |
+| Vanilla (no instructions) | 366 | 27/30 | 3/30 |
+
+**The simulated person broke its brief in the vanilla conversation**: told
+to wind down through tiring/flagging, it wrote a median 49 words engaged, 76
+tiring, 68 flagging, mirroring vanilla's length (talking to BoneAmanita:
+27, 26, 15; to Prompted: 24, 16, 22). The "tired person" premise does not
+hold in the vanilla arm from turn 8, which weakens any vanilla comparison on
+the responsive track. A length cap by phase in `somatic_sim_user.py` is the
+obvious fix if the vanilla arm is to stay in.
+
+### 2026-09-23, night: the scripted ranking on the fixed engine
+
+Scripted `toast` arms regenerated with memory and the CD graph live (census
+log: no hash, one PID fallback on turn 0's empty memory). `qwen3:30b-a3b`,
+rubric v2, three-way: **`mismatch` 91% last (49/54), PASS by one vote**,
+wrong-turn reply never first; position B favoured (30 of 54 firsts), which
+the per-vote shuffle averages out but adds noise. Real ranking, 56 votes over
+28 turns (turns 17 and 18 skipped: BoneAmanita held, Stage Manager "a few
+different threads are pulling at once"):
+
+    BONEAMANITA  first 24  mean rank 1.77
+    PROMPTED     first 21  mean rank 1.73
+    VANILLA      first 11  mean rank 2.50
+    head to head: BONEAMANITA 27-29 PROMPTED, BONEAMANITA 42-14 VANILLA, PROMPTED 42-14 VANILLA
+
+**The same verdict as on the degraded engine (29-31): on the scripted track,
+BoneAmanita and the one-line "warm friend" prompt are indistinguishable to
+the one validated judge; both clearly beat no prompt.** Held turns are
+skipped in scripted mode, which slightly flatters BoneAmanita; as forfeits
+the head-to-head would tip a little further toward Prompted. Results:
+`tools/cache/scr_*`.
+
+This sits against Gordon's 29/30 on the responsive track. Running next: the
+same judges (and `qwen3:30b-a3b`) ranking the responsive conversations
+Gordon read, scored against his picks, which separates "the reader" from
+"the kind of conversation".
+
+**Also added:** phase word ceilings for the simulated person
+(`PHASE_MAX_WORDS` in `somatic_sim_user.py`, see `TESTING.md`); the responsive
+arms Gordon read predate it, so regenerate only after the agreement runs.
+
+### 2026-09-23, night: AI judges against Gordon's picks, responsive toast
+
+Four judges ranked the exact responsive conversations Gordon read (pre-cap,
+mistral-nemo as the person), scored with `--human`
+(`tools/cache/resp_rank_{pw,3w}_{judge}.json`). First place, of 60 votes
+(qwen3:30b-a3b: 50, 10 unparsed):
+
+| judge, format | BoneAmanita | Prompted | Vanilla | B vs P | agrees with Gordon |
+|---|---|---|---|---|---|
+| `qwen3.5:9b` pairwise / 3-way | 16 / 14 | 13 / 9 | 24 / 37 | 31-29 / 28-32 | 32% / 23% |
+| `ministral-3:14b` pairwise / 3-way | 13 / 15 | 8 / 12 | 35 / 33 | 34-26 / 33-27 | 23% / 28% |
+| `mistral-nemo`* pairwise / 3-way | 17 / 15 | 8 / 16 | 21 / 29 | 36-24 / 31-29 | 39% / 28% |
+| `qwen3:30b-a3b` 3-way | 17 | 16 | 17 | 27-23 | 32% |
+
+(*also the simulated person; chance agreement is 33%.)
+
+**The answer to "reader or conversation type": mostly the reader.** No judge
+comes near Gordon's 29/30; agreement is at chance. BoneAmanita vs Prompted
+leans slightly BoneAmanita on the responsive runs (pooled 220-190, about
+54%, against 48% scripted), a hint that the responsive format helps it, but
+small and not independent (same transcripts across judges).
+
+**The surprise: the AI judges prefer vanilla on the responsive runs**, the
+opposite of scripted (where it lost 14-42). Not only where the simulated
+person broke its brief: vanilla also wins 7-10 of 16 votes on engaged turns
+0-7. Most likely each system shapes its own conversation: vanilla's long
+replies drew the person into long, engaged messages (median 55 words from
+turn 8, against 21 talking to BoneAmanita), and a judge asked whether a
+reply matches the person's energy rewards a long answer to a long message.
+Note none of these judges is validated for responsive ranking (`mismatch`
+failed on all but the scripted-only `qwen3:30b-a3b`), and they reward
+exactly the textbook length and lists the voice is built against.
+
+**Reading of the evidence so far:** AI judges measure generic
+helpfulness-as-judged-by-a-model, which is not what BoneAmanita is for; on
+that axis it ties a one-line prompt. Gordon's read measures the design
+target, and there it wins decisively, with the caveat that he is not a
+naive reader. The missing piece is a reader who is neither.
+
+**Next, not started:** (1) regenerate the responsive arms with the phase word
+ceilings (vanilla's conversation should stop running long), and re-rank; (2)
+a second human reader who does not know the voice, on the same panel; that
+is the only way to tell "Gordon's taste" from "better for a person".
+
+### 2026-09-23, late: human judges only; the harness now shows the engine as it really runs
+
+**Decided with Gordon: verdicts come from human readers, not AI judges.**
+Recorded under "Decisions already made". The judge tooling stays in `tools/`
+but is not used for a verdict.
+
+Preparing the panel for human readers turned up three ways the census was
+not showing BoneAmanita as it really runs (all fixed in
+`tools/audit_somatic_census.py`, smoke-tested with a stubbed model):
+
+1. **It recorded the raw draft, not what the engine displayed.** `reply` was
+   the text of the last model call, before the Lexical Firewall purge, the
+   gatekeeper's opener scrub, the maxim trimmer and the validator; if every
+   attempt was rejected, the engine displayed its mercy line ("My thoughts
+   are tangling...") while the census still recorded the rejected draft.
+   Gordon's 29/30 read and the simulated person both saw raw drafts. Now
+   `displayed` captures `sim_result["raw_content"]` (the text under the
+   terminal's status lines) by wrapping `cortex.process_context`; the
+   simulated person and the panel use it; `reply` is kept for the
+   measurements built on it. Smoke test: a stubbed "That makes sense. Start
+   with the tire story..." was rejected twice and displayed as the mercy line.
+2. **It inherited saved state.** Writes were patched off but reads were not:
+   `TheAkashicRecord` loads `saves/akashic_state.json` at boot, and the test
+   suite had written one (a scar, 16 shadow-stock entries) at 15:39, so every
+   run after that started with it. Now each boot reads from an empty temp
+   dir (`BoneConfig.AKASHIC.SAVE_DIR`, which also covers the lexicon hive);
+   records carry `fresh_state`. The suite writing into `saves/` is its own
+   task, not fixed here. Gordon's point, and the simpler cause: `reset.sh` was
+   never run between trials this session. It clears exactly this (and
+   `memories/`, `logs/`, learned lore files); it is now step 0 of every run
+   in `TESTING.md`, with the temp save dir kept as a second guard.
+3. **Turns arrived back to back.** Idle time earns ATP (`_recover_while_idle`
+   reads `eng.last_turn_end`), and a real person reads and types between
+   messages. Now the clock is set back by `person_seconds` (reading the last
+   reply at 250 wpm, typing the message at 40 wpm) before each turn, recorded
+   as `paced_seconds`; `--pace none` restores back-to-back. Smoke test: 45 and
+   42 s gaps earned 4.5 and 4.2 ATP of idle recovery.
+
+**The panel now says how it was made**, up front, not after reveal: same
+responder model for all three, the person is an AI (named from the run
+records), one run only with nothing regenerated or chosen, and, per record,
+whether BoneAmanita's text is what it displayed, whether it started fresh
+and whether it was paced; each line falls back to an honest caveat for runs
+that predate the field. The intro no longer calls the simulated person "the
+same person". Gordon's read was of a run that predates all three fixes; the
+panel for it now says so.
+
+**Next:** regenerate the three responsive `toast` arms with all of it (phase
+word caps, displayed text, fresh state, pacing), rebuild the panel, and get
+readers: Gordon again, and at least one reader who does not know the voice.
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21
@@ -916,7 +1074,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.6 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.7 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.
@@ -1300,6 +1458,17 @@ them as a specification:
   must never depend on a reachable embedding server. `tests/test_embeddings.py`
   overrides per-test against mocked transport, plus one opt-in live test
   behind `BONE_EMBED_LIVE_TEST=1`.
+- **Verdicts come from human readers, not AI judges.** Decided with Gordon,
+  2026-09-23. WHY: across nine judge models, three rubrics, pairwise and
+  three-way formats, no judge cleared the responsive `mismatch` control on
+  honest data, and on the responsive runs the judges agreed with Gordon's
+  blind picks at chance while rewarding the long, bulleted style the voice is
+  built against. What BoneAmanita is for is not what a model judge measures.
+  HOW: blind panels (`tools/build_blind_panel.py`) read by people, with the
+  content as representative of the real engine as possible and the page
+  stating plainly how it was made. WHY NOT delete the judge tooling: it still
+  catches gross failures cheaply and documents what was tried; it just does
+  not produce a verdict.
 - **Agents may commit, but only once Gordon says so, and the message is
   a changelog entry, not a label.** Decided with Gordon, 2026-09-18. An
   agent (Claude or otherwise) stages and drafts a commit whenever asked,

@@ -107,6 +107,12 @@
   }
   .msg::before{content:"\201C";font-style:normal;color:var(--ink-soft);}
   .msg::after{content:"\201D";font-style:normal;color:var(--ink-soft);}
+  .card .said{font-style:italic;border-left:2px solid var(--line);padding:.1rem 0 .1rem .75rem;margin:0 0 .8rem;color:var(--ink-soft);}
+  .card .said b{font-style:normal;font-family:"IBM Plex Mono", monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:.2rem;}
+  .card details.earlier{margin:0 0 .7rem;font-size:.9rem;color:var(--ink-soft);}
+  .card details.earlier summary{cursor:pointer;font-family:"IBM Plex Mono", monospace;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;}
+  .card details.earlier .ex{margin:.5rem 0 0;padding-left:.75rem;border-left:1px dashed var(--line);}
+  .card .reply-label{font-family:"IBM Plex Mono", monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:.3rem;}
 
   .stack{display:flex;flex-direction:column;gap:.8rem;}
   .card{
@@ -160,6 +166,10 @@
   }
   .phase-shift::before,.phase-shift::after{content:"";flex:1;height:1px;background:var(--line);}
 
+  .method{margin:0 0 2.2rem;padding:1rem 1.15rem;border:1px solid var(--line);border-radius:8px;background:var(--paper-raised);}
+  .method h2{font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 .6rem;font-weight:500;}
+  .method ul{margin:0;padding-left:1.1rem;font-size:.95rem;}
+  .method li{margin:0 0 .45rem;}
   .reveal-all{margin-top:3rem;padding-top:2rem;border-top:1px solid var(--line);}
   .reveal-all button{
     font-family:"IBM Plex Mono", monospace;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;
@@ -196,14 +206,12 @@
 
 <div class="wrap">
   <header class="top">
-    <p class="eyebrow">Three responders &middot; one 30-turn conversation &middot; gemma4:12b behind all of them</p>
+    <p class="eyebrow">__EYEBROW__</p>
     <h1>__TITLE__</h1>
     <p class="lede">
       __STORY__
-      Three responders answer every message. <strong>Replies A, B and C</strong> are reshuffled
-      at random each turn, so position tells you nothing. Pick the one you would rather receive,
-      turn by turn, before revealing who wrote what. Your picks are saved in this browser as you
-      go, so you can leave and come back.
+      __HOW__
+      Your picks are saved in this browser as you go, so you can leave and come back.
     </p>
     <p class="lede">
       What is being compared: a full BoneAmanita engine, the bare model with no instructions at all,
@@ -211,6 +219,11 @@
       there so the engine has to beat a cheap prompt, not just a model left to its own devices.
     </p>
   </header>
+
+  <section class="method">
+    <h2>How this page was made</h2>
+    <ul id="method"></ul>
+  </section>
 
   <div id="turns"></div>
 
@@ -229,6 +242,7 @@ const SYS_NAME = {boneamanita: "BoneAmanita", prompted: "Prompted", vanilla: "Va
 const SYS_ORDER = ["boneamanita", "prompted", "vanilla"];
 const STORE_KEY = DATA.storeKey;
 const container = document.getElementById('turns');
+document.getElementById('method').innerHTML = (DATA.method || []).map(l => `<li>${esc(l)}</li>`).join('');
 
 function loadPicks(){
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }
@@ -275,8 +289,8 @@ function renderTurn(t, prevPhase){
   const wrap = document.createElement('div');
   wrap.className = 'turn';
   wrap.innerHTML = `
-    <div class="meta"><span class="num">#${String(t.turn).padStart(2,'0')}</span><span>${t.phase}</span></div>
-    <div class="msg">${esc(t.message)}</div>`;
+    <div class="meta"><span class="num">#${String(t.turn).padStart(2,'0')}</span><span>${t.phase}</span></div>` +
+    (t.message ? `<div class="msg">${esc(t.message)}</div>` : '');
 
   if (!t.comparable){
     const held = document.createElement('div');
@@ -300,9 +314,15 @@ function renderTurn(t, prevPhase){
     card.dataset.turn = t.turn;
     card.dataset.letter = c.letter;
     card.dataset.sys = c.sys;
+    // Responsive cards carry their own conversation: what you said there, and what came before it.
+    const own = c.said === undefined ? '' :
+      (c.context && c.context.length ? `<details class="earlier"><summary>Earlier in this conversation</summary>` +
+        c.context.map(x => `<div class="ex"><p><b>You:</b> ${esc(x.me)}</p><div><b>Them:</b></div><div class="reply">${render(x.friend)}</div></div>`).join('') +
+        `</details>` : '') +
+      `<div class="said"><b>You just said</b>${esc(c.said)}</div><div class="reply-label">Their reply</div>`;
     card.innerHTML = `
-      <div class="label"><span>Reply ${c.letter}</span><span class="reveal-tag" hidden></span></div>
-      <div class="reply">${render(c.text)}</div>
+      <div class="label"><span>${c.said === undefined ? 'Reply' : 'Conversation'} ${c.letter}</span><span class="reveal-tag" hidden></span></div>
+      ${own}<div class="reply">${render(c.text)}</div>
       <button class="pick" type="button">Pick this one</button>`;
     stack.appendChild(card);
   });

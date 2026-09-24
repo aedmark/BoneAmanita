@@ -122,7 +122,7 @@ def run(model: str, topic: str, cache: Path, arm: str = "vanilla", user=None, ma
                 "seconds": round(time.time() - started, 2),
             }
             if user:
-                record.update(beat=beat, shown=reply, delivered=True, sim_fallback=user.fell_back)
+                record.update(beat=beat, shown=reply, delivered=True, sim_fallback=user.fell_back, sim_trimmed=user.trimmed)
             out.write(json.dumps(record) + "\n")
             out.flush()
             print(f"  [{turn:>2}] {phase:<10} {record['seconds']:>5.1f}s  {message[:40]!r}")

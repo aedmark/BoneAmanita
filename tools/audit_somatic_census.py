@@ -33,6 +33,20 @@ lexicon, checkpoints, spores or Akashic state, and must not become the next
 session's memory. The embedder is left as configured, unlike the C5 audit:
 memory, the graph solve and zones all run here, and the hash fallback breaks
 the solve outright (its width is not a multiple of 64).
+
+Three things keep a run representative of a first real conversation:
+
+  fresh    saved state (Akashic, the learned-vocabulary hive) is read from an
+           empty temporary directory, so nothing left in saves/ by earlier
+           sessions or the test suite is inherited
+  shown    `displayed` is what the engine put on screen: the reply after the
+           Lexical Firewall, the gatekeeper's scrubs and the validator, or the
+           mercy line if every attempt failed. `reply` stays the raw text of
+           the last model call, for the measurements built on it
+  paced    before each turn the engine's clock is set back by the time a person
+           would take to read the last reply and type the next message
+           (READ_WPM, TYPE_WPM), so idle recovery sees a human gap instead of
+           back-to-back turns; `--pace none` turns it off
 """
 
 import argparse
@@ -313,10 +327,24 @@ def trace_field(state_cls, field: str, ledger: list):
     return patch.object(state_cls, "__setattr__", traced)
 
 
+# A person reading on a screen, and typing on a phone or keyboard.
+READ_WPM = 250
+TYPE_WPM = 40
+
+
+def person_seconds(last_shown: str, message: str) -> float:
+    """How long a person would take to read the last reply and type the next message."""
+    return 60.0 * (len((last_shown or "").split()) / READ_WPM + len(message.split()) / TYPE_WPM)
+
+
 def boot(model: str):
+    import tempfile
+
     from main import BoneAmanita
+    from engine.presets import BoneConfig
 
     patches = [
+        patch.object(BoneConfig.AKASHIC, "SAVE_DIR", tempfile.mkdtemp(prefix="census_saves_")),
         patch("engine.core.LoreManifest.save"),
         patch("protocols.chronos.ChronosKeeper.save_checkpoint"),
         patch("spores.io.LocalFileSporeLoader.save_spore"),
@@ -344,6 +372,18 @@ def boot(model: str):
     return eng, patches
 
 
+def capture_displayed(eng, shown: list):
+    """Wrap the cortex so each turn's on-screen reply (`raw_content`) lands in `shown`."""
+    real = eng.cortex.process_context
+
+    def spy(ctx):
+        result = real(ctx)
+        shown.append(result.get("raw_content") if isinstance(result, dict) else None)
+        return result
+
+    eng.cortex.process_context = spy
+
+
 def read_prompt(prompt: str) -> dict:
     metrics = METRICS_LINE.search(prompt)
     telemetry = TELEMETRY_P.search(prompt)
@@ -368,11 +408,14 @@ def run(
     topic: str = DEFAULT_TOPIC,
     user=None,
     max_turns: int = None,
+    pace: bool = True,
 ) -> None:
     """`user`, when given, writes each message in reply to what the engine actually showed
     (`somatic_sim_user.SimulatedUser`); the script's line is then only the beat."""
     script = SCRIPTS[topic][:max_turns]
     eng, patches = boot(model)
+    displayed: list = []
+    capture_displayed(eng, displayed)
     llm = eng.cortex.llm
     calls = []
     real_generate = llm.generate
@@ -389,9 +432,14 @@ def run(
     try:
         with cache.open("a", encoding="utf-8") as out:
             transcript: list = []
+            last_shown = ""
             for turn, (phase, beat) in enumerate(script):
                 message = user.message(turn, phase, beat, transcript) if user else beat
                 calls.clear()
+                displayed.clear()
+                gap = person_seconds(last_shown, message) if pace and turn else 0.0
+                if gap:
+                    eng.last_turn_end = time.time() - gap
                 ATP_LEDGER.clear()
                 HEALTH_LEDGER.clear()
                 if hold_atp is not None:
@@ -423,6 +471,9 @@ def run(
                     "asked": {k: call["asked"].get(k) for k in ("temperature", "top_p", "max_tokens")} if call else None,
                     "sent": {k: call["sent"].get(k) for k in ("temperature", "top_p", "max_tokens")} if call else None,
                     "reply": call["reply"] if call else None,
+                    "displayed": displayed[-1] if displayed else None,
+                    "paced_seconds": round(gap, 1),
+                    "fresh_state": True,
                     "person": {"E_u": float(u.E_u), "P_u": float(u.P_u)},
                     # The gates that refuse a turn read these, so a halt can be
                     # sized against them even when no prompt was composed.
@@ -442,13 +493,15 @@ def run(
                 }
                 if user:
                     # What the person saw: the reply, or the notice a held turn put on screen.
-                    delivered = snapshot.get("type") == "GEODESIC_FRAME" and bool(record["reply"])
-                    shown = record["reply"] if delivered else (record["halt"] or "")
+                    delivered = snapshot.get("type") == "GEODESIC_FRAME" and bool(record["displayed"])
+                    shown = record["displayed"] if delivered else (record["halt"] or "")
                     record.update(
-                        arm="bone", beat=beat, delivered=delivered, shown=shown, sim_fallback=user.fell_back
+                        arm="bone", beat=beat, delivered=delivered, shown=shown, sim_fallback=user.fell_back,
+                        sim_trimmed=user.trimmed,
                     )
                     transcript.append({"me": message, "friend": shown, "delivered": delivered})
                 out.write(json.dumps(record) + "\n")
+                last_shown = record["displayed"] if snapshot.get("type") == "GEODESIC_FRAME" else (record["halt"] or "")
                 out.flush()
                 p = record["prompt"] or {}
                 print(
@@ -602,13 +655,15 @@ def main() -> int:
         help="reset ATP to this before every turn, to observe the person model past an economy halt",
     )
     parser.add_argument("--cache", type=Path, default=CACHE)
+    parser.add_argument("--pace", choices=("realistic", "none"), default="realistic",
+                        help="a person's reading and typing time between turns, or back-to-back")
     args = parser.parse_args()
 
     from engine.presets import BoneConfig
 
     model = args.model or BoneConfig.MODEL
     if not args.report_only:
-        run(model, args.cache, args.hold_atp, args.topic)
+        run(model, args.cache, args.hold_atp, args.topic, pace=args.pace == "realistic")
     records = []
     if args.cache.exists():
         records = [json.loads(line) for line in args.cache.open(encoding="utf-8") if line.strip()]

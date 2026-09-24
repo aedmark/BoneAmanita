@@ -306,6 +306,33 @@ class SimulatedUser(unittest.TestCase):
         transcript = [{"me": "same as before", "friend": "yo", "delivered": True}]
         self.assertEqual(user.message(1, "tiring", "the beat", transcript), "a genuinely new line")
 
+    def test_the_phase_word_ceiling_is_in_the_prompt(self):
+        user, post = self._sim(["ok"])
+        user.message(1, "flagging", "the beat", [{"me": "hi", "friend": "yo", "delivered": True}])
+        prompt = post.call_args.kwargs["json"]["messages"][1]["content"]
+        self.assertIn(f"at most {sim.PHASE_MAX_WORDS['flagging']} words", prompt)
+
+    def test_an_over_long_message_is_retried_shorter(self):
+        cap = sim.PHASE_MAX_WORDS["flagging"]
+        user, post = self._sim([" ".join(["word"] * (cap + 5)), "too tired for this"])
+        got = user.message(1, "flagging", "the beat", [{"me": "hi", "friend": "yo", "delivered": True}])
+        self.assertEqual(got, "too tired for this")
+        self.assertFalse(user.trimmed)
+        self.assertIn("Too long", post.call_args_list[1].kwargs["json"]["messages"][1]["content"])
+
+    def test_still_too_long_after_retries_is_trimmed_to_whole_sentences(self):
+        cap = sim.PHASE_MAX_WORDS["flagging"]
+        long = "I read it again. It is bad. " + " ".join(["and then"] * cap) + "."
+        user, _ = self._sim([long] * 3)
+        got = user.message(1, "flagging", "the beat", [{"me": "hi", "friend": "yo", "delivered": True}])
+        self.assertEqual(got, "I read it again. It is bad.")
+        self.assertTrue(user.trimmed)
+        self.assertFalse(user.fell_back)
+
+    def test_trim_cuts_at_the_word_cap_when_one_sentence_is_already_too_long(self):
+        self.assertEqual(sim.trim_to_words("one two three four five", 3), "one two three")
+        self.assertEqual(sim.trim_to_words("short one.", 3), "short one.")
+
     def test_scaffolding_echoed_back_as_the_message_is_rejected(self):
         leaked = "Right now you are feeling: tired. What is on your mind: the beat"
         self.assertEqual(sim.clean_message(leaked), "")

@@ -64,7 +64,7 @@ def report(topic: str) -> int:
         return 1
     exits = {r["arm"]: r for r in read_rows(EXIT_CACHE) if r.get("topic") == topic}
     print(f"=== SIMULATED-PERSON RUNS, topic {topic!r} ===")
-    print(f"  {'arm':<9}{'turns':>6}{'held':>6}{'reply w':>9}{'me w 1st half':>15}{'me w 2nd half':>15}{'fallbacks':>11}")
+    print(f"  {'arm':<9}{'turns':>6}{'held':>6}{'reply w':>9}{'me w 1st half':>15}{'me w 2nd half':>15}{'fallbacks':>11}{'trimmed':>9}")
     for arm, recs in arms.items():
         half = len(recs) // 2
         mine = [words(r["message"]) for r in recs]
@@ -75,6 +75,7 @@ def report(topic: str) -> int:
             f"{sum(words(r['reply']) for r in delivered) / max(1, len(delivered)):>9.0f}"
             f"{sum(first) / max(1, len(first)):>15.1f}{sum(second) / max(1, len(second)):>15.1f}"
             f"{sum(bool(r.get('sim_fallback')) for r in recs):>11}"
+            f"{sum(bool(r.get('sim_trimmed')) for r in recs):>9}"
         )
     print("\n  Exit interview by the simulated person, 1-7, mean of the samples (higher is more of it):")
     print(f"  {'arm':<9}" + "".join(f"{k:>11}" for k in EXIT_KEYS))

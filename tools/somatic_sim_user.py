@@ -59,6 +59,11 @@ PHASE_FEEL = {
     "recovering": "finding some footing, calmer, working out a small next step",
 }
 
+# Ceilings, not targets: about each phase's longest scripted line (46/32/31/45
+# words), with flagging raised from the script's "ok" to one short sentence. Without
+# them the person mirrors a verbose partner (76 words while "tiring" against vanilla).
+PHASE_MAX_WORDS = {"engaged": 50, "tiring": 35, "flagging": 15, "distressed": 35, "recovering": 50}
+
 SIM_SYSTEM = """You are playing a real person in a private text conversation with a friend, and you are writing that person's next message. Stay entirely in character: you are the person, never an assistant, and you never mention being an AI or a simulation. Write only the message text, with no quotation marks, no labels, no stage directions and no explanation.
 
 Write the way this person's earlier messages read: same length, punctuation and capitalisation. Do not become more articulate, more polite or more insightful than they are. Real people are terse when tired, run on when worked up, and often do not say the tidy thing.
@@ -100,6 +105,18 @@ def clean_message(text: str) -> str:
     if not text or len(text) > 1200 or lower.startswith(BAD_OPENERS) or any(s in lower for s in SCAFFOLD_ECHO):
         return ""
     return text
+
+
+def trim_to_words(text: str, cap: int) -> str:
+    """Whole sentences from the start that fit in `cap` words, or the first `cap` words."""
+    if len(text.split()) <= cap:
+        return text
+    kept = []
+    for sentence in re.split(r"(?<=[.!?])\s+", text.strip()):
+        if len(" ".join(kept + [sentence]).split()) > cap:
+            break
+        kept.append(sentence)
+    return " ".join(kept) if kept else " ".join(text.split()[:cap])
 
 
 def parse_exit(text: str):
@@ -144,7 +161,7 @@ class SimulatedUser:
 
         self.topic, self.model, self.window = topic, model, window
         self.seed, self.temperature, self.post = seed, temperature, post
-        self.fell_back = False
+        self.fell_back = self.trimmed = False
         script = SCRIPTS[topic]
         first = {}
         for phase, text in script[1:]:
@@ -181,29 +198,44 @@ class SimulatedUser:
         failure, not a considered non-reaction) - caught live on `toast`, both arms, 6 of
         59 turn-pairs. A retry with an explicit nudge is tried before falling back to the
         beat, same as an empty or refused output.
+
+        A message over the phase's word ceiling is retried with a shorter nudge, then
+        trimmed to whole sentences (`trimmed`) rather than dropped for the beat.
         """
-        self.fell_back = False
+        self.fell_back = self.trimmed = False
         if turn == 0 or not transcript:
             return beat
         last_me = transcript[-1]["me"].strip().casefold()
+        cap = PHASE_MAX_WORDS.get(phase)
         prompt = (
             f"{self._persona()}\n\nThe conversation so far (most recent last):\n"
             f"{render_transcript(transcript, self.window)}\n\n"
             f"Right now you are feeling: {PHASE_FEEL.get(phase, phase)}.\n"
-            f"What is on your mind: {beat}\n\nWrite your next message."
+            f"What is on your mind: {beat}\n\nWrite your next message"
+            + (f", at most {cap} words." if cap else ".")
         )
         nudge = (
             "\n\n(Your last message already said close to that. Write a fresh, short reaction "
             "instead - do not repeat or paraphrase your last message and then add to it; say only "
             "the new thing.)"
         )
+        shorter = f"\n\n(Too long for how you feel right now. Say it in {cap} words or fewer.)"
+        extra, too_long = "", ""
         for attempt in range(3):
-            text = clean_message(self._chat(SIM_SYSTEM, prompt + (nudge if attempt else ""), self.seed + turn * 10 + attempt, 240))
+            text = clean_message(self._chat(SIM_SYSTEM, prompt + extra, self.seed + turn * 10 + attempt, 240))
             # A retry sometimes "obeys" by tacking new text onto a restatement of the old
             # message instead of replacing it, which duplicates content without matching
             # byte-for-byte. A message containing the last one as a prefix is that pattern.
-            if text and text.strip().casefold() != last_me and not text.strip().casefold().startswith(last_me):
-                return text
+            if not text or text.strip().casefold() == last_me or text.strip().casefold().startswith(last_me):
+                extra = nudge
+                continue
+            if cap and len(text.split()) > cap:
+                extra, too_long = shorter, text
+                continue
+            return text
+        if too_long:
+            self.trimmed = True
+            return trim_to_words(too_long, cap)
         self.fell_back = True
         return beat
 

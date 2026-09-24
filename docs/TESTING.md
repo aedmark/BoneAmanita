@@ -10,6 +10,10 @@ still the log of what happened and when; this is the standing reference for
 how to run it again. `ROADMAP.md` is the project's own status; this file
 assumes you've read enough of it to know what "the Somatic Contract" is.
 
+**As of 2026-09-23, verdicts come from human readers** (see
+`SESSION_HANDOFF.md`, "Decisions already made"). The AI-judge sections below
+document what was built and tried; the judges are not a verdict.
+
 The question this pipeline answers: **compared to a bare model, and to a bare
 model with one friendly instruction, does the full engine's state-driven
 prompting actually produce replies a person would rather receive?** Everything
@@ -127,6 +131,13 @@ sorting `run` ids and taking the last, so **re-running a topic doesn't erase
 history, but every consumer silently ignores everything except the newest
 run** unless you pass `back=` (judge tool) or read the raw file yourself.
 
+**Representative runs** (2026-09-23): each boot reads saved state from an
+empty temp dir (`fresh_state`), `displayed` is the reply as the engine showed
+it (after its filters, or the mercy line), and turns are paced by a person's
+reading and typing time (`paced_seconds`, `--pace none` to disable). Records
+from before this lack the three fields; `build_blind_panel.py` says so on the
+page when it builds from them.
+
 ### `audit_somatic_vanilla.py` — the baseline arms
 
 Calls Ollama's *native* `/api/chat` directly (not the OpenAI-compatible shim
@@ -193,6 +204,16 @@ Given how each fix exposed the next failure mode, treat this list as
 probably-not-exhaustive rather than closed; if a fourth pattern shows up,
 add a case to `tests/test_judge_controls.py`'s `SimulatedUser` class the same
 way, not just a one-off cache-cleaning pass.
+
+**Phase word ceilings** (`PHASE_MAX_WORDS`, 2026-09-23): 50 / 35 / 15 / 35 / 50
+words for engaged / tiring / flagging / distressed / recovering, about each
+phase's longest scripted line, with flagging raised from the script's "ok" to
+one short sentence. Ceilings, not targets, the same for every arm. Added after
+the person mirrored vanilla's length (76 words "tiring" against vanilla, 26
+against BoneAmanita). The cap is stated in the prompt; an over-long message is
+retried once with a "shorter" nudge, then trimmed to whole sentences
+(`trim_to_words`) and recorded as `sim_trimmed` (a report column next to
+fallbacks). Runs from before this change have no `sim_trimmed` field.
 
 `.exit_interview(transcript, samples=3)` asks the simulated person, in
 character, to rate the conversation 1-7 on `heard`, `clearer`, `lectured`,
@@ -341,6 +362,16 @@ e.g. Neocities. The template's "Copy my results" button exports the reader's
 per-turn picks as plain text, parseable back by
 `audit_somatic_blind_judge.py`'s `parse_human()`/`--agree`.
 
+`--responsive` (2026-09-23) builds the page from `somatic_responsive.jsonl`
+instead. The three conversations drifted apart, so there is no shared
+message: each card carries what the person had just said in *that*
+conversation, the reply it got (or the on-screen notice, if the engine held),
+and the exchange before it collapsed under "Earlier in this conversation".
+`--judge` is optional (none is validated for responsive ranking). The export
+is the same format, so a human read of the responsive runs can score any
+judge with `--agree`; that is the plan for validating a responsive judge
+against Gordon's own picks rather than tuning the `mismatch` control further.
+
 ### `audit_silence_diagnostic.py` — why a turn went silent
 
 Not part of the scoring pipeline. Re-runs one scripted topic with spies
@@ -387,8 +418,11 @@ Every `.jsonl` reader in this pipeline takes the row(s) matching a `topic`
 ## A full run, from scratch
 
 ```bash
-# 0. What's available locally
+# 0. What's available locally, and a clean engine: reset.sh clears saves/,
+#    memories/, logs/ and learned lore files (not tools/cache/). Run it before
+#    every trial; the census also boots from an empty save dir as a second guard.
 ollama list
+bash reset.sh
 
 # 1. Generate the three (or four) arms for a topic
 python tools/audit_somatic_census.py --topic toast

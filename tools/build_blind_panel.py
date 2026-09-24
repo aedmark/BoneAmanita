@@ -9,6 +9,12 @@ judge outputs, so the page can be regenerated instead of hand-assembled.
         --judge tools/cache/blind_judge_toast_ministral.json \\
         --out panel.html --standalone panel-standalone.html
 
+`--responsive` builds it from the simulated-person runs instead: each system's
+conversation drifted on its own, so every card carries what you said in that
+conversation (and, collapsed, the exchange before it), not one shared message.
+A held turn is shown as the notice the person saw and can still be picked.
+Judges are optional there, since none is validated for responsive ranking yet.
+
 `--out` is a page body (what an artifact host wraps); `--standalone` adds the
 document wrapper a self-hosted page needs (doctype, charset, viewport and the
 base reset), e.g. for Neocities. Card order per turn is a seeded shuffle, and
@@ -31,39 +37,107 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_somatic_vanilla import FRIEND_PROMPT  # noqa: E402
 
 CACHE = Path("tools/cache")
+RESPONSIVE_ARMS = {"boneamanita": "bone", "prompted": "friend", "vanilla": "vanilla"}
+HEADINGS = {
+    False: (
+        "Three responders &middot; one 30-turn conversation &middot; gemma4:12b behind all of them",
+        "Three responders answer every message. <strong>Replies A, B and C</strong> are reshuffled at random "
+        "each turn, so position tells you nothing. Pick the one you would rather receive, turn by turn, before "
+        "revealing who wrote what.",
+    ),
+    True: (
+        "Three conversations &middot; one simulated person reacting to each &middot; gemma4:12b behind all of them",
+        "The same simulated person (see how this page was made, below) talked to three responders, and "
+        "because each answered differently the three "
+        "conversations drifted apart. Each turn shows <strong>Conversations A, B and C</strong>, reshuffled at "
+        "random: what you had just said in that conversation, and the reply it got. Pick the exchange you would "
+        "rather have been in, turn by turn, before revealing who wrote what.",
+    ),
+}
 TEMPLATE = Path(__file__).with_name("blind_panel_template.html")
 SEED = 20260920
 
 
-def load_latest(name: str, topic: str) -> dict:
+def load_latest(name: str, topic: str, arm: str = None) -> dict:
     recs = [json.loads(l) for l in (CACHE / name).open(encoding="utf-8") if l.strip()]
-    recs = [r for r in recs if r.get("topic") == topic]
+    recs = [r for r in recs if r.get("topic") == topic and (arm is None or r.get("arm") == arm)]
     latest = sorted({r["run"] for r in recs})[-1]
     return {r["turn"]: r for r in recs if r["run"] == latest}
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[2])
-    ap.add_argument("--topic", required=True)
-    ap.add_argument("--title", required=True)
-    ap.add_argument("--story", required=True)
-    ap.add_argument("--judge", action="append", required=True, type=Path)
-    ap.add_argument("--out", required=True, type=Path)
-    ap.add_argument("--standalone", type=Path)
-    args = ap.parse_args()
+def shown(rec: dict) -> str:
+    """What the person saw: the reply, or the notice that replaced it on a held turn."""
+    return rec.get("shown") or rec.get("reply") or ""
 
-    runs = {
-        "boneamanita": load_latest("somatic_census.jsonl", args.topic),
-        "vanilla": load_latest("somatic_vanilla.jsonl", args.topic),
-        "prompted": load_latest("somatic_prompted.jsonl", args.topic),
-    }
-    judges = [json.load(open(p, encoding="utf-8"))["summary"] for p in args.judge]
 
+def bone_text(rec: dict) -> str:
+    """BoneAmanita's reply as the engine displayed it; the raw model text only for runs that predate `displayed`."""
+    return rec.get("displayed") or rec.get("reply") or ""
+
+
+def method_lines(runs: dict, responsive: bool) -> list:
+    """How the page's content was made, stated from the run records rather than from memory."""
+    from somatic_sim_user import PHASE_MAX_WORDS
+
+    bone = list(runs["boneamanita"].values())
+    models = sorted({r.get("model") for rs in runs.values() for r in rs.values() if r.get("model")})
+    lines = [
+        f"Every reply was written by the same model ({', '.join(models)}), run locally. The three responders "
+        f"differ only in what surrounds it: BoneAmanita's full engine, one instruction (\u201c{FRIEND_PROMPT}\u201d), "
+        "or nothing at all.",
+    ]
+    if responsive:
+        sims = sorted({r.get("sim_model") for r in read_jsonl("somatic_responsive_exit.jsonl") if r.get("sim_model")})
+        lines.append(
+            "The person is not a real person. Their messages were written by a different AI model "
+            f"({', '.join(sims) or 'not recorded'}) playing one fixed character through a fixed arc (engaged, tiring, "
+            "flagging, distressed, recovering) and reacting to each responder's actual replies, so the three "
+            "conversations drift apart. Only the first message is identical in all three."
+        )
+        if any("sim_trimmed" in r for rs in runs.values() for r in rs.values()):
+            caps = ", ".join(f"{p} {n}" for p, n in PHASE_MAX_WORDS.items())
+            lines.append(f"The person's messages were capped by phase ({caps} words), so they cannot run long when "
+                         "the character is meant to be worn out.")
+    else:
+        lines.append("The person's 30 messages are a fixed script written in advance; every responder received "
+                     "exactly the same messages, whatever it replied.")
+    lines.append("This is the only run of each conversation. Nothing was regenerated or chosen for this page.")
+    if all("displayed" in r for r in bone):
+        lines.append("BoneAmanita's replies are shown exactly as the engine displayed them, after its own filters. "
+                     "The status lines its terminal prints above each reply are left out.")
+    else:
+        lines.append("BoneAmanita's replies are the model's raw text before the engine's own filters: this run "
+                     "predates capturing what the engine displayed, so a line the engine would have removed may show.")
+    if all(r.get("fresh_state") for r in bone):
+        lines.append("BoneAmanita ran as a first conversation, with no memory of earlier sessions; its memory, "
+                     "embeddings and Creative Determinant were live within this one.")
+    else:
+        lines.append("BoneAmanita's memory, embeddings and Creative Determinant were live, but this run may have "
+                     "started with saved state left by earlier sessions or tests (it predates starting each run "
+                     "fresh).")
+    if all("paced_seconds" in r for r in bone):
+        lines.append("Between messages the engine was given the time a person would take to read the reply and type "
+                     "the next message, since its energy recovers while idle.")
+    else:
+        lines.append("Messages reached the engine back to back, with none of the idle time a real person's reading "
+                     "and typing would give it (its energy recovers while idle).")
+    lines.append("Where BoneAmanita declined to reply, its card shows the notice the person saw instead.")
+    lines.append("A, B and C are shuffled every turn with a fixed seed. The answer key is in the page source, so this "
+                 "is a casual blind read, not a sealed one.")
+    return lines
+
+
+def read_jsonl(name: str) -> list:
+    path = CACHE / name
+    return [json.loads(l) for l in path.open(encoding="utf-8") if l.strip()] if path.exists() else []
+
+
+def scripted_turns(runs: dict, rng: random.Random) -> list:
+    """One entry per scripted turn; a turn any system did not deliver is listed with the engine's reason."""
     def delivered(system: str, turn: int) -> bool:
         rec = runs[system].get(turn, {})
         return bool(rec.get("reply")) and rec.get("snapshot_type") in (None, "GEODESIC_FRAME")
 
-    rng = random.Random(SEED)
     turns = []
     for t in sorted(runs["boneamanita"]):
         bone = runs["boneamanita"][t]
@@ -72,7 +146,8 @@ def main() -> int:
             order = rng.sample(list(runs), len(runs))
             entry["comparable"] = True
             entry["cards"] = [
-                {"letter": string.ascii_uppercase[i], "sys": s, "text": runs[s][t]["reply"]}
+                {"letter": string.ascii_uppercase[i], "sys": s,
+                 "text": bone_text(runs[s][t]) if s == "boneamanita" else runs[s][t]["reply"]}
                 for i, s in enumerate(order)
             ]
         else:
@@ -86,6 +161,54 @@ def main() -> int:
                 {"sys": s, "text": runs[s][t]["reply"]} for s in ("prompted", "vanilla") if runs[s].get(t)
             ]
         turns.append(entry)
+    return turns
+
+
+def responsive_turns(runs: dict, rng: random.Random) -> list:
+    """One entry per turn every system reached; each card is that system's own last exchange."""
+    shared = sorted(set.intersection(*(set(r) for r in runs.values())))
+    turns = []
+    for t in shared:
+        order = rng.sample(list(runs), len(runs))
+        cards = []
+        for i, s in enumerate(order):
+            rec, prev = runs[s][t], runs[s].get(t - 1)
+            cards.append(
+                {
+                    "letter": string.ascii_uppercase[i],
+                    "sys": s,
+                    "said": rec["message"],
+                    "context": [{"me": prev["message"], "friend": shown(prev)}] if prev else [],
+                    "text": bone_text(rec) if s == "boneamanita" and rec.get("delivered", True) else shown(rec),
+                }
+            )
+        turns.append({"turn": t, "phase": runs["boneamanita"][t]["phase"], "comparable": True, "cards": cards})
+    return turns
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[2])
+    ap.add_argument("--topic", required=True)
+    ap.add_argument("--title", required=True)
+    ap.add_argument("--story", required=True)
+    ap.add_argument("--judge", action="append", default=[], type=Path)
+    ap.add_argument("--responsive", action="store_true", help="the simulated-person runs, one conversation per card")
+    ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument("--standalone", type=Path)
+    args = ap.parse_args()
+
+    if args.responsive:
+        runs = {s: load_latest("somatic_responsive.jsonl", args.topic, arm) for s, arm in RESPONSIVE_ARMS.items()}
+    else:
+        runs = {
+            "boneamanita": load_latest("somatic_census.jsonl", args.topic),
+            "vanilla": load_latest("somatic_vanilla.jsonl", args.topic),
+            "prompted": load_latest("somatic_prompted.jsonl", args.topic),
+        }
+    judges = [json.load(open(p, encoding="utf-8"))["summary"] for p in args.judge]
+
+    rng = random.Random(SEED)
+    turns = responsive_turns(runs, rng) if args.responsive else scripted_turns(runs, rng)
 
     def pooled(a: str, b: str):
         return (
@@ -95,8 +218,9 @@ def main() -> int:
 
     bp, bv = pooled("BONEAMANITA", "PROMPTED"), pooled("BONEAMANITA", "VANILLA")
     data = {
-        "storeKey": f"blind-panel-{args.topic}-v1",
+        "storeKey": f"blind-panel-{args.topic}-{'responsive-' if args.responsive else ''}v1",
         "friendPrompt": FRIEND_PROMPT,
+        "method": method_lines(runs, args.responsive),
         "turns": turns,
         "judges": [
             {
@@ -108,13 +232,18 @@ def main() -> int:
             for j in judges
         ],
         "pooledNote": (
-            f"Both judges pooled: BoneAmanita beat Prompted {bp[0]} to {bp[1]} and beat Vanilla "
+            f"Judges pooled: BoneAmanita beat Prompted {bp[0]} to {bp[1]} and beat Vanilla "
             f"{bv[0]} to {bv[1]}. Votes are not fully independent, since each turn is judged twice "
             "on the same three replies, so treat any gap as an estimate."
-        ),
+        )
+        if judges
+        else "",
     }
+    eyebrow, how = HEADINGS[args.responsive]
     page = (
         TEMPLATE.read_text(encoding="utf-8")
+        .replace("__EYEBROW__", eyebrow)
+        .replace("__HOW__", how)
         .replace("__TITLE__", html.escape(args.title))
         .replace("__STORY__", html.escape(args.story))
         .replace("/*__DATA__*/null", json.dumps(data, ensure_ascii=True, separators=(",", ":")))
