@@ -9,6 +9,64 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
+## Where things stand, end of 2026-09-23 (read this first)
+
+**The direction:** AI judges are retired as verdicts (Gordon: they cannot
+judge the nuance). Evaluation is **human blind reads** of a panel that shows
+the engine as it really runs, with an honest account of how the page was
+made. The panel now works for a cold audience and is ready to hand out.
+
+**What changed tonight, in order** (details in the dated entries below,
+20.7.4.12 to 20.7.4.17):
+1. `NEGATIVE_COMPARISON` only fires on the real shape (same subject:
+   "It's not X. It's Y."), not on ordinary reassurance.
+2. **Salvage:** a last draft that breaks a soft style rule ships with the
+   offending sentence cut instead of a canned pause line. Scaffold leaks and
+   `"hard"` patterns still pause. Also fixed: my own word-boundary regex had
+   stopped the gatekeeper catching `[END OF` / `===` leaks.
+3. `ThePragmatist` had been discarding any draft containing "didn't" since
+   20.6.3 (a regex truncated to `didn`). Removed; the gatekeeper owns
+   negative comparisons.
+4. **Temperature was 0 on almost every turn since D4 (2026-09-18).** The
+   Creative Determinant locked a "diffuse" turn to `(0, 0)`, and its pivot
+   (0.5) was unreachable in conversation (replayed z_excess: -0.12 to 0.39).
+   Now the gate narrows the somatic band from the top (never below half of
+   it) and `Z_PIVOT` is 0.2. Every run anyone read before tonight's last
+   one sampled at 0; the exit interview's "clearer" rose from 3-4 to 5 on
+   the first run after the fix (one run, a hint).
+5. The panel's method section got more honest (sampling differences,
+   untuned friend prompt, length giveaway, small sample, a `--disclose`
+   line that BoneAmanita was tuned on this very story), then the page was
+   rewritten for strangers: welcome screen, one moment per screen, plain
+   names, picks locked on reveal, copy/email the picks back.
+
+**The run on the page:** `bone` `20260923-231533` (20.7.4.15, fresh, paced,
+after `reset.sh`), friend `20260923-193010`, vanilla `20260923-194135`, all
+in `tools/cache/somatic_responsive.jsonl` (gitignored, local only).
+
+**Next (Gordon's plan):** upload `tools/cache/panel_public_standalone.html`
+to Neocities, hand the link out, collect picks by email, and score each
+reader against the others (and against any judge) with
+`audit_somatic_blind_judge.py --agree`. Gordon's own blind read of this run
+has not happened yet. Rebuild the public page (the address goes in only
+this uploaded build, never a committed file):
+
+```bash
+.venv/bin/python tools/build_blind_panel.py --responsive --topic toast \
+  --title "Which Reply Would You Rather Get?" \
+  --story "Someone has to give the toast at their brother's wedding, and they're dreading it. Over thirty messages they go from putting it off, to a first draft, to a bad night, and back again." \
+  --disclose "BoneAmanita's style filters and its temperature control were fixed today after reading its earlier runs of this same conversation (same character, same wedding), and those fixes are in this run. The friend prompt and the plain AI got no such attention, so this page favours BoneAmanita on this particular story." \
+  --contact-email "<Gordon's address>" \
+  --out tools/cache/panel_public.html --standalone tools/cache/panel_public_standalone.html
+```
+
+**Open threads worth a look:** the z pivot (0.2) is calibrated on two runs
+of one topic, so check it on another topic before trusting it widely; a
+reachable pivot means `CO_REGULATION` and a higher voltage target now fire
+on coherent turns, which is by design but has never been live before and is
+unmeasured; the salvage path has not yet fired in a live run (0 of 30
+twice), so its first real cut deserves a read.
+
 ## 2026-09-23: the layout moved, and `tools/cache/` is gone
 
 **Two things changed under this file since the entries below were written.**
@@ -1288,8 +1346,10 @@ jargon and no assumption that you remember how any of it works. Read that
 first if you have been away; this file assumes you already have the
 shape of the thing in your head.
 
-**The live thread is the judge work at the top of this file**, not the
-engine. Read the newest dated entry first; `TESTING.md` is how to run it.
+**The live thread is the human blind panel**, summarised at the top of this
+file ("Where things stand"). AI judges are no longer used for verdicts.
+Read that summary, then the newest dated entries; `TESTING.md` is how to
+run it.
 
 Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
 
@@ -1734,6 +1794,21 @@ them as a specification:
   must never depend on a reachable embedding server. `tests/test_embeddings.py`
   overrides per-test against mocked transport, plus one opt-in live test
   behind `BONE_EMBED_LIVE_TEST=1`.
+- **Style rules cut, they don't kill.** Decided with Gordon, 2026-09-23:
+  "we don't need a zero tolerance policy, we just need to cut the shit." A
+  soft style crime on the last draft costs its sentence (`TheGatekeeper.
+  salvage`), not the reply; only scaffold leaks and `"hard"` patterns fall
+  through to a pause. WHY: the pause line was canned text standing in for a
+  reply that was mostly fine. WHY NOT loosen the rules instead: the retries
+  that name the construction fix nearly every draft, and the rules are the
+  voice.
+- **The Creative Determinant narrows the somatic temperature band; it never
+  replaces it.** Decided with Gordon, 2026-09-23. Chemistry picks the
+  temperature, the somatic budget sets the band, the gate takes the top off
+  it for a diffuse turn (never below `DIFFUSE_SHARE`). WHY: D4's
+  replace-the-band design sent temperature 0 on nearly every measured turn
+  for five days. WHY NOT a fixed temperature: the engine is meant to tweak
+  it from its metrics every turn.
 - **Verdicts come from human readers, not AI judges.** Decided with Gordon,
   2026-09-23. WHY: across nine judge models, three rubrics, pairwise and
   three-way formats, no judge cleared the responsive `mismatch` control on
