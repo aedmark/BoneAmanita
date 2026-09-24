@@ -33,8 +33,7 @@ neocities push ./portfolio
 ## Editing
 
 - **Project text** lives in `index.html`, one `<article class="spot">` per project.
-- **Resume placeholders** are the bracketed entries under Experience and Education in
-  `resume.html`, each followed by an "Edit me" note. Fill them in or delete the block. The notes
-  are hidden when printing.
+- **Resume entries** are the `<div class="entry">` blocks in `resume.html`; add or remove them
+  freely. The `.todo` style is available for any "edit me" notes and is hidden when printing.
 - **Colours and fonts** are CSS custom properties at the top of `style.css`.
 - **Contact details** appear in the About section of `index.html` and the header of `resume.html`.
