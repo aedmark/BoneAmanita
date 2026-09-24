@@ -40,22 +40,19 @@ CACHE = Path("tools/cache")
 RESPONSIVE_ARMS = {"boneamanita": "bone", "prompted": "friend", "vanilla": "vanilla"}
 HEADINGS = {
     False: (
-        "Three responders &middot; one 30-turn conversation &middot; gemma4:12b behind all of them",
-        "Three responders answer every message. <strong>Replies A, B and C</strong> are reshuffled at random "
-        "each turn, so position tells you nothing. Pick the one you would rather receive, turn by turn, before "
-        "revealing who wrote what.",
+        "A blind taste test",
+        "Three AI helpers each answered the same messages. At every moment you'll see the three replies side "
+        "by side, labelled A, B and C in a shuffled order, so you can't tell which helper wrote which.",
     ),
     True: (
-        "Three conversations &middot; one simulated person reacting to each &middot; gemma4:12b behind all of them",
-        "The same simulated person (see how this page was made, below) talked to three responders, and "
-        "because each answered differently the three "
-        "conversations drifted apart. Each turn shows <strong>Conversations A, B and C</strong>, reshuffled at "
-        "random: what you had just said in that conversation, and the reply it got. Pick the exchange you would "
-        "rather have been in, turn by turn, before revealing who wrote what.",
+        "A blind taste test",
+        "Three different AI helpers each talked this person through it, in three separate conversations. At every "
+        "moment you'll see where each conversation had got to, side by side and labelled A, B and C in a shuffled "
+        "order, so you can't tell which helper is which.",
     ),
 }
-# The names the page reveals (SYS_NAME in the template).
-LABELS = {"boneamanita": "BoneAmanita", "prompted": "Prompted", "vanilla": "Vanilla"}
+# The names the page reveals (SYS_PLAIN in the template).
+LABELS = {"boneamanita": "BoneAmanita", "prompted": "the friend prompt", "vanilla": "the plain AI"}
 TEMPLATE = Path(__file__).with_name("blind_panel_template.html")
 SEED = 20260920
 
@@ -243,6 +240,7 @@ def main() -> int:
     ap.add_argument("--responsive", action="store_true", help="the simulated-person runs, one conversation per card")
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--standalone", type=Path)
+    ap.add_argument("--contact-email", help="where readers send their picks; shown on the page, never stored in the repo")
     ap.add_argument("--disclose", action="append", default=[],
                     help="a fact about how this test was made that the records cannot show; one line on the page each")
     args = ap.parse_args()
@@ -268,8 +266,9 @@ def main() -> int:
 
     bp, bv = pooled("BONEAMANITA", "PROMPTED"), pooled("BONEAMANITA", "VANILLA")
     data = {
-        "storeKey": f"blind-panel-{args.topic}-{'responsive-' if args.responsive else ''}v1",
+        "storeKey": f"blind-panel-{args.topic}-{'responsive-' if args.responsive else ''}v2",
         "friendPrompt": FRIEND_PROMPT,
+        "contact": {"email": args.contact_email} if args.contact_email else None,
         "method": method_lines(runs, args.responsive, args.disclose),
         "turns": turns,
         "judges": [
@@ -305,7 +304,7 @@ def main() -> int:
     if args.standalone:
         cut = page.index("</style>") + len("</style>")
         reset = (
-            "<style>html{color-scheme:light dark}body{margin:0;padding:0;font-size:14px}"
+            "<style>html{color-scheme:light dark}body{margin:0;padding:0}"
             "img{max-width:100%}[hidden]{display:none!important}</style>"
         )
         args.standalone.write_text(

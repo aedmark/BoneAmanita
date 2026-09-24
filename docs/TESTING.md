@@ -353,17 +353,30 @@ the same is not a pass.
 ### `build_blind_panel.py` + `blind_panel_template.html` — the human blind read
 
 Builds a single HTML page from the latest census/vanilla/prompted caches and
-one or more finished judge JSON files: every comparable turn shown as three
-unlabeled cards in a per-turn seeded shuffle (`SEED = 20260920`, same seed
-every time — the shuffle is casual obfuscation, not a sealed test; the answer
-key sits in the page's own JSON), a held turn shown with its reason and what
-the other two systems said instead, and a "Reveal" button that shows both the
-reader's own tally and every supplied judge's numbers side by side. `--out` is
-a page body meant for an Artifact host; `--standalone` additionally wraps a
+optional judge JSON files, written for a cold audience (2026-09-23: friends,
+family and strangers, not just Gordon). A welcome screen explains the task in
+plain words, three numbered steps, and "pick as many as you like"; the method
+list sits under "How this was made (the fine print)" with a plain summary on
+top. Then one moment per screen: every comparable turn as three unlabeled
+cards (A, B, C) in a per-turn seeded shuffle (`SEED = 20260920`, same seed
+every time; casual obfuscation, not a sealed test, since the answer key sits
+in the page's own JSON), a progress strip to jump between moments, a fixed
+Back/Next bar, plain phase names ("Getting tired", "A rough night"), and keys
+1/2/3 and arrows on a keyboard. "I'm done" reveals who was who with plain
+names (BoneAmanita, the friend prompt, the plain AI) and **locks the picks**
+so looking back cannot change them. The finish screen takes an optional name
+and note and has "Copy my picks" plus, with `--contact-email`, an "Email
+them" button and the address as copyable text. The copied text keeps the
+`#07 engaged: BoneAmanita` lines, so `audit_somatic_blind_judge.py`'s
+`parse_human()`/`--agree` still reads it (the `From:` and `Notes:` lines are
+ignored). Picks live in the reader's browser (`localStorage`, key `...v2`).
+
+`--out` is a page body meant for an Artifact host; `--standalone` wraps a
 full document (doctype, charset, viewport, a minimal reset) for self-hosting,
-e.g. Neocities. The template's "Copy my results" button exports the reader's
-per-turn picks as plain text, parseable back by
-`audit_somatic_blind_judge.py`'s `parse_human()`/`--agree`.
+e.g. Neocities. **Pass `--contact-email` only when building the file you
+upload; never commit a built page with an address in it.** A mail link is a
+convenience that may do nothing on some devices, which is why the address is
+also shown as text.
 
 `--responsive` (2026-09-23) builds the page from `somatic_responsive.jsonl`
 instead. The three conversations drifted apart, so there is no shared

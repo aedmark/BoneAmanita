@@ -678,6 +678,16 @@ The responsive panel is rebuilt from this run and went to Gordon. The method
 line on held turns now names them from the records, and the sampling line
 counts only turns that called the model.
 
+**The panel is now written for a cold audience** (Gordon wants to hand the
+link to friends, family and strangers). Welcome screen in plain words, one
+moment per screen with a progress strip and a fixed Back/Next bar, plain
+phase and helper names, picks locked once "I'm done" reveals who was who,
+and a finish screen with optional name and note, "Copy my picks", and an
+email button (`--contact-email`, passed only when building the file Gordon
+uploads to his own hosting, never committed). The method list is intact
+under "the fine print". The export format still parses with
+`parse_human()`. See `TESTING.md` for the flow.
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21

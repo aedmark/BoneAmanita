@@ -16,9 +16,13 @@
     --prompted:#86506f;
     --prompted-soft:#efdde8;
     --focus:#1c2624;
+    --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --serif:"Newsreader", Georgia, "Times New Roman", serif;
+    --display:"Fraunces", Georgia, serif;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
+      color-scheme:dark;
       --paper:#171d1b;
       --paper-raised:#1f2724;
       --ink:#e7ece9;
@@ -36,6 +40,7 @@
     }
   }
   :root[data-theme="dark"]{
+    color-scheme:dark;
     --paper:#171d1b;
     --paper-raised:#1f2724;
     --ink:#e7ece9;
@@ -54,207 +59,260 @@
 
   *{box-sizing:border-box;}
   body{
-    background:var(--paper);
-    color:var(--ink);
-    font-family:"Newsreader", Georgia, serif;
-    line-height:1.55;
-    -webkit-font-smoothing:antialiased;
+    background:var(--paper);color:var(--ink);font-family:var(--serif);
+    font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:760px;margin:0 auto;padding:2.5rem 1.25rem 6rem;}
+  .wrap{max-width:760px;margin:0 auto;padding-inline:1.1rem;padding-block:2.2rem 7rem;}
+  button{font:inherit;color:inherit;}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:3px;}
+  .mono{font-family:var(--mono);}
+  .label{
+    font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
+  }
 
+  /* Intro */
   h1{
-    font-family:"Fraunces", Georgia, serif;
-    font-weight:600;
-    font-size:clamp(1.9rem, 4vw, 2.6rem);
-    letter-spacing:-0.01em;
-    text-wrap:balance;
-    margin:0 0 .35rem;
+    font-family:var(--display);font-weight:600;font-size:clamp(1.9rem, 5vw, 2.7rem);
+    letter-spacing:-0.01em;line-height:1.12;text-wrap:balance;margin:.5rem 0 1rem;
   }
-  .eyebrow{
-    font-family:"IBM Plex Mono", ui-monospace, monospace;
-    font-size:.72rem;
-    letter-spacing:.14em;
-    text-transform:uppercase;
-    color:var(--ink-soft);
-    margin:0 0 .6rem;
+  h2{font-family:var(--display);font-weight:600;font-size:1.5rem;line-height:1.2;text-wrap:balance;margin:0 0 .8rem;}
+  .lede{font-size:1.12rem;max-width:62ch;margin:0 0 1.2rem;}
+  .steps{list-style:none;padding:0;margin:1.6rem 0;display:grid;gap:.9rem;max-width:62ch;}
+  .steps li{display:grid;grid-template-columns:2rem 1fr;gap:.7rem;align-items:baseline;}
+  .steps .n{
+    font-family:var(--mono);font-weight:600;color:var(--gold);font-size:.95rem;
+    border:1px solid var(--gold);border-radius:50%;width:1.9rem;height:1.9rem;
+    display:inline-grid;place-items:center;
   }
-  .lede{max-width:62ch;color:var(--ink-soft);font-size:1.02rem;margin:0 0 1rem;}
-  .lede strong{color:var(--ink);font-weight:500;}
-  header.top{border-bottom:1px solid var(--line);padding-bottom:1.5rem;margin-bottom:1.5rem;}
+  .aside{color:var(--ink-soft);max-width:62ch;margin:0 0 1.6rem;}
+  .cta{
+    display:inline-flex;align-items:center;gap:.5rem;background:var(--ink);color:var(--paper);
+    border:none;border-radius:999px;padding:.85rem 1.6rem;font-family:var(--mono);font-size:.9rem;
+    letter-spacing:.04em;cursor:pointer;
+  }
+  .cta:hover{background:var(--bone);}
+  .cta.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);}
+  .cta.secondary:hover{border-color:var(--ink-soft);background:transparent;}
+  .cta-row{display:flex;flex-wrap:wrap;gap:.7rem;align-items:center;}
 
-  .bar{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line);margin-bottom:2rem;}
-  .bar-inner{
-    max-width:760px;margin:0 auto;padding:.7rem 1.25rem;
-    display:flex;align-items:center;gap:1.1rem;
-    font-family:"IBM Plex Mono", monospace;font-size:.78rem;color:var(--ink-soft);
-  }
-  .bar .count{color:var(--ink);font-weight:600;}
-  .bar .fill{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden;}
-  .bar .fill i{display:block;height:100%;background:var(--gold);width:0%;transition:width .25s ease;}
-  .bar .tallybit{display:flex;gap:.4rem;align-items:center;white-space:nowrap;}
-  .swatch{width:.55rem;height:.55rem;border-radius:1px;display:inline-block;background:var(--gold);}
+  details.fine{margin-top:2.6rem;border-top:1px solid var(--line);padding-top:1.1rem;}
+  details.fine summary{cursor:pointer;font-family:var(--mono);font-size:.8rem;letter-spacing:.06em;color:var(--ink-soft);}
+  details.fine .plain{margin:1rem 0;display:grid;gap:.6rem;max-width:62ch;}
+  details.fine .plain p{margin:0;}
+  details.fine ul{margin:.6rem 0 0;padding-left:1.1rem;font-size:.95rem;color:var(--ink-soft);max-width:66ch;}
+  details.fine li{margin:0 0 .5rem;}
 
-  .turn{margin:0 0 2.6rem;}
-  .turn .meta{
-    display:flex;align-items:baseline;gap:.6rem;
-    font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
-    color:var(--ink-soft);margin-bottom:.55rem;
+  /* Moment screen */
+  .strip{display:grid;grid-template-columns:repeat(var(--n), 1fr);gap:3px;margin:0 0 1.1rem;}
+  .strip button{
+    height:10px;border:none;border-radius:2px;background:var(--line);cursor:pointer;padding:0;
   }
-  .turn .meta .num{color:var(--gold);}
-  .msg{
-    background:var(--paper-raised);border-left:2px solid var(--line);
-    padding:.85rem 1.05rem;border-radius:0 6px 6px 0;font-style:italic;margin-bottom:1rem;
+  .strip button.done{background:var(--gold);}
+  .strip button.here{outline:2px solid var(--ink);outline-offset:1px;}
+  .moment-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:.4rem 1rem;margin-bottom:.3rem;}
+  .moment-head h2{margin:0;font-size:1.35rem;}
+  .phase{font-family:var(--mono);font-size:.78rem;color:var(--ink-soft);}
+  .ask{margin:.2rem 0 1.3rem;color:var(--ink-soft);}
+  .shared{
+    background:var(--paper-raised);border-left:3px solid var(--line);padding:.8rem 1rem;border-radius:0 6px 6px 0;
+    font-style:italic;margin:0 0 1.2rem;
   }
-  .msg::before{content:"\201C";font-style:normal;color:var(--ink-soft);}
-  .msg::after{content:"\201D";font-style:normal;color:var(--ink-soft);}
-  .card .said{font-style:italic;border-left:2px solid var(--line);padding:.1rem 0 .1rem .75rem;margin:0 0 .8rem;color:var(--ink-soft);}
-  .card .said b{font-style:normal;font-family:"IBM Plex Mono", monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:.2rem;}
-  .card details.earlier{margin:0 0 .7rem;font-size:.9rem;color:var(--ink-soft);}
-  .card details.earlier summary{cursor:pointer;font-family:"IBM Plex Mono", monospace;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;}
-  .card details.earlier .ex{margin:.5rem 0 0;padding-left:.75rem;border-left:1px dashed var(--line);}
-  .card .reply-label{font-family:"IBM Plex Mono", monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:.3rem;}
 
-  .stack{display:flex;flex-direction:column;gap:.8rem;}
+  .stack{display:grid;gap:1rem;}
   .card{
-    background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;
-    padding:1rem 1.15rem;display:flex;flex-direction:column;
+    background:var(--paper-raised);border:1px solid var(--line);border-radius:10px;padding:1.05rem 1.15rem 1.15rem;
+    display:flex;flex-direction:column;gap:.7rem;transition:border-color .15s ease, box-shadow .15s ease;
   }
-  .card .label{
-    font-family:"IBM Plex Mono", monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;
-    color:var(--ink-soft);margin-bottom:.55rem;display:flex;justify-content:space-between;align-items:center;
+  .card-top{display:flex;justify-content:space-between;align-items:center;gap:.6rem;}
+  .card-name{font-family:var(--mono);font-weight:600;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;}
+  .said{
+    margin:0;padding:.15rem 0 .15rem .8rem;border-left:2px solid var(--line);color:var(--ink-soft);font-style:italic;
   }
-  .reply{font-size:.98rem;}
+  .said b,.reply-label{
+    display:block;font-style:normal;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-soft);margin-bottom:.2rem;font-weight:500;
+  }
+  details.earlier{font-size:.93rem;color:var(--ink-soft);}
+  details.earlier summary{cursor:pointer;font-family:var(--mono);font-size:.72rem;letter-spacing:.05em;}
+  details.earlier .ex{margin:.5rem 0 0;padding-left:.8rem;border-left:1px dashed var(--line);}
+  details.earlier .ex p{margin:0 0 .4rem;}
   .reply p{margin:0 0 .7rem;}
   .reply p:last-child,.reply ul:last-child{margin-bottom:0;}
   .reply ul{margin:0 0 .7rem;padding-left:1.25rem;}
   .reply li{margin:0 0 .3rem;}
-  .reply .h{font-family:"IBM Plex Mono", monospace;font-size:.78rem;letter-spacing:.04em;font-weight:600;margin:.9rem 0 .4rem;}
+  .reply .h{font-family:var(--mono);font-size:.8rem;font-weight:600;margin:.9rem 0 .4rem;}
   .reply hr{border:none;border-top:1px solid var(--line);margin:.9rem 0;}
-
   .pick{
-    margin-top:.9rem;align-self:flex-start;border:1px solid var(--line);background:transparent;color:var(--ink);
-    font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
-    padding:.5rem .8rem;border-radius:6px;cursor:pointer;
-    transition:background .15s ease, border-color .15s ease;
+    align-self:flex-start;border:1px solid var(--ink-soft);background:transparent;border-radius:999px;
+    padding:.6rem 1.1rem;font-family:var(--mono);font-size:.82rem;cursor:pointer;
   }
-  .pick:hover{border-color:var(--ink-soft);}
-  .pick:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
-  .card.picked{border-color:var(--gold);}
-  .card.picked .pick{background:var(--gold-soft);border-color:var(--gold);}
-  .card.picked .pick::after{content:" \2713";}
-  .card.revealed.is-boneamanita{border-color:var(--bone);}
-  .card.revealed.is-vanilla{border-color:var(--vanilla);}
-  .card.revealed.is-prompted{border-color:var(--prompted);}
-  .tag{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;padding:.15rem .45rem;border-radius:4px;}
+  .pick:hover{background:var(--gold-soft);border-color:var(--gold);}
+  .pick:disabled{cursor:default;opacity:.6;background:transparent;}
+  .card.picked{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset;}
+  .card.picked .pick{background:var(--gold);border-color:var(--gold);color:var(--paper);opacity:1;}
+  .tag{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .5rem;border-radius:4px;}
   .tag.boneamanita{background:var(--bone-soft);color:var(--bone);}
   .tag.vanilla{background:var(--vanilla-soft);color:var(--vanilla);}
   .tag.prompted{background:var(--prompted-soft);color:var(--prompted);}
-
   .held{
-    background:var(--paper-raised);border:1px dashed var(--line);border-radius:8px;padding:1rem 1.15rem;
-    color:var(--ink-soft);font-family:"IBM Plex Mono", monospace;font-size:.78rem;
+    background:var(--paper-raised);border:1px dashed var(--line);border-radius:10px;padding:1rem 1.15rem;color:var(--ink-soft);
   }
-  .held .why{margin-top:.5rem;font-family:"Newsreader", Georgia, serif;font-size:.95rem;color:var(--ink);font-style:italic;}
-  .held details{margin-top:.8rem;font-family:"Newsreader", Georgia, serif;color:var(--ink);}
-  .held summary{cursor:pointer;font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
-  .held .other{margin-top:.7rem;}
-  .held .other .tag{display:inline-block;margin-bottom:.4rem;}
+  .held .other{margin-top:.8rem;}
 
-  .phase-shift{
-    font-family:"IBM Plex Mono", monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--ink-soft);text-align:center;margin:2.8rem 0 1.6rem;display:flex;align-items:center;gap:.8rem;
+  .navbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--paper);border-top:1px solid var(--line);
+    padding:.7rem 1.1rem calc(.7rem + env(safe-area-inset-bottom, 0px));
   }
-  .phase-shift::before,.phase-shift::after{content:"";flex:1;height:1px;background:var(--line);}
+  .navbar-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:.6rem;}
+  .navbar .count{flex:1;text-align:center;font-family:var(--mono);font-size:.8rem;color:var(--ink-soft);white-space:nowrap;}
+  .navbar button{
+    border:1px solid var(--line);background:var(--paper-raised);border-radius:999px;padding:.6rem 1rem;
+    font-family:var(--mono);font-size:.82rem;cursor:pointer;white-space:nowrap;
+  }
+  .navbar button.go{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .navbar button:disabled{opacity:.4;cursor:default;}
+  .keys{margin-top:1.4rem;font-family:var(--mono);font-size:.72rem;color:var(--ink-soft);}
+  @media (hover: none){ .keys{display:none;} }
 
-  .method{margin:0 0 2.2rem;padding:1rem 1.15rem;border:1px solid var(--line);border-radius:8px;background:var(--paper-raised);}
-  .method h2{font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 .6rem;font-weight:500;}
-  .method ul{margin:0;padding-left:1.1rem;font-size:.95rem;}
-  .method li{margin:0 0 .45rem;}
-  .reveal-all{margin-top:3rem;padding-top:2rem;border-top:1px solid var(--line);}
-  .reveal-all button{
-    font-family:"IBM Plex Mono", monospace;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;
-    background:var(--ink);color:var(--paper);border:none;padding:.75rem 1.3rem;border-radius:6px;cursor:pointer;
+  /* Finish screen */
+  .tally{display:grid;gap:.6rem;margin:1.2rem 0 1.6rem;}
+  .tally .row{
+    display:grid;grid-template-columns:1fr auto;gap:.3rem 1rem;align-items:center;
+    padding:.8rem 1rem;border:1px solid var(--line);border-radius:10px;background:var(--paper-raised);
   }
-  .reveal-all button:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
-  .verdict{display:none;margin-top:1.6rem;}
-  .verdict.shown{display:block;}
-  .verdict h2{
-    font-family:"IBM Plex Mono", monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--ink-soft);margin:1.8rem 0 .3rem;font-weight:500;
+  .tally .num{font-family:var(--mono);font-weight:600;font-size:1.3rem;font-variant-numeric:tabular-nums;}
+  .tally .what{grid-column:1 / -1;color:var(--ink-soft);font-size:.95rem;}
+  .send{border-top:1px solid var(--line);margin-top:2rem;padding-top:1.6rem;}
+  .field{display:grid;gap:.3rem;margin:0 0 1rem;max-width:36rem;}
+  .field label{font-family:var(--mono);font-size:.75rem;letter-spacing:.05em;color:var(--ink-soft);}
+  .field input,.field textarea{
+    font:inherit;font-size:1rem;color:var(--ink);background:var(--paper-raised);border:1px solid var(--line);
+    border-radius:8px;padding:.6rem .75rem;width:100%;
   }
-  .verdict h2:first-child{margin-top:0;}
-  .verdict .row{
-    display:flex;justify-content:space-between;align-items:center;gap:1rem;
-    padding:.65rem 0;border-bottom:1px solid var(--line);
-    font-family:"IBM Plex Mono", monospace;font-size:.85rem;
+  .export{
+    width:100%;font-family:var(--mono);font-size:.78rem;line-height:1.5;background:var(--paper-raised);color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;padding:.8rem;margin:.8rem 0 0;
   }
-  .verdict .row:last-child{border-bottom:none;}
-  .verdict .num{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .note{font-size:.9rem;color:var(--ink-soft);max-width:62ch;margin:.8rem 0 0;}
-  .export{width:100%;margin-top:.8rem;font-family:"IBM Plex Mono", monospace;font-size:.75rem;background:var(--paper-raised);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:.7rem;}
-  .note code{font-family:"IBM Plex Mono", monospace;font-size:.8rem;color:var(--ink);}
-  footer{margin-top:3rem;color:var(--ink-soft);font-size:.85rem;font-family:"IBM Plex Mono", monospace;}
+  .address{font-family:var(--mono);background:var(--paper-raised);border:1px solid var(--line);border-radius:6px;padding:.1rem .45rem;user-select:all;}
+  .status{font-family:var(--mono);font-size:.8rem;color:var(--bone);min-height:1.2em;margin:.6rem 0 0;}
+  .judges .row{display:flex;justify-content:space-between;gap:1rem;padding:.45rem 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.82rem;}
+  .note{color:var(--ink-soft);font-size:.95rem;max-width:62ch;}
+  .quiet{background:none;border:none;padding:0;color:var(--ink-soft);text-decoration:underline;cursor:pointer;font-family:var(--mono);font-size:.78rem;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;scroll-behavior:auto!important;} }
 </style>
 
-<div class="bar">
-  <div class="bar-inner">
-    <span class="tallybit"><span class="swatch"></span> picked: <span class="count" id="pickedCount">0</span>/<span id="pickedTotal">0</span></span>
-    <div class="fill"><i id="fillBar"></i></div>
-    <span id="barHint">read blind, pick as you go</span>
-  </div>
-</div>
-
 <div class="wrap">
-  <header class="top">
-    <p class="eyebrow">__EYEBROW__</p>
-    <h1>__TITLE__</h1>
-    <p class="lede">
-      __STORY__
-      __HOW__
-      Your picks are saved in this browser as you go, so you can leave and come back.
-    </p>
-    <p class="lede">
-      What is being compared: a full BoneAmanita engine, the bare model with no instructions at all,
-      and the bare model with a single line asking it to be a warm, concise friend. The third one is
-      there so the engine has to beat a cheap prompt, not just a model left to its own devices.
-    </p>
-  </header>
+  <section id="intro" aria-labelledby="introTitle">
+    <p class="label">__EYEBROW__</p>
+    <h1 id="introTitle">__TITLE__</h1>
+    <p class="lede">__STORY__</p>
+    <p class="lede">__HOW__</p>
+    <ol class="steps">
+      <li><span class="n">1</span><span>Read what they just said and the three replies they got.</span></li>
+      <li><span class="n">2</span><span>Pick the reply <strong>you would rather receive</strong> if you were them. There are no right answers; go with your gut.</span></li>
+      <li><span class="n">3</span><span>When you're done, see which helper was which, and send your picks back.</span></li>
+    </ol>
+    <p class="aside" id="lengthNote"></p>
+    <div class="cta-row">
+      <button class="cta" id="startBtn" type="button">Start reading</button>
+      <button class="cta secondary" id="resumeFinish" type="button" hidden>See my results</button>
+    </div>
 
-  <section class="method">
-    <h2>How this page was made</h2>
-    <ul id="method"></ul>
+    <details class="fine" id="fine">
+      <summary>How this was made (the fine print)</summary>
+      <div class="plain">
+        <p><strong>The person is not real.</strong> Another AI played them, and it reacted to whatever each helper said, so the three conversations drift apart.</p>
+        <p><strong>All three helpers are the same AI model.</strong> One runs inside BoneAmanita, an experimental engine being tested here. One was given a single instruction to be a warm, concise friend. One was given no instructions at all.</p>
+        <p><strong>This is a home-made test, not a scientific one.</strong> The list below says exactly how it was made and where it leans.</p>
+      </div>
+      <ul id="method"></ul>
+    </details>
   </section>
 
-  <div id="turns"></div>
+  <section id="moment" hidden aria-live="polite">
+    <div class="strip" id="strip" role="group" aria-label="All moments"></div>
+    <div class="moment-head">
+      <h2 id="momentTitle" tabindex="-1"></h2>
+      <span class="phase" id="momentPhase"></span>
+    </div>
+    <p class="ask">Which reply would you rather get?</p>
+    <div id="momentBody"></div>
+    <p class="keys">Keys: 1, 2, 3 to pick &middot; &larr; &rarr; to move</p>
+  </section>
 
-  <div class="reveal-all">
-    <button id="revealBtn" type="button">Reveal everything</button>
-    <div class="verdict" id="verdict"></div>
-  </div>
+  <section id="finish" hidden aria-labelledby="finishTitle">
+    <h2 id="finishTitle" tabindex="-1">Thank you. Here's who was who.</h2>
+    <p class="note" id="finishLead"></p>
+    <div class="tally" id="tally"></div>
+    <div class="cta-row">
+      <button class="cta secondary" id="browseBtn" type="button">Look back through the conversations, names shown</button>
+    </div>
+    <div class="judges" id="judges"></div>
 
-  <footer id="foot"></footer>
+    <div class="send">
+      <h2>Send your picks</h2>
+      <p class="note" id="sendLead"></p>
+      <div class="field">
+        <label for="whoInput">Your name or a nickname (optional)</label>
+        <input id="whoInput" type="text" autocomplete="nickname">
+      </div>
+      <div class="field">
+        <label for="notesInput">Anything you noticed? (optional)</label>
+        <textarea id="notesInput" rows="3"></textarea>
+      </div>
+      <div class="cta-row">
+        <button class="cta" id="copyBtn" type="button">Copy my picks</button>
+        <a class="cta secondary" id="mailBtn" hidden>Email them</a>
+      </div>
+      <p class="status" id="copyStatus" role="status"></p>
+      <textarea id="exportText" class="export" rows="8" readonly aria-label="Your picks as text"></textarea>
+      <p class="note" style="margin-top:2rem">
+        <button class="quiet" id="resetBtn" type="button">Clear my picks and start over</button>
+      </p>
+    </div>
+  </section>
 </div>
+
+<nav class="navbar" id="navbar" hidden aria-label="Moments">
+  <div class="navbar-inner">
+    <button type="button" id="prevBtn">&larr; Back</button>
+    <span class="count" id="navCount"></span>
+    <button type="button" id="nextBtn">Next &rarr;</button>
+    <button type="button" id="doneBtn" class="go">I'm done</button>
+  </div>
+</nav>
 
 <script>
 const DATA = /*__DATA__*/null;
 const TURNS = DATA.turns;
+// Export names stay fixed: the result parser reads them.
 const SYS_NAME = {boneamanita: "BoneAmanita", prompted: "Prompted", vanilla: "Vanilla"};
+const SYS_PLAIN = {
+  boneamanita: ["BoneAmanita", "The experimental engine being tested."],
+  prompted: ["The friend prompt", "The same AI with one instruction: “" + DATA.friendPrompt + "”"],
+  vanilla: ["The plain AI", "The same AI with no instructions at all."],
+};
 const SYS_ORDER = ["boneamanita", "prompted", "vanilla"];
+const PHASE_PLAIN = {
+  engaged: "Getting going", tiring: "Getting tired", flagging: "Running on empty",
+  distressed: "A rough night", recovering: "Coming back around",
+};
 const STORE_KEY = DATA.storeKey;
-const container = document.getElementById('turns');
-document.getElementById('method').innerHTML = (DATA.method || []).map(l => `<li>${esc(l)}</li>`).join('');
+const $ = id => document.getElementById(id);
+const comparable = TURNS.filter(t => t.comparable);
 
-function loadPicks(){
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }
-  catch(e){ return {}; }
+function load(){
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch(e){ return {}; }
 }
-function savePicks(p){
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(p)); }
-  catch(e){ /* storage blocked: picks just will not persist */ }
+function save(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){ /* not kept: fine */ }
 }
-let picks = loadPicks();
+const stored = load();
+// Older pages stored the picks map directly.
+const state = stored.picks ? stored : {picks: stored, revealed: false, at: 0};
+state.picks = state.picks || {};
 
-function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function inline(s){
   return esc(s)
     .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
@@ -264,176 +322,203 @@ function inline(s){
 function render(text){
   const out = []; let list = null;
   const flush = () => { if (list){ out.push('<ul>' + list.join('') + '</ul>'); list = null; } };
-  text.split(/\n/).forEach(line => {
-    const t = line.trim();
-    let m;
+  String(text || '').split(/\n/).forEach(line => {
+    const t = line.trim(); let m;
     if (!t){ flush(); return; }
     if (/^-{3,}$/.test(t)){ flush(); out.push('<hr>'); return; }
     if ((m = t.match(/^#{1,6}\s+(.*)$/))){ flush(); out.push('<div class="h">' + inline(m[1]) + '</div>'); return; }
-    if ((m = t.match(/^[*\-]\s+(.*)$/)) || (m = t.match(/^\d+[.)]\s+(.*)$/))){
-      (list = list || []).push('<li>' + inline(m[1]) + '</li>'); return;
-    }
+    if ((m = t.match(/^[*\-]\s+(.*)$/)) || (m = t.match(/^\d+[.)]\s+(.*)$/))){ (list = list || []).push('<li>' + inline(m[1]) + '</li>'); return; }
     flush(); out.push('<p>' + inline(t) + '</p>');
   });
   flush();
   return out.join('');
 }
+const pickedCount = () => comparable.filter(t => state.picks[t.turn] !== undefined).length;
 
-function renderTurn(t, prevPhase){
-  if (t.phase !== prevPhase){
-    const shift = document.createElement('div');
-    shift.className = 'phase-shift';
-    shift.textContent = t.phase;
-    container.appendChild(shift);
-  }
-  const wrap = document.createElement('div');
-  wrap.className = 'turn';
-  wrap.innerHTML = `
-    <div class="meta"><span class="num">#${String(t.turn).padStart(2,'0')}</span><span>${t.phase}</span></div>` +
-    (t.message ? `<div class="msg">${esc(t.message)}</div>` : '');
+/* Intro */
+$('method').innerHTML = (DATA.method || []).map(l => `<li>${esc(l)}</li>`).join('');
+$('lengthNote').textContent =
+  `There are ${TURNS.length} moments. Pick as many as you like; even five helps. ` +
+  `Your picks are saved in this browser, so you can stop and come back later.`;
+if (pickedCount()) $('startBtn').textContent = `Carry on (${pickedCount()} picked so far)`;
+if (state.revealed) { $('resumeFinish').hidden = false; $('startBtn').textContent = 'Look back through the conversations'; }
 
-  if (!t.comparable){
-    const held = document.createElement('div');
-    held.className = 'held';
-    const others = t.heldContext.map(o =>
-      `<div class="other"><span class="tag ${o.sys}">${SYS_NAME[o.sys]} replied</span><div class="reply">${render(o.text)}</div></div>`
-    ).join('');
-    held.innerHTML = `BoneAmanita held silence on this turn.
-      <div class="why">${esc(t.haltReason || '')}</div>
-      <details><summary>What the other two said</summary>${others}</details>`;
-    wrap.appendChild(held);
-    container.appendChild(wrap);
-    return;
-  }
+/* Moments */
+const strip = $('strip');
+strip.style.setProperty('--n', TURNS.length);
+TURNS.forEach((t, i) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.i = i;
+  strip.appendChild(b);
+});
+function paintStrip(){
+  [...strip.children].forEach((b, i) => {
+    const t = TURNS[i];
+    const done = state.picks[t.turn] !== undefined;
+    b.classList.toggle('done', done);
+    b.classList.toggle('here', i === state.at);
+    b.setAttribute('aria-label', `Moment ${i + 1}${done ? ', picked' : ''}`);
+    if (i === state.at) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+  });
+  $('navCount').textContent = `${pickedCount()} picked`;
+  $('prevBtn').disabled = state.at === 0;
+  $('nextBtn').disabled = state.at === TURNS.length - 1;
+  $('doneBtn').textContent = state.revealed ? 'Results' : "I'm done";
+}
 
-  const stack = document.createElement('div');
-  stack.className = 'stack';
-  t.cards.forEach(c => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.turn = t.turn;
-    card.dataset.letter = c.letter;
-    card.dataset.sys = c.sys;
-    // Responsive cards carry their own conversation: what you said there, and what came before it.
-    const own = c.said === undefined ? '' :
-      (c.context && c.context.length ? `<details class="earlier"><summary>Earlier in this conversation</summary>` +
-        c.context.map(x => `<div class="ex"><p><b>You:</b> ${esc(x.me)}</p><div><b>Them:</b></div><div class="reply">${render(x.friend)}</div></div>`).join('') +
+function cardHTML(c, t){
+  const picked = state.picks[t.turn] === c.letter;
+  const name = state.revealed
+    ? `<span class="tag ${c.sys}">${esc(SYS_PLAIN[c.sys][0])}</span>` : '';
+  const own = c.said === undefined ? '' :
+    (c.context && c.context.length
+      ? `<details class="earlier"><summary>Earlier in this conversation</summary>` +
+        c.context.map(x => `<div class="ex"><p><b>They said:</b> ${esc(x.me)}</p><div class="reply">${render(x.friend)}</div></div>`).join('') +
         `</details>` : '') +
-      `<div class="said"><b>You just said</b>${esc(c.said)}</div><div class="reply-label">Their reply</div>`;
-    card.innerHTML = `
-      <div class="label"><span>${c.said === undefined ? 'Reply' : 'Conversation'} ${c.letter}</span><span class="reveal-tag" hidden></span></div>
-      ${own}<div class="reply">${render(c.text)}</div>
-      <button class="pick" type="button">Pick this one</button>`;
-    stack.appendChild(card);
+      `<p class="said"><b>They just said</b>${esc(c.said)}</p>`;
+  return `<div class="card${picked ? ' picked' : ''}" data-letter="${c.letter}">
+      <div class="card-top"><span class="card-name">${c.said === undefined ? 'Reply' : 'Conversation'} ${c.letter}</span>${name}</div>
+      ${own}<div><span class="reply-label">The reply</span><div class="reply">${render(c.text)}</div></div>
+      <button class="pick" type="button" aria-pressed="${picked}" ${state.revealed ? 'disabled' : ''}>${picked ? 'Your pick' : 'I’d rather get this one'}</button>
+    </div>`;
+}
+
+function showMoment(i, focus){
+  state.at = Math.max(0, Math.min(TURNS.length - 1, i)); save();
+  const t = TURNS[state.at];
+  $('momentTitle').textContent = `Moment ${state.at + 1} of ${TURNS.length}`;
+  $('momentPhase').textContent = PHASE_PLAIN[t.phase] || t.phase;
+  let html = t.message ? `<p class="shared"><span class="reply-label">They said</span>${esc(t.message)}</p>` : '';
+  if (!t.comparable){
+    html += `<div class="held"><p>On this moment one helper stayed silent, so there is nothing to pick.</p>
+      <p><em>${esc(t.haltReason || '')}</em></p>` +
+      t.heldContext.map(o => `<div class="other"><span class="reply-label">Another helper replied</span><div class="reply">${render(o.text)}</div></div>`).join('') +
+      `</div>`;
+  } else {
+    html += `<div class="stack">${t.cards.map(c => cardHTML(c, t)).join('')}</div>`;
+  }
+  $('momentBody').innerHTML = html;
+  paintStrip();
+  window.scrollTo({top: 0});
+  if (focus) $('momentTitle').focus({preventScroll: true});
+}
+
+function pick(letter){
+  const t = TURNS[state.at];
+  if (!t.comparable || state.revealed) return;
+  state.picks[t.turn] = letter; save();
+  // Update in place: re-rendering would jump a phone reader back to the top.
+  document.querySelectorAll('#momentBody .card').forEach(card => {
+    const mine = card.dataset.letter === letter;
+    const b = card.querySelector('.pick');
+    card.classList.toggle('picked', mine);
+    b.setAttribute('aria-pressed', mine);
+    b.textContent = mine ? 'Your pick' : 'I’d rather get this one';
   });
-  wrap.appendChild(stack);
-  container.appendChild(wrap);
+  paintStrip();
 }
 
-let prevPhase = null;
-TURNS.forEach(t => { renderTurn(t, prevPhase); prevPhase = t.phase; });
-
-const comparable = TURNS.filter(t => t.comparable);
-document.getElementById('pickedTotal').textContent = comparable.length;
-const heldCount = TURNS.length - comparable.length;
-document.getElementById('foot').textContent = heldCount
-  ? `${heldCount} of the ${TURNS.length} scripted turns ${heldCount === 1 ? 'is' : 'are'} not scored: BoneAmanita held silence ` +
-    `${heldCount === 1 ? 'on it' : 'on them'}, which is a real behaviour and not a missing data point, so there is nothing to rank against.`
-  : '';
-
-function updateBar(){
-  const n = Object.keys(picks).filter(k => comparable.some(t => String(t.turn) === k)).length;
-  document.getElementById('pickedCount').textContent = n;
-  document.getElementById('fillBar').style.width = (100 * n / comparable.length).toFixed(0) + '%';
-  document.getElementById('barHint').textContent = n >= comparable.length ? 'all picked, reveal below' : 'read blind, pick as you go';
+function openScreen(name){
+  $('intro').hidden = name !== 'intro';
+  $('moment').hidden = name !== 'moment';
+  $('finish').hidden = name !== 'finish';
+  $('navbar').hidden = name !== 'moment';
 }
-function applyStoredPick(turn){
-  const letter = picks[turn];
-  if (letter === undefined) return;
-  document.querySelectorAll(`.card[data-turn="${turn}"]`).forEach(card => {
-    card.classList.toggle('picked', card.dataset.letter === letter);
-  });
-}
-comparable.forEach(t => applyStoredPick(t.turn));
-updateBar();
 
-container.addEventListener('click', e => {
-  const btn = e.target.closest('.pick');
-  if (!btn) return;
-  const card = btn.closest('.card');
-  const turn = card.dataset.turn;
-  picks[turn] = card.dataset.letter;
-  savePicks(picks);
-  document.querySelectorAll(`.card[data-turn="${turn}"]`).forEach(c => c.classList.toggle('picked', c === card));
-  updateBar();
+$('startBtn').addEventListener('click', () => { openScreen('moment'); showMoment(state.at || 0, true); });
+$('resumeFinish').addEventListener('click', () => { openScreen('finish'); renderFinish(); });
+$('prevBtn').addEventListener('click', () => showMoment(state.at - 1, true));
+$('nextBtn').addEventListener('click', () => showMoment(state.at + 1, true));
+$('doneBtn').addEventListener('click', () => { openScreen('finish'); renderFinish(); });
+strip.addEventListener('click', e => { const b = e.target.closest('button'); if (b) showMoment(+b.dataset.i, true); });
+$('momentBody').addEventListener('click', e => {
+  const b = e.target.closest('.pick'); if (b) pick(b.closest('.card').dataset.letter);
+});
+document.addEventListener('keydown', e => {
+  if ($('moment').hidden || e.target.closest('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = TURNS[state.at];
+  if (e.key === 'ArrowRight') showMoment(state.at + 1, true);
+  else if (e.key === 'ArrowLeft') showMoment(state.at - 1, true);
+  else if (t.comparable && /^[1-9]$/.test(e.key) && t.cards[+e.key - 1]) pick(t.cards[+e.key - 1].letter);
 });
 
-function row(label, value){
-  return `<div class="row"><span>${label}</span><span class="num">${value}</span></div>`;
-}
-
-document.getElementById('revealBtn').addEventListener('click', () => {
-  document.querySelectorAll('.card[data-sys]').forEach(card => {
-    const sys = card.dataset.sys;
-    card.classList.add('revealed', 'is-' + sys);
-    const tag = card.querySelector('.reveal-tag');
-    tag.hidden = false;
-    tag.innerHTML = `<span class="tag ${sys}">${SYS_NAME[sys]}</span>`;
-  });
-
+/* Finish */
+function tallyPicks(){
   const mine = {boneamanita: 0, prompted: 0, vanilla: 0};
   comparable.forEach(t => {
-    const letter = picks[t.turn];
-    if (letter === undefined) return;
-    const c = t.cards.find(x => x.letter === letter);
+    const c = t.cards.find(x => x.letter === state.picks[t.turn]);
     if (c) mine[c.sys]++;
   });
-  const unpicked = comparable.length - mine.boneamanita - mine.prompted - mine.vanilla;
-  const key = {boneamanita: 'BONEAMANITA', prompted: 'PROMPTED', vanilla: 'VANILLA'};
-  let html = '<h2>Your picks</h2>';
-  SYS_ORDER.forEach(s => { html += row(SYS_NAME[s], mine[s]); });
-  html += row('Unpicked', unpicked);
-  DATA.judges.forEach(J => {
-    const pw = (a, b) => `${J.pairwise[`${a} over ${b}`]} &ndash; ${J.pairwise[`${b} over ${a}`]}`;
-    html += `<h2>Judge: ${esc(J.model)}</h2>`;
-    html += row(`First place, of ${J.votes} votes`, '');
-    SYS_ORDER.forEach(s => { html += row('&nbsp;&nbsp;' + SYS_NAME[s], `${J.first[key[s]]} &middot; mean rank ${J.meanRank[key[s]]}`); });
-    html += row('BoneAmanita vs Prompted', pw('BONEAMANITA', 'PROMPTED'));
-    html += row('BoneAmanita vs Vanilla', pw('BONEAMANITA', 'VANILLA'));
-    html += row('Prompted vs Vanilla', pw('PROMPTED', 'VANILLA'));
-    html += `<p class="note">Ranked ${J.passes} times per turn with independent shuffles; both passes picked the same winner on ${J.agree} of ${J.turns} turns` +
-      (J.unparsed ? `, and ${J.unparsed} of ${J.unparsed + J.votes} votes could not be parsed and were dropped.` : '.') + `</p>`;
+  return mine;
+}
+function exportText(){
+  const mine = tallyPicks();
+  const who = $('whoInput').value.trim();
+  const notes = $('notesInput').value.trim();
+  const lines = [document.title + ' — my picks'];
+  if (who) lines.push('From: ' + who);
+  lines.push(`BoneAmanita ${mine.boneamanita} | Prompted ${mine.prompted} | Vanilla ${mine.vanilla} | no pick ${comparable.length - pickedCount()}`);
+  comparable.forEach(t => {
+    const c = t.cards.find(x => x.letter === state.picks[t.turn]);
+    lines.push(`#${String(t.turn).padStart(2, '0')} ${t.phase}: ${c ? SYS_NAME[c.sys] : 'no pick'}`);
   });
-  html += `<p class="note">${esc(DATA.pooledNote)}</p>`;
-  html += `<h2>What each one was</h2>
-    <p class="note"><strong>BoneAmanita:</strong> the full engine on gemma4:12b (physics, somatic budget, Lexical Firewall, the CONVERSATION style guide).</p>
-    <p class="note"><strong>Prompted:</strong> gemma4:12b with exactly one instruction, <code>${esc(DATA.friendPrompt)}</code></p>
-    <p class="note"><strong>Vanilla:</strong> gemma4:12b with no instructions, and no cap on how long it could go.</p>`;
-  html += `<h2>Send your picks back</h2>
-    <p class="note">Copies your result for each turn, with the phase and which responder you chose, so it can be read as text.</p>
-    <button id="copyBtn" type="button">Copy my results</button>
-    <textarea id="copyOut" class="export" readonly hidden rows="8"></textarea>`;
-  const v = document.getElementById('verdict');
-  v.innerHTML = html;
-  const summary = [
-    document.title + ' \u2014 my picks',
-    `BoneAmanita ${mine.boneamanita} | Prompted ${mine.prompted} | Vanilla ${mine.vanilla} | no pick ${unpicked}`,
-  ].concat(comparable.map(t => {
-    const c = picks[t.turn] === undefined ? null : t.cards.find(x => x.letter === picks[t.turn]);
-    return `#${String(t.turn).padStart(2, '0')} ${t.phase}: ${c ? SYS_NAME[c.sys] : 'no pick'}`;
-  })).join('\n');
-  document.getElementById('copyBtn').addEventListener('click', () => {
-    const out = document.getElementById('copyOut');
-    out.value = summary;
-    const showManual = () => { out.hidden = false; out.focus(); out.select(); };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(summary).then(
-        () => { document.getElementById('copyBtn').textContent = 'Copied'; },
-        showManual
-      );
-    } else { showManual(); }
+  if (notes) lines.push('', 'Notes: ' + notes);
+  return lines.join('\n');
+}
+function refreshExport(){
+  const text = exportText();
+  $('exportText').value = text;
+  const mail = $('mailBtn');
+  if (DATA.contact && DATA.contact.email){
+    mail.hidden = false;
+    mail.href = `mailto:${DATA.contact.email}?subject=${encodeURIComponent(document.title + ': my picks')}&body=${encodeURIComponent(text)}`;
+  }
+}
+function renderFinish(){
+  const n = pickedCount();
+  if (!state.revealed && n){ state.revealed = true; save(); }
+  const mine = tallyPicks();
+  $('finishLead').textContent = n
+    ? `You picked on ${n} of ${comparable.length} moments. Your picks are now locked, so looking back can't change them.`
+    : `You haven't picked any replies yet. Go back and pick a few first; the names stay hidden until you do.`;
+  $('finishTitle').textContent = n ? "Thank you. Here's who was who." : 'Nothing picked yet';
+  $('tally').innerHTML = n ? SYS_ORDER.map(s => `
+    <div class="row"><span><span class="tag ${s}">${esc(SYS_PLAIN[s][0])}</span></span>
+      <span class="num">${mine[s]}</span><span class="what">${esc(SYS_PLAIN[s][1])}</span></div>`).join('') : '';
+  $('browseBtn').textContent = n ? 'Look back through the conversations, names shown' : 'Back to the moments';
+  let jh = '';
+  (DATA.judges || []).forEach(J => {
+    const key = {boneamanita: 'BONEAMANITA', prompted: 'PROMPTED', vanilla: 'VANILLA'};
+    jh += `<h2>An AI judge's picks (${esc(J.model)})</h2>` +
+      SYS_ORDER.map(s => `<div class="row"><span>${esc(SYS_PLAIN[s][0])}</span><span>${J.first[key[s]]} first places</span></div>`).join('');
   });
-  v.classList.add('shown');
-  v.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  if (DATA.pooledNote) jh += `<p class="note">${esc(DATA.pooledNote)}</p>`;
+  $('judges').innerHTML = n ? jh : '';
+  $('sendLead').innerHTML = DATA.contact && DATA.contact.email
+    ? `Copy your picks and email them to <span class="address">${esc(DATA.contact.email)}</span>, or use the email button if your device opens mail for you.`
+    : `Copy your picks and send them to whoever shared this page with you.`;
+  document.querySelector('.send').hidden = !n;
+  refreshExport();
+  $('finishTitle').focus({preventScroll: true});
+  window.scrollTo({top: 0});
+}
+['whoInput', 'notesInput'].forEach(id => $(id).addEventListener('input', refreshExport));
+$('browseBtn').addEventListener('click', () => { openScreen('moment'); showMoment(state.at, true); });
+$('copyBtn').addEventListener('click', () => {
+  const text = exportText();
+  const out = $('exportText');
+  out.value = text;
+  const manual = () => { out.focus(); out.select(); $('copyStatus').textContent = 'Selected: press Ctrl+C (or Cmd+C) to copy.'; };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(() => { $('copyStatus').textContent = 'Copied. Now paste it into a message.'; }, manual);
+  } else manual();
 });
+let resetArmed = false;
+$('resetBtn').addEventListener('click', () => {
+  if (!resetArmed){ resetArmed = true; $('resetBtn').textContent = 'Tap again to clear everything'; return; }
+  state.picks = {}; state.revealed = false; state.at = 0; save();
+  location.reload();
+});
+
+openScreen('intro');
 </script>
