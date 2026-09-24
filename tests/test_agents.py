@@ -158,6 +158,45 @@ class AgentTests(BoneTestCase):
         gatekeeper.audit_generation("Start with the tire story.", forge)
         self.assertIsNone(gatekeeper.last_rejection)
 
+    def test_a_banned_phrase_inside_another_word_is_not_a_hit(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        ok, _ = gatekeeper.audit_generation("If the story ends and there is a beat of silence, let it sit.", forge)
+        self.assertTrue(ok, gatekeeper.last_rejection)
+        ok, _ = gatekeeper.audit_generation("Here is a plan for the toast.", forge)
+        self.assertFalse(ok)
+        self.assertEqual(gatekeeper.last_rejection["text"].lower(), "here is a")
+
+    def test_a_pattern_the_validator_repairs_is_not_rejected_here(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        for text in ("While the room is loud, the story will carry.", "Importantly, keep it to one story."):
+            ok, _ = gatekeeper.audit_generation(text, forge)
+            self.assertTrue(ok, (text, gatekeeper.last_rejection))
+
+    SCOPED = {
+        "AGENCY_THEFT": "If you feel ready, start with the tire story.",
+        "SNEAKY_ENGAGEMENT": "Out of curiosity, start with the tire story.",
+        "CASUAL_FILLER": "So, start with the tire story.",
+        "SYRUPY_EMPATHY": "That sounds like a lot to carry into one toast.",
+    }
+
+    def test_game_narration_rules_stay_out_of_conversation(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        for name, text in self.SCOPED.items():
+            ok, _ = gatekeeper.audit_generation(text, forge, mode="ADVENTURE")
+            self.assertFalse(ok, name)
+            self.assertEqual(gatekeeper.last_rejection["name"], name)
+            ok, _ = gatekeeper.audit_generation(text, forge, mode="CONVERSATION")
+            self.assertTrue(ok, (name, gatekeeper.last_rejection))
+
+    def test_the_validator_scopes_the_same_rules(self):
+        validator = self.engine.cortex.validator
+        for name, text in self.SCOPED.items():
+            self.assertFalse(validator.validate(text, {"meta": {"active_mode": "ADVENTURE"}})["valid"], name)
+            self.assertTrue(validator.validate(text, {"meta": {"active_mode": "CONVERSATION"}})["valid"], name)
+
     def test_a_mask_costs_the_configured_ros_and_less_on_a_retry(self):
         """The person never sees a masked draft; it was a flat 15 ROS every time."""
         bio = self.engine.config.BIO

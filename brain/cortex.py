@@ -801,12 +801,17 @@ class TheCortex:
                         )
             if not val_res.get("feedback_instruction"):
                 gate_pass, gate_txt = gk.audit_generation(
-                    final_text, self.svc.bio.mito, attempt=attempt
+                    final_text, self.svc.bio.mito, attempt=attempt,
+                    mode=full_state.get("meta", {}).get("active_mode"),
                 )
                 if not gate_pass or "IMMUNOSUPPRESSION ENGAGED" in gate_txt:
                     # The feedback below is the same for both; the gatekeeper's own message names the phrase.
                     rejected_by = "gatekeeper" if not gate_pass else "hla_mask"
-                    reject_detail = Prisma.strip(gate_txt)
+                    caught = getattr(gk, "last_rejection", None)
+                    # The gatekeeper's own message is flavour and may not name the match; log the match.
+                    reject_detail = (
+                        f'{caught["kind"]} {caught["name"]}: "{caught["text"]}"' if caught else Prisma.strip(gate_txt)
+                    )
                     val_res.update(
                         {
                             "feedback_instruction": self._name_the_crime(getattr(gk, "last_rejection", None)),

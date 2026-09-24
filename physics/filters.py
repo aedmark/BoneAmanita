@@ -153,7 +153,16 @@ class TheGatekeeper:
         self._banned_phrases = style_crimes.get(
             "BANNED_PHRASES", []
         ) + style_crimes.get("TOXIC_KEYWORDS", [])
-        self._rejection_patterns = style_crimes.get("PATTERNS", [])
+        # Word-bounded like the validator's copy of the same list: "there is a" is not "Here is a".
+        self._banned_regex = (
+            re.compile(r"(?i)\b(" + "|".join(re.escape(str(p)) for p in self._banned_phrases) + r")\b")
+            if self._banned_phrases
+            else None
+        )
+        # Patterns with a repair action (KEEP_TAIL, STRIP_PREFIX) are the validator's to fix, not ours to reject.
+        self._rejection_patterns = [
+            p for p in style_crimes.get("PATTERNS", []) if p.get("action") not in ("KEEP_TAIL", "STRIP_PREFIX")
+        ]
         self._default_rejections = style_crimes.get(
             "REJECTIONS",
             [
@@ -246,7 +255,7 @@ class TheGatekeeper:
         }
 
     def audit_generation(
-        self, generated_text: str, mito_state: Any, attempt: int = 0
+        self, generated_text: str, mito_state: Any, attempt: int = 0, mode: Optional[str] = None
     ) -> Tuple[bool, str]:
         # What the last rejection matched, so a retry can be told exactly what to avoid.
         self.last_rejection = None
@@ -263,14 +272,12 @@ class TheGatekeeper:
         for pattern, replacement in self._compiled_scrubs:
             gen_txt = pattern.sub(replacement, gen_txt)
         gen_txt = gen_txt.strip()
-        text_lower = gen_txt.lower()
-        trigger = next(
-            (phrase for phrase in self._banned_phrases if phrase.lower() in text_lower),
-            None,
-        )
-        matched = trigger
+        hit = self._banned_regex.search(gen_txt) if self._banned_regex else None
+        trigger = matched = hit.group(0) if hit else None
         if not trigger:
             for pat in self._rejection_patterns:
+                if mode and mode.upper() in pat.get("skip_modes", []):
+                    continue
                 if (regex_pattern := pat.get("regex")) and (
                     hit := re.search(regex_pattern, gen_txt, re.IGNORECASE)
                 ):

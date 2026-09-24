@@ -493,10 +493,44 @@ variant; say it plainly.` The validator path already named its phrases.
 Tests in `tests/test_agents.py` and `tests/test_random.py`, the retry-prompt
 one mutation checked.
 
-**Running:** a fresh `bone` responsive run with both changes (after the
-vanilla arm), then the full suite. There is no logged run without the
-naming fix, so the only before/after is the mercy count (3/30 before), on
-different conversations: a hint, not a measurement.
+**What the receipts found: the gatekeeper, and it was wrong.** A fresh `bone`
+run with the receipts and the named-phrase retries: 5 drafts rejected on 3
+turns, all by `TheGatekeeper`, two turns falling through to a pause line
+(7 engaged, 22 distressed). Every one was a false positive:
+
+1. **Banned phrases matched as raw substrings.** Turn 7's draft said "...and
+   there is a beat of silence"; "t*here is a*" contains the banned "Here is
+   a". The validator already matched the same list with word boundaries;
+   the gatekeeper's copy was `phrase in text`. Fixed: the gatekeeper compiles
+   the same word-bounded regex (`_banned_regex`).
+2. **Repair patterns rejected outright.** `NEG_COMP` (`STRIP_PREFIX`),
+   `WHILE_HEDGE` and `ADVERB_BLOAT` (`KEEP_TAIL`) are patterns the validator
+   rewrites in place; the gatekeeper ignored `action` and rejected the whole
+   draft on any match. Fixed: it skips patterns with a repair action.
+3. **An ADVENTURE rule in CONVERSATION.** Turn 22's draft to a distressed
+   person contained "you feel"; `AGENCY_THEFT`'s own message reads "Do not
+   tell the player what they feel... You only control the physical
+   environment." The gatekeeper applied every pattern in every mode.
+   **Fixed, Gordon's call:** `AGENCY_THEFT`, `CASUAL_FILLER` (a reply opening
+   with So/Well/Oh/Now, "speak with absolute weight"), `SYRUPY_EMPATHY` and
+   `SNEAKY_ENGAGEMENT` carry `"skip_modes": ["CONVERSATION"]` in
+   `lore/style_crimes.json`, honoured by both the gatekeeper (new `mode`
+   argument, from the turn's `meta.active_mode`, the validator's source) and
+   the validator. Every other mode is unchanged. Tests in both directions for
+   all four, in both filters, each skip mutation checked.
+
+Also fixed: the receipt logged the gatekeeper's flavour message, which is
+chosen at random and often does not name the match ("a corporate safety
+filter is violently suppressed"); it now logs `kind name: "matched text"`.
+`cortex.redraft` goes in a new `EVENT_SUBSYSTEMS` (issued only when a draft is
+sent back), since on `CORE_SUBSYSTEMS` a session with no rejections would
+read as a silent subsystem; the roll-call test accepts either. That test was
+the full suite's one failure (658 passed, 5 skipped before these fixes).
+Tests for 1 and 2 in `tests/test_agents.py`, both mutation checked; the
+receipt detail is asserted in `tests/test_random.py`.
+
+The pauses were never about bad drafts. The mercy line's 3/30 (and this
+run's 2/30) came from the filter, not the model.
 
 <a id="judge-controls-2026-09-21"></a>
 
@@ -1160,7 +1194,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.10 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.11 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.

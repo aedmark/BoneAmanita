@@ -1072,6 +1072,8 @@ class ResponseValidator:
                 "DO NOT NARRATE ACTIONS OR USE STAGE DIRECTIONS (e.g. *sighs*, *looks away*). Speak only the words."
             )
         for compiled_reg, p in self.compiled_patterns:
+            if str(active_mode).upper() in p.get("skip_modes", []):
+                continue
             if active_mode == "TECHNICAL" and p.get("name") in [
                 "META_AI_TALK",
                 "CUSTOMER_SERVICE_GREETING",

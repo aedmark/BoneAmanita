@@ -511,7 +511,10 @@ class RandomTest(BoneTestCase):
 
     def test_a_retry_is_told_the_exact_banned_phrase(self):
         from engine.core import CycleContext
+        from engine.receipts import ReceiptLedger
         from physics.models import PhysicsPacket
+
+        ReceiptLedger.get_instance().begin_turn()
 
         self.engine.cortex.dspy_critic.enabled = False
         self.engine.cortex.validator.validate = MagicMock(
@@ -528,6 +531,8 @@ class RandomTest(BoneTestCase):
         self.engine.cortex.process_context(ctx)
         retry_prompt = self.engine.cortex.llm.generate.call_args_list[1].args[0]
         self.assertIn('banned phrase "a rare privilege"', retry_prompt)
+        receipt = next(r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft")
+        self.assertEqual((receipt.effect, receipt.detail), ("gatekeeper", 'phrase a rare privilege: "a rare privilege"'))
 
     def test_the_pause_pool_never_mentions_the_engine_and_never_asks(self):
         pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]

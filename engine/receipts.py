@@ -20,6 +20,8 @@ CORE_SUBSYSTEMS = (
     "physics.word_resolution",
     "stage.negotiate",
 )
+# Issued only when their event happens (a draft sent back), so their absence is not silence.
+EVENT_SUBSYSTEMS = ("cortex.redraft",)
 
 
 @dataclass(frozen=True)

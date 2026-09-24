@@ -62,11 +62,13 @@
     },
     {
       "name": "AGENCY_THEFT",
+      "skip_modes": ["CONVERSATION"],
       "regex": "(?i)\\b(you feel|you notice|you can't help but|you wonder|you think|you realize|you decide|you ponder|you sense|you hesitate|you confidently|you cautiously|you assume)\\b",
       "error_msg": "AGENCY THEFT. Do not tell the player what they feel, think, notice, or do. You only control the physical environment."
     },
     {
       "name": "SNEAKY_ENGAGEMENT",
+      "skip_modes": ["CONVERSATION"],
       "regex": "(?i)\\b(let's explore|shall we|what is it that|out of curiosity|just curious)\\b.*",
       "error_msg": "NO FORCED ENGAGEMENT. Stop trying to lead the conversation."
     },
@@ -87,11 +89,13 @@
     },
     {
       "name": "CASUAL_FILLER",
+      "skip_modes": ["CONVERSATION"],
       "regex": "(?i)^(?:wow|well|oh|hmm|haha|lol|anyway|now|so)[,.]?\\s+",
       "error_msg": "DETECTED CASUAL OPENER. Do not use conversational filler. Speak with absolute weight."
     },
     {
       "name": "SYRUPY_EMPATHY",
+      "skip_modes": ["CONVERSATION"],
       "regex": "(?i)(?:sounds like|looks like|seems like you|wow|intense)",
       "error_msg": "NO EMPATHY GUESSING. Do not patronize the user or evaluate their feelings."
     },

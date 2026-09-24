@@ -14,7 +14,7 @@ import ast
 import os
 import unittest
 
-from engine.receipts import CORE_SUBSYSTEMS, Receipt, ReceiptLedger
+from engine.receipts import CORE_SUBSYSTEMS, EVENT_SUBSYSTEMS, Receipt, ReceiptLedger
 from tests.base import BoneTestCase
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -168,11 +168,11 @@ class TestRollCall(unittest.TestCase):
 
     def test_every_issuing_subsystem_is_on_the_roll_call(self):
         issued = {n for n in _issued_subsystem_names() if not n.startswith("probe.")}
-        unwatched = sorted(issued - set(CORE_SUBSYSTEMS))
+        unwatched = sorted(issued - set(CORE_SUBSYSTEMS) - set(EVENT_SUBSYSTEMS))
         self.assertEqual(
             unwatched,
             [],
-            f"These subsystems issue receipts but are not in CORE_SUBSYSTEMS: "
+            f"These subsystems issue receipts but are in neither CORE_SUBSYSTEMS nor EVENT_SUBSYSTEMS: "
             f"{unwatched}. Nothing would notice if they went silent.",
         )
 
