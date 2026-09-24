@@ -5,8 +5,6 @@ from engine.core import Prisma
 
 
 class ThePragmatist:
-    _CLICHE_A_RE = re.compile(r"(?i)not just a?\s*.*?,?\s*it['’]s a")
-    _CLICHE_B_RE = re.compile(r"(?i)didn")
     _HEDGE_A_RE = re.compile(r"(?i)\bperhaps\b\s*")
     _HEDGE_B_RE = re.compile(r"(?i)it could be said(?: that)?\s*")
 
@@ -44,14 +42,7 @@ class ThePragmatist:
         )
         word_count = len(draft_text.split())
         lower_draft = draft_text.lower()
-        if self._CLICHE_A_RE.search(draft_text) or self._CLICHE_B_RE.search(draft_text):
-            if self.events:
-                self.events.log(
-                    f"{Prisma.RED}Syntactic antigen detected (Negative Comparative). Amputated.{Prisma.RST}",
-                    "SYS",
-                )
-                self.events.log("TOXICITY_SPIKE", "SYS")
-            return "[SYNTACTIC ANTIGEN AMPUTATED]", False
+        # Negative comparisons are the gatekeeper's (NEGATIVE_COMPARISON), which can cut one sentence instead of the draft.
         if cf_expect > 0.7 and any(
             phrase in lower_draft
             for phrase in [

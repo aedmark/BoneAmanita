@@ -205,6 +205,7 @@ class AgentTests(BoneTestCase):
             "You aren't trying to fill a time slot; you're telling him something.",
             "This isn’t about perfection, it’s about showing up.",
             "The words aren't the point; they're the vehicle.",
+            "You didn't just drive four hours, you showed up.",
         ):
             ok, _ = gatekeeper.audit_generation(text, forge, mode="CONVERSATION")
             self.assertFalse(ok, text)
@@ -214,6 +215,7 @@ class AgentTests(BoneTestCase):
             "You do not have to carry his panic for him. It is his to hold.",
             "You don't have to decide tonight. It's okay to sleep on it.",
             "I'm not sure what to say, but I'm here.",
+            "He didn't say much, but you knew.",
         ):
             ok, _ = gatekeeper.audit_generation(text, forge, mode="CONVERSATION")
             self.assertTrue(ok, (text, gatekeeper.last_rejection))

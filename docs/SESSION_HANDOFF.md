@@ -580,6 +580,21 @@ refuses to gut a draft or ship a leak), `tests/test_random.py` (through the
 real loop: a last draft with a style crime ships without that sentence and
 files the receipt; an all-crime draft still pauses).
 
+**The run after 20.7.4.12** (`20260923-214147`, fresh, paced): 30 turns, 0
+held, 5 turns redrafted, 1 pause (turn 3), 0 salvages. Turn 3's second draft
+never reached the gatekeeper: `ThePragmatist.enforce_maxims` replaced it
+whole with `[SYNTACTIC ANTIGEN AMPUTATED]`, the validator stripped that to
+nothing and rejected it as "RESPONSE TOO SHORT". The pragmatist had its own
+negative-comparison check, and since 20.6.3 (2026-06-25, when its regexes
+were hoisted to class attributes) `_CLICHE_B_RE` was the truncated
+`(?i)didn`: **any draft containing "didn't" was discarded.** The original
+was `didn['’]t just\s*.*?,?\s*you`. **Fixed in 20.7.4.13:** the
+pragmatist check is removed (the gatekeeper owns negative comparisons and
+can salvage), and "You didn't just X, you Y" is a new `NEGATIVE_COMPARISON`
+branch ("He didn't say much, but you knew." passes). Tests in
+`tests/test_pragmatics.py` (the pragmatist leaves both shapes alone) and
+`tests/test_agents.py`.
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21
@@ -1242,7 +1257,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.12 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.13 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.
