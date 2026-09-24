@@ -520,12 +520,10 @@ class PromptComposer:
         v_high = float(safe_get(c_cfg, "VOLTAGE_HIGH", 60.0))
         v_manic = float(safe_get(c_cfg, "VOLTAGE_MANIC", 80.0))
         v_low = float(safe_get(c_cfg, "VOLTAGE_LOW", 20.0))
+        active_style_guide = list(self.fog_protocol or mode_data.get("style_guide", []))
+        # High voltage adds to the mode's rules; replacing them dropped "RESPOND, DO NOT NARRATE" and the identity.
         if voltage > v_high:
-            active_style_guide = high_voltage_data.get("style_guide", [])
-        else:
-            active_style_guide = mode_data.get("style_guide", [])
-        if self.fog_protocol:
-            active_style_guide = self.fog_protocol
+            active_style_guide += high_voltage_data.get("style_guide", [])
         style_notes.extend(
             [line.replace("{ban_string}", ban_string) for line in active_style_guide]
         )
@@ -792,10 +790,9 @@ class PromptComposer:
             voltage = float(
                 safe_get(phys_ref, "voltage", safe_get(energy_layer, "voltage", 30.0))
             )
-        if voltage > 60:
-            mode_directives = high_voltage_data.get("directives", [])
-        else:
-            mode_directives = mode_data.get("directives", [])
+        mode_directives = list(mode_data.get("directives", []))
+        if voltage > float(safe_get(safe_get(self.cfg, "CORTEX", {}), "VOLTAGE_HIGH", 60.0)):
+            mode_directives += high_voltage_data.get("directives", [])
         if mood_override:
             mood_note = f"Current Biology: {mood_override}"
         else:

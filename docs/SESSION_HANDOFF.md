@@ -20,6 +20,31 @@ Offline: engaged turns reading as tiring 25-45% to 0% in every set. Cost:
 the reading now climbs from 0 at `DISENGAGEMENT_RATE` 0.15 per message, so
 flagging on the simulated-person runs registers less (toast 14% to 3%,
 rescue 90% to 47%); the rate is the knob if that matters.
+**(1) done (20.7.4.30), Gordon's call A-C, keep an eye on D:**
+- **A.** High voltage *adds* to the mode's rules instead of replacing them.
+  Above `VOLTAGE_HIGH` the composer used to swap both the mode's directives
+  (behind a hard-coded 60) and its style guide for `HIGH_VOLTAGE`'s, which
+  dropped RESPOND, DO NOT NARRATE and the identity in a conversation. Both
+  now read `VOLTAGE_HIGH` and append the overlay.
+- **B.** `HIGH_VOLTAGE` is a short overlay: "running hot... quicker, more
+  associative, willing to leap and skip a step. You are still talking to
+  the same person", "Shorter sentences, faster turns, sharper opinions",
+  "Never describe your state, your systems or a body". Gone: "NO
+  CONVERSATION: You are not talking to anyone", "Raw, abstract, frantic,
+  physical", "Internal system monologues only", "raw, brutal fact".
+- **C.** The reply prefixes carry no state banner in any band. **Found in
+  the audit:** "[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]" ended the prompt on
+  29 of 29 turns of the final rescue run and 29 of 30 of the toast run,
+  because conversations run at 2 to 20 volts and `VOLTAGE_LOW` is 20. So
+  every panel run so far told the model, last thing before it wrote, that
+  it was an exhausted system. The panel page's run (`161859`) had this.
+- **D (watch, not changed):** `VOLTAGE_LOW` 20 sits above where
+  conversations run, so anything else keyed to "low voltage" is effectively
+  always on in CONVERSATION. Check during A8's measurement pass.
+- Tests: `tests/test_voltage_prompt.py` composes the conversation prompt at
+  3, 30 and 90 volts (rules and identity always present, no banner, no old
+  protocol; the overlay only at 90, after the mode's rules); each of the
+  three changes mutation checked.
 
 **THE PAGE TO UPLOAD (2026-09-24 night):** `tools/cache/panel_public_standalone.html`
 (gitignored; carries Gordon's address), built from rescue bone
@@ -1630,7 +1655,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   native-Ollama and source-sweep change (2026-09-24): green (expect 692 passed, 5 skipped).
+   native-Ollama and source-sweep change (2026-09-24): green (expect 694 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1714,7 +1739,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 692 passed, 0 failed, 5 skipped** (2026-09-24 night), about
+- **Test suite: 694 passed, 0 failed, 5 skipped** (2026-09-24 night), about
   seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
