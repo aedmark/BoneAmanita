@@ -57,6 +57,7 @@
   "PATTERNS": [
     {
       "name": "META_AI_TALK",
+      "hard": true,
       "regex": "(?i)\\b(data and code|digital realm|language model|1s and 0s|virtual space|database)\\b",
       "error_msg": "NO META-AWARENESS. You are a cybernetic organism, not a computer program. Do not refer to data or code."
     },
@@ -106,7 +107,7 @@
     },
     {
       "name": "NEGATIVE_COMPARISON",
-      "regex": "(?i)\\bnot\\s+(?:only|just|merely|simply)?\\s*[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but|rather|instead|they|it)\\b|\\b(?:isn'?t|aren'?t|wasn'?t|weren'?t|doesn'?t|don'?t|didn'?t|won'?t|wouldn'?t|can'?t|couldn'?t|shouldn'?t|not)\\b[^.!?;\\n]*[.!?;]\\s+(?:It'?s|It\\s+is|They'?re|They\\s+are|You'?re|You\\s+are|We'?re|We\\s+are|That'?s|That\\s+is)\\b",
+      "regex": "(?i)\\bnot\\s+(?:only|just|merely|simply)\\s+[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but|rather|instead)\\b|\\bnot\\s+about\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?:but\\s+)?(?:about|it['’]?s\\s+about|it\\s+is\\s+about)\\b|(?:\\b(?:it|this|that)['’]s\\s+not|\\b(?:is|was)\\s+not|\\b(?:isn['’]?t|wasn['’]?t))\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?:it|this|that)(?:['’]s|\\s+is|\\s+was)\\b|\\b(?:are\\s+not|were\\s+not|aren['’]?t|weren['’]?t)\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)they(?:['’]re|\\s+are|\\s+were)\\b|\\b(?P<s1>you|they|we)(?:(?:['’]re|\\s+are|\\s+were)\\s+not|\\s+(?:aren['’]?t|weren['’]?t))\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?P=s1)(?:['’]re|\\s+are|\\s+were)\\b|\\bI(?:['’]m|\\s+am)\\s+not\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)I(?:['’]m|\\s+am)\\b",
       "error_msg": "DETECTED NEGATIVE COMPARISON. Don't say what it isn't. Say exactly what it is."
     },
     {

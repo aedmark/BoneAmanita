@@ -534,6 +534,41 @@ class RandomTest(BoneTestCase):
         receipt = next(r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft")
         self.assertEqual((receipt.effect, receipt.detail), ("gatekeeper", 'phrase a rare privilege: "a rare privilege"'))
 
+    def _run_with_drafts(self, drafts):
+        from engine.core import CycleContext
+        from engine.receipts import ReceiptLedger
+        from physics.models import PhysicsPacket
+
+        ReceiptLedger.get_instance().begin_turn()
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.validator.validate = MagicMock(
+            side_effect=lambda text, _state: {"valid": True, "content": text, "meta_logs": []}
+        )
+        self.engine.cortex.llm.generate = MagicMock(side_effect=drafts)
+        ctx = CycleContext(input_text="Help me with the toast.", is_system_event=False)
+        ctx.physics = PhysicsPacket()
+        ctx.bio_result = {"mito": {"atp_pool": 100.0, "ros_buildup": 0.0}}
+        ctx.mind_state = {"lens": "TEST", "role": "Test"}
+        ctx.world_state = {}
+        result = self.engine.cortex.process_context(ctx)
+        return result, ReceiptLedger.get_instance().for_turn()
+
+    def test_a_last_draft_with_a_style_crime_ships_without_that_sentence(self):
+        result, receipts = self._run_with_drafts([
+            "It is the essence of a toast. Keep it short.",
+            "Start with the tire story. It's not a speech. It's a toast.",
+        ])
+        self.assertEqual(result["raw_content"], "Start with the tire story. It's a toast.")
+        salvage = [r for r in receipts if r.subsystem == "cortex.salvage"]
+        self.assertEqual([r.detail for r in salvage], ["It's not a speech."])
+        self.assertEqual(len([r for r in receipts if r.subsystem == "cortex.redraft"]), 2)
+
+    def test_a_last_draft_that_is_all_crime_still_pauses(self):
+        pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]
+        result, receipts = self._run_with_drafts(["The essence of it.", "A grand tapestry. A delicate dance."])
+        self.assertIn(result["raw_content"], pool)
+        self.assertFalse([r for r in receipts if r.subsystem == "cortex.salvage"])
+
     def test_the_pause_pool_never_mentions_the_engine_and_never_asks(self):
         pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]
         self.assertGreaterEqual(len(pool), 4)

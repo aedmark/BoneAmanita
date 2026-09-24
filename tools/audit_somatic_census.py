@@ -474,6 +474,10 @@ def run(
                         for r in ReceiptLedger.get_instance().for_turn()
                         if r.subsystem == "cortex.redraft"
                     ],
+                    # Sentences cut from the last draft instead of replacing it with a pause.
+                    "salvaged": [
+                        r.detail for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.salvage"
+                    ],
                     "prompt": read_prompt(call["prompt"]) if call else None,
                     "asked": {k: call["asked"].get(k) for k in ("temperature", "top_p", "max_tokens")} if call else None,
                     "sent": {k: call["sent"].get(k) for k in ("temperature", "top_p", "max_tokens")} if call else None,

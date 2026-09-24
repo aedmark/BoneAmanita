@@ -133,10 +133,13 @@ run** unless you pass `back=` (judge tool) or read the raw file yourself.
 
 **Representative runs** (2026-09-23): each boot reads saved state from an
 empty temp dir (`fresh_state`), `displayed` is the reply as the engine showed
-it (after its filters, or the mercy line), and turns are paced by a person's
-reading and typing time (`paced_seconds`, `--pace none` to disable). Records
-from before this lack the three fields; `build_blind_panel.py` says so on the
-page when it builds from them.
+it (after its filters, a last draft with its offending sentences cut, or a
+pause line), and turns are paced by a person's reading and typing time
+(`paced_seconds`, `--pace none` to disable). Records from before this lack
+the three fields; `build_blind_panel.py` says so on the page when it builds
+from them. `rejections` lists each draft sent back that turn (which check,
+what it matched); `salvaged` lists the sentences cut from the last draft
+instead of pausing (records from before 2026-09-23 late lack it).
 
 ### `audit_somatic_vanilla.py` — the baseline arms
 

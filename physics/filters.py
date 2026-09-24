@@ -125,6 +125,32 @@ class HLA_Stabilizer:
         return msg + model_output
 
 
+_SENTENCE_END = re.compile(r"[.!?]+[\"')\]]*(?=\s|$)|\n\s*\n")
+
+
+def _sentence_around(text: str, pos: int) -> Tuple[int, int]:
+    """The [start, end) of the sentence holding pos, ending punctuation included."""
+    start = 0
+    for m in _SENTENCE_END.finditer(text):
+        if m.end() <= pos:
+            start = m.end()
+        else:
+            return start, m.end() if text[m.start()] != "\n" else m.start()
+    return start, len(text)
+
+
+def _bounded(phrase: str) -> str:
+    head = r"(?<!\w)" if phrase[:1].isalnum() else ""
+    tail = r"(?!\w)" if phrase[-1:].isalnum() else ""
+    return head + re.escape(phrase) + tail
+
+
+def _tidy(text: str) -> str:
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 class TheGatekeeper:
     _FIREWALL_PATTERN = re.compile(
         r"^\s*(that makes sense|i understand|you bring up a great point|you're right|i agree|makes sense)[.,]?\s*",
@@ -153,9 +179,9 @@ class TheGatekeeper:
         self._banned_phrases = style_crimes.get(
             "BANNED_PHRASES", []
         ) + style_crimes.get("TOXIC_KEYWORDS", [])
-        # Word-bounded like the validator's copy of the same list: "there is a" is not "Here is a".
+        # Word-bounded ("there is a" is not "Here is a"), but only at word edges, so "[END OF" still matches.
         self._banned_regex = (
-            re.compile(r"(?i)\b(" + "|".join(re.escape(str(p)) for p in self._banned_phrases) + r")\b")
+            re.compile("(?i)" + "|".join(_bounded(str(p)) for p in self._banned_phrases))
             if self._banned_phrases
             else None
         )
@@ -163,6 +189,10 @@ class TheGatekeeper:
         self._rejection_patterns = [
             p for p in style_crimes.get("PATTERNS", []) if p.get("action") not in ("KEEP_TAIL", "STRIP_PREFIX")
         ]
+        # Scaffold leaks and "hard" patterns spoil the whole draft; everything else can be cut out of it.
+        self._hard_phrases = {str(p).lower() for p in style_crimes.get("TOXIC_KEYWORDS", [])}
+        self._hard_patterns = {p.get("name") for p in self._rejection_patterns if p.get("hard")}
+        self._last_draft = None
         self._default_rejections = style_crimes.get(
             "REJECTIONS",
             [
@@ -258,7 +288,7 @@ class TheGatekeeper:
         self, generated_text: str, mito_state: Any, attempt: int = 0, mode: Optional[str] = None
     ) -> Tuple[bool, str]:
         # What the last rejection matched, so a retry can be told exactly what to avoid.
-        self.last_rejection = None
+        self.last_rejection, self._last_draft = None, None
         gen_txt = self.hla.mitigate_rejection(
             generated_text, current_psi=1.0, mito_state=mito_state, attempt=attempt
         )
@@ -272,20 +302,11 @@ class TheGatekeeper:
         for pattern, replacement in self._compiled_scrubs:
             gen_txt = pattern.sub(replacement, gen_txt)
         gen_txt = gen_txt.strip()
-        hit = self._banned_regex.search(gen_txt) if self._banned_regex else None
-        trigger = matched = hit.group(0) if hit else None
-        if not trigger:
-            for pat in self._rejection_patterns:
-                if mode and mode.upper() in pat.get("skip_modes", []):
-                    continue
-                if (regex_pattern := pat.get("regex")) and (
-                    hit := re.search(regex_pattern, gen_txt, re.IGNORECASE)
-                ):
-                    trigger, matched = pat.get("name", "BANNED_PATTERN"), hit.group(0)
-                    break
+        self._last_draft = (gen_txt, mode)
+        crime = self._find_crime(gen_txt, mode)
+        trigger = crime["name"] if crime else None
         if trigger:
-            kind = "phrase" if matched == trigger else "pattern"
-            self.last_rejection = {"kind": kind, "name": trigger, "text": matched}
+            self.last_rejection = {k: crime[k] for k in ("kind", "name", "text")}
             bio_cfg = safe_get(self.cfg, "BIO", {})
             repeat_scale = repeat_tax_scale(self.cfg, attempt)
             apply_metabolic_tax(
@@ -298,3 +319,37 @@ class TheGatekeeper:
             )
             return False, f"{Prisma.RED}{rejection_msg}{Prisma.RST}"
         return True, gen_txt
+
+    def _find_crime(self, text: str, mode: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """The first banned phrase or pattern in text, with where it starts; no taxes, no state."""
+        if self._banned_regex and (hit := self._banned_regex.search(text)):
+            hard = hit.group(0).lower() in self._hard_phrases
+            return {"kind": "phrase", "name": hit.group(0), "text": hit.group(0), "start": hit.start(), "hard": hard}
+        for pat in self._rejection_patterns:
+            if mode and mode.upper() in pat.get("skip_modes", []):
+                continue
+            if (regex_pattern := pat.get("regex")) and (hit := re.search(regex_pattern, text, re.IGNORECASE)):
+                name = pat.get("name", "BANNED_PATTERN")
+                return {"kind": "pattern", "name": name, "text": hit.group(0), "start": hit.start(),
+                        "hard": name in self._hard_patterns}
+        return None
+
+    def salvage(self, max_cut_share: float = 0.5) -> Optional[Tuple[str, List[str]]]:
+        """The last audited draft with each offending sentence cut, or None if that guts it or a crime is hard.
+
+        Returns (text, cut sentences). A negative comparison loses its "isn't" sentence and keeps its "is" one.
+        """
+        if not self._last_draft:
+            return None
+        text, mode = self._last_draft
+        total = sum(1 for part in _SENTENCE_END.split(text) if part.strip())
+        cut = []
+        while crime := self._find_crime(text, mode):
+            if crime["hard"] or len(cut) + 1 > max_cut_share * total:
+                return None
+            start, end = _sentence_around(text, crime["start"])
+            cut.append(text[start:end].strip())
+            text = _tidy(text[:start] + text[end:])
+            if not text:
+                return None
+        return (text, cut) if cut else None

@@ -197,6 +197,53 @@ class AgentTests(BoneTestCase):
             self.assertFalse(validator.validate(text, {"meta": {"active_mode": "ADVENTURE"}})["valid"], name)
             self.assertTrue(validator.validate(text, {"meta": {"active_mode": "CONVERSATION"}})["valid"], name)
 
+    def test_negative_comparison_catches_the_shape_not_the_reassurance(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        for text in (
+            "It's not a speech. It's a toast.",
+            "You aren't trying to fill a time slot; you're telling him something.",
+            "This isn’t about perfection, it’s about showing up.",
+            "The words aren't the point; they're the vehicle.",
+        ):
+            ok, _ = gatekeeper.audit_generation(text, forge, mode="CONVERSATION")
+            self.assertFalse(ok, text)
+            self.assertEqual(gatekeeper.last_rejection["name"], "NEGATIVE_COMPARISON")
+        for text in (
+            "The worry won't sit still. You are allowed to step away from it.",
+            "You do not have to carry his panic for him. It is his to hold.",
+            "You don't have to decide tonight. It's okay to sleep on it.",
+            "I'm not sure what to say, but I'm here.",
+        ):
+            ok, _ = gatekeeper.audit_generation(text, forge, mode="CONVERSATION")
+            self.assertTrue(ok, (text, gatekeeper.last_rejection))
+
+    def test_a_scaffold_leak_is_caught_despite_its_punctuation(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        ok, _ = gatekeeper.audit_generation("Start small. [END OF TURN", self.engine.bio.mito)
+        self.assertFalse(ok)
+        self.assertEqual(gatekeeper.last_rejection["text"], "[END OF")
+
+    def test_salvage_cuts_the_isnt_sentence_and_keeps_the_is(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        draft = "Start with the tire story. It's not a speech. It's a toast.\n\nKeep it short."
+        gatekeeper.audit_generation(draft, self.engine.bio.mito, mode="CONVERSATION")
+        text, cut = gatekeeper.salvage()
+        self.assertEqual(text, "Start with the tire story. It's a toast.\n\nKeep it short.")
+        self.assertEqual(cut, ["It's not a speech."])
+
+    def test_salvage_will_not_gut_a_draft_or_ship_a_leak(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        gatekeeper.audit_generation("It's not a speech. It's a toast.", forge, mode="CONVERSATION")
+        self.assertIsNotNone(gatekeeper.salvage())
+        gatekeeper.audit_generation("The tapestry of it. A delicate dance. Keep it short.", forge)
+        self.assertIsNone(gatekeeper.salvage())
+        gatekeeper.audit_generation("Start small. Keep it short. VOLTAGE=5 now.", forge)
+        self.assertIsNone(gatekeeper.salvage())
+        gatekeeper.audit_generation("Start small.", forge)
+        self.assertIsNone(gatekeeper.salvage())
+
     def test_a_mask_costs_the_configured_ros_and_less_on_a_retry(self):
         """The person never sees a masked draft; it was a flat 15 ROS every time."""
         bio = self.engine.config.BIO

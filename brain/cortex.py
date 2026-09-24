@@ -849,6 +849,21 @@ class TheCortex:
                     else 2.0
                 )
                 self.svc.bio.mito.adjust_atp(-penalty, lbl)
+            if attempt == cognitive_retries - 1 and rejected_by == "gatekeeper":
+                # A style crime on the last draft costs its sentence, not the whole reply.
+                salvaged = gk.salvage() if hasattr(gk, "salvage") else None
+                val_res = self.validator.validate(salvaged[0], full_state) if salvaged else {"valid": False}
+                if val_res.get("valid"):
+                    final_output = val_res["content"]
+                    extracted_logs = val_res.get("meta_logs", [])
+                    issue_receipt(
+                        "cortex.salvage",
+                        "cut",
+                        result_count=len(salvaged[1]),
+                        inputs={"attempt": attempt + 1},
+                        detail=" | ".join(salvaged[1])[:300],
+                    )
+                    break
             if attempt == cognitive_retries - 1:
                 final_output = self._pause_line()
                 extracted_logs.append(

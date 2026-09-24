@@ -532,6 +532,54 @@ receipt detail is asserted in `tests/test_random.py`.
 The pauses were never about bad drafts. The mercy line's 3/30 (and this
 run's 2/30) came from the filter, not the model.
 
+### 2026-09-23, late: `NEGATIVE_COMPARISON` tightened, and a last draft loses a sentence, not the reply
+
+**The next `bone` run on the fixed filters** (run `20260923-203931`): 7
+drafts rejected on 4 turns, all by the gatekeeper, pauses on turns 8, 17 and
+21. Three were real clichés ("essence of", "tapestry", "serves as"); four were
+`NEGATIVE_COMPARISON`, and at least three of those were not the construction
+at all. Its second branch matched *any* negated sentence followed by one
+starting It's/You're/They're/We're/That's: "The worry won't sit still. You
+are allowed to step away" and "You do not have to carry his panic for him.
+It is his to hold" were both rejected, which is ordinary reassurance.
+
+**Tightened (Gordon's call): the second clause must pick up the negated
+one's subject.** It catches "It's not a speech. It's a toast.", "You aren't
+X; you're Y.", "Adding reinforcement isn't X; it's Y." (a thing, then
+it/this/that), "The words aren't X; they're Y.", "not only X, but Y" and
+"not about X, about Y"; it passes "You don't have to decide tonight. It's
+okay to sleep on it." and "I'm not sure what to say, but I'm here." (the old
+first branch caught that one too). Curly apostrophes count.
+
+**Salvage instead of a pause (Gordon's call: "we don't need a zero tolerance
+policy, we just need to cut the shit").** When the *last* draft is rejected
+by the gatekeeper, `TheGatekeeper.salvage()` cuts the sentence holding each
+match and re-checks until the draft is clean, then it goes through the
+validator like any draft. A negative comparison loses its "isn't" sentence
+and keeps the "is" one. It gives up, and the pause line stands, if the cuts
+would take more than half the sentences or the match is hard: a scaffold
+leak (`TOXIC_KEYWORDS`) or a pattern marked `"hard": true` in
+`style_crimes.json` (only `META_AI_TALK` so far). The AI-disclaimer mask and
+every other check (`maxims`, `dspy_critic`, `heuristic_audit`, `validator`)
+still fall through to a pause. Each salvage files a `cortex.salvage` receipt
+(an `EVENT_SUBSYSTEMS` entry) listing the cut sentences; the census records
+them as `salvaged`, and the panel's method section counts redrafted, cut
+and paused turns from the records.
+
+**A regression of my own, found while writing the hard-leak test:** the
+word-bounded `_banned_regex` above put `\b` on both ends of every phrase,
+and `\b` cannot match next to punctuation, so the gatekeeper had silently
+stopped catching the scaffold leaks `[END OF`, `===`, `[===` and a
+`VOLTAGE=` at a line end. It now bounds only an edge that is a word
+character (`physics/filters.py` `_bounded`). The validator's copy never had
+`TOXIC_KEYWORDS`, so it was unaffected.
+
+Tests: `tests/test_agents.py` (the shape and the reassurance, both
+directions; the scaffold leak; salvage keeps the "is" sentence; salvage
+refuses to gut a draft or ship a leak), `tests/test_random.py` (through the
+real loop: a last draft with a style crime ships without that sentence and
+files the receipt; an all-crime draft still pauses).
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21
@@ -1143,7 +1191,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   20.7.4.4 move into `engine/`: green (expect 633 passed, 5 skipped).
+   `NEGATIVE_COMPARISON` and salvage change: green (expect 669 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1194,7 +1242,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.11 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.12 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.
@@ -1227,8 +1275,8 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 633 passed, 0 failed, 5 skipped** (2026-09-23; the full run
-  counted 637 with a since-reverted judge test file), about eight minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
+- **Test suite: 669 passed, 0 failed, 5 skipped** (2026-09-23 late), about
+  seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
 - **Module boundaries are genuinely clean.** `physics/`, `body/`,

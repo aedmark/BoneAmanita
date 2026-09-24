@@ -121,6 +121,16 @@ def method_lines(runs: dict, responsive: bool) -> list:
     else:
         lines.append("Messages reached the engine back to back, with none of the idle time a real person's reading "
                      "and typing would give it (its energy recovers while idle).")
+    if all("salvaged" in r for r in bone):
+        ux = json.loads(Path("lore/ux_strings.json").read_text(encoding="utf-8"))
+        pool = set(ux.get("brain_strings", {}).get("cortex_pause", []))
+        redrafted = sum(1 for r in bone if r.get("rejections"))
+        cut = sum(1 for r in bone if r.get("salvaged"))
+        paused = sum(1 for r in bone if (r.get("displayed") or "").strip() in pool)
+        lines.append(f"BoneAmanita checks every draft against its style rules and rewrites it on a hit. It rewrote "
+                     f"on {redrafted} of {len(bone)} turns. When the last rewrite still broke a rule, it cut the "
+                     f"offending sentence ({cut} turns) or, if that would gut the reply, showed a short pause line "
+                     f"instead ({paused} turns). Those pause lines are canned text, not the model's.")
     lines.append("Where BoneAmanita declined to reply, its card shows the notice the person saw instead.")
     lines.append("A, B and C are shuffled every turn with a fixed seed. The answer key is in the page source, so this "
                  "is a casual blind read, not a sealed one.")
