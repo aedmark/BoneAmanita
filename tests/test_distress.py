@@ -50,6 +50,12 @@ class DistressIsReadFromWords(BoneTestCase):
         feed(lattice, ["She's still under the desk.", "Still there.", "Going to make tea."])
         self.assertGreaterEqual(lattice.u.distress_u, 0.4)
 
+    def test_a_new_person_does_not_start_tired(self):
+        lattice = SharedLatticeDriver()
+        feed(lattice, ["I adopted a rescue dog three weeks ago and I'm still working out what she likes."])
+        self.assertLess(lattice.u.E_u, 0.4)
+        self.assertFalse(SomaticBudget.evaluate({"exhaustion": lattice.u.E_u}, {}).reason.startswith("User is tiring"))
+
     def test_a_terse_stretch_does_not_become_the_new_normal(self):
         lattice = SharedLatticeDriver()
         feed(lattice, ["Here is a long and thoughtful message about the week, the dog, and how it is all going."] * 4)

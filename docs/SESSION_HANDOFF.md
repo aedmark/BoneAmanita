@@ -11,6 +11,16 @@ each session; that one is the standing reference for how to run it again.
 
 ## Where things stand, 2026-09-24 midday (read this first)
 
+**2026-09-24 night, Gordon's order of work:** (1) audit the HIGH_VOLTAGE
+style guide, (2) the person model's starting exhaustion, (3) make `/mode`
+switch modes, (4) `ROADMAP.md` A8. **(2) done (20.7.4.29):**
+`UserInferredState.E_u` starts at 0.0, not 0.5 (above the 0.4 tiring
+threshold, so every conversation's first replies got the tiring budget).
+Offline: engaged turns reading as tiring 25-45% to 0% in every set. Cost:
+the reading now climbs from 0 at `DISENGAGEMENT_RATE` 0.15 per message, so
+flagging on the simulated-person runs registers less (toast 14% to 3%,
+rescue 90% to 47%); the rate is the knob if that matters.
+
 **THE PAGE TO UPLOAD (2026-09-24 night):** `tools/cache/panel_public_standalone.html`
 (gitignored; carries Gordon's address), built from rescue bone
 `20260924-161859` on 20.7.4.27 with the friend `082315` and vanilla `082744`
@@ -1620,7 +1630,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   native-Ollama and source-sweep change (2026-09-24): green (expect 691 passed, 5 skipped).
+   native-Ollama and source-sweep change (2026-09-24): green (expect 692 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1704,7 +1714,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 691 passed, 0 failed, 5 skipped** (2026-09-24 late evening), about
+- **Test suite: 692 passed, 0 failed, 5 skipped** (2026-09-24 night), about
   seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.

@@ -272,7 +272,8 @@ class PhysicsPacket:
 
 @dataclass
 class UserInferredState:
-    E_u: float = 0.5
+    # A new person is not tired; 0.5 sat above the 0.4 tiring threshold and cut every opening reply short.
+    E_u: float = 0.0
     beta_u: float = 0.5
     S_u: float = 0.5
     D_u: float = 0.3
