@@ -446,6 +446,44 @@ shows, and it goes quiet when the person is struggling.
   mutation checked), `tests/test_mechanics.py`, `tests/test_commands.py`
   (through `engine.cmd`, the processor the engine actually builds).
 
+### 2026-09-23, late: the mercy line, rejection receipts, and naming the banned phrase
+
+**Found by the `displayed` fix:** in the first representative responsive run
+(fresh, paced, capped person), **BoneAmanita displayed its mercy line on 3 of
+30 turns** (7 engaged, 8 tiring, 22 distressed): every draft was rejected,
+so the person got "I'm sorry. My thoughts are tangling and I'm burning too
+much energy trying to piece this together...". The rejected drafts read as
+ordinary, reasonable replies. At turn 22 a distressed person was told the
+engine is "burning too much energy", which is the engine narrating its body
+at the worst moment, against the somatic contract. The old harness recorded
+the rejected drafts instead, so Gordon's 29/30 read, the simulated person and
+every AI-judge number saw good-looking text where the engine showed this
+line; how often, the old records cannot say. Open: whether the mercy line
+should exist in CONVERSATION mode, and what it should say.
+
+**Rejection receipts** (`brain/cortex.py`): every draft the retry loop sends
+back files `cortex.redraft` with which check rejected it (`maxims`,
+`dspy_critic`, `heuristic_audit`, `gatekeeper`, `hla_mask`, `validator`), what
+it said, and the attempt number. Visible in `/diag`; the census copies them
+into each record as `rejections`. Test through the real loop, mutation
+checked.
+
+**The retry prompt now names what was caught** (Gordon's call). The
+gatekeeper branch used to send every retry "HLA Stabilizer flagged toxic AI
+slop. Drop the corporate persona immediately." whatever it caught, so the
+model was never told which phrase to avoid. `TheGatekeeper.last_rejection`
+records the matched phrase (or a pattern's name and matched text, or the
+AI-disclaimer mask), and `TheCortex._name_the_crime` quotes it: `Your reply
+used the banned phrase "a rare privilege". Do not use it or any close
+variant; say it plainly.` The validator path already named its phrases.
+Tests in `tests/test_agents.py` and `tests/test_random.py`, the retry-prompt
+one mutation checked.
+
+**Running:** a fresh `bone` responsive run with both changes (after the
+vanilla arm), then the full suite. There is no logged run without the
+naming fix, so the only before/after is the mercy count (3/30 before), on
+different conversations: a hint, not a measurement.
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21
@@ -1108,7 +1146,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.8 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.9 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.

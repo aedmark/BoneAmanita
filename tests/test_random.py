@@ -486,6 +486,49 @@ class RandomTest(BoneTestCase):
             "Exhaustion directive was not injected into the mind state.",
         )
 
+    def test_every_rejected_draft_files_a_receipt_naming_the_check(self):
+        from engine.core import CycleContext
+        from engine.receipts import ReceiptLedger
+        from physics.models import PhysicsPacket
+
+        self.engine.cortex.validator.validate = MagicMock(
+            return_value={"valid": False, "feedback_instruction": "Always fails"}
+        )
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value="A plain reply with nothing wrong in it.")
+        ledger = ReceiptLedger.get_instance()
+        ledger.begin_turn()
+        ctx = CycleContext(input_text="Tell me a simple story.", is_system_event=False)
+        ctx.physics = PhysicsPacket()
+        ctx.bio_result = {"mito": {"atp_pool": 100.0, "ros_buildup": 0.0}}
+        ctx.mind_state = {"lens": "TEST", "role": "Test"}
+        ctx.world_state = {}
+        self.engine.cortex.process_context(ctx)
+        redrafts = [r for r in ledger.for_turn() if r.subsystem == "cortex.redraft"]
+        self.assertTrue(redrafts, "A rejected draft left no trace of why.")
+        self.assertEqual([r.inputs["attempt"] for r in redrafts], list(range(1, len(redrafts) + 1)))
+        self.assertTrue(all(r.effect == "validator" and "Always fails" in r.detail for r in redrafts))
+
+    def test_a_retry_is_told_the_exact_banned_phrase(self):
+        from engine.core import CycleContext
+        from physics.models import PhysicsPacket
+
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.validator.validate = MagicMock(
+            side_effect=lambda text, _state: {"valid": True, "content": text, "meta_logs": []}
+        )
+        self.engine.cortex.llm.generate = MagicMock(
+            side_effect=["Honestly it is a rare privilege to help with this.", "Start with the tire story."]
+        )
+        ctx = CycleContext(input_text="Help me with the toast.", is_system_event=False)
+        ctx.physics = PhysicsPacket()
+        ctx.bio_result = {"mito": {"atp_pool": 100.0, "ros_buildup": 0.0}}
+        ctx.mind_state = {"lens": "TEST", "role": "Test"}
+        ctx.world_state = {}
+        self.engine.cortex.process_context(ctx)
+        retry_prompt = self.engine.cortex.llm.generate.call_args_list[1].args[0]
+        self.assertIn('banned phrase "a rare privilege"', retry_prompt)
+
     def test_rejection_death_loop_mercy_rule(self):
         self.initial_atp = self.engine.bio.mito.state.atp_pool
         clean_sim_result = {

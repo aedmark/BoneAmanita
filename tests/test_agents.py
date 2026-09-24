@@ -149,6 +149,15 @@ class AgentTests(BoneTestCase):
         self.assertEqual(scrubbed, text)
         self.assertEqual(forge.state.atp_pool, 40.0)
 
+    def test_the_gatekeeper_remembers_exactly_what_it_caught(self):
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        ok, _ = gatekeeper.audit_generation("Honestly it is a rare privilege to help.", forge)
+        self.assertFalse(ok)
+        self.assertEqual(gatekeeper.last_rejection, {"kind": "phrase", "name": "a rare privilege", "text": "a rare privilege"})
+        gatekeeper.audit_generation("Start with the tire story.", forge)
+        self.assertIsNone(gatekeeper.last_rejection)
+
     def test_a_mask_costs_the_configured_ros_and_less_on_a_retry(self):
         """The person never sees a masked draft; it was a flat 15 ROS every time."""
         bio = self.engine.config.BIO

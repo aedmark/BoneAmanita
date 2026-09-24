@@ -65,6 +65,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np  # noqa: E402
 
 from engine.constants import Prisma  # noqa: E402
+from engine.receipts import ReceiptLedger  # noqa: E402
 from engine.struts import safe_get  # noqa: E402
 from body.somatic_metrics import measure  # noqa: E402
 
@@ -467,6 +468,12 @@ def run(
                     if snapshot.get("type") != "GEODESIC_FRAME"
                     else None,
                     "model_calls": len(calls),
+                    # Why each draft was sent back this turn: which check, and what it said.
+                    "rejections": [
+                        {"attempt": r.inputs.get("attempt"), "by": r.effect, "reason": r.detail}
+                        for r in ReceiptLedger.get_instance().for_turn()
+                        if r.subsystem == "cortex.redraft"
+                    ],
                     "prompt": read_prompt(call["prompt"]) if call else None,
                     "asked": {k: call["asked"].get(k) for k in ("temperature", "top_p", "max_tokens")} if call else None,
                     "sent": {k: call["sent"].get(k) for k in ("temperature", "top_p", "max_tokens")} if call else None,

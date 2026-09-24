@@ -137,6 +137,7 @@ class TheGatekeeper:
         self.lex = lexicon_ref
         self.cfg = config_ref or BoneConfig
         self.hla = HLA_Stabilizer(config_ref=self.cfg)
+        self.last_rejection = None
         style_crimes = (
             self.lex.get("style_crimes")
             or LoreManifest.get_instance().get("STYLE_CRIMES")
@@ -247,10 +248,14 @@ class TheGatekeeper:
     def audit_generation(
         self, generated_text: str, mito_state: Any, attempt: int = 0
     ) -> Tuple[bool, str]:
+        # What the last rejection matched, so a retry can be told exactly what to avoid.
+        self.last_rejection = None
         gen_txt = self.hla.mitigate_rejection(
             generated_text, current_psi=1.0, mito_state=mito_state, attempt=attempt
         )
         if "IMMUNOSUPPRESSION ENGAGED" in gen_txt:
+            mask = self.hla._mask_regex.search(generated_text)
+            self.last_rejection = {"kind": "mask", "name": "RLHF_MASK", "text": mask.group(0) if mask else ""}
             return True, gen_txt
         if self._FIREWALL_PATTERN.match(gen_txt):
             gen_txt = self._FIREWALL_PATTERN.sub("", gen_txt).strip()
@@ -263,14 +268,17 @@ class TheGatekeeper:
             (phrase for phrase in self._banned_phrases if phrase.lower() in text_lower),
             None,
         )
+        matched = trigger
         if not trigger:
             for pat in self._rejection_patterns:
-                if (regex_pattern := pat.get("regex")) and re.search(
-                    regex_pattern, gen_txt, re.IGNORECASE
+                if (regex_pattern := pat.get("regex")) and (
+                    hit := re.search(regex_pattern, gen_txt, re.IGNORECASE)
                 ):
-                    trigger = pat.get("name", "BANNED_PATTERN")
+                    trigger, matched = pat.get("name", "BANNED_PATTERN"), hit.group(0)
                     break
         if trigger:
+            kind = "phrase" if matched == trigger else "pattern"
+            self.last_rejection = {"kind": kind, "name": trigger, "text": matched}
             bio_cfg = safe_get(self.cfg, "BIO", {})
             repeat_scale = repeat_tax_scale(self.cfg, attempt)
             apply_metabolic_tax(

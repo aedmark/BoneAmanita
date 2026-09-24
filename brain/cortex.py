@@ -722,6 +722,7 @@ class TheCortex:
             if attempt > 0:
                 phys_state["is_steering_retry"] = True
             val_res = {"valid": False}
+            rejected_by, reject_detail = "validator", ""
             raw_resp = self.llm.generate(final_prompt, llm_params)
             if firewall_active:
                 original_len = len(raw_resp)
@@ -742,6 +743,7 @@ class TheCortex:
                 final_text, user_input, phys_state, stamina_val
             )
             if needs_rewrite:
+                rejected_by = "maxims"
                 val_res["feedback_instruction"] = (
                     "CRITICAL FAILURE: Maxim of Quantity violated. Your response was too long."
                 )
@@ -767,6 +769,7 @@ class TheCortex:
                         user_input, ctx_str, final_text, active_mode=self.active_mode
                     )
                     if not is_faithful:
+                        rejected_by = "dspy_critic"
                         val_res["feedback_instruction"] = (
                             f"CRITICAL FAILURE: {judge_reason}. If the user is exhausted, drastically shorten and soften your tone."
                         )
@@ -791,6 +794,7 @@ class TheCortex:
                         user_input, final_text, e_u, beta
                     )
                     if not is_faithful:
+                        rejected_by = "heuristic_audit"
                         val_res["feedback_instruction"] = (
                             f"CRITICAL FAILURE: {judge_reason} Prioritize presence over output. Stay in character."
                         )
@@ -799,9 +803,12 @@ class TheCortex:
                     final_text, self.svc.bio.mito, attempt=attempt
                 )
                 if not gate_pass or "IMMUNOSUPPRESSION ENGAGED" in gate_txt:
+                    # The feedback below is the same for both; the gatekeeper's own message names the phrase.
+                    rejected_by = "gatekeeper" if not gate_pass else "hla_mask"
+                    reject_detail = Prisma.strip(gate_txt)
                     val_res.update(
                         {
-                            "feedback_instruction": "HLA Stabilizer flagged toxic AI slop. Drop the corporate persona immediately.",
+                            "feedback_instruction": self._name_the_crime(getattr(gk, "last_rejection", None)),
                             "replacement": "Gatekeeper Apoptotic Block.",
                             "meta_logs": ["[SYSTEM] HLA Stabilizer engaged."],
                         }
@@ -816,6 +823,13 @@ class TheCortex:
                         "SYNTAX_CORRECTED", {"triplet": val_res["learned_triplet"]}
                     )
                 break
+            issue_receipt(
+                "cortex.redraft",
+                rejected_by,
+                result_count=attempt + 1,
+                inputs={"attempt": attempt + 1, "of": cognitive_retries},
+                detail=(reject_detail or Prisma.strip(str(val_res.get("feedback_instruction") or "")))[:300],
+            )
             if self.svc.bio:
                 lbl = (
                     "Cognitive Stumble (Terminal)"
@@ -945,6 +959,21 @@ class TheCortex:
             for m in mandates
         ]
         return final_text, meta_logs
+
+    @staticmethod
+    def _name_the_crime(rejection) -> str:
+        """Retry feedback that quotes what was caught, so the next draft knows what to avoid."""
+        if not rejection or not rejection.get("text"):
+            return "HLA Stabilizer flagged toxic AI slop. Drop the corporate persona immediately."
+        text = rejection["text"].strip()
+        if rejection["kind"] == "mask":
+            return f'Your reply contained "{text}", which reads as an AI disclaimer. Speak as yourself, without it.'
+        if rejection["kind"] == "pattern":
+            return (
+                f'Your reply contained "{text}" ({rejection["name"]}). '
+                "Do not use that construction or anything close to it; say it plainly."
+            )
+        return f'Your reply used the banned phrase "{text}". Do not use it or any close variant; say it plainly.'
 
     def _run_heuristic_audit(
         self, user_input: str, final_text: str, e_u: float, beta: float
