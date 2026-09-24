@@ -240,11 +240,25 @@ section { padding: clamp(2rem, 5vw, 3.5rem) 0; border-top: 1px solid var(--line)
 @media print {
   :root { --bg: #fff; --bg-2: #fff; --surface: #fff; --line: #bbb; --text: #000; --muted: #444; --accent: #000; --accent-2: #000; }
   body::before, .site-head, .r-actions, .theme-btn, .no-print { display: none !important; }
-  body { font-size: 10.5pt; line-height: 1.4; background: #fff; }
+  body { font-size: 9.2pt; line-height: 1.32; background: #fff; }
   .resume { padding: 0; max-width: none; }
-  .resume h2 { margin-top: 1.1rem; }
+  .resume h1 { font-size: 1.7rem; }
+  .resume header.r-head { padding-bottom: 0.5rem; margin-bottom: 0.8rem; }
+  .resume h2 { margin-top: 0.8rem; margin-bottom: 0.5rem; font-size: 0.9rem; }
+  .resume .entry { margin-bottom: 0.55rem; grid-template-columns: 7.5rem 1fr; }
+  .resume .entry li { margin-bottom: 0.1rem; }
+  .resume .skills dd { margin-bottom: 0.25rem; }
+  p { margin-bottom: 0.6em; }
   a { color: #000; text-decoration: none; }
   .resume .todo { display: none; }
-  .entry { break-inside: avoid; }
-  .resume .skills { grid-template-columns: 11rem 1fr; gap: 0.3rem 1rem; }
+  .entry { break-inside: auto; }
+  .entry h3, .resume h2 { break-after: avoid; }
+  .entry li { break-inside: avoid; }
+  .resume header.r-head { flex-wrap: nowrap; align-items: flex-start; }
+  .resume .r-contact { flex-shrink: 0; text-align: right; }
+  .resume .skills { display: block; }
+  .resume .skills dt { display: inline; font-weight: 700; color: #000; }
+  .resume .skills dt::after { content: ": "; }
+  .resume .skills dd { display: inline; margin: 0; }
+  .resume .skills dd::after { content: "\A"; white-space: pre; }
 }
