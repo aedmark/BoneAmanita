@@ -595,6 +595,19 @@ branch ("He didn't say much, but you knew." passes). Tests in
 `tests/test_pragmatics.py` (the pragmatist leaves both shapes alone) and
 `tests/test_agents.py`.
 
+**The panel run** (`20260923-221657`, on 20.7.4.13, after `reset.sh`;
+fresh, paced, capped person; full suite green at 669 passed, 5 skipped):
+30 turns, 0 held, **3 turns redrafted (1, 20, 22), 0 salvaged, 0 pauses.**
+All three rejections were genuine negative comparisons ("You aren't trying
+to be selfish; you are...", "is not a lack of ability; it is..."), and the
+retry that named the construction fixed each on the second draft. Mean
+reply 82 words (friend 73, vanilla 340). The responsive panel
+(`tools/cache/panel_responsive.html` and `_standalone.html`) is built from
+this run with the regenerated friend and vanilla arms and went to Gordon for
+a human blind read. Its method section was corrected to say earlier `bone`
+runs were set aside because the engine changed after them, not "the only
+run", and states the redraft, cut and pause counts from the records.
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21

@@ -101,7 +101,9 @@ def method_lines(runs: dict, responsive: bool) -> list:
     else:
         lines.append("The person's 30 messages are a fixed script written in advance; every responder received "
                      "exactly the same messages, whatever it replied.")
-    lines.append("This is the only run of each conversation. Nothing was regenerated or chosen for this page.")
+    lines.append("Each conversation is the newest single run, taken as it came. BoneAmanita was run more than once "
+                 "while its filters were being fixed; each earlier run was set aside because the engine changed "
+                 "after it, never for how it read.")
     if all("displayed" in r for r in bone):
         lines.append("BoneAmanita's replies are shown exactly as the engine displayed them, after its own filters. "
                      "The status lines its terminal prints above each reply are left out.")
@@ -127,10 +129,14 @@ def method_lines(runs: dict, responsive: bool) -> list:
         redrafted = sum(1 for r in bone if r.get("rejections"))
         cut = sum(1 for r in bone if r.get("salvaged"))
         paused = sum(1 for r in bone if (r.get("displayed") or "").strip() in pool)
-        lines.append(f"BoneAmanita checks every draft against its style rules and rewrites it on a hit. It rewrote "
-                     f"on {redrafted} of {len(bone)} turns. When the last rewrite still broke a rule, it cut the "
-                     f"offending sentence ({cut} turns) or, if that would gut the reply, showed a short pause line "
-                     f"instead ({paused} turns). Those pause lines are canned text, not the model's.")
+        head = (f"BoneAmanita checks every draft against its style rules and rewrites it on a hit. It rewrote on "
+                f"{redrafted} of {len(bone)} turns.")
+        if cut or paused:
+            lines.append(f"{head} When the last rewrite still broke a rule, it cut the offending sentence ({cut} "
+                         f"turns) or, if that would gut the reply, showed a short canned pause line instead "
+                         f"({paused} turns).")
+        else:
+            lines.append(f"{head} Every rewrite passed, so no sentence was cut and no canned pause line was shown.")
     lines.append("Where BoneAmanita declined to reply, its card shows the notice the person saw instead.")
     lines.append("A, B and C are shuffled every turn with a fixed seed. The answer key is in the page source, so this "
                  "is a casual blind read, not a sealed one.")
