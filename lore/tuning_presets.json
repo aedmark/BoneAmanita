@@ -86,7 +86,6 @@
     "PEN_BETA_SCALAR": 0.3,
     "PEN_CHI_SCALAR": 0.2,
     "TOKEN_CHEM_MODIFIERS": {
-      "dop": 800,
       "adr": 400,
       "cor": 200
     },
@@ -140,7 +139,6 @@
     "REASONING_EFFORT": "none",
     "COGNITIVE_RETRY_LIMIT": 2,
     "VALIDATOR_STUTTER_LENGTH": 5,
-    "BASE_TOKENS": 720,
     "MAX_TOKENS": 4096,
     "SELF_CARE_THRESHOLD": 10,
     "LLM_FAILURE_THRESHOLD": 3,
@@ -836,7 +834,6 @@
     "TOP_K": 10
   },
   "SOMATIC_BUDGET": {
-    "WORD_CAP_DEFAULT": 200,
     "SENTENCE_CAP_DEFAULT": 10,
     "RETRY_ALLOWANCE_DEFAULT": 3,
     "TEMP_BAND_DEFAULT": [0.6, 0.9],

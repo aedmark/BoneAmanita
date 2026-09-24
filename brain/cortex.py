@@ -302,7 +302,7 @@ class TheCortex:
             llm_params.update({"temperature": 0.7, "top_p": 0.95})
             
         somatic_budget = full_state.get("somatic_budget")
-        if somatic_budget:
+        if somatic_budget and somatic_budget.word_cap:
             llm_params["max_tokens"] = min(llm_params.get("max_tokens", 4096), somatic_budget.word_cap * 2 + 50)
 
         structural_ctx, cognitive_path, token_cost = self._route_dual_memory(user_input)
@@ -456,7 +456,7 @@ class TheCortex:
                 inputs={
                     "e_u": round(getattr(getattr(self.svc, "shared_lattice", None), "u", type("U", (), {"E": 0.0})()).E, 2) if getattr(self.svc, "shared_lattice", None) else 0.0,
                     "atp": round(getattr(self.svc.bio.mito.state, "atp_pool", 0.0), 1) if self.svc.bio else 0.0,
-                    "budget": f"w:{somatic_budget.word_cap} s:{somatic_budget.sentence_cap}",
+                    "budget": f"w:{somatic_budget.word_cap or '-'} s:{somatic_budget.sentence_cap}",
                     "measured_w": int(w),
                     "measured_s": int(s)
                 },

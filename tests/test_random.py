@@ -534,7 +534,7 @@ class RandomTest(BoneTestCase):
         receipt = next(r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft")
         self.assertEqual((receipt.effect, receipt.detail), ("gatekeeper", 'phrase a rare privilege: "a rare privilege"'))
 
-    def _run_with_drafts(self, drafts):
+    def _run_with_drafts(self, drafts, budget=None):
         from engine.core import CycleContext
         from engine.receipts import ReceiptLedger
         from physics.models import PhysicsPacket
@@ -550,6 +550,8 @@ class RandomTest(BoneTestCase):
         ctx.bio_result = {"mito": {"atp_pool": 100.0, "ros_buildup": 0.0}}
         ctx.mind_state = {"lens": "TEST", "role": "Test"}
         ctx.world_state = {}
+        if budget is not None:
+            ctx.somatic_budget = budget
         result = self.engine.cortex.process_context(ctx)
         return result, ReceiptLedger.get_instance().for_turn()
 
@@ -568,6 +570,32 @@ class RandomTest(BoneTestCase):
         result, receipts = self._run_with_drafts(["The essence of it.", "A grand tapestry. A delicate dance."])
         self.assertIn(result["raw_content"], pool)
         self.assertFalse([r for r in receipts if r.subsystem == "cortex.salvage"])
+
+    def test_a_calm_turn_is_not_capped_below_the_hardware_ceiling(self):
+        """Every turn used to go out capped at 450 tokens (a default 200-word cap), whatever the state."""
+        from body.somatic_budget import SomaticBudget
+
+        self._run_with_drafts(["Start with the tire story."], budget=SomaticBudget.evaluate({}, {}))
+        self.assertGreater(self.engine.cortex.llm.generate.call_args.args[1]["max_tokens"], 450)
+        self._run_with_drafts(["Start with the tire story."], budget=SomaticBudget.evaluate({"exhaustion": 0.9}, {}))
+        self.assertEqual(self.engine.cortex.llm.generate.call_args.args[1]["max_tokens"], 60 * 2 + 50)
+
+    def test_stress_and_a_flagging_person_narrow_the_token_cap(self):
+        from body.somatic_budget import SomaticBudget
+        from brain.mind import NeurotransmitterModulator
+
+        self.assertIsNone(SomaticBudget.evaluate({}, {}).word_cap)
+        self.assertEqual(SomaticBudget.evaluate({"exhaustion": 0.9}, {}).word_cap, 60)
+        mod = NeurotransmitterModulator(bio_ref=MagicMock(), config_ref=self.engine.config)
+        ceiling = mod.b["MAX_TOKENS"]
+        mod.current_chem.adrenaline = mod.current_chem.cortisol = 0.0
+        mod.current_chem.dopamine = 1.0
+        calm = mod.modulate(base_voltage=30.0)["max_tokens"]
+        mod.current_chem.adrenaline = mod.current_chem.cortisol = 1.0
+        stressed = mod.modulate(base_voltage=30.0)["max_tokens"]
+        self.assertLessEqual(calm, ceiling, "dopamine must not raise the cap past the hardware ceiling")
+        self.assertGreater(calm, ceiling * 0.8)
+        self.assertLess(stressed, calm)
 
     def test_the_pause_pool_never_mentions_the_engine_and_never_asks(self):
         pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]

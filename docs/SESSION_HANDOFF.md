@@ -39,10 +39,44 @@ made. The panel now works for a cold audience and is ready to hand out.
    line that BoneAmanita was tuned on this very story), then the page was
    rewritten for strangers: welcome screen, one moment per screen, plain
    names, picks locked on reveal, copy/email the picks back.
+6. **The 450-token cap on every turn is gone** (Gordon: "The cap should be
+   based on hardware limits and only gated and narrowed when it fits the
+   narrative or the current mood or user's emotional state"). It was the
+   somatic budget's default 200-word cap (`word_cap * 2 + 50`), applied on
+   every turn. Now `word_cap` is `None` unless the person is flagging (60
+   words, 170 tokens); the modulator starts from `MAX_TOKENS` (4096) and only
+   stress chemistry (adrenaline, cortisol) narrows it. Dopamine no longer
+   raises it, and `BASE_TOKENS` and `WORD_CAP_DEFAULT` are gone. Reply length
+   is still shaped by the prompt's sentence caps and the validator's
+   sentence trim; the token cap is only a hard stop. Tests through the real
+   cortex (calm budget over 450, flagging exactly 170; mutation checked) and
+   the modulator (stress narrows, dopamine never passes the ceiling).
 
 **The run on the page:** `bone` `20260923-231533` (20.7.4.15, fresh, paced,
 after `reset.sh`), friend `20260923-193010`, vanilla `20260923-194135`, all
 in `tools/cache/somatic_responsive.jsonl` (gitignored, local only).
+
+**FIRST THING NEXT SESSION: the real hardware limit is the context window,
+and the engine's prompt overflows it.** `ollama ps` shows `gemma4:12b`
+loaded with a **4096-token context** when the engine uses it (it talks to
+Ollama's `/v1/chat/completions`, which cannot set `num_ctx`; the vanilla and
+friend arms use the native `/api/chat` with `num_ctx` 32768, so they never
+had this limit). A replay of the panel run measuring the main reply prompt:
+median 8.5k characters (~2.1k tokens, fits), but turn 1 was 31.4k (~7.8k
+tokens), turn 6 27k, turns 0, 5, 25 and 27 16k to 19k. On those six turns
+Ollama must have truncated the prompt itself, and the output had little or
+no room. Two things to decide: (a) give the engine a context that fits (set
+`OLLAMA_CONTEXT_LENGTH`, or move the engine to the native endpoint with
+`options.num_ctx`), then derive the token ceiling from context minus prompt;
+(b) find what balloons those prompts to 4x the median (turns 0-1 and 5-6
+look like boot and an early memory/lore dump). The replay script is easy to
+rebuild: `boot()` from `audit_somatic_census`, patch `llm.generate` to return
+each recorded `displayed` reply and record `len(prompt)` for prompts
+containing `=== PARTNER INPUT ===`.
+
+**The panel run predates the token-cap fix and the context fix,** so the
+page does not represent the engine any more. Fix the context, do one more
+`bone` run after `reset.sh`, rebuild, then upload.
 
 **Next (Gordon's plan):** upload `tools/cache/panel_public_standalone.html`
 to Neocities, hand the link out, collect picks by email, and score each
@@ -1802,6 +1836,12 @@ them as a specification:
   reply that was mostly fine. WHY NOT loosen the rules instead: the retries
   that name the construction fix nearly every draft, and the rules are the
   voice.
+- **The token cap is the hardware ceiling, narrowed only by state.**
+  Decided with Gordon, 2026-09-23. `MAX_TOKENS` is the ceiling; the person's
+  state (flagging) and stress chemistry narrow it; nothing caps a calm turn.
+  WHY: a fixed 450 on every turn is an experimenter's limit, not the
+  engine's; length is the sentence caps' job, and a hard stop should only
+  bite when the moment calls for brevity.
 - **The Creative Determinant narrows the somatic temperature band; it never
   replaces it.** Decided with Gordon, 2026-09-23. Chemistry picks the
   temperature, the somatic budget sets the band, the gate takes the top off

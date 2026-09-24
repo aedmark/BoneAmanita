@@ -63,7 +63,7 @@ class BrainSubstrateTests(BoneTestCase):
             hasattr(mod, "b"),
             "[FAIL] Modulator failed to initialize the 'self.b' dictionary cache.",
         )
-        self.assertIn("BASE_TOKENS", mod.b, "[FAIL] Cache is missing critical bounds.")
+        self.assertIn("MAX_TOKENS", mod.b, "[FAIL] Cache is missing critical bounds.")
         params = mod.modulate(
             base_voltage=50.0, physics_state={"chi": 0.5, "contradiction": 0.3}
         )

@@ -73,7 +73,6 @@ class NeurotransmitterModulator:
         self.stagnation_ticks = 0
         self.previous_chem_sum = 0.0
         self.b = {
-            "BASE_TOKENS": int(safe_get(cfg, "BASE_TOKENS", 720)),
             "MAX_TOKENS": int(safe_get(cfg, "MAX_TOKENS", 4096)),
             "SELF_CARE": int(safe_get(cfg, "SELF_CARE_THRESHOLD", 10)),
             "DECAY": float(safe_get(cfg, "BASE_DECAY_RATE", 0.1)),
@@ -106,7 +105,7 @@ class NeurotransmitterModulator:
             "PEN_BETA": float(safe_get(cfg, "PEN_BETA_SCALAR", 0.3)),
             "PEN_CHI": float(safe_get(cfg, "PEN_CHI_SCALAR", 0.2)),
             "T_MODS": safe_get(
-                cfg, "TOKEN_CHEM_MODIFIERS", {"dop": 800, "adr": 400, "cor": 200}
+                cfg, "TOKEN_CHEM_MODIFIERS", {"adr": 400, "cor": 200}
             ),
             "MIN_TOK": float(safe_get(cfg, "MIN_TOKENS", 150.0)),
         }
@@ -208,13 +207,9 @@ class NeurotransmitterModulator:
         final_top_p = min(1.0, b["B_TOP_P"] + (chi * b["TOP_CHI"]))
         base_penalty = min(1.2, 0.5 + (beta * b["PEN_BETA"]) + (chi * b["PEN_CHI"]))
         tm = b["T_MODS"]
-        token_delta = (
-            (c.dopamine * tm.get("dop", 800))
-            - (c.adrenaline * tm.get("adr", 400))
-            - (c.cortisol * tm.get("cor", 200))
-        )
-        raw_tokens = b["BASE_TOKENS"] + token_delta
-        max_t = int(max(b["MIN_TOK"], min(float(b["MAX_TOKENS"]), raw_tokens)))
+        # MAX_TOKENS is the hardware ceiling; only stress (adrenaline, cortisol) narrows it.
+        narrowing = (c.adrenaline * tm.get("adr", 400)) + (c.cortisol * tm.get("cor", 200))
+        max_t = int(max(b["MIN_TOK"], float(b["MAX_TOKENS"]) - narrowing))
         return {
             "temperature_band": t_limits,
             "temperature": final_temp,

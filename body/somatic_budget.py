@@ -1,12 +1,13 @@
 from dataclasses import dataclass
-from typing import Tuple, Dict, Any
+from typing import Any, Dict, Optional, Tuple
 
 from engine.presets import BoneConfig
 from engine.struts import safe_get
 
 @dataclass
 class SomaticBudget:
-    word_cap: int
+    # None: no cap beyond the hardware ceiling. Set only when the person's state calls for one.
+    word_cap: Optional[int]
     sentence_cap: int
     closing_question_allowed: bool
     offer_to_carry_load: bool
@@ -36,7 +37,7 @@ class SomaticBudget:
         ros = engine_state.get("ros", 0.0)
         respiration = engine_state.get("respiration", "")
 
-        word_cap = int(safe_get(cfg, "WORD_CAP_DEFAULT", 200))
+        word_cap = None
         sentence_cap = int(safe_get(cfg, "SENTENCE_CAP_DEFAULT", 10))
         closing_question_allowed = True
         offer_to_carry_load = False
@@ -48,7 +49,7 @@ class SomaticBudget:
         e_u_tiring = float(safe_get(cfg, "E_U_TIRING", 0.4))
         if e_u > e_u_flagging:
             sentence_cap = min(sentence_cap, int(safe_get(cfg, "SENTENCE_CAP_FLAGGING", 3)))
-            word_cap = min(word_cap, int(safe_get(cfg, "WORD_CAP_FLAGGING", 60)))
+            word_cap = int(safe_get(cfg, "WORD_CAP_FLAGGING", 60))
             closing_question_allowed = False
             reason_parts.append("User is flagging (high exhaustion)")
         elif e_u > e_u_tiring:

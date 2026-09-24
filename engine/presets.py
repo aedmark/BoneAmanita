@@ -209,7 +209,6 @@ class BoneConfig:
     OLLAMA_FALLBACK = ""
     REQUIRED_CONFIG = {
         "CORTEX": [
-            "BASE_TOKENS",
             "MAX_TOKENS",
             "SELF_CARE_THRESHOLD",
             "LLM_FAILURE_THRESHOLD",
@@ -256,7 +255,6 @@ class BoneConfig:
             "SILENCE_COST",
         ],
         "SOMATIC_BUDGET": [
-            "WORD_CAP_DEFAULT",
             "SENTENCE_CAP_DEFAULT",
             "RETRY_ALLOWANCE_DEFAULT",
             "TEMP_BAND_DEFAULT",
@@ -318,7 +316,6 @@ class BoneConfig:
     }
 
     SOMATIC_BUDGET = {
-        "WORD_CAP_DEFAULT": 200,
         "SENTENCE_CAP_DEFAULT": 10,
         "RETRY_ALLOWANCE_DEFAULT": 3,
         "TEMP_BAND_DEFAULT": (0.6, 0.9),

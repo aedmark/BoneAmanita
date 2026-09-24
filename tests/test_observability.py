@@ -248,7 +248,7 @@ class ConfigStrictness(unittest.TestCase):
         from engine.struts import safe_get
 
         expected = {
-            "CORTEX": ["BASE_TOKENS", "MAX_TOKENS", "SELF_CARE_THRESHOLD",
+            "CORTEX": ["MAX_TOKENS", "SELF_CARE_THRESHOLD",
                        "LLM_FAILURE_THRESHOLD", "MAX_HISTORY_LENGTH"],
             "MACHINE": ["PACEMAKER_BOREDOM_THRESHOLD"],
             "DRIVERS": ["LIMINAL_SCAR_RELIEF", "LIMINAL_TRAUMA_HEAL",
