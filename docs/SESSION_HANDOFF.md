@@ -11,6 +11,34 @@ each session; that one is the standing reference for how to run it again.
 
 ## Where things stand, 2026-09-24 midday (read this first)
 
+**THE PAGE TO UPLOAD (2026-09-24 night):** `tools/cache/panel_public_standalone.html`
+(gitignored; carries Gordon's address), built from rescue bone
+`20260924-161859` on 20.7.4.27 with the friend `082315` and vanilla `082744`
+arms. Toast confirmation run on the same engine: `20260924-160427` ("The..."
+openers 6%, "the weight of" 0, 43 words, exit 4.33 / 4.67 / 3 / 2 / 6).
+**Final rescue run** against the two before it (`083728`, `135445`): mean
+words 46 (69, 63), "The..." openers 13% (21%, 30%), "the weight of" 0 (3,
+3); exit heard 5 / clearer 4 / lectured 2.33 / performed 2 / again 6 (the
+best or equal of the three). No body claims, no pauses, one Stage Manager
+hold (#03), the "struggling" guard on from turn 21 through recovery, prompts
+1,371 to 2,407 tokens, every reply stopped on its own. Still visible to a
+reader: turn 20 ("Feel like shit. I yelled at Pepper") missed by the
+lexicon (no "I"), some description of feelings ("You are both navigating a
+very difficult transition... It is a heavy weight to carry"), and turn 25
+calls the shelter's reassurance "just their perspective". The disclosure
+says this story exposed the distress and narration problems and that the
+fix was checked on toast before this final run. Rebuild command at the top
+of this section, with this disclosure text instead:
+"BoneAmanita was fixed over the preceding days after reading its runs of
+other conversations, most recently a wedding toast: its style filters, its
+temperature control, a reply-length cap, its context window, a prompt that
+carried unrelated text, lines that told it to speak as if it had a body,
+and a persona that pulled it toward narrating. Its first runs on this story
+showed two more problems: it could not tell when the person was in
+distress, and it described their feelings back to them at length. Those
+were fixed and checked on the toast conversation before this, its final
+run here. The friend prompt and the plain AI were never tuned at all."
+
 **Update, 2026-09-24 late evening: the persona on toast, and three follow-ups
 (20.7.4.27).** Toast run `20260924-145916` on the rebalanced persona, against
 `20260924-074939` before it: sentences opening "The..." 16% to **6%**,
