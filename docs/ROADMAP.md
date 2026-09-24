@@ -462,6 +462,70 @@ options, and the second is better:
 Do this before A3, because receipts are worth much less if their
 warnings land in the same silent channel.
 
+## A7. A `/tune` command (plan, not started; drafted 2026-09-23)
+
+`BoneConfig.tune(sector, parameter, value)` already exists
+(`engine/presets.py`): it checks the sector and key exist, refuses a type
+change, sets the value and runs `validate_integrity()`. `tests/test_presets.py`
+covers it. **Nothing calls it**, so every tuning change today means editing
+`lore/tuning_presets.json` and restarting. Found while wiring up `WHIMSY`,
+when the handoff nearly claimed the keys were "live-tunable with `/tune`".
+
+The command itself is small. The risk is the same one this whole document is
+about: **a knob that reports success and changes nothing.** Three things
+make that likely here:
+
+1. **Two config objects.** The engine reads `engine.config` (an instance);
+   six modules read the `BoneConfig` class directly (`mechanics/terminal.py`,
+   `setup.py`, `lexicon.py`, `dspycritic.py`, `archetypes/council.py`,
+   `main.py`). Tuning one leaves the other stale: `/tune WHIMSY
+   LUDICROUS_SPEED true` on the instance would not reach `typewriter()`, which
+   reads the class.
+2. **Values cached at boot.** The "`__init__` Bedrock Caching" rule (A1) means
+   many subsystems copy a config value once and never read it again
+   (`HLA_Stabilizer.mask_ros`, the idle-recovery rate, the gatekeeper's
+   patterns). Setting the config afterwards changes nothing they do.
+3. **Values rewritten later.** `main.py` sets `config.GATE_TOLERANCE` from the
+   mode's settings on every mode change, so a tuned tolerance silently reverts
+   at the next `/mode`.
+
+**Plan:**
+
+- **`/tune`**: no args lists the sectors; `/tune SECTOR` lists its keys with
+  current values; `/tune SECTOR KEY VALUE` sets one. Auto-registers like every
+  other `_cmd_` method and goes through the same reality-layer gate.
+- **Parse by the current type**, since command arguments arrive as strings:
+  `true`/`false` for bools, int, float, else string. `tune()` already rejects a
+  type change; parsing first is what makes it usable.
+- **Set both objects**: `engine.config` and the `BoneConfig` class, until the
+  six class readers are moved onto the engine's config (a follow-up, tracked
+  here, not a prerequisite).
+- **Say whether it took effect.** Each key is classed *live* (read per use)
+  or *at next boot* (cached in an `__init__`). Start with an explicit
+  allowlist of keys proven live by a test that tunes them and observes the
+  behaviour change (the `WHIMSY` keys, the somatic budget constants read per
+  turn); everything else reports "set; takes effect at next boot". Grow the
+  allowlist one tested key at a time. Never report "TUNED" for a key nothing
+  will read.
+- **Say when it will be undone**: a tuned `GATE_TOLERANCE` warns that `/mode`
+  resets it.
+- **A receipt per change** (`config.tune`, A3's pattern), so `/diag` shows
+  what was changed this session and a transcript can be told apart from a
+  stock engine's. A census or panel run must be able to state it ran on
+  stock tuning.
+- **Persisting is opt-in**: `/tune --save` writes to the user's own
+  gitignored `config.json`, never to the tracked `lore/tuning_presets.json`,
+  so an experiment cannot leak into the repo's defaults. (Check first that
+  `config.json` values are merged at boot for the sector in question.)
+
+**Deliverables:** the command; a type-parsing helper with tests; the live
+allowlist with one behaviour test per key; the two-object write, with a test
+that a tuned `WHIMSY.LUDICROUS_SPEED` reaches `typewriter()`; the receipt;
+the `/mode` warning; `--save` with a test that it never touches `lore/`.
+
+**Not in scope:** tuning mid-panel-run. The census boots a stock engine and
+must keep doing so.
+
 # Track B: The Creative Determinant
 
 **Correction (2026-09-17):** The graph Laplacian and Picard solver described in earlier versions of this document have been removed. Following a recommendation from Nelson Spence, who pointed out the Laplacian term was contributing only ~1.5% of the eigenvalue, the governor no longer builds a memory subgraph or solves an elliptic BVP. Instead, `CyberneticGovernor._bitmap_regulation` reads `SignBitmap.score_all(q)` in one pass to compute a standard deviation score over the corpus mean, gating temperature directly. The prompt tag is now `<thermal_gate>`. B0 through B3 below have been updated to reflect the current design.

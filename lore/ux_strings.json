@@ -889,5 +889,28 @@
     "tune_param_err": "PARAM ERROR: '{parameter}' not found in {sector}.",
     "tune_type_err": "TYPE MISMATCH: Cannot replace {curr_type} with {new_type}.",
     "tune_success": "TUNED: {sector}.{parameter} -> {value}"
+  },
+  "whimsy_asides": {
+    "mild": [
+      "{dept} notes that one draft was returned for revisions.",
+      "{dept} has filed a draft under 'nearly'.",
+      "A draft was declined. {dept} wishes it well in its future endeavours."
+    ],
+    "dry": [
+      "One draft was sent back. It knew what it did.",
+      "{dept} has reviewed the previous draft and would like those thirty seconds back.",
+      "{dept} regrets to confirm that the first draft was, in fact, a draft."
+    ],
+    "withering": [
+      "{dept} has convened a hearing into the previous draft. The previous draft was not invited.",
+      "Another draft, another inquiry. {dept} is running low on forms.",
+      "{dept} has begun grading drafts on vibes. The vibes are not good."
+    ],
+    "absurd": [
+      "{dept} reports all hats present and accounted for. Vectors: at large.",
+      "A semantic vector has escaped into the lobby. Staff are approaching it calmly.",
+      "{dept} has reached a decision and misplaced it.",
+      "Quarterly hat inspection passed. One hat was found to be two smaller hats in a trench coat."
+    ]
   }
 }

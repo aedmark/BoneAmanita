@@ -32,6 +32,7 @@ from mechanics.setup import ConfigWizard
 from mechanics.providers import environment_config
 from mechanics.terminal import SessionGuardian, typewriter
 from mechanics.tools import TheSubstrate
+from mechanics.whimsy import ministry_aside
 from physics import NaviSADProtocol, ZoneInertia
 from physics.models import PhysicsPacket
 from engine.presets import BoneConfig, BonePresets
@@ -885,6 +886,8 @@ if __name__ == "__main__":
                 if stamina < 20.0:
                     ui_text = f"{Prisma.GRY}{Prisma.strip(ui_text)}{Prisma.RST}"
                 typewriter(f"{ui_text}\n", speed=speed)
+                if note := ministry_aside(session, res.get("metrics", {}).get("tick", 0)):
+                    print(f"{Prisma.GRY}   {note}{Prisma.RST}")
             if res.get("type") == "DEATH":
                 term_msg = ux("main_strings", "session_term")
                 print(f"\n{Prisma.GRY}{term_msg}{Prisma.RST}")

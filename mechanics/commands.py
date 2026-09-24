@@ -214,7 +214,14 @@ class CommandProcessor:
         self.interface.log("\n".join(lines))
         return True
 
+    def _department_line(self, title: str) -> Optional[str]:
+        """WHIMSY.DEPARTMENT_NAME heads the engine's own reports; notices shown in place of a reply stay unsigned."""
+        dept = safe_get(safe_get(self.interface.Config, "WHIMSY", {}), "DEPARTMENT_NAME", "")
+        return f"{self.P.GRY}{dept} // {title}{self.P.RST}" if dept else None
+
     def _cmd_status(self, _parts):
+        if line := self._department_line("Status"):
+            self.interface.log(line)
         v = self.interface.get_vitals()
         menu_cfg = LoreManifest.get_instance(config_ref=self.interface.Config).get(
             "ux_strings", "status_menu") or {}
@@ -299,6 +306,8 @@ class CommandProcessor:
         return True
 
     def _cmd_diag(self, _parts):
+        if line := self._department_line("Diagnostics"):
+            self.interface.log(line)
         self._report_receipts()
         try:
             telemetry = getattr(self.interface.eng, "telemetry", None)

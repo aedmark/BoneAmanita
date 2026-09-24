@@ -102,3 +102,13 @@ class MechanicsTests(BoneTestCase):
             mutated,
             "[FAIL] Pragmatist stripped too much and destroyed the bedrock logic.",
         )
+
+    def test_ludicrous_speed_skips_the_typewriter(self):
+        from engine.presets import BoneConfig
+        from mechanics.terminal import typewriter
+
+        for ludicrous, sleeps in ((False, True), (True, False)):
+            with patch.object(BoneConfig.WHIMSY, "LUDICROUS_SPEED", ludicrous), \
+                    patch("mechanics.terminal.time.sleep") as sleep, patch("sys.stdout"):
+                typewriter("slow words", speed=0.01)
+            self.assertEqual(sleep.called, sleeps)

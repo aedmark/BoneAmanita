@@ -24,7 +24,8 @@ def typewriter(text: str, speed: Optional[float] = None, end: str = "\n"):
         if speed is not None
         else float(safe_get(cfg, "RENDER_SPEED_FAST", 0.00025))
     )
-    if actual_speed < 0.001:
+    # WHIMSY.LUDICROUS_SPEED: no typewriter at all, including the tired-engine slowdown.
+    if actual_speed < 0.001 or safe_get(safe_get(BoneConfig, "WHIMSY", {}), "LUDICROUS_SPEED", False):
         print(text, end=end, flush=True)
         return
     for part in ANSI_SPLIT.split(text):

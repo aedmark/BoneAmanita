@@ -412,6 +412,40 @@ panel for it now says so.
 word caps, displayed text, fresh state, pacing), rebuild the panel, and get
 readers: Gordon again, and at least one reader who does not know the voice.
 
+### 2026-09-23, late: WHIMSY does something now
+
+`lore/tuning_presets.json`'s `WHIMSY` block (added in 19.6.0) was loaded into
+`BoneConfig.WHIMSY` and read by nothing. Wired up with Gordon, on one rule:
+**whimsy lives in the engine's own chrome, never in the prompt, the reply or
+the snapshot**, so it cannot change what a person is told or what a panel
+shows, and it goes quiet when the person is struggling.
+
+- `LUDICROUS_SPEED` (`mechanics/terminal.py`): true skips the typewriter
+  entirely, including the tired-engine slowdown. **Shipped as false** to keep
+  today's animated output (it was `true` while it did nothing).
+- `DEPARTMENT_NAME` (`mechanics/commands.py`): heads `/status` and `/diag`.
+  Deliberately not on held-turn or refusal notices: those replace a reply at
+  a person's worst moments and appear verbatim in panel content.
+- `MAX_SARCASM_LEVEL` and `ABSURDITY_CONSTANT` (`mechanics/whimsy.py`, printed
+  from `main.py`'s terminal loop only): after a turn where the engine sent one
+  of its own drafts back (`cortex.somatic` receipt `re-asked` or `failed`), a
+  one-line aside from `ux_strings.json` `whimsy_asides`, mild / dry /
+  withering by the engine's own ROS (0-100 as 0-11), capped by
+  `MAX_SARCASM_LEVEL` (0 silences them). Every `ABSURDITY_CONSTANT`th turn, one
+  line from the absurd pool. Both silent whenever the person reads as tiring
+  or flagging (`/status`'s 0.4 exhaustion line). Lines are about the engine's
+  drafts, never the person, and never claim a reason for a rejection they
+  do not know (flavour must not pose as diagnosis). The shipped lines are a
+  starter set for Gordon to rewrite. Change them in `lore/tuning_presets.json`
+  (there is a `BoneConfig.tune()` method but no command calls it, so nothing
+  is tunable live from the terminal). A `/tune` command is planned as
+  `ROADMAP.md` A7, including why a naive one would report success and change
+  nothing (two config objects, values cached at boot, `/mode` resets).
+- Tests: `tests/test_whimsy.py` (bands, cap, absurd interval, distress gate,
+  shipped pools format, a real-engine receipt path; the distress gate is
+  mutation checked), `tests/test_mechanics.py`, `tests/test_commands.py`
+  (through `engine.cmd`, the processor the engine actually builds).
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21
@@ -1074,7 +1108,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.7 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.8 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.

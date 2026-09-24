@@ -1,6 +1,6 @@
 """tests/test_commands.py"""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from engine.constants import Prisma
 from main import BoneAmanita
@@ -126,3 +126,16 @@ class CommandSystemTests(BoneTestCase):
             engine.cortex.dialogue_buffer[-1],
             "The Jester's mandate was not injected into the active cortex buffer.",
         )
+
+    def test_the_department_heads_its_own_reports(self):
+        engine = BoneAmanita({})
+        processor = engine.cmd  # the engine's own processor, reading engine.config
+        dept = engine.config.WHIMSY.DEPARTMENT_NAME
+        for cmd in ("/status", "/diag"):
+            processor.interface.log = MagicMock()
+            processor.execute(cmd)
+            self.assertIn(dept, Prisma.strip(processor.interface.log.call_args_list[0].args[0]))
+        with patch.object(engine.config.WHIMSY, "DEPARTMENT_NAME", ""):
+            processor.interface.log = MagicMock()
+            processor.execute("/status")
+            self.assertNotIn("//", Prisma.strip(processor.interface.log.call_args_list[0].args[0]))

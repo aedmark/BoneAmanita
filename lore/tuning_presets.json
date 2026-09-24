@@ -149,7 +149,7 @@
   "WHIMSY": {
     "ABSURDITY_CONSTANT": 42,
     "MAX_SARCASM_LEVEL": 11,
-    "LUDICROUS_SPEED": true,
+    "LUDICROUS_SPEED": false,
     "DEPARTMENT_NAME": "The Ministry of Silly Hats & Semantic Vectors"
   },
   "METABOLISM": {
