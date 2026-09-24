@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resume — Andrew Edmark</title>
+  <meta name="description" content="Resume for Andrew Edmark: software developer and founder of Oopis McGoopis LLC. Python, JavaScript, language-model systems, procedural generation, games.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12c0-5 4-8 9-8s9 3 9 8H3z" fill="var(--accent)" stroke="none"/>
+        <circle cx="8" cy="8.5" r="1" fill="var(--bg)" stroke="none"/><circle cx="13" cy="6.5" r="1" fill="var(--bg)" stroke="none"/><circle cx="16" cy="9.5" r="1" fill="var(--bg)" stroke="none"/>
+        <path d="M9.5 12v6.5a2.5 2.5 0 0 0 5 0V12"/>
+      </svg>
+      Andrew Edmark <small>/ Oopis McGoopis LLC</small>
+    </a>
+    <nav class="nav" aria-label="Site">
+      <a href="index.html#work">Work</a>
+      <a href="index.html#about">About</a>
+      <a href="resume.html" aria-current="page">Resume</a>
+      <button class="theme-btn" type="button" id="themeBtn" aria-label="Toggle light and dark theme">theme</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="resume">
+
+  <div class="r-actions no-print">
+    <button class="btn" type="button" onclick="window.print()">Print / save as PDF</button>
+    <a class="btn" href="index.html#work">Project spotlights</a>
+  </div>
+
+  <header class="r-head">
+    <div>
+      <h1>Andrew Edmark</h1>
+      <div class="r-title">Software developer · AI consultant · founder, Oopis McGoopis LLC<br>Quad Cities, Iowa</div>
+    </div>
+    <div class="r-contact">
+      <a href="mailto:a.edmark@gmail.com">a.edmark@gmail.com</a><br>
+      <a href="https://github.com/aedmark">github.com/aedmark</a><br>
+      <a href="https://www.linkedin.com/in/aedmark">linkedin.com/in/aedmark</a><br>
+      <a href="https://oopismcgoopis.com">oopismcgoopis.com</a>
+    </div>
+  </header>
+
+  <h2>Summary</h2>
+  <p>
+    Creative problem solver and self-taught systems builder who came to software through film,
+    live events and hospital A/V. I build complex adaptive systems that bridge human language and
+    mathematical simulation: a language-model harness with persistent state, receipts and audit
+    tooling; a procedural 3D engine with no external assets; an offline-first screenwriting app;
+    an in-browser operating system with a Python kernel; and a narrative game shipped for both the
+    modern web and Sierra's 1989 SCI0 interpreter. I favour static, dependency-light architectures,
+    document decisions as I make them, and write READMEs that state a project's limits as plainly
+    as its features. Reliable, adaptive, and happiest working with people.
+  </p>
+
+  <h2>Selected projects</h2>
+
+  <div class="entry">
+    <div class="when">2026 · Python</div>
+    <div>
+      <h3>BoneAmanita <span class="sub" style="display:inline">· <a href="https://github.com/aedmark/BoneAmanita">github.com/aedmark/BoneAmanita</a></span></h3>
+      <ul>
+        <li>Stateful prompt-construction engine for local LLMs: vocabulary classification, ~60 derived state variables, threshold-driven instruction assembly, cliché filtering with bounded retries.</li>
+        <li>Embedded semantic memory with zone-scoped retrieval, stress-driven forgetting and a sleep-cycle promotion path; atomic checkpointing of session state.</li>
+        <li>Designed a per-subsystem "receipts" diagnostic layer that exposes silent fallbacks and no-op subsystems; ~43k lines, 525 passing unit tests, seven audit scripts.</li>
+        <li>Integrated third-party mathematics (Project Navi's Creative Determinant, <code>ordvec</code> bitmap similarity) and documented, with measurements, what was and was not load-bearing.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="when">2026 · JavaScript / WebGL</div>
+    <div>
+      <h3>Level 0 Engine <span class="sub" style="display:inline">· <a href="https://github.com/aedmark/level0engine">github.com/aedmark/level0engine</a></span></h3>
+      <ul>
+        <li>Procedural liminal-space generator on Three.js: Julia-set maze carving, eleven sealed sectors, run-time texture synthesis cached to IndexedDB, zero shipped image or audio assets.</li>
+        <li>Custom Web Audio DSP with raycast occlusion; O(1) spatial-hash collision; zero-allocation scratch vectors; 32 hardware shadow casters; parallel shader compilation.</li>
+        <li>Seeded narrative engine: cold cases whose claims must be corroborated across sectors; six AI hazards; a zero-dependency visual Lore Editor.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="when">2025–2026 · Prompt design</div>
+    <div>
+      <h3>The Hypervisor <span class="sub" style="display:inline">· <a href="https://github.com/aedmark/the-hypervisor">github.com/aedmark/the-hypervisor</a></span></h3>
+      <ul>
+        <li>Plain-text harness that gives cloud LLMs a metabolic budget, memory shedding and a cast of governing voices via the system prompt alone; modular "Mod Chip" specialists.</li>
+        <li>Cut seven versions of accretion down to a lean core; ships with worked examples and full attribution of the ideas it builds on.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="when">2026 · Vanilla JS</div>
+    <div>
+      <h3>plainchant <span class="sub" style="display:inline">· <a href="https://plainchant.vercel.app">plainchant.vercel.app</a></span></h3>
+      <ul>
+        <li>Responsive Fountain screenwriting app with live preview, smart typing, autocomplete, multi-encoding import/export and a 30-day recovery library. No framework, no build step, no runtime dependencies.</li>
+        <li>Pure, unit-tested parser module; headless end-to-end tests; written decisions log and an IndexedDB migration spec.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="when">2025–2026 · Python / Pyodide</div>
+    <div>
+      <h3>FractalOS <span class="sub" style="display:inline">· <a href="https://github.com/aedmark/FractalOS">github.com/aedmark/FractalOS</a></span></h3>
+      <ul>
+        <li>Web-based operating system with a Python kernel running in WebAssembly, a Unix-like virtual file system with permissions and <code>sudo</code>, and an AI-integrated shell.</li>
+        <li>JSON "Effect Contract" boundary between kernel and JavaScript frontend; graphical editor and paint apps; desktop packaging through Neutralinojs. Successor to Oopis-OS and SamwiseOS.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="when">2026 · JS and SCI0</div>
+    <div>
+      <h3>Trauma Response Simulator, web and SCI editions <span class="sub" style="display:inline">· <a href="https://aedmark.itch.io/trs">aedmark.itch.io/trs</a></span></h3>
+      <ul>
+        <li>Turn-based stat-management game with hidden response mechanics, seeded and daily runs, New Game+, persistent case files, a journaling companion and a visual content-pack editor. Fully local, no server.</li>
+        <li>Ported the complete game to Sierra's SCI0 engine: 196 rooms generated from the web edition's source by Node.js scripts, 102 endings, cross-session persistence, MIDI music; built with SCI Companion under Wine, tested in DOSBox-X.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Skills</h2>
+  <dl class="skills">
+    <dt>Languages</dt><dd>Python, JavaScript (vanilla, ES modules), HTML/CSS, SCI0 script, SQL, shell</dd>
+    <dt>Language-model systems</dt><dd>Prompt architecture, local models via Ollama and OpenAI-compatible APIs, embeddings and semantic retrieval, DSPy, evaluation and audit tooling, xAI and Anthropic APIs</dd>
+    <dt>Graphics and audio</dt><dd>Three.js / WebGL, procedural generation, Web Audio API and custom DSP, Tone.js</dd>
+    <dt>Web and runtime</dt><dd>Static, offline-first apps; Pyodide / WebAssembly; IndexedDB and localStorage; Neutralinojs; Vercel; Neocities</dd>
+    <dt>Data and geo</dt><dd>PostGIS, OpenStreetMap, GraphHopper routing</dd>
+    <dt>Practice</dt><dd>pytest and headless-browser testing, written decision records and session handoffs, MIT licensing with human/AI-collaboration disclosure</dd>
+    <dt>Tools</dt><dd>PyCharm, WebStorm, Git, DOSBox-X, SCI Companion, Wine</dd>
+  </dl>
+
+  <h2>Experience</h2>
+  <div class="entry">
+    <div class="when">Jan 2025–present</div>
+    <div>
+      <h3>AI consultant and founder, Oopis McGoopis LLC</h3>
+      <p class="sub">Self-employed · Quad Cities, Iowa</p>
+      <ul>
+        <li>Design and build systems with large language models, taking a philosophical approach to how a model is instructed, constrained and audited.</li>
+        <li>Ship the projects listed above as public source, each with a roadmap, a decisions log and a plain statement of its limits.</li>
+        <li>Co-developed the VSL Hypervisor, a framework that lets a model adopt specific technical personae (the SLASH Council) to run forensic code audits and architectural reviews.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="entry">
+    <div class="when">Sep 2022–present</div>
+    <div>
+      <h3>Inventory Management Specialist, MSC Industrial Supply</h3>
+      <p class="sub">Quad Cities, Iowa</p>
+      <ul>
+        <li>Implement and support vendor-managed inventory solutions for industrial customers.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="entry">
+    <div class="when">2006–2020</div>
+    <div>
+      <h3>Earlier</h3>
+      <ul>
+        <li><b>K&amp;K True Value Hardware</b>, Bettendorf, Iowa (2016–2020): lumber associate and delivery driver.</li>
+        <li><b>Gabe's</b>, Iowa City (2010–2011): general manager and talent buyer for the live music venue.</li>
+        <li><b>University of Iowa Hospitals and Clinics</b> (2008–2010): project assistant; deployed infrared servers and a video-on-demand service across hospital units.</li>
+        <li><b>University of Iowa Football Office</b> (2006–2008): video technician for games, practices and away travel.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Education</h2>
+  <div class="entry">
+    <div class="when">2006–2010</div>
+    <div>
+      <h3>University of Iowa</h3>
+      <p class="sub">Cinema and English</p>
+    </div>
+  </div>
+
+  <h2>Also</h2>
+  <dl class="skills">
+    <dt>Languages</dt><dd>English, German</dd>
+    <dt>Certification</dt><dd>RealWORKS Gold Certification</dd>
+    <dt>Award</dt><dd>Best Low Budget Film</dd>
+    <dt>Publication</dt><dd><em>Somos Las Bolas</em></dd>
+    <dt>Writing</dt><dd><a href="https://mycelialmirror.medium.com">mycelialmirror.medium.com</a></dd>
+    <dt>Games</dt><dd><a href="https://aedmark.itch.io">aedmark.itch.io</a></dd>
+  </dl>
+
+</main>
+
+<footer class="site-foot no-print">
+  <div class="wrap">
+    <span>© <span id="year">2026</span> Andrew Edmark</span>
+    <span><a href="index.html">← Back to the portfolio</a></span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

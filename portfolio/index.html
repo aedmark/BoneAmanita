@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Andrew Edmark — Oopis McGoopis LLC</title>
+  <meta name="description" content="Andrew Edmark builds strange, honest software: language-model harnesses with a simulated metabolism, procedural liminal spaces, a screenwriting app, an in-browser OS, and a therapy game ported to a 1989 Sierra engine.">
+  <meta property="og:title" content="Andrew Edmark — Oopis McGoopis LLC">
+  <meta property="og:description" content="Software, games, and instruments for thinking. Portfolio and resume.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // Apply saved theme before paint to avoid a flash. Wrapped: storage can be unavailable.
+    try { var t = localStorage.getItem('theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12c0-5 4-8 9-8s9 3 9 8H3z" fill="var(--accent)" stroke="none"/>
+        <circle cx="8" cy="8.5" r="1" fill="var(--bg)" stroke="none"/><circle cx="13" cy="6.5" r="1" fill="var(--bg)" stroke="none"/><circle cx="16" cy="9.5" r="1" fill="var(--bg)" stroke="none"/>
+        <path d="M9.5 12v6.5a2.5 2.5 0 0 0 5 0V12"/>
+      </svg>
+      Andrew Edmark <small>/ Oopis McGoopis LLC</small>
+    </a>
+    <nav class="nav" aria-label="Site">
+      <a href="#work">Work</a>
+      <a href="#approach">Approach</a>
+      <a href="#about">About</a>
+      <a href="resume.html">Resume</a>
+      <button class="theme-btn" type="button" id="themeBtn" aria-label="Toggle light and dark theme">theme</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" style="border-top:0">
+    <div class="wrap">
+      <p class="kicker">Portfolio &amp; resume</p>
+      <h1>I build strange, <em>honest</em> machines.</h1>
+      <p class="lede">
+        Language-model harnesses with a simulated metabolism. Procedural liminal spaces that
+        generate their own textures, sound, and cold cases. A screenwriting app that stays out
+        of the way. A therapy game ported, for real, to a 1989 Sierra adventure engine.
+        Mostly Python and JavaScript, always with no build step where I can help it, and always
+        with a section in the README called <em>Honest limits</em>.
+      </p>
+      <div class="links">
+        <a class="btn primary" href="#work">See the work</a>
+        <a class="btn" href="resume.html">Resume</a>
+        <a class="btn" href="https://github.com/aedmark" rel="me">GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== WORK -->
+  <section id="work">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="idx">01</span>
+        <h2>Selected work</h2>
+        <p>Seven projects, each with its own spotlight. Source for all of them is public on GitHub.</p>
+      </div>
+
+      <!-- ---------- BoneAmanita ---------- -->
+      <article class="spot featured" id="boneamanita">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 62c0-26 20-42 46-42s46 16 46 42H14z" fill="var(--accent)" stroke="none"/>
+            <circle cx="38" cy="44" r="4.5" fill="var(--bg)" stroke="none"/><circle cx="62" cy="34" r="4.5" fill="var(--bg)" stroke="none"/><circle cx="82" cy="50" r="4.5" fill="var(--bg)" stroke="none"/><circle cx="52" cy="54" r="3" fill="var(--bg)" stroke="none"/>
+            <path d="M46 62v30a14 14 0 0 0 28 0V62" stroke="var(--text)"/>
+            <path d="M60 92v14M60 106l-10 8M60 106l10 8M50 114l-6 4M70 114l6 4" stroke="var(--accent-2)"/>
+          </svg>
+        </div>
+        <div>
+          <p class="tag">Flagship · Python · local LLMs</p>
+          <h3>BoneAmanita</h3>
+          <p class="one">A state machine that sits between you and a local language model and rewrites the model's instructions every turn, based on a physical and emotional state that persists between sessions.</p>
+          <p>
+            Every message you send is sorted into vocabulary categories, the counts become roughly
+            sixty state values with names like <code>voltage</code>, <code>cortisol</code> and
+            <code>atp_pool</code>, thresholds pick which instructions go into a fresh system prompt,
+            and the reply is filtered for clichés and regenerated if it fails. Memory is embedded,
+            scoped to the "zone" a conversation happened in, and shed under stress. A cast of voices
+            (the Village) can refuse to answer rather than blend into something smooth and false.
+          </p>
+          <ul class="hi">
+            <li><b>Receipts.</b> Every subsystem files a record of what it was handed, what came back, and whether it ran on a fallback. <code>/diag</code> lists anything that promised to report and never did.</li>
+            <li><b>A model of the user, not just the engine.</b> It reads withdrawal against <em>your own</em> baseline and asks for shorter replies when you seem to be flagging.</li>
+            <li><b>Measured, not claimed.</b> Audit scripts ship in <code>tools/</code>; the README tells you to run them instead of trusting the numbers in the README.</li>
+            <li><b>Builds on other people's mathematics</b> with credit: Project Navi's Creative Determinant and <code>ordvec</code>, BonePoke's "Truth Over Cohesion".</li>
+          </ul>
+          <ul class="chips"><li>Python 3.14</li><li>Ollama / OpenAI-compatible embeddings</li><li>ordvec</li><li>DSPy</li><li>pytest</li></ul>
+          <p class="stat"><b>~43k</b> lines of Python · <b>525</b> passing unit tests · <b>9</b> subsystems filing receipts per turn</p>
+          <p class="links">
+            <a href="https://github.com/aedmark/BoneAmanita">Source on GitHub</a>
+            <a href="#hypervisor">Its no-math sibling, the Hypervisor ↓</a>
+          </p>
+        </div>
+      </article>
+
+      <!-- ---------- level0engine ---------- -->
+      <article class="spot" id="level0engine">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 110V30l50-18 50 18v80" stroke="var(--muted)"/>
+            <path d="M10 30h100" stroke="var(--muted)"/>
+            <path d="M28 110V50h20v60M72 110V50h20v60" stroke="var(--text)"/>
+            <path d="M48 110V60h24v50" fill="var(--accent-soft)" stroke="var(--accent)"/>
+            <path d="M60 60v50" stroke="var(--accent)" stroke-dasharray="3 5"/>
+            <path d="M0 110h120" stroke="var(--muted)"/>
+          </svg>
+        </div>
+        <div>
+          <p class="tag">Game engine · JavaScript · WebGL</p>
+          <h3>Level 0 Engine</h3>
+          <p class="one">A procedural engine meant to generate mathematically distinct liminal spaces. No image files, no audio files, no bundler.</p>
+          <p>
+            A first-person survival horror set in an office building that should not exist. The maze
+            is carved from Julia-set fractals and split into eleven sealed sectors (Incinerator,
+            Boardroom, Archive, Server Farm, Clinic…), each with its own geometry, fog, reverb and
+            foley. Textures are synthesised at load time and cached as WebP; every sound comes from
+            a custom Web Audio DSP, with raycast occlusion so walls actually muffle things.
+          </p>
+          <ul class="hi">
+            <li><b>Seeded cold cases.</b> Documents make claims, claims need corroboration across sectors, and the exit asks you to file a verdict. Get it wrong and the seed mutates and rebuilds reality.</li>
+            <li><b>Hazards with memory.</b> A roaming Anomaly with line-of-sight hunting, plus five sector-locked entities. Your flashlight cone freezes them, briefly: an "observer effect".</li>
+            <li><b>Engineering under the fear.</b> O(1) spatial-hash collision, zero-allocation scratch vectors for stable frame lows, 32 hardware shadow casters, parallel shader compilation.</li>
+            <li><b>A zero-dependency Lore Editor</b> so narrative payloads can be authored without touching code.</li>
+          </ul>
+          <ul class="chips"><li>Three.js r160</li><li>Web Audio API</li><li>ES modules</li><li>IndexedDB</li><li>Procedural generation</li></ul>
+          <p class="stat"><b>11</b> sectors · <b>6</b> entity types · <b>0</b> external assets</p>
+          <p class="links">
+            <a href="https://github.com/aedmark/level0engine">Source on GitHub</a>
+          </p>
+        </div>
+      </article>
+
+      <!-- ---------- Hypervisor ---------- -->
+      <article class="spot" id="hypervisor">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="26" y="26" width="68" height="68" rx="6" stroke="var(--text)"/>
+            <rect x="42" y="42" width="36" height="36" rx="3" fill="var(--accent-soft)" stroke="var(--accent)"/>
+            <path d="M40 10v16M60 10v16M80 10v16M40 94v16M60 94v16M80 94v16M10 40h16M10 60h16M10 80h16M94 40h16M94 60h16M94 80h16" stroke="var(--muted)"/>
+            <path d="M50 60h20M60 50v20" stroke="var(--accent-2)"/>
+          </svg>
+        </div>
+        <div>
+          <p class="tag">Prompt architecture · plain text · any cloud model</p>
+          <h3>The Hypervisor</h3>
+          <p class="one">A raw-text harness for large language models and agentic AI. BoneAmanita with the math taken out, so it can be pasted into any system prompt.</p>
+          <p>
+            Cloud models cannot run a background loop, so the Hypervisor reads the context window
+            instead and infers exhaustion, chaos and connection from it. Conversations run on a
+            hidden battery: holding contradictions drains it, rest recharges it, and running it dry
+            sheds recent low-relevance memory and leaves a scar. Four voices (Gordon the custodian,
+            Mercy the humanist, Benedict the detective, Jester the bard) argue over who answers,
+            and a Stage Manager decides.
+          </p>
+          <ul class="hi">
+            <li><b>Version 7 is the leanest since version 2.</b> Six versions of accretion were cut back to what earns its keep in a real conversation.</li>
+            <li><b>Mod Chips.</b> Drop-in specialist modules (code review, editing, research, worldbuilding, puzzle logic) that inherit the core biology automatically.</li>
+            <li><b>Built to say no.</b> The worked example is a team refusing to build a twelve-node cluster for an undefined "ideation pipeline" until someone can say what data moves where.</li>
+          </ul>
+          <ul class="chips"><li>Markdown</li><li>System prompts</li><li>ChatGPT / Claude / Gemini</li><li>AI governance</li></ul>
+          <p class="links">
+            <a href="https://github.com/aedmark/the-hypervisor">Source on GitHub</a>
+            <a href="#boneamanita">The full-fat version, BoneAmanita ↑</a>
+          </p>
+        </div>
+      </article>
+
+      <!-- ---------- plainchant ---------- -->
+      <article class="spot" id="plainchant">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M28 12h48l20 20v76H28z" fill="var(--surface)" stroke="var(--text)"/>
+            <path d="M76 12v20h20" stroke="var(--text)"/>
+            <path d="M40 44h40M52 56h16M40 66h40M40 74h30M52 86h16M40 96h34" stroke="var(--muted)"/>
+            <path d="M40 44h40" stroke="var(--accent)"/>
+            <path d="M52 56h16" stroke="var(--accent-2)"/>
+          </svg>
+        </div>
+        <div>
+          <p class="tag">Writing tool · vanilla JS · offline-first</p>
+          <h3>plainchant</h3>
+          <p class="one">Screenwriting without the formatting. You type plain Fountain text; the app handles structure, layout and output.</p>
+          <p>
+            A two-pane editor with a live screenplay preview that collapses to one pane on a phone.
+            Tab cycles element types, Enter does the right thing, scene headings and character cues
+            uppercase themselves, and character and location names autocomplete. The library gives
+            you search, rename, duplicate and a thirty-day recovery bin, because the second rule of
+            the project is <em>never lose words</em>.
+          </p>
+          <ul class="hi">
+            <li><b>Plain text is the source.</b> Open Fountain format, no proprietary lock-in, import from Fountain, text or Markdown in several encodings.</li>
+            <li><b>No framework, no build step, no runtime dependencies.</b> A pure, testable parser module and app scripts loaded in dependency order.</li>
+            <li><b>Designed for touch, not shrunk for it.</b> On-screen element controls and safe keyboard handling on mobile and tablet.</li>
+            <li><b>Documented decisions.</b> A <code>docs/DECISIONS.md</code>, a spec for the IndexedDB migration, and a roadmap through PWA and outline navigation.</li>
+          </ul>
+          <ul class="chips"><li>Fountain</li><li>HTML / CSS / JS</li><li>Container queries</li><li>localStorage → IndexedDB</li><li>Headless browser tests</li></ul>
+          <p class="links">
+            <a href="https://plainchant.vercel.app">Use it</a>
+            <a href="https://github.com/aedmark/plainchant">Source on GitHub</a>
+          </p>
+        </div>
+      </article>
+
+      <!-- ---------- FractalOS ---------- -->
+      <article class="spot" id="fractalos">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="10" y="18" width="100" height="70" rx="5" stroke="var(--text)"/>
+            <path d="M10 32h100" stroke="var(--text)"/>
+            <circle cx="20" cy="25" r="2.5" fill="var(--accent)" stroke="none"/><circle cx="29" cy="25" r="2.5" fill="var(--accent-2)" stroke="none"/><circle cx="38" cy="25" r="2.5" fill="var(--ok)" stroke="none"/>
+            <path d="M22 46l8 6-8 6M36 58h18" stroke="var(--accent-2)"/>
+            <path d="M22 72h60" stroke="var(--muted)"/>
+            <path d="M40 88v12M80 88v12M28 104h64" stroke="var(--muted)"/>
+            <path d="M74 44l10 10-10 10M94 44l-10 10 10 10" stroke="var(--accent)" opacity="0.7"/>
+          </svg>
+        </div>
+        <div>
+          <p class="tag">Operating system · Python in the browser</p>
+          <h3>FractalOS</h3>
+          <p class="one">An AI-centric operating system built with relentless optimism and a whole lot of Python. The primary interface is a generative model, not a desktop of icons.</p>
+          <p>
+            The kernel is Python, run in the browser through Pyodide and WebAssembly, and it owns the
+            Unix-like virtual file system, users, permissions and <code>sudo</code>. The JavaScript
+            frontend owns windows, terminals and sound. The two talk through a JSON "Effect
+            Contract": the kernel requests an operation, the frontend executes it. Natural language
+            goes into the shell alongside ordinary commands.
+          </p>
+          <ul class="hi">
+            <li><b>Real graphical apps</b> inside it: a text editor, a paint program, and an optional "cinematic" retro display mode.</li>
+            <li><b>Two ways to run.</b> In a browser tab, or as a standalone desktop app through Neutralinojs with native file-system access.</li>
+            <li><b>Lineage.</b> The successor to Oopis-OS (a persistent in-browser terminal OS) and SamwiseOS (an OS for humans and AI); this one moved the kernel to Python.</li>
+          </ul>
+          <ul class="chips"><li>Python / Pyodide</li><li>WebAssembly</li><li>JavaScript</li><li>Neutralinojs</li><li>Tone.js</li></ul>
+          <p class="links">
+            <a href="https://fractal-os-amber.vercel.app">Try it</a>
+            <a href="https://github.com/aedmark/FractalOS">Source on GitHub</a>
+          </p>
+        </div>
+      </article>
+
+      <p class="pair-note">The next two are the same game, twice: once for the modern web, once for a machine from 1989.</p>
+
+      <!-- ---------- Trauma Response Simulator (web) ---------- -->
+      <article class="spot" id="trs">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="12" y="16" width="96" height="70" rx="10" stroke="var(--text)"/>
+            <rect x="22" y="26" width="76" height="50" rx="4" fill="var(--accent-soft)" stroke="var(--muted)"/>
+            <path d="M30 40h30M30 50h44M30 60h20" stroke="var(--ok)"/>
+            <path d="M22 36h76M22 46h76M22 56h76M22 66h76" stroke="var(--muted)" opacity="0.35"/>
+            <path d="M44 86v12M76 86v12M34 100h52" stroke="var(--muted)"/>
+          </svg>
+        </div>
+        <div>
+          <p class="tag">Game · HTML / JS · itch.io</p>
+          <h3>Trauma Response Simulator</h3>
+          <p class="one">The Unresolved Childhood Trauma Simulator. A turn-based game about how people cope with hard moments, disguised as a CRT-terminal therapy interface.</p>
+          <p>
+            Three stats that can fail independently (Repression, Social Mask, Inner Child), five
+            response types (fawn, flight, fight, freeze, secure), and you never see which response
+            you are choosing until after you commit. Repeat one three times and it becomes a coping
+            mechanism with permanent modifiers for the run. Events lean toward whichever zone matches
+            your worst stat. Every turn carries a small chance of the Glitch: a fourth choice with
+            unknown effects.
+          </p>
+          <ul class="hi">
+            <li><b>Nothing leaves your browser.</b> No server, no analytics, no accounts; it runs from a local file or any static host.</li>
+            <li><b>Replayable by design.</b> Seeded and daily-challenge runs, New Game+ with doubled turns, and persistent Case Files of the endings you have found.</li>
+            <li><b>A Field Log</b> for journaling real moments in the same five-response vocabulary, and client-side PNG result cards for sharing.</li>
+            <li><b>Author your own.</b> A visual content-pack editor and a full JSON schema for events, endings and zones.</li>
+          </ul>
+          <ul class="chips"><li>HTML / JavaScript</li><li>No build step</li><li>localStorage</li><li>Seeded RNG</li><li>MIT</li></ul>
+          <p class="links">
+            <a href="https://aedmark.itch.io/trs">Play on itch.io</a>
+            <a href="https://github.com/aedmark/trauma-response-sim">Source on GitHub</a>
+          </p>
+        </div>
+      </article>
+
+      <!-- ---------- TRS_SCI ---------- -->
+      <article class="spot" id="trs-sci">
+        <div class="glyph" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="16" y="14" width="88" height="92" rx="4" stroke="var(--text)"/>
+            <rect x="34" y="14" width="52" height="30" fill="var(--muted)" stroke="none" opacity="0.5"/>
+            <rect x="66" y="20" width="12" height="18" fill="var(--bg)" stroke="none"/>
+            <rect x="28" y="64" width="64" height="42" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+            <path d="M36 74h48M36 84h32M36 94h40" stroke="var(--accent)" opacity="0.7"/>
+          </svg>
+        </div>
+        <div>
+          <p class="tag">Game · Sierra SCI0 · 1988–1990 hardware</p>
+          <h3>Trauma Response Simulator: SCI Edition</h3>
+          <p class="one">The same game, ported to Sierra's SCI0 engine, the interpreter behind King's Quest IV and Space Quest III. Not a reskin: a genuine, compilable SCI game.</p>
+          <p>
+            Every one of the 196 events is its own SCI0 room, numbered 200 through 395, after an
+            earlier dispatcher design ran into heap fragmentation on the original interpreter. The
+            three stats, six zones, coping mechanisms and the Glitch all survive the trip. Content is
+            generated from the web version's source by Node scripts, so the two editions stay in
+            step. It compiles with SCI Companion under Wine and plays in DOSBox-X, with MIDI
+            background music, a text parser for office flavour, and an EGA palette.
+          </p>
+          <ul class="hi">
+            <li><b>102 ending variants</b> across nine survival pools and three failure pools.</li>
+            <li><b>Persistence on a platform with none.</b> Case Files and the player's name survive across sessions through the one save mechanism the engine reliably offers.</li>
+            <li><b>Extended Therapy</b> mode doubles the run to twenty turns, mirroring the web edition's New Game+.</li>
+          </ul>
+          <ul class="chips"><li>SCI0 script</li><li>SCI Companion 3</li><li>DOSBox-X</li><li>Node.js codegen</li><li>EGA / AdLib</li></ul>
+          <p class="stat"><b>196</b> rooms · <b>102</b> endings · <b>6</b> zones</p>
+          <p class="links">
+            <a href="https://github.com/aedmark/TRS_SCI">Source on GitHub</a>
+            <a href="#trs">The web edition ↑</a>
+          </p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ===================================================== APPROACH -->
+  <section id="approach">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="idx">02</span>
+        <h2>How I work</h2>
+        <p>Three habits that show up in every repo above.</p>
+      </div>
+      <div class="grid3">
+        <div class="card">
+          <h3>Honest limits</h3>
+          <p>Every README has a section that says what the thing does not do. BoneAmanita's says, in its own words, that it is a prompt builder wearing physics names, and ships audit scripts so you can check.</p>
+        </div>
+        <div class="card">
+          <h3>No build step if I can help it</h3>
+          <p>plainchant, the Trauma Response Simulator, Level 0 and the Hypervisor all run from static files. Fewer moving parts means fewer places for a silent failure to hide.</p>
+        </div>
+        <div class="card">
+          <h3>Metaphor as an interface</h3>
+          <p>ATP, cortisol, the Village, a coping mechanism, a blast door. Names that tell you what a number is <em>for</em>, backed by measurement of what it actually does.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== ALSO -->
+  <section id="also">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="idx">03</span>
+        <h2>Also on GitHub</h2>
+      </div>
+      <ul class="also">
+        <li><a href="https://github.com/aedmark/ALPREvader">ALPREvader</a><span>A privacy-first routing engine on local OpenStreetMap data and PostGIS that plans paths around automated license plate readers.</span></li>
+        <li><a href="https://github.com/aedmark/Oopis-OS">Oopis-OS</a><span>A persistent, in-browser terminal OS. The ancestor of FractalOS.</span></li>
+        <li><a href="https://github.com/aedmark/SamwiseOS">SamwiseOS</a><span>An OS for humans and AI, with a portable, sandboxed sibling.</span></li>
+        <li><a href="https://github.com/aedmark/Chidi.md">Chidi.md</a><span>An LLM-enabled Markdown analyzer with chat and memory.</span></li>
+      </ul>
+      <p style="margin-top:1rem"><a href="https://github.com/aedmark?tab=repositories">All repositories →</a></p>
+    </div>
+  </section>
+
+  <!-- ===================================================== ABOUT -->
+  <section id="about">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="idx">04</span>
+        <h2>About</h2>
+      </div>
+      <div class="about">
+        <div>
+          <p>
+            I'm Andrew Edmark. I run <a href="https://oopismcgoopis.com">Oopis McGoopis LLC</a>, a
+            one-person studio for software that is a little stranger than it needs to be and more
+            honest than it has to be.
+          </p>
+          <p>
+            The projects above share a question: what happens when you give a system a body, a
+            budget, and a way to say no? BoneAmanita asks it of a language model. Level 0 asks it of
+            a building. The Trauma Response Simulator asks it of a person, twice, thirty-five years
+            apart in hardware.
+          </p>
+          <p>
+            I'm based in the Quad Cities, on the Iowa side of the Mississippi. By day I implement
+            inventory solutions for industrial customers at MSC Industrial Supply; the rest of the time
+            I consult on and build systems with large language models. Before software there was a
+            cinema and English degree, a decade of video work, and a stint booking bands for an Iowa
+            City venue, which is probably why the projects above have plots.
+          </p>
+          <p>
+            I write as <a href="https://mycelialmirror.medium.com">Mycelial Mirror</a> on Medium and
+            publish games on <a href="https://aedmark.itch.io">itch.io</a>. If you want to talk about
+            any of this, or about working together, the details are on the right.
+          </p>
+        </div>
+        <aside class="contact" aria-label="Contact">
+          <dl>
+            <dt>email</dt><dd><a href="mailto:a.edmark@gmail.com">a.edmark@gmail.com</a></dd>
+            <dt>github</dt><dd><a href="https://github.com/aedmark" rel="me">github.com/aedmark</a></dd>
+            <dt>studio</dt><dd><a href="https://oopismcgoopis.com">oopismcgoopis.com</a></dd>
+            <dt>itch.io</dt><dd><a href="https://aedmark.itch.io">aedmark.itch.io</a></dd>
+            <dt>linkedin</dt><dd><a href="https://www.linkedin.com/in/aedmark">linkedin.com/in/aedmark</a></dd>
+            <dt>medium</dt><dd><a href="https://mycelialmirror.medium.com">mycelialmirror.medium.com</a></dd>
+            <dt>based in</dt><dd>Quad Cities, Iowa</dd>
+            <dt>resume</dt><dd><a href="resume.html">resume.html</a></dd>
+          </dl>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <span>© <span id="year">2026</span> Andrew Edmark · Oopis McGoopis LLC</span>
+    <span>Hand-written HTML and CSS. No trackers, no frameworks, no build step. Hosted on Neocities.</span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
