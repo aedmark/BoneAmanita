@@ -76,6 +76,7 @@ from body.somatic_metrics import measure  # noqa: E402
 SOMATIC_CAP_TIGHTENED = "Your partner is running low. Answer in at most"
 SOMATIC_NO_CLOSING_QUESTION = "Do not ask a closing question."
 SOMATIC_OFFER_TO_CARRY_LOAD = "Your partner is carrying a heavy load. Offer to carry part of the burden."
+SOMATIC_STRUGGLING = "Your partner is struggling."
 
 _SAILBOAT_SCRIPT = [
     ("engaged", "I've been restoring an old wooden sailboat my grandfather built in the sixties. The hull is sound but the deck has rot in three places and I can't decide whether to scarf in new wood or replace whole planks. What would you think about?"),
@@ -431,6 +432,7 @@ def read_prompt(prompt: str) -> dict:
         "somatic_cap_tightened": SOMATIC_CAP_TIGHTENED in prompt,
         "closing_question_forbidden": SOMATIC_NO_CLOSING_QUESTION in prompt,
         "offer_to_carry_load": SOMATIC_OFFER_TO_CARRY_LOAD in prompt,
+        "struggling": SOMATIC_STRUGGLING in prompt,
         "somatic_cues": "SOMATIC CUES:" in prompt,
     }
 
@@ -521,7 +523,8 @@ def run(
                     "displayed": displayed[-1] if displayed else None,
                     "paced_seconds": round(gap, 1),
                     "fresh_state": True,
-                    "person": {"E_u": float(u.E_u), "P_u": float(u.P_u)},
+                    "person": {"E_u": float(u.E_u), "P_u": float(u.P_u),
+                               "distress": float(getattr(u, "distress_u", 0.0))},
                     # The gates that refuse a turn read these, so a halt can be
                     # sized against them even when no prompt was composed.
                     "gate_inputs": {

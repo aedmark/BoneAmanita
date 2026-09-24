@@ -27,8 +27,10 @@ def feed(lattice, messages):
 class DistressIsReadFromWords(BoneTestCase):
     def test_distressed_lines_register_and_ordinary_ones_do_not(self):
         read = SharedLatticeDriver.read_distress
+        # Inflections included: "fucked" and "crashed" once slipped past word boundaries built for "fuck" and "crash".
         for line in (TURN_22, "I'm a shitty brother.", "Idk if I can do this.", "i'm so angry at myself",
-                     "My heart's racing. I can't see myself up there, silent."):
+                     "My heart's racing. I can't see myself up there, silent.", "Meh, i fucked up tonight.",
+                     "Dunno if I'm cut out for this."):
             self.assertGreaterEqual(read(line), 0.5, line)
         for line in ("I found one good memory.", "I don't want to bore everyone with too much.",
                      "I'm done adding names. Going to bed.", "Dev just called. He's freaking out about the cake.",
@@ -55,7 +57,8 @@ class DistressIsReadFromWords(BoneTestCase):
     def test_tiredness_said_out_loud_counts(self):
         lattice = SharedLatticeDriver()
         feed(lattice, ["I think I'll just crash early tonight. Goodnight."] * 1)
-        self.assertGreaterEqual(lattice.read_disengagement("I'm beat. Gonna call it a night."), 0.7)
+        for line in ("I'm beat. Gonna call it a night.", "Meh, just crashed.", "whatever"):
+            self.assertGreaterEqual(lattice.read_disengagement(line), 0.7, line)
 
 
 class TheBudgetAnswersDistress(BoneTestCase):

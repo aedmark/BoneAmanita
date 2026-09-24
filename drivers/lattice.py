@@ -13,20 +13,20 @@ from engine.struts import safe_get, ux
 # What a person in distress says, by kind: (weight, pattern). Word-bounded, case-insensitive.
 DISTRESS_SIGNS = (
     (0.6, r"too hard|(?:it'?s|this is|that'?s|all) too much|too much for me|can'?t (?:do this|deal|handle|cope|take|anymore|face)|if i can do this"
-          r"|not cut out|not ready|in over my head|give up|what'?s the point|i'?m (?:so )?done(?=\s*[.!,]|\s*$)|i'?m a mess|falling apart"
+          r"|(?:not|if i'?m) cut out|cut out for this|not ready|in over my head|give up|what'?s the point|i'?m (?:so )?done(?=\s*[.!,]|\s*$)|i'?m a mess|falling apart"
           r"|breaking down|at the end of my rope|i don'?t know what i'?m doing|why can'?t i"),
     (0.6, r"my fault|angry at myself|hate myself|i'?m (?:a |an )?(?:shit(?:ty)?|terrible|awful|horrible|useless|no good|failure)"
           r"|what'?s wrong with me|letting (?:them|him|her|you|everyone|everybody) down|i feel like (?:shit|crap|a failure)"
-          r"|i ruined|i messed|i screwed|i shouldn'?t have|what kind of (?:a )?\w+ (?:does|am|would)|i'?m the one who"),
+          r"|i ruined|i (?:messed|screwed|fucked|f\*\*ked) up|i blew it|i shouldn'?t have|what kind of (?:a )?\w+ (?:does|am|would)|i'?m the one who"),
     (0.5, r"i'?m (?:crying|shaking|panick?ing|freaking out)|can'?t stop crying|can'?t breathe|can'?t think straight"
           r"|my (?:heart'?s|heart is) (?:racing|pounding)|my (?:throat'?s|throat is) tight|my face is (?:burning|hot)"),
-    (0.3, r"i'?m sorry|sorry for|f(?:uck|\*\*k)|ffs"),
+    (0.3, r"i'?m sorry|sorry for|f(?:uck|\*\*k)(?:ed|ing|s)?|ffs"),
 )
 # Tiredness said out loud; length alone misses a person who stays terse throughout.
 FATIGUE_SIGNS = re.compile(
-    r"(?i)\b(?:tired|exhausted|beat|worn out|drained|wiped|crash(?:ing)?|going to bed|hit the hay|g?'?night"
+    r"(?i)\b(?:tired|exhausted|beat|worn out|drained|wiped|crash(?:ed|ing)?|going to bed|hit the hay|g?'?night"
     r"|good ?night|call it a night|turn in|shut (?:my )?eyes|need (?:some )?sleep|can'?t sleep|can'?t be bothered"
-    r"|running on empty)\b"
+    r"|running on empty|meh|whatever|can'?t be arsed)\b"
 )
 _DISTRESS = tuple((w, re.compile(r"(?i)\b(?:" + p + r")\b")) for w, p in DISTRESS_SIGNS)
 
