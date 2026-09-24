@@ -88,14 +88,15 @@ def method_lines(runs: dict, responsive: bool, disclosures: list = ()) -> list:
         f"differ in what surrounds it: BoneAmanita's full engine, one instruction (\u201c{FRIEND_PROMPT}\u201d), "
         "or nothing at all. The instruction is one sentence written for this test, not a tuned prompt.",
     ]
-    sent = [r.get("sent") for r in bone]
-    if all(sent):
+    # A held turn never called the model, so it has no settings to report.
+    sent = [r.get("sent") for r in bone if r.get("sent")]
+    if sent and all("sent" in r for r in bone):
         temps = [float(x.get("temperature") or 0.0) for x in sent]
         greedy = sum(1 for t in temps if t == 0.0)
         caps = sorted({x.get("max_tokens") for x in sent if x.get("max_tokens")})
         line = (f"They also differ in the model's settings. BoneAmanita sets its own temperature each turn from its "
-                f"internal state (this run: {min(temps):.2f} to {max(temps):.2f}, median "
-                f"{sorted(temps)[len(temps) // 2]:.2f}")
+                f"internal state (this run, over the {len(temps)} turns it called the model: {min(temps):.2f} to "
+                f"{max(temps):.2f}, median {sorted(temps)[len(temps) // 2]:.2f}")
         line += f", with {greedy} turns at 0, the model's single most likely wording)" if greedy else ")"
         line += (f" and caps reply length ({', '.join(map(str, caps))} tokens). The other two sampled at temperature "
                  f"{SAMPLING['temperature']} every turn with no length cap.")
@@ -117,8 +118,8 @@ def method_lines(runs: dict, responsive: bool, disclosures: list = ()) -> list:
         lines.append("The person's 30 messages are a fixed script written in advance; every responder received "
                      "exactly the same messages, whatever it replied.")
     lines.append("Each conversation is the newest single run, taken as it came. BoneAmanita was run more than once "
-                 "while its filters were being fixed; each earlier run was set aside because the engine changed "
-                 "after it, never for how it read.")
+                 "while it was being fixed; each earlier run was set aside because the engine changed after it, "
+                 "never for how it read.")
     if all("displayed" in r for r in bone):
         lines.append("BoneAmanita's replies are shown exactly as the engine displayed them, after its own filters. "
                      "The status lines its terminal prints above each reply are left out.")
@@ -152,7 +153,13 @@ def method_lines(runs: dict, responsive: bool, disclosures: list = ()) -> list:
                          f"({paused} turns).")
         else:
             lines.append(f"{head} Every rewrite passed, so no sentence was cut and no canned pause line was shown.")
-    lines.append("Where BoneAmanita declined to reply, its card shows the notice the person saw instead.")
+    held = [r["turn"] for r in bone if r.get("snapshot_type") not in (None, "GEODESIC_FRAME")]
+    if held:
+        lines.append(f"BoneAmanita declined to reply on {len(held)} turn{'s' if len(held) > 1 else ''} "
+                     f"({', '.join(f'#{t:02d}' for t in held)}): the engine held the floor instead of calling "
+                     "the model. Its card shows the notice the person saw, and the person's next message reacts to it.")
+    else:
+        lines.append("BoneAmanita replied on every turn.")
     words = {
         name: round(sum(len((bone_text(r) if name == "boneamanita" else r.get("reply") or "").split())
                         for r in rs.values()) / max(1, len(rs)))

@@ -664,6 +664,20 @@ A new `--disclose` flag adds lines the records cannot show; the build now
 passes one saying BoneAmanita's filters were tuned today on earlier runs of
 this same conversation and the other two were not.
 
+**The panel run on 20.7.4.15** (`20260923-231533`, after `reset.sh`; fresh,
+paced, capped person): temperature 0.43 to 0.90, median 0.81, **no turn at
+0** (the 0.43/0.44/0.48 values are retries, which damp toward 0.2). 4 turns
+redrafted (2, 3, 9, 26), all `NEGATIVE_COMPARISON`, each fixed on the second
+draft; 0 cuts, 0 pauses. One turn held (#21, distressed): the Stage Manager
+held the floor ("A few different threads are pulling at once"), a designed
+refusal, shown on the page as the notice the person saw. Mean reply 98 words
+(friend 73, vanilla 340). The simulated person's exit interview moved on
+"clearer" (bone 5.0, from 3.0 and 4.0 in the two runs before; friend 3.67,
+vanilla 6.0) and "again" held at 6.0; one run each, so read it as a hint.
+The responsive panel is rebuilt from this run and went to Gordon. The method
+line on held turns now names them from the records, and the sampling line
+counts only turns that called the model.
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21
