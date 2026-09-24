@@ -311,7 +311,7 @@ class BoneConfig:
         "ANCHOR_SHARE": 0.75,
         "FATIGUE_WEIGHT": 0.7,
         "DISTRESS_RISE": 0.8,
-        "DISTRESS_FALL": 0.2,
+        "DISTRESS_FALL": 0.1,
     }
 
     STAGE = {

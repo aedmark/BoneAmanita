@@ -30,11 +30,13 @@ class DistressIsReadFromWords(BoneTestCase):
         # Inflections included: "fucked" and "crashed" once slipped past word boundaries built for "fuck" and "crash".
         for line in (TURN_22, "I'm a shitty brother.", "Idk if I can do this.", "i'm so angry at myself",
                      "My heart's racing. I can't see myself up there, silent.", "Meh, i fucked up tonight.",
-                     "Dunno if I'm cut out for this."):
+                     "Dunno if I'm cut out for this.", "It's just... it's just not enough.",
+                     "dev thinks i can do this but i'm spiraling. might have to tell him i can't."):
             self.assertGreaterEqual(read(line), 0.5, line)
         for line in ("I found one good memory.", "I don't want to bore everyone with too much.",
                      "I'm done adding names. Going to bed.", "Dev just called. He's freaking out about the cake.",
-                     "Sorry, got distracted by work."):
+                     "Sorry, got distracted by work.", "I can't make it Tuesday, but Wednesday works.",
+                     "There's not enough coffee in the house."):
             self.assertLess(read(line), 0.5, line)
 
     def test_distress_rises_fast_and_falls_slowly(self):
@@ -44,8 +46,9 @@ class DistressIsReadFromWords(BoneTestCase):
         feed(lattice, [TURN_22])
         peak = lattice.u.distress_u
         self.assertGreaterEqual(peak, 0.4, "one clearly distressed message should cross the budget threshold")
-        feed(lattice, ["She's still under the desk."])
-        self.assertGreater(lattice.u.distress_u, peak * 0.6)
+        # One bad message should keep the guard on for a few calmer turns, not two.
+        feed(lattice, ["She's still under the desk.", "Still there.", "Going to make tea."])
+        self.assertGreaterEqual(lattice.u.distress_u, 0.4)
 
     def test_a_terse_stretch_does_not_become_the_new_normal(self):
         lattice = SharedLatticeDriver()
@@ -84,7 +87,7 @@ class TheBudgetAnswersDistress(BoneTestCase):
 
 class NarratingTheirStateIsCaught(BoneTestCase):
     TURN_22_REPLY = (
-        "The weight of the work is heavy and visible in your words. You are reaching a point where the demands of "
+        "The work is heavy and it shows in your words. You are reaching a point where the demands of "
         "care feel like they exceed your capacity to give. That feeling is honest. It reflects the reality of how "
         "exhausting this process is for you."
     )
@@ -99,3 +102,15 @@ class NarratingTheirStateIsCaught(BoneTestCase):
                      "It's okay to go to bed and look at it tomorrow."):
             ok, _ = gatekeeper.audit_generation(fine, forge, mode="CONVERSATION")
             self.assertTrue(ok, (fine, gatekeeper.last_rejection))
+
+
+class TheWeightOfIsACliche(BoneTestCase):
+    def test_the_weight_of_is_rewritten_not_paused(self):
+        """A BoneAmanita tic: 35 of 239 toast replies, and still 5 of 30 with no "weight" left in the prompt."""
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        ok, _ = gatekeeper.audit_generation("Start small. The weight of it is a lot tonight. Sleep on it.",
+                                            self.engine.bio.mito, mode="CONVERSATION")
+        self.assertFalse(ok)
+        self.assertEqual(gatekeeper.last_rejection["text"].lower(), "the weight of")
+        text, cut = gatekeeper.salvage()
+        self.assertEqual(text, "Start small. Sleep on it.")

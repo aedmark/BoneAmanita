@@ -14,7 +14,8 @@ from engine.struts import safe_get, ux
 DISTRESS_SIGNS = (
     (0.6, r"too hard|(?:it'?s|this is|that'?s|all) too much|too much for me|can'?t (?:do this|deal|handle|cope|take|anymore|face)|if i can do this"
           r"|(?:not|if i'?m) cut out|cut out for this|not ready|in over my head|give up|what'?s the point|i'?m (?:so )?done(?=\s*[.!,]|\s*$)|i'?m a mess|falling apart"
-          r"|breaking down|at the end of my rope|i don'?t know what i'?m doing|why can'?t i"),
+          r"|breaking down|at the end of my rope|i don'?t know what i'?m doing|why can'?t i|spiral(?:l?ing|l?ed)?"
+          r"|i can'?t(?=\s*[.!]*\s*$)|(?:it'?s|i'?m|that'?s|this is) (?:just )?not (?:good )?enough"),
     (0.6, r"my fault|angry at myself|hate myself|i'?m (?:a |an )?(?:shit(?:ty)?|terrible|awful|horrible|useless|no good|failure)"
           r"|what'?s wrong with me|letting (?:them|him|her|you|everyone|everybody) down|i feel like (?:shit|crap|a failure)"
           r"|i ruined|i (?:messed|screwed|fucked|f\*\*ked) up|i blew it|i shouldn'?t have|what kind of (?:a )?\w+ (?:does|am|would)|i'?m the one who"),
@@ -126,7 +127,7 @@ class SharedLatticeDriver:
             d_rate = (
                 self._user_cfg("DISTRESS_RISE", 0.8)
                 if distress > self.u.distress_u
-                else self._user_cfg("DISTRESS_FALL", 0.2)
+                else self._user_cfg("DISTRESS_FALL", 0.1)
             )
             self.u.distress_u = max(0.0, min(1.0, self.u.distress_u + (distress - self.u.distress_u) * d_rate))
             if text.strip():

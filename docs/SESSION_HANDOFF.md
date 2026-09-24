@@ -11,6 +11,35 @@ each session; that one is the standing reference for how to run it again.
 
 ## Where things stand, 2026-09-24 midday (read this first)
 
+**Update, 2026-09-24 late evening: the persona on toast, and three follow-ups
+(20.7.4.27).** Toast run `20260924-145916` on the rebalanced persona, against
+`20260924-074939` before it: sentences opening "The..." 16% to **6%**,
+replies with "the weight of" 9 to 4, mean words 83 to 53; exit interview
+the same (heard 4, clearer 5, lectured 2.67) except "again" 6 to 5.33. The
+ordinary replies read direct ("That is a solid story... Focus on that one
+moment and let it stand by itself."). Distress fired on turns 20-21 and
+those replies were short and direct; turns 22-24 narrated and lectured
+again ("Stop looking for a grand performance") because distress faded below
+0.4 in two turns and missed "not enough", "spiraling" and a bare "I
+can't." Gordon approved all three follow-ups:
+1. `DISTRESS_FALL` 0.2 to 0.1, so one strong message holds the guard for
+   several calmer turns (test mutation checked against the JSON value, which
+   is what the engine reads).
+2. `read_distress` adds "spiraling", a sentence-final "I can't.", and
+   "it's/I'm/that's/this is (just) not (good) enough"; "I can't make it
+   Tuesday" and "not enough coffee" stay at 0.
+3. "the weight of" is a banned phrase (soft: a rewrite, or salvage cuts the
+   sentence; never a pause). It survived with no "weight" left in the
+   prompt, so it is the model's habit.
+
+Offline check after these: distress crosses 0.4 on 71% of toast distressed
+turns (was 64%) and 62% of held-out rescue's, and now stays on through most
+of recovery (62% toast, 60-100% rescue), which is the slower fade doing its
+job; two borderline triggers outside distress in the design set ("But what
+if it's not enough?", "Can't face it now."). Voice comparison script: the
+`voice_compare.py` pattern in the session ("The..." openers, I/you/let's
+openers, "the weight of", NARRATING_STATE hits, words, mean exit interview).
+
 **Update, 2026-09-24 evening: the persona rebalanced against the narrator
 voice (20.7.4.26, Gordon's green light).** The distress guard (below) fired
 where it could, but the regenerated rescue run (`20260924-135445`) still
@@ -1563,7 +1592,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   native-Ollama and source-sweep change (2026-09-24): green (expect 690 passed, 5 skipped).
+   native-Ollama and source-sweep change (2026-09-24): green (expect 691 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1647,7 +1676,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 690 passed, 0 failed, 5 skipped** (2026-09-24 evening), about
+- **Test suite: 691 passed, 0 failed, 5 skipped** (2026-09-24 late evening), about
   seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.

@@ -246,7 +246,7 @@ class AgentTests(BoneTestCase):
         gatekeeper.audit_generation("Start small.", forge)
         self.assertIsNone(gatekeeper.salvage())
 
-    TURN_ZERO = ("The weight of a public promise can feel like a heavy stone in your pocket. You want to say something "
+    TURN_ZERO = ("A public promise can feel like a stone in your pocket. You want to say something "
                  "honest without causing a scene. The smell of burnt toast sometimes lingers in the back of my throat "
                  "when I think about things that are hard to swallow. You have three weeks to find the right words.")
 
