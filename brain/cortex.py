@@ -1368,9 +1368,9 @@ class TheCortex:
         if not self.dialogue_buffer:
             mind["style_directives"].append(
                 f"CRITICAL BEDROCK OVERRIDE: You have just awoken from a stateless purge. "
-                f"You have no conversational memory, but your body persists. "
+                f"You have no conversational memory, but your internal state persists. "
                 f"Your Stamina is {phys.get('p', 100)}, your Health is {phys.get('h', 100)}. "
-                f"Assume your role as {mind.get('role', 'The Architect')} and orient immediately to the present physical state. "
+                f"Assume your role as {mind.get('role', 'The Architect')} and let that state shape how you answer, without mentioning it. "
                 f"DO NOT reference the loss of memory; act continuously."
             )
         for mandate in list(sim_result.get("council_mandates", [])):
@@ -1475,9 +1475,14 @@ class TheCortex:
                         f"{Prisma.MAG}Injecting structural bombs: {shadow_str}{Prisma.RST}",
                         "CORTEX",
                     )
-            else:
+            elif self.active_mode == "ADVENTURE":
                 mind["style_directives"].append(
                     f"SHADOW CAST: Subtly weave imagery or themes related to [{shadow_str}] into your environment or dialogue. DO NOT explicitly say 'you recall' or 'from deep memory'. Integrate it viscerally into the current scene as a natural detail."
+                )
+            else:
+                # Outside a scene there is nowhere to put imagery but the speaker, which is how "my throat" happened.
+                mind["style_directives"].append(
+                    f"SHADOW CAST: Where it fits, let themes related to [{shadow_str}] inform what you say. DO NOT explicitly say 'you recall' or 'from deep memory', and never present them as your own sensations or memories."
                 )
                 if self.events:
                     self.events.log(

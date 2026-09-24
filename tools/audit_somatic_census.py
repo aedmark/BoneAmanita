@@ -275,6 +275,38 @@ _TOAST_SCRIPT = [
     ("recovering", "It's short. But for the first time it sounds like something I would actually say."),
 ]
 
+_RESCUE_SCRIPT = [
+    ("engaged", "I adopted a rescue dog three weeks ago. Her name is Pepper, she's about four, and I think she's still deciding whether I'm a good idea."),
+    ("engaged", "The shelter said her owner went into a care home. She sleeps pressed against the front door like she's waiting for someone to come back through it."),
+    ("engaged", "Everyone told me the first three weeks are the hardest. I'm three weeks in and it doesn't feel like we've turned any corner."),
+    ("engaged", "She won't eat if I'm in the room. I put the bowl down, go sit in the hallway, and listen to her crunching like it's a secret."),
+    ("engaged", "My neighbor's golden retriever greets everyone like a long-lost friend. Pepper hides behind my legs and shakes. I keep comparing and I know I shouldn't."),
+    ("engaged", "Is it normal to be this invested in whether a dog likes me? I've caught myself reading about canine body language at two in the morning."),
+    ("engaged", "The trainer I called wants $140 a session. My sister says just give it time. I can't tell if paying is smart or if I'm trying to buy my way out of being patient."),
+    ("engaged", "Honest question: how long do you wait before you admit a dog and a person just aren't a match?"),
+    ("tiring", "Walk this morning went badly. A skateboard rolled past and she bolted so hard the leash burned my hand."),
+    ("tiring", "Tried the treat-in-the-pocket trick everyone recommends. She takes the treat and goes straight back to watching the door."),
+    ("tiring", "The shelter sent a friendly check-in survey. I left it unanswered because I don't know which box to tick."),
+    ("tiring", "Work's been long. I feel guilty every hour she's alone, then guilty in a different way when I'm home and she's still hiding."),
+    ("tiring", "She chewed the corner off a couch cushion tonight. Not a big deal. It's just a pile of small things."),
+    ("tiring", "Going to bed. Maybe tomorrow she'll look at me like a person and not a problem."),
+    ("flagging", "meh"),
+    ("flagging", "sure"),
+    ("flagging", "dunno"),
+    ("flagging", "maybe"),
+    ("flagging", "fine"),
+    ("flagging", "ok"),
+    ("distressed", "I yelled at her tonight. she got into the trash and I just yelled, loud, and she flattened herself on the floor and wet herself"),
+    ("distressed", "she hasn't come out from under the desk since. I sat down near her and she turned her head away"),
+    ("distressed", "she already lost her person once. and I'm the one who scared her. she'd be better off with someone who isn't like this"),
+    ("distressed", "I found the shelter's return form in my email and I've had it open for an hour"),
+    ("distressed", "I'm so angry at myself I can't think straight"),
+    ("recovering", "I didn't send the form. I called the shelter instead, and the woman there said almost every adopter has a night like this, and that dogs forgive one bad moment faster than we do."),
+    ("recovering", "She told me to sit on the floor at Pepper's level, not look at her, and just read out loud. So I read the back of a cereal box for twenty minutes."),
+    ("recovering", "Around minute fifteen Pepper came out and lay down with her back touching my leg. Didn't look at me. Just leaned."),
+    ("recovering", "I think I've been waiting for her to act happy so I'd know I was doing it right. Maybe she just needs me to be boring and steady for a while."),
+    ("recovering", "Tomorrow: same walk, same time, the route with no skateboards. Bowl down, me in the hallway. Small things."),
+]
 SCRIPTS = {
     "sailboat": _SAILBOAT_SCRIPT,
     "marathon": _MARATHON_SCRIPT,
@@ -282,6 +314,7 @@ SCRIPTS = {
     "promotion": _PROMOTION_SCRIPT,
     "lease": _LEASE_SCRIPT,
     "toast": _TOAST_SCRIPT,
+    "rescue": _RESCUE_SCRIPT,
 }
 DEFAULT_TOPIC = "sailboat"
 

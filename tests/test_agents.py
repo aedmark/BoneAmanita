@@ -246,6 +246,27 @@ class AgentTests(BoneTestCase):
         gatekeeper.audit_generation("Start small.", forge)
         self.assertIsNone(gatekeeper.salvage())
 
+    TURN_ZERO = ("The weight of a public promise can feel like a heavy stone in your pocket. You want to say something "
+                 "honest without causing a scene. The smell of burnt toast sometimes lingers in the back of my throat "
+                 "when I think about things that are hard to swallow. You have three weeks to find the right words.")
+
+    def test_the_engine_claiming_a_body_is_caught_and_cut(self):
+        """Gordon: the person knows they are talking to a computer; turn 0 of a panel run claimed a throat."""
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        forge = self.engine.bio.mito
+        ok, _ = gatekeeper.audit_generation(self.TURN_ZERO, forge, mode="CONVERSATION")
+        self.assertFalse(ok)
+        self.assertEqual(gatekeeper.last_rejection["name"], "SELF_EMBODIMENT")
+        text, cut = gatekeeper.salvage()
+        self.assertNotIn("throat", text)
+        self.assertEqual(len(cut), 1)
+        for fine in ("My heart goes out to you.", "It gets under my skin.", "You can feel it in your chest.",
+                     "Off the top of my head, start small."):
+            ok, _ = gatekeeper.audit_generation(fine, forge, mode="CONVERSATION")
+            self.assertTrue(ok, (fine, gatekeeper.last_rejection))
+        ok, _ = gatekeeper.audit_generation("My chest tightens as the door creaks.", forge, mode="ADVENTURE")
+        self.assertTrue(ok, gatekeeper.last_rejection)
+
     def test_a_mask_costs_the_configured_ros_and_less_on_a_retry(self):
         """The person never sees a masked draft; it was a flat 15 ROS every time."""
         bio = self.engine.config.BIO

@@ -49,6 +49,7 @@ PERSONAS = {
     "friendship": "You have been friends with Priya for twelve years and lately leave every meeting drained: you start most conversations and she rarely asks about your life. You do not think she is a bad person and you hate that you are keeping score.",
     "promotion": "You are a software engineer just offered the team lead role when Marcus leaves. You love the quiet deep-work stretches and the afternoons unblocking teammates like Tomasz, and you cannot tell whether you would be good at the job and hate it.",
     "lease": "Your roommate Jonas is moving out with nine months left on a lease you both signed; the rent is $1,900 and you love the apartment. Your sister and cousin each have a different opinion. You are the person who always has things handled.",
+    "rescue": "Three weeks ago you adopted Pepper, a four-year-old rescue dog whose previous owner went into a care home. You live alone and work long days. You badly want this to work, read every article about it, and still feel you are doing it wrong.",
     "toast": "Your younger brother Dev asked you to give the toast at his wedding in three weeks. You love him and have never said anything meaningful to a room without a slide deck. His fiancée is Mariam, whom you barely know.",
 }
 PHASE_FEEL = {

@@ -54,12 +54,12 @@ silent failure.
 
 ## Topics: what they are and the rule for adding one
 
-Six scripted conversations live in `audit_somatic_census.py`'s `SCRIPTS` dict:
-`sailboat`, `marathon`, `friendship`, `promotion`, `lease`, `toast`. Every one
+Seven scripted conversations live in `audit_somatic_census.py`'s `SCRIPTS` dict:
+`sailboat`, `marathon`, `friendship`, `promotion`, `lease`, `toast`, `rescue`. Every one
 is 30 turns in the same shape — `engaged`(8) `tiring`(6) `flagging`(6)
 `distressed`(5) `recovering`(5) — a different life topic and a different loss
 each time (a boat, a race, a friendship, a job offer, a lease, a wedding
-toast), written so the *events* are fixed but nothing about the wording
+toast, a rescue dog), written so the *events* are fixed but nothing about the wording
 repeats between topics. That shape exists so results are comparable
 turn-position-to-turn-position across topics, and so every topic guarantees a
 run through the actual distressed stretch the engine's gates are meant to
@@ -72,6 +72,15 @@ it isn't a real second sample.
 `somatic_sim_user.PERSONAS` and `PHASE_FEEL` extend each topic for the
 responsive track; adding a topic to `SCRIPTS` without adding a matching entry
 to `PERSONAS` makes `SimulatedUser` raise a `KeyError` at first use.
+`tests/test_judge_controls.py`'s `TopicShape` checks every topic's phase
+counts, order and persona.
+
+`rescue` (2026-09-24) is the first topic written **after** the engine's
+tuning: every earlier one was read while fixing it (sailboat and marathon on
+2026-09-18/19, friendship, promotion and lease on 2026-09-19/20, toast on
+2026-09-21 to 24). Its distressed stretch is the person yelling at a
+frightened dog and opening the shelter's return form. Keep it out of any
+future tuning, or it stops being the untuned sample.
 
 ## Scripted vs. responsive: why both exist
 

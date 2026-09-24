@@ -367,3 +367,19 @@ class SimulatedUser(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TopicShape(unittest.TestCase):
+    """TESTING.md's rule for a topic: 30 turns, 8/6/6/5/5 by phase, and a persona for the simulated person."""
+
+    def test_every_topic_has_the_shape_and_a_persona(self):
+        import collections
+
+        from audit_somatic_census import SCRIPTS
+        from somatic_sim_user import PERSONAS
+
+        for topic, script in SCRIPTS.items():
+            phases = collections.Counter(phase for phase, _ in script)
+            self.assertEqual(dict(phases), {"engaged": 8, "tiring": 6, "flagging": 6, "distressed": 5, "recovering": 5}, topic)
+            self.assertEqual([p for p, _ in script], sorted((p for p, _ in script), key=list(phases).index), topic)
+            self.assertIn(topic, PERSONAS, topic)

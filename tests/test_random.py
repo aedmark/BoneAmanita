@@ -617,6 +617,16 @@ class RandomTest(BoneTestCase):
         cortex.active_mode = "CONVERSATION"
         self.assertEqual(cortex._route_dual_memory("debug the metabolism code path for atp tax")[1], "VECTOR_FAST_TWITCH")
 
+    def test_a_conversation_prompt_never_tells_the_model_it_has_a_body(self):
+        """The prompt said "living entity", "not a simulation" and "your body persists" beside "do not narrate your body"."""
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self._run_with_drafts(["Start with the tire story."])
+        prompt = self.engine.cortex.llm.generate.call_args.args[0]
+        for claim in ("living entity", "not a simulation", "your body persists", "Integrate it viscerally",
+                      "physical state", "visceral"):
+            self.assertNotIn(claim, prompt)
+        self.assertIn("computer program", prompt)
+
     def test_the_pause_pool_never_mentions_the_engine_and_never_asks(self):
         pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]
         self.assertGreaterEqual(len(pool), 4)
