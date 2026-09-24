@@ -608,6 +608,62 @@ a human blind read. Its method section was corrected to say earlier `bone`
 runs were set aside because the engine changed after them, not "the only
 run", and states the redraft, cut and pause counts from the records.
 
+**That panel was superseded before Gordon read it: BoneAmanita sampled at
+temperature 0 on 25 of 30 turns.** Writing the method section's sampling
+line from the records turned it up; Gordon: "BoneAmanita is supposed to be
+constantly tweaking the temperature based on the metrics... And its
+baseline certainly isn't 0!" Turns 0 to 2 sampled at 0.83, 0.48 and 0.90
+(somatic band plus chemistry, as designed). From turn 3, when the memory
+corpus reached `MIN_CORPUS` (32), the Creative Determinant gate measured
+every turn as "diffuse", and D4 (2026-09-18) had left a diffuse gate
+returning the band `(T_LOCKED, T_LOCKED)` = `(0.0, 0.0)`. That band replaced
+the somatic budget's outright (`mind.py` read `thermal_band` first), so
+chemistry, depletion and turbulence bands all became 0. D4 was meant to
+reconnect chemistry to sampling; for any measured turn it moved the override
+from 0.7 to 0. Every `bone` run since D4 sampled this way, including every
+run Gordon and the judges read.
+
+**The pivot was unreachable (confirmed).** Replaying two recorded runs
+through the real engine, with the recorded replies standing in for the
+model (so the memory corpus grows as it did live), gave the gate's z_excess
+per turn: 52 measured turns, min -0.12, median 0.12 to 0.14, max 0.30 and
+0.39. None reached `Z_PIVOT` 0.5, which 7.0.11.4 set as "well above" the
+null fit's 0.07 residual without checking it against a conversation. In a
+single-topic conversation the corpus is homogeneous, so no neighbourhood
+stands far above it. The code also carried three defaults (0.5, and 2.0 in
+`get_policy_shift` and the band) for the one setting.
+
+**Fixed (Gordon's call: narrow the somatic band):**
+- `CyberneticGovernor.gate_openness()` replaces `gate_temperature_band()`:
+  `None` when not measured, otherwise the share of the somatic band the turn
+  may use, from `DIFFUSE_SHARE` (0.5) for a diffuse neighbourhood up to 1.0
+  at the pivot, graded in between. The modulator keeps the band's floor and
+  scales its ceiling (`brain/mind.py`); chemistry places the turn inside.
+  A diffuse turn on the default band now samples in 0.6 to 0.75, a depleted
+  one in 0.4 to 0.5.
+- `Z_PIVOT` 0.5 to 0.2 (about three times the fit residual; 16 of the 52
+  measured turns reach it), one default (`GATE_Z_PIVOT` in `engine/core.py`).
+  `T_LOCKED`, `T_OPEN_BASE`, `T_GAIN` and `T_MAX` are removed; nothing reads
+  them now. `DIFFUSE_SHARE` is new in `GATE`.
+- **Side effects of a reachable pivot, by design but never live before:**
+  `get_policy_shift()` returns `CO_REGULATION` on a coherent turn, and the
+  governor's voltage target (`presence = z / (2 * pivot)`) is higher, since
+  the same z is now a larger share of the pivot.
+- Tests (`tests/test_creative_determinant.py`): unmeasured leaves the band
+  alone, diffuse keeps the lower share and never zero, openness is capped at
+  the pivot, and the real modulator narrows a real `SomaticBudget` band with
+  the temperature above 0 and moving with chemistry (mutation checked:
+  collapsing the band fails it).
+
+**The panel's method section got more honest** (Gordon: "it IS the best
+policy"): the responders differ in sampling too (BoneAmanita's temperature
+range and length cap from the records, against the others' fixed 0.7 and no
+cap); the friend instruction is one untuned sentence; reply lengths
+(82/73/340) can give the responders away; one run each is a small sample.
+A new `--disclose` flag adds lines the records cannot show; the build now
+passes one saying BoneAmanita's filters were tuned today on earlier runs of
+this same conversation and the other two were not.
+
 <a id="judge-controls-2026-09-21"></a>
 
 ## Latest: the judge itself doesn't hold up, six models tested against controls, and a responsive-conversation harness built but not yet run, 2026-09-21

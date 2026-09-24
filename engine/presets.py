@@ -248,7 +248,7 @@ class BoneConfig:
         "PHYSICS": ["TASTE_CONFIDENCE_FLOOR", "ZONE_MARGIN"],
         "CD": ["LAMBDA"],
         "EMBEDDINGS": ["BACKEND", "MODEL", "URL"],
-        "GATE": ["Z_PIVOT", "T_OPEN_BASE", "T_GAIN", "T_MAX", "MIN_CORPUS", "TOP_K"],
+        "GATE": ["Z_PIVOT", "DIFFUSE_SHARE", "MIN_CORPUS", "TOP_K"],
         "STAGE": [
             "TENSION_HOLD_MAGNITUDE",
             "SYNTHESIS_ATP_FLOOR",
@@ -311,11 +311,8 @@ class BoneConfig:
     }
 
     GATE = {
-        "Z_PIVOT": 0.5,
-        "T_OPEN_BASE": 0.7,
-        "T_GAIN": 0.15,
-        "T_MAX": 1.2,
-        "T_LOCKED": 0.0,
+        "Z_PIVOT": 0.2,
+        "DIFFUSE_SHARE": 0.5,
         "MIN_CORPUS": 32,
         "TOP_K": 10,
     }

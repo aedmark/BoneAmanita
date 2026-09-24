@@ -37,6 +37,8 @@ except ImportError:
         "subgraph pruning are unavailable; install with `pip install 'ordvec>=0.5.0'`."
     )
 
+# z_excess at which the gate reads a neighbourhood as coherent; the GATE config overrides it.
+GATE_Z_PIVOT = 0.2
 _LOCK_TYPES = (type(threading.Lock()), type(threading.RLock()), threading.Thread)
 
 def _redact_secrets(obj, memo=None):
@@ -708,7 +710,7 @@ class CyberneticGovernor:
         return True
 
     def get_policy_shift(self) -> str:
-        pivot = self._gate_cfg("Z_PIVOT", 2.0)
+        pivot = self._gate_cfg("Z_PIVOT", GATE_Z_PIVOT)
         if self.order == 2 or (self.last_z is not None and self.last_z >= pivot):
             return "CO_REGULATION"
         return "EFFICIENCY"
@@ -827,7 +829,7 @@ class CyberneticGovernor:
         self.last_corpus = corpus
         self.last_b = float(top10)
         self.last_sol = (
-            "coherent" if z_excess >= self._gate_cfg("Z_PIVOT", 0.5) else "diffuse"
+            "coherent" if z_excess >= self._gate_cfg("Z_PIVOT", GATE_Z_PIVOT) else "diffuse"
         )
 
         issue_receipt(
@@ -845,10 +847,10 @@ class CyberneticGovernor:
                 "mean": round(float(scores.mean()), 1),
                 "std": round(deviation, 2),
             },
-            detail=f"regime={self.last_sol} temperature_band={self.gate_temperature_band()}",
+            detail=f"regime={self.last_sol} openness={self.gate_openness():.2f}",
         )
 
-        pivot = self._gate_cfg("Z_PIVOT", 0.5)
+        pivot = self._gate_cfg("Z_PIVOT", GATE_Z_PIVOT)
         presence = float(np.clip(z_excess / max(1e-6, pivot * 2.0), 0.0, 1.0))
         focus = float(np.clip(sharpness / max(1e-6, deviation * 3.0), 0.0, 1.0))
         self.target_v = v_base + presence * v_range
@@ -864,16 +866,16 @@ class CyberneticGovernor:
             self.target_d - drag
         ) * adjusted_dt
 
-    def gate_temperature_band(self) -> tuple:
-        pivot = self._gate_cfg("Z_PIVOT", 2.0)
-        if self.last_z is None or self.last_z < pivot:
-            locked_t = float(self._gate_cfg("T_LOCKED", 0.0))
-            return (locked_t, locked_t)
-        heat = self._gate_cfg("T_OPEN_BASE", 0.7) + self._gate_cfg(
-            "T_GAIN", 0.15
-        ) * (self.last_z - pivot)
-        ceiling = float(min(self._gate_cfg("T_MAX", 1.2), heat))
-        return (0.0, ceiling)
+    def gate_openness(self) -> Optional[float]:
+        """How much of the somatic temperature band this turn may use; None when not measured.
+
+        A diffuse neighbourhood keeps the band's lower DIFFUSE_SHARE; coherence opens it to the top.
+        """
+        if self.last_z is None:
+            return None
+        pivot = max(1e-6, self._gate_cfg("Z_PIVOT", GATE_Z_PIVOT))
+        floor = float(np.clip(self._gate_cfg("DIFFUSE_SHARE", 0.5), 0.0, 1.0))
+        return floor + (1.0 - floor) * float(np.clip(self.last_z / pivot, 0.0, 1.0))
 
     def _pid_fallback(
         self, physics: Dict[str, Any], dt: float, endocrine_state: Any = None

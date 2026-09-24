@@ -791,6 +791,14 @@ the whole chemistry-to-sampling mapping is computed and discarded. The
 `max_tokens` side survives but never binds: base is 720 to 930 tokens and
 the depletion cap is 400, against replies averaging 20 to 50 words.
 
+**Correction (2026-09-23):** D4 did not reconnect the channel for measured
+turns. It turned the lock into a band, but a diffuse gate returned
+`(T_LOCKED, T_LOCKED)` = `(0, 0)`, which replaced the somatic band, and the
+0.5 pivot was unreachable in conversation, so from `MIN_CORPUS` on every turn
+sampled at 0. Fixed in 20.7.4.15: the gate narrows the somatic band from the
+top (`gate_openness`), never below half of it, and `Z_PIVOT` is 0.2. See the
+handoff's 2026-09-23 entries.
+
 The third row also corrects `SESSION_HANDOFF.md`, which says the engine's
 own depletion reaches the prompt only through respiration. It also reaches
 it through `cortex.py:229`, as a style directive.

@@ -1320,7 +1320,7 @@ class TheCortex:
         z = getattr(governor, "last_z", None)
         if not isinstance(z, (int, float)):
             return
-        phys["thermal_band"] = governor.gate_temperature_band()
+        phys["thermal_openness"] = governor.gate_openness()
         phys["thermal_z"] = float(z)
         phys["thermal_regime"] = str(getattr(governor, "last_sol", "not_measured"))
 

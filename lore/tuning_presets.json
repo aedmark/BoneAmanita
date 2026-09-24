@@ -830,11 +830,8 @@
     "SILENCE_COST": 2.0
   },
   "GATE": {
-    "Z_PIVOT": 0.5,
-    "T_OPEN_BASE": 0.7,
-    "T_GAIN": 0.15,
-    "T_MAX": 1.2,
-    "T_LOCKED": 0.0,
+    "Z_PIVOT": 0.2,
+    "DIFFUSE_SHARE": 0.5,
     "MIN_CORPUS": 32,
     "TOP_K": 10
   },

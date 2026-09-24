@@ -635,7 +635,7 @@ class PromptComposer:
         ]
         parts = [text for _, text in blocks if text]
         prompt = "\n".join(parts)
-        has_band = "thermal_band" in (phys_ref or {})
+        has_band = "thermal_openness" in (phys_ref or {})
         issue_receipt(
             "composer.compose",
             "assembled the system prompt",

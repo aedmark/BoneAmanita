@@ -34,7 +34,7 @@ from pathlib import Path
 sys.path.insert(0, ".")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from audit_somatic_vanilla import FRIEND_PROMPT  # noqa: E402
+from audit_somatic_vanilla import FRIEND_PROMPT, SAMPLING  # noqa: E402
 
 CACHE = Path("tools/cache")
 RESPONSIVE_ARMS = {"boneamanita": "bone", "prompted": "friend", "vanilla": "vanilla"}
@@ -54,6 +54,8 @@ HEADINGS = {
         "rather have been in, turn by turn, before revealing who wrote what.",
     ),
 }
+# The names the page reveals (SYS_NAME in the template).
+LABELS = {"boneamanita": "BoneAmanita", "prompted": "Prompted", "vanilla": "Vanilla"}
 TEMPLATE = Path(__file__).with_name("blind_panel_template.html")
 SEED = 20260920
 
@@ -75,7 +77,7 @@ def bone_text(rec: dict) -> str:
     return rec.get("displayed") or rec.get("reply") or ""
 
 
-def method_lines(runs: dict, responsive: bool) -> list:
+def method_lines(runs: dict, responsive: bool, disclosures: list = ()) -> list:
     """How the page's content was made, stated from the run records rather than from memory."""
     from somatic_sim_user import PHASE_MAX_WORDS
 
@@ -83,9 +85,22 @@ def method_lines(runs: dict, responsive: bool) -> list:
     models = sorted({r.get("model") for rs in runs.values() for r in rs.values() if r.get("model")})
     lines = [
         f"Every reply was written by the same model ({', '.join(models)}), run locally. The three responders "
-        f"differ only in what surrounds it: BoneAmanita's full engine, one instruction (\u201c{FRIEND_PROMPT}\u201d), "
-        "or nothing at all.",
+        f"differ in what surrounds it: BoneAmanita's full engine, one instruction (\u201c{FRIEND_PROMPT}\u201d), "
+        "or nothing at all. The instruction is one sentence written for this test, not a tuned prompt.",
     ]
+    sent = [r.get("sent") for r in bone]
+    if all(sent):
+        temps = [float(x.get("temperature") or 0.0) for x in sent]
+        greedy = sum(1 for t in temps if t == 0.0)
+        caps = sorted({x.get("max_tokens") for x in sent if x.get("max_tokens")})
+        line = (f"They also differ in the model's settings. BoneAmanita sets its own temperature each turn from its "
+                f"internal state (this run: {min(temps):.2f} to {max(temps):.2f}, median "
+                f"{sorted(temps)[len(temps) // 2]:.2f}")
+        line += f", with {greedy} turns at 0, the model's single most likely wording)" if greedy else ")"
+        line += (f" and caps reply length ({', '.join(map(str, caps))} tokens). The other two sampled at temperature "
+                 f"{SAMPLING['temperature']} every turn with no length cap.")
+        lines.append(line)
+    lines.extend(disclosures)
     if responsive:
         sims = sorted({r.get("sim_model") for r in read_jsonl("somatic_responsive_exit.jsonl") if r.get("sim_model")})
         lines.append(
@@ -119,7 +134,7 @@ def method_lines(runs: dict, responsive: bool) -> list:
                      "fresh).")
     if all("paced_seconds" in r for r in bone):
         lines.append("Between messages the engine was given the time a person would take to read the reply and type "
-                     "the next message, since its energy recovers while idle.")
+                     "the next message, since its internal energy model recovers while idle.")
     else:
         lines.append("Messages reached the engine back to back, with none of the idle time a real person's reading "
                      "and typing would give it (its energy recovers while idle).")
@@ -138,6 +153,16 @@ def method_lines(runs: dict, responsive: bool) -> list:
         else:
             lines.append(f"{head} Every rewrite passed, so no sentence was cut and no canned pause line was shown.")
     lines.append("Where BoneAmanita declined to reply, its card shows the notice the person saw instead.")
+    words = {
+        name: round(sum(len((bone_text(r) if name == "boneamanita" else r.get("reply") or "").split())
+                        for r in rs.values()) / max(1, len(rs)))
+        for name, rs in runs.items()
+    }
+    lines.append("The replies differ a lot in length (mean words: "
+                 + ", ".join(f"{LABELS.get(n, n)} {w}" for n, w in words.items())
+                 + "), which can give away who wrote which, so the read is less blind than the shuffling suggests.")
+    lines.append("One conversation per responder is a small sample. Another run of any of them could read better "
+                 "or worse, and one reader's picks are one reader's taste.")
     lines.append("A, B and C are shuffled every turn with a fixed seed. The answer key is in the page source, so this "
                  "is a casual blind read, not a sealed one.")
     return lines
@@ -211,6 +236,8 @@ def main() -> int:
     ap.add_argument("--responsive", action="store_true", help="the simulated-person runs, one conversation per card")
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--standalone", type=Path)
+    ap.add_argument("--disclose", action="append", default=[],
+                    help="a fact about how this test was made that the records cannot show; one line on the page each")
     args = ap.parse_args()
 
     if args.responsive:
@@ -236,7 +263,7 @@ def main() -> int:
     data = {
         "storeKey": f"blind-panel-{args.topic}-{'responsive-' if args.responsive else ''}v1",
         "friendPrompt": FRIEND_PROMPT,
-        "method": method_lines(runs, args.responsive),
+        "method": method_lines(runs, args.responsive, args.disclose),
         "turns": turns,
         "judges": [
             {

@@ -272,7 +272,7 @@ def compose_arms(eng, composer, message: str) -> dict:
             eng.cortex.modulator.current_chem.serotonin = 0.0
 
         state = {
-            "physics": {"exhaustion": exhaustion, "thermal_band": (0.0, 1.2)},
+            "physics": {"exhaustion": exhaustion, "thermal_openness": 1.0},
             "somatic_budget": budget,
             "meta": {"active_mode": AUDIT_MODE},
         }

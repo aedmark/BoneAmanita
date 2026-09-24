@@ -197,11 +197,11 @@ class NeurotransmitterModulator:
             physics_state.get("contradiction", physics_state.get("beta_index", 0.4))
         )
         entropy_bonus = max(0.0, chi - b["E_OFF"]) * b["E_SCAL"]
-        t_limits = b["T_LIMS"]
-        if physics_state and "thermal_band" in physics_state:
-            t_limits = physics_state["thermal_band"]
-        elif somatic_budget:
-            t_limits = somatic_budget.temperature_band
+        t_limits = somatic_budget.temperature_band if somatic_budget else b["T_LIMS"]
+        # The Creative Determinant narrows the somatic band from the top; chemistry places the turn inside it.
+        openness = (physics_state or {}).get("thermal_openness")
+        if openness is not None:
+            t_limits = (t_limits[0], t_limits[0] + (t_limits[1] - t_limits[0]) * float(openness))
             
         raw_temp = b["B_TEMP"] + chemical_delta + voltage_heat + entropy_bonus
         final_temp = round(max(t_limits[0], min(t_limits[1], raw_temp)), 2)

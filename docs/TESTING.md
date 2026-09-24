@@ -375,6 +375,16 @@ is the same format, so a human read of the responsive runs can score any
 judge with `--agree`; that is the plan for validating a responsive judge
 against Gordon's own picks rather than tuning the `mismatch` control further.
 
+The page's "How this page was made" section is written by `method_lines()`
+from the run records' fields, not from memory: which model, how the person
+was simulated and capped, whether BoneAmanita started fresh, was paced and is
+shown as displayed, its temperature range and length cap against the others'
+fixed sampling, redraft/cut/pause counts, mean reply lengths (which can give
+the responders away) and that one run each is a small sample. What the
+records cannot show goes in with `--disclose "..."` (repeatable, one line
+each), e.g. that BoneAmanita was tuned on earlier runs of the same
+conversation.
+
 ### `audit_silence_diagnostic.py` — why a turn went silent
 
 Not part of the scoring pipeline. Re-runs one scripted topic with spies
