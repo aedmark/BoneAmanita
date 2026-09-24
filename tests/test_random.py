@@ -529,6 +529,21 @@ class RandomTest(BoneTestCase):
         retry_prompt = self.engine.cortex.llm.generate.call_args_list[1].args[0]
         self.assertIn('banned phrase "a rare privilege"', retry_prompt)
 
+    def test_the_pause_pool_never_mentions_the_engine_and_never_asks(self):
+        pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]
+        self.assertGreaterEqual(len(pool), 4)
+        for line in pool:
+            self.assertNotIn("?", line)
+            for word in ("energy", "tired", "burn", "breath", "sorry", "tangl"):
+                self.assertNotIn(word, line.lower(), line)
+
+    def test_a_pause_line_is_not_repeated_within_half_the_pool(self):
+        pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]
+        lines = [self.engine.cortex._pause_line() for _ in range(40)]
+        window = len(pool) // 2 + 1
+        for i in range(len(lines) - window + 1):
+            self.assertEqual(len(set(lines[i:i + window])), window, lines[i:i + window])
+
     def test_rejection_death_loop_mercy_rule(self):
         self.initial_atp = self.engine.bio.mito.state.atp_pool
         clean_sim_result = {
@@ -566,10 +581,11 @@ class RandomTest(BoneTestCase):
         self.assertEqual(
             drag_val, 0.0, "Mercy Rule failed to drop narrative drag to 0.0."
         )
+        pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]
         self.assertIn(
-            "My thoughts are tangling",
             result.get("raw_content", ""),
-            "Mercy Rule failed to provide the safe fallback text.",
+            pool,
+            "Mercy Rule failed to provide a line from the pause pool.",
         )
         self.assertLess(
             self.engine.bio.mito.state.atp_pool,

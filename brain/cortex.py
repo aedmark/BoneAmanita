@@ -109,6 +109,7 @@ class TheCortex:
         self.composer = PromptComposer(self.svc.lore, config_ref=self.cfg)
         self.validator = ResponseValidator(self.svc.lore, config_ref=self.cfg)
         self.pragmatist = ThePragmatist(events_ref=self.events)
+        self._recent_pauses: List[str] = []
         self.dspy_critic = DSPyCritic(config_ref=self.cfg)
         self.dreamer.dspy_critic = self.dspy_critic
         self.active_mode = "ADVENTURE"
@@ -844,8 +845,7 @@ class TheCortex:
                 )
                 self.svc.bio.mito.adjust_atp(-penalty, lbl)
             if attempt == cognitive_retries - 1:
-                fallback_msg = "I'm sorry. My thoughts are tangling and I'm burning too much energy trying to piece this together. I'm dropping the tension. Can we take a breath and try a simpler path?"
-                final_output = ux("brain_strings", "cortex_tangled") or fallback_msg
+                final_output = self._pause_line()
                 extracted_logs.append(
                     "[SYSTEM MERCY RULE]: Rejection loop broken. Releasing tension. Dropping Drag to 0.0."
                 )
@@ -959,6 +959,18 @@ class TheCortex:
             for m in mandates
         ]
         return final_text, meta_logs
+
+    def _pause_line(self) -> str:
+        """What the person sees when every draft was rejected: a short shared pause, never the engine's state.
+
+        Drawn from a pool and kept out of the last half of it, so a canned line never reads as one.
+        """
+        pool = (LoreManifest.get_instance().get("ux_strings", "brain_strings") or {}).get("cortex_pause")
+        pool = pool or ["Let's take a moment with that."]
+        line = random.choice([p for p in pool if p not in self._recent_pauses] or pool)
+        keep = len(pool) // 2
+        self._recent_pauses = (self._recent_pauses + [line])[-keep:] if keep else []
+        return line
 
     @staticmethod
     def _name_the_crime(rejection) -> str:

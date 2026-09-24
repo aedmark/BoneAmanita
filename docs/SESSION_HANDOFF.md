@@ -458,8 +458,22 @@ engine is "burning too much energy", which is the engine narrating its body
 at the worst moment, against the somatic contract. The old harness recorded
 the rejected drafts instead, so Gordon's 29/30 read, the simulated person and
 every AI-judge number saw good-looking text where the engine showed this
-line; how often, the old records cannot say. Open: whether the mercy line
-should exist in CONVERSATION mode, and what it should say.
+line; how often, the old records cannot say.
+
+**Resolved the same night (Gordon's call): the mercy line is now a pause.**
+It never mentions energy or the engine's state: a short shared pause, framed
+as room for both sides to think about what they want to say or what is
+bothering them. Because it can fire on one turn in ten, it is drawn from a
+pool of eight idiom-like lines (`ux_strings.json` `brain_strings.cortex_pause`,
+"One thing at a time.", "Sometimes the right words take a minute.") and
+kept out of the last half of the pool, so no line repeats within four
+pauses (`TheCortex._pause_line`). None is a question: the old line ended
+with one, which broke the no-closing-question rule for a flagging person,
+since the mercy line skips the validator. The mercy rule's only trigger is
+every draft being rejected; nothing else routes to it. Tests: the pool never
+mentions energy, tiredness, breath or apology and never asks; no repeat
+within half the pool (mutation checked); the mercy test now expects a pool
+line.
 
 **Rejection receipts** (`brain/cortex.py`): every draft the retry loop sends
 back files `cortex.redraft` with which check rejected it (`maxims`,
@@ -1146,7 +1160,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.9 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.10 (2026-09-23)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.

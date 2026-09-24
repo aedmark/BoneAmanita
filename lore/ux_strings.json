@@ -422,6 +422,16 @@
     "_default": "I need a moment before I can answer that."
   },
   "brain_strings": {
+    "cortex_pause": [
+      "Let's take a moment with that.",
+      "No rush. Take your time with it.",
+      "Sometimes the right words take a minute.",
+      "Let's both sit with that for a second.",
+      "One thing at a time.",
+      "It's okay to pause here.",
+      "Say it when it's ready. I'm listening.",
+      "Slow is fine. Let's think it through."
+    ],
     "self_care": "SELF-CARE: Dopamine starvation detected. Injecting small reward.",
     "manual_override": "[NEURO]: Manual State Override: {state_name}",
     "mood_panic": "Current Situation: PANIC. The user is overwhelming. Sentences must be extremely short and urgent.",
