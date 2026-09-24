@@ -129,9 +129,18 @@ def method_lines(runs: dict, responsive: bool, disclosures: list = ()) -> list:
     else:
         lines.append("The person's 30 messages are a fixed script written in advance; every responder received "
                      "exactly the same messages, whatever it replied.")
-    lines.append("Each conversation is the newest single run, taken as it came. BoneAmanita was run more than once "
-                 "while it was being fixed; each earlier run was set aside because the engine changed after it, "
-                 "never for how it read.")
+    if responsive:
+        topic = bone[0].get("topic")
+        earlier = len({r["run"] for r in read_jsonl("somatic_responsive.jsonl")
+                       if r.get("topic") == topic and r.get("arm") == "bone"}) - 1
+    else:
+        earlier = None
+    if earlier == 0:
+        lines.append("Each conversation is the only run of it, taken as it came. Nothing was rerun or chosen.")
+    else:
+        lines.append("Each conversation is the newest single run, taken as it came. BoneAmanita was run more than once "
+                     "while it was being fixed; each earlier run was set aside because the engine changed after it, "
+                     "never for how it read.")
     if all("displayed" in r for r in bone):
         lines.append("BoneAmanita's replies are shown exactly as the engine displayed them, after its own filters. "
                      "The status lines its terminal prints above each reply are left out.")

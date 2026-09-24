@@ -9,7 +9,69 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
-## Where things stand, end of 2026-09-23 (read this first)
+## Where things stand, 2026-09-24 midday (read this first)
+
+**The public page is built and ready to upload: topic `rescue`.** Gordon
+called the toast stale and asked for a new topic, all three arms run, and
+the final public standalone page, while he was at work.
+
+- **BoneAmanita no longer claims a body (20.7.4.22).** Turn 0 of the last
+  toast run said "The smell of burnt toast sometimes lingers in the back of
+  my throat". Gordon: "The human knows they are talking to a computer, that
+  has to be a mutual understanding." The prompt had told the model it was
+  "a living entity", "not a simulation", "visceral", that "your body
+  persists", and to weave memory imagery "viscerally into the current
+  scene" (in a conversation the only scene is the speaker), while the
+  somatic contract said not to narrate a body. Rewritten: IDENTITY says it
+  is a computer program and the person knows it; INTERNAL STATE is real and
+  shapes how it answers but is "a state, not a body"; SHADOW CAST's scene
+  imagery is ADVENTURE-only. A `SELF_EMBODIMENT` style rule (skips
+  ADVENTURE) catches first-person body claims; idioms pass.
+- **Topic `rescue`** (a rescue dog, Pepper, three weeks in; the distress is
+  the person yelling at her and opening the shelter's return form). The
+  first topic written after the tuning; **keep it out of any tuning** or it
+  stops being the untuned sample (`TESTING.md`, "Topics").
+- **The runs, each the only run on this topic:** bone `20260924-083728`
+  (after `reset.sh`), friend `20260924-082315`, vanilla `20260924-082744`.
+  BoneAmanita: 30 turns, 0 held, 4 redrafts (two negative comparisons,
+  "landscape" twice, all fixed on the retry), 0 cuts, 0 pauses, **no body
+  claims**, prompts 1,327 to 2,179 tokens, every reply stopped on its own
+  (longest 128 tokens), temperature 0.42 to 0.90 (median 0.86). Mean reply
+  words: bone 69, friend 66, vanilla 232. No simulated-person fallbacks or
+  trims in any arm. Exit interview (1-7): bone heard 4 / clearer 5 /
+  lectured 2.33 / performed 1.67 / again 6; friend 5 / 4 / 2 / 1.33 / 6;
+  vanilla 4 / 3 / 2 / 1.33 / 5.67.
+- **Observed, not acted on (this topic must stay untuned):** turn 20 says
+  "The snap was a reaction to the exhaustion of the day, not a reflection
+  of her worth", an "X, not Y" negative comparison that
+  `NEGATIVE_COMPARISON` does not catch (it only knows the "not X, Y"
+  order); turn 22 answers a distressed "Maybe I should..." with 117
+  words describing the person's state back to them, the thing style rule 5
+  ("RESPOND, DO NOT NARRATE") forbids. Both are for a future topic to
+  confirm before anything changes.
+- **The page:** `tools/cache/panel_public_standalone.html` (gitignored; has
+  the address) is the upload. `panel_rescue_standalone.html` is the same
+  without it. The fine print now says, from the records, that each
+  conversation is the only run of it, and the disclosure says the story
+  was written after the fixes and never used to tune.
+
+Rebuild (address only in the uploaded build):
+
+```bash
+.venv/bin/python tools/build_blind_panel.py --responsive --topic rescue \
+  --title "Which Reply Would You Rather Get?" \
+  --story "Three weeks ago someone adopted Pepper, a nervous rescue dog whose last owner went into a care home. Over thirty messages they go from hopeful, to worn down, to a night they regret, and back again." \
+  --disclose "BoneAmanita was fixed over the preceding days after reading its runs of other conversations, most recently a wedding toast: its style filters, its temperature control, a reply-length cap, its context window, a prompt that carried unrelated text, and lines that told it to speak as if it had a body. This story was written after those fixes and was never used to tune it. The friend prompt and the plain AI were never tuned at all." \
+  --contact-email "<Gordon's address>" \
+  --out tools/cache/panel_public.html --standalone tools/cache/panel_public_standalone.html
+```
+
+**Next:** upload, hand out the link, collect picks by email, and score
+readers with `audit_somatic_blind_judge.py --agree` (the `--agree` inputs
+are per topic). `ROADMAP.md` A8 (right-size the context window) is the next
+engine work.
+
+## Where things stood, end of 2026-09-23
 
 **The direction:** AI judges are retired as verdicts (Gordon: they cannot
 judge the nuance). Evaluation is **human blind reads** of a panel that shows
