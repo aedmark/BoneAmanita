@@ -112,6 +112,12 @@
       "error_msg": "YOU HAVE NO BODY. The person knows they are talking to a computer program. Do not claim a throat, chest, breath, senses or physical sensations; say it plainly."
     },
     {
+      "name": "NARRATING_STATE",
+      "skip_modes": ["ADVENTURE"],
+      "regex": "(?i)\\byou(?:'re|’re| are) (?:reaching|approaching|at) (?:a|the) point\\b|\\b(?:that|this|the|your) (?:feeling|doubt|frustration|exhaustion|guilt|fear|anxiety|worry|pressure|tiredness|reaction)s? (?:you(?:'re|’re| are) (?:feeling|carrying) )?(?:right now )?(?:is|are) (?:honest|valid|natural|understandable|normal|a natural|a normal|an understandable|a common)\\b|\\bis a (?:natural|normal|understandable|common|human) (?:response|reaction)\\b|\\bit(?: is|'s|’s) (?:understandable|natural|normal|okay|ok) (?:that you|to feel|for you to feel)\\b|\\bit reflects (?:the reality|how|what)\\b",
+      "error_msg": "DO NOT NARRATE THEIR STATE. Do not tell the person what they are feeling or that their feeling is valid; answer the thing they said."
+    },
+    {
       "name": "NEGATIVE_COMPARISON",
       "regex": "(?i)\\bnot\\s+(?:only|just|merely|simply)\\s+[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but|rather|instead)\\b|\\b(?:didn|don|doesn)['’]?t\\s+(?:just|only|merely|simply)\\s+[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but\\s+)?(?:you|it|they|we|he|she)\\b|\\bnot\\s+about\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?:but\\s+)?(?:about|it['’]?s\\s+about|it\\s+is\\s+about)\\b|(?:\\b(?:it|this|that)['’]s\\s+not|\\b(?:is|was)\\s+not|\\b(?:isn['’]?t|wasn['’]?t))\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?:it|this|that)(?:['’]s|\\s+is|\\s+was)\\b|\\b(?:are\\s+not|were\\s+not|aren['’]?t|weren['’]?t)\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)they(?:['’]re|\\s+are|\\s+were)\\b|\\b(?P<s1>you|they|we)(?:(?:['’]re|\\s+are|\\s+were)\\s+not|\\s+(?:aren['’]?t|weren['’]?t))\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?P=s1)(?:['’]re|\\s+are|\\s+were)\\b|\\bI(?:['’]m|\\s+am)\\s+not\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)I(?:['’]m|\\s+am)\\b",
       "error_msg": "DETECTED NEGATIVE COMPARISON. Don't say what it isn't. Say exactly what it is."

@@ -100,6 +100,7 @@ class MetabolismPhase(SimulationPhase):
             if u_model:
                 user_state["exhaustion"] = getattr(u_model, "E_u", 0.0)
                 user_state["effort"] = getattr(u_model, "P_u", 100.0)
+                user_state["distress"] = getattr(u_model, "distress_u", 0.0)
                 
         engine_state = {}
         if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):

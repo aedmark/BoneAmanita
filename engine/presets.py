@@ -264,6 +264,8 @@ class BoneConfig:
             "SENTENCE_CAP_FLAGGING",
             "WORD_CAP_FLAGGING",
             "SENTENCE_CAP_TIRING",
+            "DISTRESS_THRESHOLD",
+            "SENTENCE_CAP_DISTRESSED",
             "P_U_CRITICAL",
             "ATP_DEPLETED",
             "ATP_MODERATE",
@@ -286,6 +288,11 @@ class BoneConfig:
             "BREVITY_FLOOR",
             "DISENGAGEMENT_RATE",
             "REENGAGEMENT_RATE",
+            "ANCHOR_TURNS",
+            "ANCHOR_SHARE",
+            "FATIGUE_WEIGHT",
+            "DISTRESS_RISE",
+            "DISTRESS_FALL",
         ],
     }
 
@@ -300,6 +307,11 @@ class BoneConfig:
         "BREVITY_FLOOR": 0.5,
         "DISENGAGEMENT_RATE": 0.15,
         "REENGAGEMENT_RATE": 0.10,
+        "ANCHOR_TURNS": 4,
+        "ANCHOR_SHARE": 0.75,
+        "FATIGUE_WEIGHT": 0.7,
+        "DISTRESS_RISE": 0.8,
+        "DISTRESS_FALL": 0.2,
     }
 
     STAGE = {
@@ -325,6 +337,8 @@ class BoneConfig:
         "SENTENCE_CAP_FLAGGING": 3,
         "WORD_CAP_FLAGGING": 60,
         "SENTENCE_CAP_TIRING": 5,
+        "DISTRESS_THRESHOLD": 0.4,
+        "SENTENCE_CAP_DISTRESSED": 3,
         "P_U_CRITICAL": 30.0,
         "ATP_DEPLETED": 20.0,
         "ATP_MODERATE": 40.0,

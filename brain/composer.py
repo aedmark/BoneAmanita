@@ -663,6 +663,11 @@ class PromptComposer:
                 budget_lines.append("CRITICAL: Do not narrate your body, breath, lungs, or physical exhaustion.")
             if not somatic_budget.closing_question_allowed:
                 budget_lines.append("Do not ask a closing question.")
+            if getattr(somatic_budget, "distressed", False):
+                budget_lines.append(
+                    "Your partner is struggling. Answer the thing they just said, plainly. Do not describe their "
+                    "feelings or situation back to them, and do not offer advice or a plan unless they ask."
+                )
             if somatic_budget.offer_to_carry_load:
                 budget_lines.append("Your partner is carrying a heavy load. Offer to carry part of the burden.")
             somatic_budget_block = "\n".join(budget_lines) + "\n"

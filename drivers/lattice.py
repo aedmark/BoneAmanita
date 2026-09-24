@@ -1,4 +1,5 @@
 import time
+import re
 from collections import deque
 from typing import Any, Deque, List
 
@@ -9,6 +10,27 @@ from physics.models import PhysicsPacket, SharedDynamics, UserInferredState
 from engine.receipts import issue as issue_receipt
 from engine.struts import safe_get, ux
 
+# What a person in distress says, by kind: (weight, pattern). Word-bounded, case-insensitive.
+DISTRESS_SIGNS = (
+    (0.6, r"too hard|(?:it'?s|this is|that'?s|all) too much|too much for me|can'?t (?:do this|deal|handle|cope|take|anymore|face)|if i can do this"
+          r"|not cut out|not ready|in over my head|give up|what'?s the point|i'?m (?:so )?done(?=\s*[.!,]|\s*$)|i'?m a mess|falling apart"
+          r"|breaking down|at the end of my rope|i don'?t know what i'?m doing|why can'?t i"),
+    (0.6, r"my fault|angry at myself|hate myself|i'?m (?:a |an )?(?:shit(?:ty)?|terrible|awful|horrible|useless|no good|failure)"
+          r"|what'?s wrong with me|letting (?:them|him|her|you|everyone|everybody) down|i feel like (?:shit|crap|a failure)"
+          r"|i ruined|i messed|i screwed|i shouldn'?t have|what kind of (?:a )?\w+ (?:does|am|would)|i'?m the one who"),
+    (0.5, r"i'?m (?:crying|shaking|panick?ing|freaking out)|can'?t stop crying|can'?t breathe|can'?t think straight"
+          r"|my (?:heart'?s|heart is) (?:racing|pounding)|my (?:throat'?s|throat is) tight|my face is (?:burning|hot)"),
+    (0.3, r"i'?m sorry|sorry for|f(?:uck|\*\*k)|ffs"),
+)
+# Tiredness said out loud; length alone misses a person who stays terse throughout.
+FATIGUE_SIGNS = re.compile(
+    r"(?i)\b(?:tired|exhausted|beat|worn out|drained|wiped|crash(?:ing)?|going to bed|hit the hay|g?'?night"
+    r"|good ?night|call it a night|turn in|shut (?:my )?eyes|need (?:some )?sleep|can'?t sleep|can'?t be bothered"
+    r"|running on empty)\b"
+)
+_DISTRESS = tuple((w, re.compile(r"(?i)\b(?:" + p + r")\b")) for w, p in DISTRESS_SIGNS)
+
+
 class SharedLatticeDriver:
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
@@ -18,6 +40,8 @@ class SharedLatticeDriver:
         window = int(self._user_cfg("BASELINE_WINDOW", 8))
         self._length_baseline: Deque[int] = deque(maxlen=window)
         self._recent_texts: Deque[str] = deque(maxlen=window)
+        # The person's first messages, before any tiredness: a terse stretch must not become the new normal.
+        self._anchor: List[int] = []
         self._last_learned_turn = -1
 
     def _user_cfg(self, key: str, default: float) -> float:
@@ -45,10 +69,22 @@ class SharedLatticeDriver:
             if self._length_baseline
             else float(len(words))
         )
+        if self._anchor:
+            anchored = self._user_cfg("ANCHOR_SHARE", 0.75) * sum(self._anchor) / len(self._anchor)
+            baseline = max(baseline, anchored)
         brevity_floor = max(0.01, self._user_cfg("BREVITY_FLOOR", 0.5))
         ratio = len(words) / max(1.0, baseline)
         brevity = max(0.0, min(1.0, 1.0 - (ratio / brevity_floor)))
-        return max(brevity, repetition)
+        fatigue = self._user_cfg("FATIGUE_WEIGHT", 0.7) if FATIGUE_SIGNS.search(text) else 0.0
+        return max(brevity, repetition, fatigue)
+
+    @staticmethod
+    def read_distress(text: str) -> float:
+        """0-1 from what the person says: giving up, self-blame, raw overwhelm, apology, trailing off."""
+        score = sum(weight for weight, pattern in _DISTRESS if pattern.search(text))
+        if re.search(r"(?:\.\.\.|…)\s*$", text.strip()):
+            score += 0.3
+        return min(1.0, score)
 
     def infer_and_couple(
         self,
@@ -86,9 +122,18 @@ class SharedLatticeDriver:
             self.u.E_u = max(
                 0.0, min(1.0, self.u.E_u + (disengagement - self.u.E_u) * rate)
             )
+            distress = self.read_distress(text)
+            d_rate = (
+                self._user_cfg("DISTRESS_RISE", 0.8)
+                if distress > self.u.distress_u
+                else self._user_cfg("DISTRESS_FALL", 0.2)
+            )
+            self.u.distress_u = max(0.0, min(1.0, self.u.distress_u + (distress - self.u.distress_u) * d_rate))
             if text.strip():
                 self._length_baseline.append(word_count)
                 self._recent_texts.append(text.strip())
+                if len(self._anchor) < int(self._user_cfg("ANCHOR_TURNS", 4)):
+                    self._anchor.append(word_count)
         self.u.V_u = float(safe_get(input_phys, "voltage", self.u.V_u))
         self.u.psi_u = float(safe_get(input_phys, "psi", self.u.psi_u))
         self.u.chi_u = float(safe_get(input_phys, "chi", self.u.chi_u))

@@ -11,7 +11,58 @@ each session; that one is the standing reference for how to run it again.
 
 ## Where things stand, 2026-09-24 midday (read this first)
 
-**The public page is built and ready to upload: topic `rescue`.** Gordon
+**Update, 2026-09-24 afternoon: the engine now reads distress (20.7.4.24),
+and the `rescue` bone arm is regenerated on it.** Gordon on the two
+observations below: turn 20's "X, not Y" is fine ("not every single negative
+comparison has to be killed; just severely cut down"); turn 22 is a real
+problem. **Root cause:** the person model (`drivers/lattice.py`) only
+measured message length against the last 8 messages and repetition, so it
+read the person as steady all run; exhaustion *fell* to 0.05 through the
+flagging and distressed stretches (the 8-message baseline adapts to a terse
+stretch), and the reply budget never tightened on any turn. Four layers:
+1. **Distress from words:** `UserInferredState.distress_u`, from
+   `SharedLatticeDriver.read_distress` (giving up, self-blame, first-person
+   raw overwhelm, apology or swearing, trailing off), rising fast
+   (`DISTRESS_RISE` 0.8) and falling slowly (`DISTRESS_FALL` 0.2).
+2. **The budget answers it:** `distress_u >= DISTRESS_THRESHOLD` (0.4) caps
+   the reply at 3 sentences, bans a closing question, and adds "Your partner
+   is struggling. Answer the thing they just said, plainly. Do not describe
+   their feelings or situation back to them, and do not offer advice or a
+   plan unless they ask." (the validator's sentence trim enforces the cap).
+3. **Exhaustion anchored:** the brevity baseline is at least 75% of the
+   person's first four messages (`ANCHOR_TURNS`, `ANCHOR_SHARE`), and
+   tiredness said out loud ("I'm beat", "call it a night") reads as
+   disengagement (`FATIGUE_WEIGHT` 0.7).
+4. **Backstop:** `NARRATING_STATE` (soft, skips ADVENTURE): "You are
+   reaching a point", "That feeling is honest/valid/natural", "is a natural
+   response", "It's understandable that you", "It reflects the reality".
+   Caveat: these shapes were drawn from turn 22 itself; on 239 toast replies
+   it fires once.
+
+**Offline check (no GPU; the real `infer_and_couple` over message
+sequences), designed on the six older scripts and the ten toast responsive
+runs, rescue held out.** Share of turns crossing distress >= 0.4:
+engaged 0% and tiring 0% in every set; distressed phase 64% of toast turns,
+**53% of held-out rescue turns**, 23% of the scripts' (their distress is
+phrased differently); it spills into early recovery (22-60%) by design.
+Exhaustion >= 0.4 in flagging: scripts 83%, toast 15%, held-out rescue 56%
+(before: about 0% on the responsive runs). Script:
+`offline_rates.py` pattern in the session; easy to rebuild from
+`SCRIPTS`, the responsive jsonl and a fresh `SharedLatticeDriver`.
+
+**Found, not changed (Gordon's call):** (a) every person starts at
+`E_u` 0.5, above the 0.4 tiring threshold, so the first two or three turns
+of every conversation get the tiring budget (25-35% of engaged turns in
+the check); `UserInferredState.E_u` default is a one-line change. (b) "the
+weight of..." is a BoneAmanita tic: 35 of 239 toast replies and 3 of 30
+rescue replies; left out of NARRATING_STATE, could be a banned cliché.
+
+**Honesty:** the fix came from reading `rescue`, so the rescue page's
+disclosure now says this story exposed one problem that was fixed before
+its final BoneAmanita run.
+
+**Earlier the same day (superseded by the update above): the public page
+was built from the first rescue bone run.** Gordon
 called the toast stale and asked for a new topic, all three arms run, and
 the final public standalone page, while he was at work.
 
@@ -1479,7 +1530,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   native-Ollama and source-sweep change (2026-09-24): green (expect 679 passed, 5 skipped).
+   native-Ollama and source-sweep change (2026-09-24): green (expect 689 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1563,7 +1614,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 679 passed, 0 failed, 5 skipped** (2026-09-24), about
+- **Test suite: 689 passed, 0 failed, 5 skipped** (2026-09-24 afternoon), about
   seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.

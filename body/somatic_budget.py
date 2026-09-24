@@ -15,6 +15,8 @@ class SomaticBudget:
     temperature_band: Tuple[float, float]
     forbid_body_narration: bool
     reason: str
+    # The person is struggling: answer what they said, never narrate their state back to them.
+    distressed: bool = False
 
     @classmethod
     def evaluate(
@@ -55,6 +57,12 @@ class SomaticBudget:
         elif e_u > e_u_tiring:
             sentence_cap = min(sentence_cap, int(safe_get(cfg, "SENTENCE_CAP_TIRING", 5)))
             reason_parts.append("User is tiring")
+
+        distressed = user_state.get("distress", 0.0) >= float(safe_get(cfg, "DISTRESS_THRESHOLD", 0.4))
+        if distressed:
+            sentence_cap = min(sentence_cap, int(safe_get(cfg, "SENTENCE_CAP_DISTRESSED", 3)))
+            closing_question_allowed = False
+            reason_parts.append("User is in distress")
 
         p_u_critical = float(safe_get(cfg, "P_U_CRITICAL", 30.0))
         if p_u < p_u_critical:
@@ -99,5 +107,6 @@ class SomaticBudget:
             # ADVENTURE's room template requires "**Header**"/"(via X)" exits,
             # which the stage-direction ban can't tell apart from narration.
             forbid_body_narration=active_mode != "ADVENTURE",
-            reason="; ".join(reason_parts)
+            reason="; ".join(reason_parts),
+            distressed=distressed,
         )

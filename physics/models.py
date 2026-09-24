@@ -287,6 +287,8 @@ class UserInferredState:
     psi_u: float = 0.3
     chi_u: float = 0.2
     valence_u: float = 0.0
+    # Distress read from the person's own words (0-1); rises fast, falls slowly.
+    distress_u: float = 0.0
 
     def __getattr__(self, key: str) -> Any:
         u_key = f"{key}_u"
