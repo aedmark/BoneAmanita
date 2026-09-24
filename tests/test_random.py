@@ -534,7 +534,7 @@ class RandomTest(BoneTestCase):
         receipt = next(r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft")
         self.assertEqual((receipt.effect, receipt.detail), ("gatekeeper", 'phrase a rare privilege: "a rare privilege"'))
 
-    def _run_with_drafts(self, drafts, budget=None):
+    def _run_with_drafts(self, drafts, budget=None, message="Help me with the toast."):
         from engine.core import CycleContext
         from engine.receipts import ReceiptLedger
         from physics.models import PhysicsPacket
@@ -545,7 +545,7 @@ class RandomTest(BoneTestCase):
             side_effect=lambda text, _state: {"valid": True, "content": text, "meta_logs": []}
         )
         self.engine.cortex.llm.generate = MagicMock(side_effect=drafts)
-        ctx = CycleContext(input_text="Help me with the toast.", is_system_event=False)
+        ctx = CycleContext(input_text=message, is_system_event=False)
         ctx.physics = PhysicsPacket()
         ctx.bio_result = {"mito": {"atp_pool": 100.0, "ros_buildup": 0.0}}
         ctx.mind_state = {"lens": "TEST", "role": "Test"}
@@ -596,6 +596,26 @@ class RandomTest(BoneTestCase):
         self.assertLessEqual(calm, ceiling, "dopamine must not raise the cap past the hardware ceiling")
         self.assertGreater(calm, ceiling * 0.8)
         self.assertLess(stressed, calm)
+
+    LONG_MESSAGE = ("I found one good memory of him driving four hours for a flat tire, but the system at work "
+                    "has me so tired that I keep putting the whole toast off until tomorrow night.")
+
+    def test_a_long_message_in_conversation_gets_no_source_code(self):
+        """Any 20-word message used to paste metabolism.py and akashic.py into the prompt, up to 29k characters."""
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self._run_with_drafts(["Start with the tire story."], message=self.LONG_MESSAGE)
+        prompt = self.engine.cortex.llm.generate.call_args.args[0]
+        self.assertNotIn("CRITICAL STRUCTURAL CONTEXT", prompt)
+        self.assertNotIn(".py_L", prompt)
+
+    def test_the_code_sweep_is_for_technical_work_on_code_only(self):
+        cortex = self.engine.cortex
+        cortex.active_mode = "TECHNICAL"
+        self.assertEqual(cortex._route_dual_memory(self.LONG_MESSAGE.replace("the system at work", "work"))[1],
+                         "VECTOR_FAST_TWITCH")
+        self.assertEqual(cortex._route_dual_memory("debug the metabolism code path for atp tax")[1], "LINEAR_DEEP_TISSUE")
+        cortex.active_mode = "CONVERSATION"
+        self.assertEqual(cortex._route_dual_memory("debug the metabolism code path for atp tax")[1], "VECTOR_FAST_TWITCH")
 
     def test_the_pause_pool_never_mentions_the_engine_and_never_asks(self):
         pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]

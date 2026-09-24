@@ -98,6 +98,18 @@ def method_lines(runs: dict, responsive: bool, disclosures: list = ()) -> list:
         line += (f" and caps reply length ({', '.join(map(str, caps))} tokens). The other two sampled at temperature "
                  f"{SAMPLING['temperature']} every turn with no length cap.")
         lines.append(line)
+    usage = [r["usage"] for r in bone if r.get("usage") and r["usage"].get("prompt_tokens")]
+    if usage:
+        ctx = sorted({u.get("num_ctx") for u in usage if u.get("num_ctx")})
+        biggest = max(u["prompt_tokens"] for u in usage)
+        full = sum(1 for u in usage if u["prompt_tokens"] >= (u.get("num_ctx") or 0) - 1)
+        other = SAMPLING.get("options", {}).get("num_ctx")
+        same = ctx == [other]
+        lines.append((f"All three ran with a {other:,}-token context. " if same else
+                      f"BoneAmanita ran with a {', '.join(f'{c:,}' for c in ctx)}-token context, the other two with "
+                      f"{other:,}. ") + f"BoneAmanita's prompts, which carry its instructions, state and memory, "
+                     f"reached {biggest:,} tokens"
+                     + (f"; {full} filled the context and were cut to fit." if full else ", so none was cut."))
     lines.extend(disclosures)
     if responsive:
         sims = sorted({r.get("sim_model") for r in read_jsonl("somatic_responsive_exit.jsonl") if r.get("sim_model")})

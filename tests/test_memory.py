@@ -447,62 +447,63 @@ class TestMetabolicRouting(BoneTestCase):
             "BIO_CRIT",
         )
 
-        class TestWorkingMemoryParadigms(BoneTestCase):
-            def test_refrigerator_light_dark_matter(self):
-                """Test Paradigm 1: Global Neuronal Workspace returns LINGUISTIC_DARK_MATTER on empty attention."""
-                mock_svc = MagicMock()
-                cortex = TheCortex(services=mock_svc)
 
-                sparse_ctx, path, cost = cortex._route_dual_memory("   ")
-                self.assertEqual(path, "LINGUISTIC_DARK_MATTER")
-                self.assertEqual(cost, 0)
-                self.assertEqual(sparse_ctx, "")
+class TestWorkingMemoryParadigms(BoneTestCase):
+    def test_refrigerator_light_dark_matter(self):
+        """Test Paradigm 1: Global Neuronal Workspace returns LINGUISTIC_DARK_MATTER on empty attention."""
+        mock_svc = MagicMock()
+        cortex = TheCortex(services=mock_svc)
 
-            def test_fractal_weighting_water_tank(self):
-                """Test Paradigm 2: Fractal Weighting halts ingestion on high density."""
-                cd = CosmicDynamics(config_ref={})
-                mock_network = MagicMock()
-                mock_network.graph = {"node": {}}
+        sparse_ctx, path, cost = cortex._route_dual_memory("   ")
+        self.assertEqual(path, "LINGUISTIC_DARK_MATTER")
+        self.assertEqual(cost, 0)
+        self.assertEqual(sparse_ctx, "")
 
-                # High density = many unique words in a large list
-                clean_words = [f"unique_concept_{i}" for i in range(55)]
+    def test_fractal_weighting_water_tank(self):
+        """Test Paradigm 2: Fractal Weighting halts ingestion on high density."""
+        cd = CosmicDynamics(config_ref={})
+        mock_network = MagicMock()
+        mock_network.graph = {"node": {}}
 
-                zone, cost, msg = cd.analyze_orbit(mock_network, clean_words)
-                self.assertEqual(zone, "FRACTAL_OVERLOAD")
-                self.assertEqual(cost, 5.0)
-                self.assertIn("water tank is empty", msg)
+        # High density = many unique words in a large list
+        clean_words = [f"unique_concept_{i}" for i in range(55)]
 
-            def test_absolute_chunking_semantic_moves(self):
-                """Test Paradigm 3: LexiconStore compresses familiar semantic patterns."""
-                store = LexiconStore()
-                store.get_categories_for_word = MagicMock(return_value={"test_cat"})
+        zone, cost, msg = cd.analyze_orbit(mock_network, clean_words)
+        self.assertEqual(zone, "FRACTAL_OVERLOAD")
+        self.assertEqual(cost, 5.0)
+        self.assertIn("water tank is empty", msg)
 
-                text = "the quick brown fox"
-                result1 = store.harvest(text)
+    def test_absolute_chunking_semantic_moves(self):
+        """Test Paradigm 3: LexiconStore compresses familiar semantic patterns."""
+        store = LexiconStore()
+        store.get_categories_for_word = MagicMock(return_value={"test_cat"})
 
-                chunk_hash = hash(text.translate(store._TRANSLATOR).lower())
-                self.assertIn(chunk_hash, store._chunk_cache)
+        text = "the quick brown fox"
+        result1 = store.harvest(text)
 
-                result2 = store.harvest(text)
-                self.assertIs(result1, result2, "[FAIL] Chunk cache did not return the exact same object reference.")
+        chunk_hash = hash(text.translate(store._TRANSLATOR).lower())
+        self.assertIn(chunk_hash, store._chunk_cache)
 
-            def test_subconscious_grey_area(self):
-                """Test Paradigm 5: Oroboros records Latent Grey Area Tension for mid-level trauma."""
-                oro = TheOroboros(config_ref={})
-                oro.scars = []
+        result2 = store.harvest(text)
+        self.assertIs(result1, result2, "[FAIL] Chunk cache did not return the exact same object reference.")
 
-                mock_soul = MagicMock()
-                mock_soul.eng.trauma_accum = {"event_1": 4.0, "event_2": 3.0}
-                mock_soul.core_memories = []
+    def test_subconscious_grey_area(self):
+        """Test Paradigm 5: Oroboros records Latent Grey Area Tension for mid-level trauma."""
+        oro = TheOroboros(config_ref={})
+        oro.scars = []
 
-                with patch("engine.core.LoreManifest.get_instance") as mock_lore:
-                    mock_lore.return_value.get.return_value = {"TEST_DEATH": ["Test", "voltage", 1.0, "desc"]}
-                    oro.crystallize("TEST_DEATH", mock_soul)
+        mock_soul = MagicMock()
+        mock_soul.eng.trauma_accum = {"event_1": 4.0, "event_2": 3.0}
+        mock_soul.core_memories = []
 
-                latent_scar = next((s for s in oro.scars if s.name == "Latent Grey Area Tension"), None)
-                self.assertIsNotNone(latent_scar, "[FAIL] 16.67ms latent buffer did not register a scar.")
-                self.assertEqual(latent_scar.stat_affected, "voltage_cap")
-                self.assertAlmostEqual(latent_scar.value, 7.0 * 0.05)
+        with patch("engine.core.LoreManifest.get_instance") as mock_lore:
+            mock_lore.return_value.get.return_value = {"TEST_DEATH": ["Test", "voltage", 1.0, "desc"]}
+            oro.crystallize("TEST_DEATH", mock_soul)
 
-        if __name__ == "__main__":
-            unittest.main()
+        latent_scar = next((s for s in oro.scars if s.name == "Latent Grey Area Tension"), None)
+        self.assertIsNotNone(latent_scar, "[FAIL] 16.67ms latent buffer did not register a scar.")
+        self.assertEqual(latent_scar.stat_affected, "voltage_cap")
+        self.assertAlmostEqual(latent_scar.value, 7.0 * 0.05)
+
+if __name__ == "__main__":
+    unittest.main()

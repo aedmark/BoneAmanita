@@ -210,6 +210,7 @@ class BoneConfig:
     REQUIRED_CONFIG = {
         "CORTEX": [
             "MAX_TOKENS",
+            "NUM_CTX",
             "SELF_CARE_THRESHOLD",
             "LLM_FAILURE_THRESHOLD",
             "MAX_HISTORY_LENGTH",

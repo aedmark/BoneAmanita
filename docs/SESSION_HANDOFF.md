@@ -56,27 +56,42 @@ made. The panel now works for a cold audience and is ready to hand out.
 after `reset.sh`), friend `20260923-193010`, vanilla `20260923-194135`, all
 in `tools/cache/somatic_responsive.jsonl` (gitignored, local only).
 
-**FIRST THING NEXT SESSION: the real hardware limit is the context window,
-and the engine's prompt overflows it.** `ollama ps` shows `gemma4:12b`
-loaded with a **4096-token context** when the engine uses it (it talks to
-Ollama's `/v1/chat/completions`, which cannot set `num_ctx`; the vanilla and
-friend arms use the native `/api/chat` with `num_ctx` 32768, so they never
-had this limit). A replay of the panel run measuring the main reply prompt:
-median 8.5k characters (~2.1k tokens, fits), but turn 1 was 31.4k (~7.8k
-tokens), turn 6 27k, turns 0, 5, 25 and 27 16k to 19k. On those six turns
-Ollama must have truncated the prompt itself, and the output had little or
-no room. Two things to decide: (a) give the engine a context that fits (set
-`OLLAMA_CONTEXT_LENGTH`, or move the engine to the native endpoint with
-`options.num_ctx`), then derive the token ceiling from context minus prompt;
-(b) find what balloons those prompts to 4x the median (turns 0-1 and 5-6
-look like boot and an early memory/lore dump). The replay script is easy to
-rebuild: `boot()` from `audit_somatic_census`, patch `llm.generate` to return
-each recorded `displayed` reply and record `len(prompt)` for prompts
-containing `=== PARTNER INPUT ===`.
+**2026-09-24 morning: the context window and the prompt bloat, both fixed
+(20.7.4.20).**
+- **The engine now asks for its own context** (Gordon: "option 3 is exactly
+  how BoneAmanita was meant to work"). For `provider: ollama`,
+  `LLMInterface._transmit` sends Ollama's native `/api/chat` (derived from
+  any configured base URL, so an old `/v1/chat/completions` config still
+  works) with `options: {num_ctx, num_predict, temperature, top_p,
+  penalties, stop}` and `think` from `REASONING_EFFORT`. `num_ctx` is the
+  new `CORTEX.NUM_CTX` (32768, the same as the friend and vanilla arms);
+  `num_predict` is the smaller of the requested `max_tokens` and the context
+  left after the prompt (a conservative 3 characters per token). The `/v1`
+  endpoint could not set `num_ctx`, so every engine call before this ran at
+  Ollama's 4096. Checked live: `ollama ps` shows `gemma4:12b` at 32768,
+  100% GPU, 8.4 GB (8.1 at 4096); a 32k-character prompt read as 6,331
+  tokens and stopped cleanly. Each call records Ollama's own counts in
+  `llm.last_usage` (`prompt_tokens`, `output_tokens`, `done_reason`,
+  `num_ctx`) and logs a warning if a prompt fills the window; the census
+  records them per turn as `usage`, and the panel's fine print states the
+  context and the largest prompt from them. The cloud providers' local
+  fallback still uses `/v1`; it is a fallback for when a cloud call fails.
+- **The bloat was source code.** `TheCortex._route_dual_memory` treated any
+  message of 20+ words, or one containing "system", "file", "code" and the
+  like, as a "heavy lift" and pasted matching lines of `body/metabolism.py`
+  and `brain/akashic.py` into the prompt as "CRITICAL STRUCTURAL CONTEXT
+  (Linear Sweep)": up to 29k characters of Python on the six turns where
+  the person wrote at length. **Gordon's call: TECHNICAL mode only, keywords
+  only.** Tests through a real turn (a long CONVERSATION message puts no
+  source in the prompt) and on the router (TECHNICAL plus a code keyword
+  sweeps, CONVERSATION never does), both mutation checked.
+- **Four tests that had never run.** `TestWorkingMemoryParadigms` in
+  `tests/test_memory.py` was indented inside another test method, so pytest
+  never collected it. Moved to module level; all four pass.
 
-**The panel run predates the token-cap fix and the context fix,** so the
-page does not represent the engine any more. Fix the context, do one more
-`bone` run after `reset.sh`, rebuild, then upload.
+**The panel run still predates every fix since 20.7.4.15** (token cap,
+context, source sweep). One more `bone` run after `reset.sh`, rebuild, then
+upload.
 
 **Next (Gordon's plan):** upload `tools/cache/panel_public_standalone.html`
 to Neocities, hand the link out, collect picks by email, and score each
@@ -1393,7 +1408,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   `NEGATIVE_COMPARISON` and salvage change: green (expect 669 passed, 5 skipped).
+   native-Ollama and source-sweep change (2026-09-24): green (expect 679 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1477,7 +1492,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 669 passed, 0 failed, 5 skipped** (2026-09-23 late), about
+- **Test suite: 679 passed, 0 failed, 5 skipped** (2026-09-24), about
   seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.

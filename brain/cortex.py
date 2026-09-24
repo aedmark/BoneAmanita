@@ -1514,7 +1514,8 @@ class TheCortex:
         ]
         is_heavy_lift = any(k in query.lower() for k in heavy_keywords)
 
-        if not is_heavy_lift and len(query.split()) < 20:
+        # The sweep pastes the engine's own source into the prompt: only for someone working on code with it.
+        if self.active_mode != "TECHNICAL" or not is_heavy_lift:
             return "", "VECTOR_FAST_TWITCH", 0
         else:
             if not self.is_linear_stocked:

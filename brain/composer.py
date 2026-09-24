@@ -5,7 +5,7 @@ import re
 import time
 import urllib.error
 import urllib.request
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from engine.core import EventBus, JSONEncoder, Prisma
 from engine.presets import BoneConfig
@@ -84,6 +84,45 @@ class LLMInterface:
         self.last_failure_time = 0.0
         self.circuit_state = "CLOSED"
         self.stops_cut_reasoning = False
+        # What Ollama reported for the last call: tokens in and out, why it stopped, the window it had.
+        self.last_usage: Dict[str, Any] = {}
+
+    def _ollama_native(self, payload: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """Ollama's own /api/chat, the only endpoint that honours num_ctx; /v1 runs every model at 4096."""
+        root = re.sub(r"/(v1/chat/completions|v1|api/chat)/?$", "", self.base_url.rstrip("/"))
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        num_ctx = int(safe_get(c_cfg, "NUM_CTX", 32768))
+        prompt_chars = sum(len(str(m.get("content", ""))) for m in payload.get("messages", []))
+        # A conservative 3 characters per token: the reply may use whatever the prompt leaves.
+        room = max(256, num_ctx - prompt_chars // 3 - 64)
+        options = {"num_ctx": num_ctx, "num_predict": min(int(payload.get("max_tokens") or room), room)}
+        for key in ("temperature", "top_p", "frequency_penalty", "presence_penalty", "stop"):
+            if key in payload:
+                options[key] = payload[key]
+        native = {"model": payload.get("model"), "messages": payload.get("messages", []),
+                  "stream": False, "options": options}
+        effort = payload.get("reasoning_effort")
+        if effort in ("none", False):
+            native["think"] = False
+        elif effort in ("low", "medium", "high"):
+            native["think"] = effort
+        return root + "/api/chat", native
+
+    def _record_usage(self, body: str, num_ctx: int) -> None:
+        # Called after _parse_response, which has already rejected a body that is not JSON.
+        result = json.loads(body)
+        self.last_usage = {
+            "prompt_tokens": result.get("prompt_eval_count"),
+            "output_tokens": result.get("eval_count"),
+            "done_reason": result.get("done_reason"),
+            "num_ctx": num_ctx,
+        }
+        if (result.get("prompt_eval_count") or 0) >= num_ctx - 1 and self.events:
+            self.events.log(
+                f"{Prisma.YEL}The prompt filled the whole {num_ctx}-token context; Ollama cut it to fit.{Prisma.RST}",
+                "SYNAPSE",
+                "WARN",
+            )
 
     def _is_synapse_active(self) -> bool:
         if self.circuit_state == "CLOSED":
@@ -132,13 +171,21 @@ class LLMInterface:
             if "stop" in payload:
                 translated["stop_sequences"] = payload["stop"]
             payload = translated
+        native_ctx = None
+        if self.provider == "ollama" and override_url is None:
+            target_url, payload = self._ollama_native(payload)
+            native_ctx = payload["options"]["num_ctx"]
         data = json.dumps(payload, cls=JSONEncoder).encode()
         for attempt in range(network_retries + 1):
             try:
                 req = urllib.request.Request(target_url, data=data, headers=headers)
                 with urllib.request.urlopen(req, timeout=timeout) as response:
                     if response.status == 200:
-                        return self._parse_response(response.read().decode("utf-8"))
+                        body = response.read().decode("utf-8")
+                        content = self._parse_response(body)
+                        if native_ctx:
+                            self._record_usage(body, native_ctx)
+                        return content
             except urllib.error.HTTPError as e:
                 error_body = (
                     e.read().decode("utf-8") if hasattr(e, "read") else e.reason

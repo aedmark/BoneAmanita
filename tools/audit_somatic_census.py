@@ -424,7 +424,8 @@ def run(
     def spy(prompt, params):
         asked = copy.deepcopy(params)
         reply = real_generate(prompt, params)
-        calls.append({"prompt": prompt, "asked": asked, "sent": dict(params), "reply": reply})
+        calls.append({"prompt": prompt, "asked": asked, "sent": dict(params), "reply": reply,
+                      "usage": dict(getattr(llm, "last_usage", {}) or {})})
         return reply
 
     llm.generate = spy
@@ -482,6 +483,8 @@ def run(
                     "asked": {k: call["asked"].get(k) for k in ("temperature", "top_p", "max_tokens")} if call else None,
                     "sent": {k: call["sent"].get(k) for k in ("temperature", "top_p", "max_tokens")} if call else None,
                     "reply": call["reply"] if call else None,
+                    # What Ollama counted for the main call: prompt and reply tokens, the window, why it stopped.
+                    "usage": call.get("usage") if call else None,
                     "displayed": displayed[-1] if displayed else None,
                     "paced_seconds": round(gap, 1),
                     "fresh_state": True,
