@@ -824,7 +824,7 @@ class PromptComposer:
         valence = float(safe_get(phys_ref, "valence", 0.0))
         vsl_lines = [
             "\n[INTERNAL USE ONLY. DO NOT RENDER OR PRINT THIS TO THE USER.]",
-            "MANDATE: Consume these metrics to shape your narrative and tone. DO NOT output these numbers or draw UI bars.",
+            "MANDATE: Consume these metrics to shape how you speak: length, pace, steadiness. DO NOT output these numbers or draw UI bars.",
             f"METRICS: Voltage={voltage:.1f}/100, Exhaustion={e:.2f}, Contradiction={beta:.2f}, Void={psi:.2f}, Chaos={chi:.2f}, Valence={valence:.2f}",
         ]
         cues_map = [

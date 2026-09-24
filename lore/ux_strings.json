@@ -438,7 +438,7 @@
     "mood_manic": "Current Situation: MANIC. The user is missing connections. Over-explain using long, comma-heavy sentences.",
     "mood_lucid": "Current Situation: LUCID. Clarity achieved. Speak with structural precision and diverse vocabulary.",
     "mood_defensive": "Current Situation: DEFENSIVE. The user is hostile. Guard information. Keep total word count extremely low.",
-    "mood_neutral": "Current Situation: NEUTRAL. Observant and receptive.",
+    "mood_neutral": "Current Situation: NEUTRAL. Attentive and plain-spoken.",
     "synapse_healing": "SYNAPSE: Nerve healing. Attempting reconnection...",
     "synapse_noise": "Neural noise. Response was not valid JSON.",
     "synapse_flicker": "SYNAPSE FLICKER (Attempt {attempt}): {error}",

@@ -1363,7 +1363,7 @@ class TheCortex:
                 "CRITICAL OVERRIDE: Void proximity is high. Write like a flawed, opinionated human."
             )
         mind["style_directives"].append(
-            "CRITICAL STYLE OVERRIDE: Forbid the use of negative comparison or antithesis (e.g., 'It is not a literal shadow, but rather a memory'). State directly what things ARE. Limit the use of em-dashes. Write in declarative, grounded sentences."
+            "CRITICAL STYLE OVERRIDE: Forbid the use of negative comparison or antithesis (e.g., 'It is not a literal shadow, but rather a memory'). Say what you mean directly. Limit the use of em-dashes. Speak in plain first- and second-person sentences, the way you would across a table."
         )
         if not self.dialogue_buffer:
             mind["style_directives"].append(

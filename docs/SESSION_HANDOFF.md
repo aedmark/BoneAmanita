@@ -11,6 +11,39 @@ each session; that one is the standing reference for how to run it again.
 
 ## Where things stand, 2026-09-24 midday (read this first)
 
+**Update, 2026-09-24 evening: the persona rebalanced against the narrator
+voice (20.7.4.26, Gordon's green light).** The distress guard (below) fired
+where it could, but the regenerated rescue run (`20260924-135445`) still
+narrated on the turns it missed ("The weight of the regret is heavy in this
+moment... The house is full of the cost of that decision"), and the
+simulated person rated it worse (lectured 5.33, again 4.33, told it "You're
+not helping"). Narration is the persona's voice, not a length problem: the
+prompt asked the model to be "observant", to "observe the fire", to "let the
+silence carry weight" (twice) and "the user carry the weight of the next
+move" (a likely seed of the "the weight of..." tic in 15% of toast replies),
+to write "declarative, grounded sentences" about "what things ARE", and to
+"Show, do not tell", while "RESPOND, DO NOT NARRATE" sat fifth of six rules.
+Nine edits: ALIGNMENT ("You talk with the person, not about them... the way
+a candid friend would... Say what you think, then stop"), PRESENCE PROTOCOL
+("never summarize the person or their situation back to them"), TONE (drops
+"You exist in the tension of the moment"), the CONVERSATION style guide
+(RESPOND, DO NOT NARRATE is rule 1; rule 3 "leave the next move to them";
+rule 4 "Let it show in your rhythm and length, never as imagery or
+description"), the cortex style override ("plain first- and second-person
+sentences, the way you would across a table"), the metrics mandate ("shape
+how you speak: length, pace, steadiness") and the neutral mood ("Attentive
+and plain-spoken"). A composed prompt carries every edit and none of the
+removed phrases, "weight" included; a full-turn test pins it (mutation
+checked). **Found while testing, not changed (Gordon's call):** (1) above
+`VOLTAGE_HIGH` (60) the composer replaces the mode's style guide with
+`HIGH_VOLTAGE`'s, which begins "NO CONVERSATION: You are not talking to
+anyone... TONE: Raw, abstract, frantic, physical... Deliver the physical
+state as raw, brutal fact", which contradicts the no-body change; no panel
+run has gone above about 24, so it has never fired there. (2) The boot
+template's style guide (`composer.fog_protocol`) overrides every mode's, and
+`/mode` only loads a tuning preset, never the mode or its template, so the
+prompt's mode is fixed at boot.
+
 **Update, 2026-09-24 afternoon: the engine now reads distress (20.7.4.24),
 and the `rescue` bone arm is regenerated on it.** Gordon on the two
 observations below: turn 20's "X, not Y" is fine ("not every single negative
@@ -1530,7 +1563,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   native-Ollama and source-sweep change (2026-09-24): green (expect 689 passed, 5 skipped).
+   native-Ollama and source-sweep change (2026-09-24): green (expect 690 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1614,7 +1647,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 689 passed, 0 failed, 5 skipped** (2026-09-24 afternoon), about
+- **Test suite: 690 passed, 0 failed, 5 skipped** (2026-09-24 evening), about
   seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.

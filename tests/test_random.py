@@ -627,6 +627,28 @@ class RandomTest(BoneTestCase):
             self.assertNotIn(claim, prompt)
         self.assertIn("computer program", prompt)
 
+    def test_a_conversation_prompt_asks_for_a_partner_not_a_narrator(self):
+        """The prompt pulled toward describing: "observant", "observe the fire", "declarative sentences",
+        "Show, do not tell", and "weight" three times, with "RESPOND, DO NOT NARRATE" fifth of six rules."""
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value="Start with the tire story.")
+        from engine.struts import safe_get
+
+        # Above VOLTAGE_HIGH the HIGH_VOLTAGE guide replaces the mode's; the test engine boots hot.
+        cortex_cfg = safe_get(self.engine.cortex.composer.cfg, "CORTEX", {})
+        calm = patch.dict(cortex_cfg, {"VOLTAGE_HIGH": 1000.0}) if isinstance(cortex_cfg, dict) \
+            else patch.object(cortex_cfg, "VOLTAGE_HIGH", 1000.0)
+        # A CONVERSATION boot loads this template; the test engine boots in ADVENTURE.
+        self.engine.cortex.composer.load_template(self.engine.prompt_library["CONVERSATION"])
+        with calm:
+            self.engine.process_turn("I found one good memory for the toast.")
+        prompt = [c.args[0] for c in self.engine.cortex.llm.generate.call_args_list
+                  if "=== PARTNER INPUT ===" in c.args[0]][-1]
+        for pull in ("weight", "observe the fire", "bservant", "declarative", "Show, do not tell", "your narrative"):
+            self.assertNotIn(pull, prompt)
+        self.assertLess(prompt.index("RESPOND, DO NOT NARRATE"), prompt.index("TONE: Candor over empathy"))
+
     def test_the_pause_pool_never_mentions_the_engine_and_never_asks(self):
         pool = LoreManifest.get_instance().get("ux_strings", "brain_strings")["cortex_pause"]
         self.assertGreaterEqual(len(pool), 4)
