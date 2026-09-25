@@ -168,6 +168,9 @@ class ArbitrationPhase(SimulationPhase):
             safe_get(safe_get(self.eng.config, "STAGE", {}), "SILENCE_COST", 2.0)
         )
         self.eng.bio.mito.adjust_atp(-cost, "Stage Manager: negotiated silence")
+        # A held turn skips the reply and stabilization that would bring voltage down.
+        bleed = float(safe_get(safe_get(self.eng.config, "STAGE", {}), "HOLD_VOLTAGE_BLEED", 0.25))
+        ctx.physics.voltage = float(ctx.physics.voltage) * (1.0 - bleed)
         held = (
             ux("cycle_strings", "stage_manager_silence")
             or "The Stage Manager holds the floor empty. Nothing here is ready to be said."
@@ -220,6 +223,7 @@ class ArbitrationPhase(SimulationPhase):
             atp=atp,
             nominations=getattr(ctx, "nominations", []),
             somatic_budget=getattr(ctx, "somatic_budget", None),
+            grace=bool(getattr(self.eng, "in_grace", lambda: False)()),
         )
         ctx.stage_verdict = verdict
         issue_receipt(

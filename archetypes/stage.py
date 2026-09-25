@@ -83,9 +83,16 @@ class StageManager:
         default_voice: str = "NARRATOR",
         nominations: Optional[list[Nomination]] = None,
         somatic_budget: Any = None,
+        grace: bool = False,
     ) -> Verdict:
         nominations = nominations or []
-        if nominations:
+        if grace:
+            # Early turns: only a hard nomination (the person's own [SILENCE], an exploit, consent) holds.
+            nominations = [n for n in nominations if n.magnitude >= 100.0]
+        max_holds = int(self._cfg("MAX_CONSECUTIVE_HOLDS", 2))
+        # Two silent turns is the absolute max; the third speaks, whatever nominated a hold.
+        at_cap = self.consecutive_holds >= max_holds
+        if nominations and not at_cap:
             winning_nom = max(nominations, key=lambda n: n.magnitude)
             user_distressed = False
             if somatic_budget and getattr(somatic_budget, "sentence_cap", 100) <= 3:
@@ -101,11 +108,19 @@ class StageManager:
                     adjustments={"refusal_packet": winning_nom.packet} if winning_nom.packet else {},
                     gate=winning_nom.gate,
                 )
-            
+        if at_cap:
+            self.consecutive_holds = 0
+            voice = tension.voices[0] if tension.voices else default_voice
+            return Verdict(
+                SPEAK, voice, f"held {max_holds} turns already; {voice} takes the floor", tension
+            )
+
         if not tension.voices:
+            self.consecutive_holds = 0
             return Verdict(SPEAK, default_voice, "no voice triggered", tension)
 
         if not tension.is_tense:
+            self.consecutive_holds = 0
             return Verdict(
                 SPEAK, tension.voices[0], "one voice, nothing to negotiate", tension
             )
@@ -121,15 +136,9 @@ class StageManager:
                 dict(data.get("adjustments") or {}),
             )
 
-        max_holds = int(self._cfg("MAX_CONSECUTIVE_HOLDS", 2))
-        if self.consecutive_holds >= max_holds:
+        if grace:
             self.consecutive_holds = 0
-            return Verdict(
-                SPEAK,
-                tension.voices[0],
-                f"held {max_holds} turns already; {tension.voices[0]} takes the floor",
-                tension,
-            )
+            return Verdict(SPEAK, tension.voices[0], f"{tension}; early turns, {tension.voices[0]} carries it", tension)
 
         atp_floor = self._cfg("SYNTHESIS_ATP_FLOOR", 25.0)
         if float(atp) < atp_floor:

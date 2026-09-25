@@ -16,7 +16,9 @@ class TheVillageCouncil:
         def gv(k, d=0.0):
             return float(safe_get(p, k, d))
 
-        V, F = gv("voltage", 30.0), gv("narrative_drag", 0.6)
+        # The governor's voltage setpoint is where the engine lives; APRIL fires on distance from it.
+        v_home = float(safe_get(safe_get(safe_get(safe_get(BoneConfig, "BIO", {}), "PID_SETTINGS", {}), "VOLTAGE", {}), "setpoint", 10.0))
+        V, F = gv("voltage", v_home), gv("narrative_drag", 0.6)
         P = (
             float(_bio_state.get("stamina", 100.0))
             if _bio_state
@@ -136,7 +138,7 @@ class TheVillageCouncil:
             (V > cv("TRIG_GIDEON_V", 70.0), Prisma.YEL, "village_gideon"),
             (
                 ros > cv("TRIG_APRIL_ROS", 20.0)
-                or abs(V - 30.0) > cv("TRIG_APRIL_V_DEV", 20.0),
+                or abs(V - v_home) > cv("TRIG_APRIL_V_DEV", 20.0),
                 Prisma.CYN,
                 "village_april",
             ),

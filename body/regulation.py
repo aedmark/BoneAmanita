@@ -65,7 +65,6 @@ class PIDController:
 @dataclass
 class MetabolicGovernor:
     mode: str = "COURTYARD"
-    GRACE_PERIOD: int = 5
     psi_mod: float = 0.2
     kappa_target: float = 0.0
     drag_floor: float = 2.0

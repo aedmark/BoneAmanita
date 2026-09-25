@@ -1,36 +1,98 @@
-# Project Update: Structural Invariant Governance (The Warden & The Mechanism)
+# The Warden and the Gatekeeper
 
-BoneAmanita is an experimental framework designed to embed Large Language Models within a strictly deterministic, simulated physical environment. Rather than treating LLMs as omnipotent conversationalists, the framework treats them as biological components operating under literal metabolic constraints—tracking exhaustion, ATP expenditure, and narrative momentum as rigid numerical values. 
+What `69caa5d` added, as the code does it. Revised 2026-09-25 (20.7.4.34):
+an audit found the first version of this report claimed more than the code
+did. Where the claim was worth keeping, the code was changed to match; where
+it was not, the claim was cut. Both are listed at the end.
 
-Today, we significantly hardened the boundary between the model's stochastic generation and the framework's deterministic state space by implementing a strict governance pipeline. 
+BoneAmanita is a prompt builder with a simulated state behind it (see the
+README). The model's output is untrusted input to that state. These two
+pieces check it before it gets in.
 
-## What We Built Today
+## The Warden: one JSON object per reply
 
-We introduced two new paradigms to the framework: **The Warden** and **The Mechanism (Gatekeeper)**.
+`PromptComposer` ends every prompt with a `STRUCTURAL INVARIANT GOVERNANCE`
+block: reply with exactly one JSON object and nothing else, using one of two
+tools.
 
-### 1. The Warden (Syntactic Sandboxing)
-Historically, BoneAmanita allowed the model to output free-form narrative prose and extracted context using regex sweeps. This left the system vulnerable to jailbreaks, prompt bleeding, and unconstrained formatting errors. 
+- `nominate_response`: `{"tool": "nominate_response", "args": {"internal_monologue": "...", "text": "..."}}`
+- `commit_memory`: the same, plus `"evidence"`, an exact quote from the dialogue.
 
-We replaced this with a strict JSON-enforced boundary. The system prompt is now forcefully prepended with a `STRUCTURAL INVARIANT GOVERNANCE` block. The model is treated as a sandboxed system actor that may only output exactly one JSON object per turn, executing specific "tools" (e.g., `nominate_response`, `commit_memory`). If the model attempts to generate conversational prose or markdown outside of the designated JSON schema, the turn is structurally intercepted and rejected before it reaches the simulation pipeline.
+The cortex takes the object from a fenced block if there is one, otherwise
+from the first `{` to the last `}`. If it does not parse, or has no `tool`
+or `args`, the draft is rejected (`warden.json_gate` receipt and a log line)
+and the model is asked again with the reason. Only `args.text` goes on to
+the rest of the pipeline (lexical firewall, validator, style rules), so prose
+outside the JSON never reaches the person.
 
-### 2. The Mechanism & The Gatekeeper (Semantic Verification)
-LLMs are highly prone to hallucinating facts, memories, and citations. To solve this, we introduced an Invariant Gatekeeper that evaluates the model's requested state transitions against physical reality. 
+On gemma4:12b, 6 of 30 CONVERSATION replies were rejected once for not being
+JSON and all passed on the retry (2026-09-25 real-model run).
 
-A primary feature of this Gatekeeper is **Evidence-Gated Memory**. If the model attempts to execute a `commit_memory` action, it must provide exact, verbatim citations from the historical dialogue buffer. If the Gatekeeper detects that the cited evidence was hallucinated or altered, the memory commit is completely blocked.
+## The Gatekeeper: evidence-gated memory
 
-### 3. Trial-and-Commit Atomic State
-Because LLM outputs are inherently unpredictable, trusting their state transitions is dangerous. We refactored the central simulation loop to run on a "Trial-then-Commit" architecture. 
+`engine/invariants.py`. A `commit_memory` passes only if its `evidence` is an
+exact quote from the dialogue buffer:
 
-Before the model is invoked, the engine freezes a deep snapshot of all metabolic and structural parameters. The model's response is generated, parsed, and evaluated against both local invariants (like the Evidence Gate) and global invariants (such as ensuring the turn's token generation didn't force the system's ATP pool below 0). 
+- case and words must match exactly; runs of whitespace are treated as one space;
+- at least five words, so a stray word or a single letter cannot pass as a quote;
+- the dialogue buffer holds both sides of the conversation, so the quote can
+  come from the person or from an earlier reply.
 
-If any invariant is breached, the model is fed a `SYSTEM REJECTION` payload and forced to retry silently. If it exhausts its retry allowance, the system discards the corrupted trial state, thaws the pristine pre-turn snapshot, and cleanly degrades the turn—preventing any hallucinated or malformed output from permanently corrupting the simulation state.
+A failed check is an `InvariantViolation`: the draft is rejected
+(`gatekeeper.invariant` receipt) and the model is asked again.
 
-## What BoneAmanita Can Do Now
+What is stored is the verified quote itself, as the memory's text and
+trigger words; the model's `internal_monologue` is never stored. The memory
+layer keeps an engram only above its significance threshold (voltage
+against `SPORES.CONSOLIDATION_THRESHOLD`); the log says whether it was kept.
 
-With these systems fully integrated, BoneAmanita is now capable of:
+This grounds what the Warden commits. It does not cover the engine's other
+memory writes: the per-turn engram, dreams and REM consolidation work as they
+always have.
 
-- **Self-Healing Execution**: The system can safely absorb and silently correct degenerate model outputs without human intervention or state corruption.
-- **Strictly Grounded Memory**: The model's internal long-term memory graph is now cryptographically bound to the actual dialogue that occurred, entirely eliminating hallucinated historical context.
-- **Atomic Simulation Integrity**: The continuous state-space (tracking health, stamina, and biological variables) is mathematically guaranteed to never fall into an illegal or paradoxical state, regardless of the model's generated text. 
+## Retries and what happens when they run out
 
-By treating the LLM as an untrusted biological organ rather than a trusted software layer, BoneAmanita has achieved a profound level of deterministic stability while maintaining dynamic, generative capabilities.
+Every rejection (the Warden's, the Gatekeeper's, the validator's, the style
+rules') costs an attempt: `CORTEX.COGNITIVE_RETRY_LIMIT` (2), lowered by the
+somatic budget's allowance. When they run out, the person gets a short pause
+line from `lore/ux_strings.json` (`cortex_pause`, for example "One thing at a
+time."). That is a degraded turn, not a healed one. The first 2026-09-25
+run showed it on ADVENTURE turns where the DSPy critic rejected every draft;
+the critic is now off in ADVENTURE (`CORTEX.DSPY_CRITIC_DISABLED_MODES`).
+
+## The turn snapshot
+
+`CycleSimulator.run_simulation` snapshots health, stamina, trauma, the soul
+and the mitochondrial state before the phases run, and restores them if the
+phase run raises or ATP ends below zero. In practice it rarely fires: each
+phase's own errors are caught by `PhaseExecutor` first, and ATP is clamped at
+zero. The physics packet, memory, the village and the dialogue are not in the
+snapshot.
+
+## Response length
+
+Not the Gatekeeper's job. Length is set by the somatic budget: a token
+ceiling when the person's state calls for a word cap, and the validator's
+sentence trim. An earlier budget check here read a context that does not
+exist and never ran; it was removed rather than wired in, because a
+rejection costs a retry and exhausted retries end in the fallback line.
+
+## Audit, 2026-09-25
+
+Made true in the code:
+- "Exact, verbatim citations": the check was a case-insensitive substring,
+  so any single letter from the dialogue passed. Now exact, five words
+  minimum.
+- "Evidence-gated memory": commits were never stored (the cortex looked for a
+  memory handle it does not have), and would have stored the unverified
+  monologue. Now the verified quote is stored.
+
+Cut from this report:
+- "Cryptographically bound": no cryptography is involved; it is an exact
+  string match.
+- "Mathematically guaranteed to never fall into an illegal state": the
+  snapshot covers five fields and rarely fires (above).
+- "Entirely eliminating hallucinated historical context": only Warden commits
+  are gated.
+- "Self-healing": exhausted retries end in a fallback line.
+- The length check: removed (above), and the prompt no longer threatens it.

@@ -172,6 +172,8 @@
     "map": "Navigation check",
     "mode": "Switch the experience mode; the conversation carries over",
     "preset": "Load a tuning preset without changing the mode",
+    "allow": "Let a held file edit through (add keep to allow it from now on)",
+    "deny": "Drop a held file edit",
     "debug": "Toggle verbose logs",
     "exit": "Shutdown",
     "soul": "Introspection",
@@ -211,6 +213,8 @@
         "/save",
         "/mode",
         "/preset",
+        "/allow",
+        "/deny",
         "/exit",
         "/help"
       ],
@@ -239,6 +243,8 @@
   "command_alerts": {
     "reality_lock": "COMMAND REJECTED: Reality Depth {depth} prohibits administrative override.",
     "mode_usage": "Usage: /mode [ADVENTURE | CONVERSATION | CREATIVE | TECHNICAL]",
+    "allow_usage": "Usage: /allow PATH [keep]. A folder ending in / with keep covers everything under it.",
+    "deny_usage": "Usage: /deny PATH",
     "preset_usage": "Usage: /preset [ZEN_GARDEN | THUNDERDOME | SANCTUARY | LABORATORY | STANDARD | ZEN | MANIC | DEBUG]",
     "preset_unknown": "Unknown preset: {preset}.",
     "preset_loaded": "Loaded preset {preset}.",

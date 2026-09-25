@@ -1,3 +1,5 @@
+import json
+import logging
 import math
 import os
 import random
@@ -8,6 +10,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from engine.constants import Prisma
+
+logger = logging.getLogger("bone")
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -280,10 +284,66 @@ class RandomRetrievalNavigator:
         }
 
 
+class SubstrateLedger:
+    """Files under output/ the engine created, and edits the person granted on the rest."""
+
+    FILE = ".substrate_ledger.json"
+    _EDIT_VERBS = re.compile(
+        r"\b(edit|change|update|modify|fix|rewrite|overwrite|refactor|add|append|replace|patch|tweak|adjust|correct|clean up|write)\b"
+    )
+    _NEGATION = re.compile(r"\b(don't|dont|do not|never|leave|without touching|not touch)\b")
+
+    def __init__(self, base_dir: str):
+        self.path = os.path.join(base_dir, self.FILE)
+        self.created: List[str] = []
+        self.grants: List[Dict[str, Any]] = []
+        if not os.path.exists(self.path):
+            return
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                data = json.load(f)
+            self.created = list(data.get("created", []))
+            self.grants = list(data.get("grants", []))
+        except (OSError, ValueError) as e:
+            # An unreadable ledger means every existing file is foreign: ask first.
+            logger.warning(f"Substrate ledger unreadable, treating output/ as foreign: {e}")
+
+    def save(self):
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump({"created": self.created, "grants": self.grants}, f, indent=2)
+
+    def record_created(self, rel: str):
+        if rel not in self.created:
+            self.created.append(rel)
+
+    def grant(self, rel: str, recursive: bool = False):
+        rel = rel.rstrip("/")
+        if not any(g["path"] == rel and g["recursive"] == recursive for g in self.grants):
+            self.grants.append({"path": rel, "recursive": recursive})
+
+    def may_edit(self, rel: str) -> bool:
+        if rel in self.created:
+            return True
+        for g in self.grants:
+            if rel == g["path"] or (g["recursive"] and (g["path"] in ("", ".") or rel.startswith(g["path"] + "/"))):
+                return True
+        return False
+
+    @classmethod
+    def requested(cls, rel: str, request_text: str) -> bool:
+        """The person's own message asked to edit this file: that request is the permission."""
+        text = (request_text or "").lower()
+        names = {rel.lower(), os.path.basename(rel).lower()}
+        if not any(re.search(rf"(?<![\w./-]){re.escape(n)}(?![\w-])", text) for n in names):
+            return False
+        return bool(cls._EDIT_VERBS.search(text)) and not cls._NEGATION.search(text)
+
+
 class TheSubstrate:
     def __init__(self, events_ref):
         self.events = events_ref
         self.pending_writes: List[Dict[str, Any]] = []
+        self.held_writes: Dict[str, Dict[str, Any]] = {}
         self._cords_instance = None
         from engine.core import LoreManifest
 
@@ -296,19 +356,61 @@ class TheSubstrate:
     def queue_write(self, path: str, content: str):
         self.pending_writes.append({"path": path, "content": content, "retries": 0})
 
-    def execute_writes(self, stamina_pool: float) -> Tuple[List[str], float]:
+    @staticmethod
+    def _base_dir() -> str:
+        os.makedirs("output", exist_ok=True)
+        return os.path.realpath("output")
+
+    def ledger(self) -> SubstrateLedger:
+        return SubstrateLedger(self._base_dir())
+
+    def approve(self, rel: str, keep: bool = False, recursive: bool = False) -> bool:
+        """The person allowed a held write: once, or kept as a grant (a folder grant is recursive)."""
+        rel = rel.strip().lstrip("/")
+        if keep:
+            ledger = self.ledger()
+            ledger.grant(rel, recursive)
+            ledger.save()
+        released = [
+            k for k in self.held_writes if k == rel.rstrip("/") or (recursive and k.startswith(rel.rstrip("/") + "/"))
+        ]
+        for k in released:
+            w = self.held_writes.pop(k)
+            w["approved"] = True
+            self.pending_writes.append(w)
+        return bool(released) or keep
+
+    def deny(self, rel: str) -> bool:
+        return self.held_writes.pop(rel.strip().lstrip("/"), None) is not None
+
+    def execute_writes(self, stamina_pool: float, request_text: str = "") -> Tuple[List[str], float]:
         logs, cost = [], 0.0
         if not self.pending_writes:
             return logs, cost
-        os.makedirs("output", exist_ok=True)
-        base_dir = os.path.realpath("output")
+        base_dir = self._base_dir()
+        ledger = SubstrateLedger(base_dir)
         retained_writes = []
         for w in self.pending_writes:
             s_path = os.path.realpath(os.path.join(base_dir, w["path"].lstrip("/")))
             s_name = os.path.basename(s_path)
-            if os.path.commonpath([base_dir, s_path]) != base_dir:
+            if os.path.commonpath([base_dir, s_path]) != base_dir or s_path == ledger.path:
                 logs.append(
                     f"{Prisma.VIOLET}FATAL ERROR: Path traversal breach detected ({w['path']}). Purged.{Prisma.RST}"
+                )
+                continue
+            rel = os.path.relpath(s_path, base_dir).replace(os.sep, "/")
+            existed = os.path.exists(s_path)
+            if (
+                existed
+                and not w.get("approved")
+                and not ledger.may_edit(rel)
+                and not SubstrateLedger.requested(rel, request_text)
+            ):
+                self.held_writes[rel] = w
+                logs.append(
+                    f"{Prisma.OCHRE}I want to change output/{rel}, which I didn't create, so I haven't touched it. "
+                    f"/allow {rel} lets this edit through, /allow {rel} keep lets me edit it from now on, "
+                    f"/deny {rel} drops it.{Prisma.RST}"
                 )
                 continue
             w_cost = len(w["content"]) * self.config.get("ATP_COST_PER_CHAR", 0.02)
@@ -334,6 +436,9 @@ class TheSubstrate:
                 os.makedirs(os.path.dirname(s_path), exist_ok=True)
                 with open(s_path, "w", encoding="utf-8") as f:
                     f.write(w["content"])
+                if not existed:
+                    ledger.record_created(rel)
+                    ledger.save()
                 cost += w_cost
                 kb_size = len(w["content"]) / 1024.0
                 logs.append(

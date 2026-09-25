@@ -71,6 +71,7 @@ class ToleranceReachesTheGates(BoneTestCase):
 
     def test_a_genuine_extreme_is_still_refused(self):
         """Tolerance widens the gate; it does not remove it."""
+        self.engine.tick_count = int(self.engine.config.MAIN.GRACE_TURNS)  # past the bunny hill
         self.engine.config.GATE_TOLERANCE = 1.6
         extreme = {"narrative_drag": 9.0, "chi": 0.95, "m_a": 0.49}
         ctx3 = CycleContext(

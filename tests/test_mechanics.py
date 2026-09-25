@@ -75,33 +75,19 @@ class MechanicsTests(BoneTestCase):
             mutated,
             "[FAIL] Pragmatist failed to execute the Trope Breach. Slop leaked through.",
         )
-        phys_state = {"narrative_drag": 10.0, "entropy": 0.0}
+        # The length and hedge rules are gone (20.7.4.34): the somatic budget sets
+        # length, and "it could be said" is a banned phrase in style_crimes.json.
+        phys_state = {"narrative_drag": 10.0, "entropy": 0.0, "voltage": 5.0}
         bloated_draft = "Word " * 50
         mutated, needs_rewrite = pragmatist.enforce_maxims(
             bloated_draft, "Tell me a story", phys_state, stamina=20.0
         )
-        self.assertTrue(
-            needs_rewrite,
-            "[FAIL] Pragmatist failed to trigger a rewrite on exhausted bloat. Cognitive overload imminent.",
-        )
-        phys_state = {"narrative_drag": 0.0, "entropy": 0.1}
-        hedging_draft = "Perhaps it could be said that the sky is blue."
+        self.assertFalse(needs_rewrite)
+        hedging_draft = "Perhaps the sky is blue."
         mutated, needs_rewrite = pragmatist.enforce_maxims(
             hedging_draft, "What color is the sky?", phys_state, stamina=100.0
         )
-        self.assertNotIn(
-            "Perhaps", mutated, "[FAIL] Pragmatist failed to strip 'Perhaps'."
-        )
-        self.assertNotIn(
-            "it could be said that",
-            mutated,
-            "[FAIL] Pragmatist failed to strip 'it could be said that'.",
-        )
-        self.assertIn(
-            "the sky is blue.",
-            mutated,
-            "[FAIL] Pragmatist stripped too much and destroyed the bedrock logic.",
-        )
+        self.assertEqual(mutated, hedging_draft, "'perhaps' is ordinary English")
 
     def test_ludicrous_speed_skips_the_typewriter(self):
         from engine.presets import BoneConfig

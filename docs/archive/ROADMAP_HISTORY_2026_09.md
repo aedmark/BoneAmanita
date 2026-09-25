@@ -357,7 +357,7 @@ reader does not have to work that out from the variable name.
 
 ## B4. Make the credits true, **DONE**
 
-`credits.txt` and `docs/CREDITS.MD` have been updated to reflect the new reality: BoneAmanita implements the `CreativeDeterminantEngine` and the `SignBitmap` memory aligner. We no longer claim "lean4 certified algorithms" for PDEs that we aren't even running anymore. We now properly attribute the math we actually use.
+`CREDITS.MD` and `docs/CREDITS.MD` have been updated to reflect the new reality: BoneAmanita implements the `CreativeDeterminantEngine` and the `SignBitmap` memory aligner. We no longer claim "lean4 certified algorithms" for PDEs that we aren't even running anymore. We now properly attribute the math we actually use.
 
 Verification is attributed correctly, and the correct version is stronger
 than either the overclaim or my first attempt at fixing it. **`ordvec` is

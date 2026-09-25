@@ -93,6 +93,13 @@ and only Adventure has an inventory and a world to move through.
 | `/hud <depth>` | Set readout depth: `warm`, `lite`, `core` or `deep`. |
 | `/reload` | Hot-reload `lore/*.json` without restarting. |
 | `/look`, `/use`, `/inventory`, `/map` | Adventure mode only: the world and what you carry. |
+| `/allow <path> [keep]`, `/deny <path>` | Answer a held file edit (below). `keep` allows that file from now on; a folder ending in `/` with `keep` covers everything under it. |
+
+Files the model writes (Technical mode's `<write_file>` blocks, `/journal`)
+go under `output/`. It creates new files and edits its own freely. An existing
+file it did not create is left alone and the edit is held until you `/allow`
+or `/deny` it, unless your own message asked for that file to be changed.
+`output/.substrate_ledger.json` records what it created and what you allowed.
 
 ## How a turn works
 
@@ -350,7 +357,7 @@ check.
 | `ROADMAP.md` | Current priorities plus dated measurements and historical implementation plans. |
 | `SESSION_HANDOFF.md` | The project's reference document: what is true right now, the decisions that bind changes, and which traps to avoid. Read before changing anything. |
 | `docs/README.MD` | The Hypervisor, BoneAmanita's no-math sibling for cloud models. |
-| `credits.txt` | Full lineage and attribution. |
+| `CREDITS.MD` | Full lineage and attribution. |
 | `license.txt` | MIT, human/computer variant. |
 
 ## Credits
@@ -367,7 +374,7 @@ rather than inspirational:
 - **Bradley Bates** ([bradsadevnow](https://github.com/bradsadevnow/)) for the "Gloss" framework and endless inspiration and advice.
 
 
-`credits.txt` has the full list and the specifics. On verification: `ordvec` is
+`CREDITS.MD` has the full list and the specifics. On verification: `ordvec` is
 itself Lean 4 verified and the Creative Determinant has its own formalisation,
 both in Project Navi's repos. BoneAmanita's own implementation of those equations
 is ordinary Python and carries no proofs.

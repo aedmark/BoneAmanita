@@ -23,7 +23,7 @@ class DragProfile:
 
 @dataclass
 class EnergyState:
-    voltage: float = 30.0
+    voltage: float = 0.0
     health: float = 100.0
     stamina: float = 100.0
     trauma: float = 0.0
@@ -201,6 +201,8 @@ class PhysicsPacket:
 
     def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
+        # asdict copies a Counter as Counter(pairs), nesting its keys a tuple deeper.
+        data["matter"]["counts"] = dict(self.matter.counts)
         for k, v in self.__dict__.items():
             if k not in data and not k.startswith("_"):
                 data[k] = v

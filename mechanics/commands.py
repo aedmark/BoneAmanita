@@ -670,18 +670,50 @@ class CommandProcessor:
             "SYS", )
         return True
 
-    def _execute_substrate_write(self, file_name: str, content: str):
+    def _substrate(self):
         substrate = getattr(self.interface.eng, "substrate", None)
         if substrate is None:
             from mechanics.tools import TheSubstrate
             substrate = TheSubstrate(getattr(self.interface.eng, "events", None))
             self.interface.eng.substrate = substrate
+        return substrate
+
+    def _execute_substrate_write(self, file_name: str, content: str):
+        substrate = self._substrate()
         substrate.queue_write(file_name, self.P.strip(content))
+        self._flush_substrate(substrate)
+
+    def _flush_substrate(self, substrate):
         stamina = self.interface.get_resource("stamina")
         write_logs, cost = substrate.execute_writes(stamina)
         self.interface.modify_resource("stamina", -cost)
         for log in write_logs:
             self.interface.log(log)
+
+    def _cmd_allow(self, parts):
+        """Let a held file edit through: /allow PATH once, /allow PATH keep for good (a folder/ grant is recursive)."""
+        if len(parts) < 2:
+            self.interface.log(ux("command_alerts", "allow_usage") or "Usage: /allow PATH [keep]")
+            return True
+        rel = parts[1]
+        keep = len(parts) > 2 and parts[2].lower() == "keep"
+        substrate = self._substrate()
+        if not substrate.approve(rel, keep=keep, recursive=keep and rel.endswith("/")):
+            self.interface.log(f"No held edit for output/{rel.lstrip('/')}.")
+            return True
+        if keep:
+            self.interface.log(f"I can edit output/{rel.lstrip('/')} from now on.")
+        self._flush_substrate(substrate)
+        return True
+
+    def _cmd_deny(self, parts):
+        """Drop a held file edit: /deny PATH."""
+        if len(parts) < 2:
+            self.interface.log(ux("command_alerts", "deny_usage") or "Usage: /deny PATH")
+            return True
+        dropped = self._substrate().deny(parts[1])
+        self.interface.log(f"Dropped the edit to output/{parts[1].lstrip('/')}." if dropped else f"No held edit for output/{parts[1].lstrip('/')}.")
+        return True
 
     def _cmd_journal(self, _parts):
         cost = float(safe_get(self.cmd_cfg, "COST_JOURNAL", 15.0))

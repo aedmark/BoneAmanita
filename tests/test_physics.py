@@ -105,22 +105,31 @@ class TopologicalPrimitivesTest(BoneTestCase):
             1.2,
             "[FAIL] Novel logic failed to expand the fractal dimension.",
         )
-        initial_atp = self.engine.bio.mito.state.atp_pool
         self.engine.host_stats.efficiency_index = 1.0
         self.engine.tick_count = 6
         self.engine.cortex.dspy_critic.enabled = False
+        logged = []
+        real_log = self.engine.events.log
+        def spy(text, *args, **kwargs):
+            logged.append(str(text))
+            return real_log(text, *args, **kwargs)
         with patch.object(
             self.engine.cortex.llm, "generate", return_value='{"tool": "nominate_response", "args": {"text": "I agree completely."}}'
-        ):
+        ), patch.object(self.engine.events, "log", side_effect=spy), patch.object(
+            self.engine, "drain_atp", wraps=self.engine.drain_atp
+        ) as drain:
             result = self.engine.process_turn("Do you agree?")
-        self.assertIn(
-            "FALSE COHESION BREAK",
-            result.get("ui", ""),
+        self.assertTrue(
+            any("The Jester detected a Point Attractor" in line for line in logged),
             "[FAIL] The Jester failed to shatter the mathematically proven point attractor.",
         )
-        self.assertLess(
-            self.engine.bio.mito.state.atp_pool,
-            initial_atp,
+        # Gordon: a technical line, never shown to the player.
+        self.assertNotIn("FALSE COHESION BREAK", result.get("ui", ""))
+        self.assertNotIn("has seized the architecture", result.get("ui", ""))
+        # Net ATP over the turn also carries unrelated refunds, so check the burn itself.
+        self.assertIn(
+            5.0,
+            [c.args[0] for c in drain.call_args_list],
             "[FAIL] ATP was not burned to break the false cohesion.",
         )
         phys_pkt = result.get("physics", {})

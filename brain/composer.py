@@ -667,6 +667,16 @@ class PromptComposer:
             if somatic_budget.offer_to_carry_load:
                 budget_lines.append("Your partner is carrying a heavy load. Offer to carry part of the burden.")
             somatic_budget_block = "\n".join(budget_lines) + "\n"
+        if out_of_reach := state.get("out_of_reach"):
+            somatic_budget_block += (
+                f"=== OUT OF REACH ===\nThey asked for something you cannot do. {out_of_reach.limit} "
+                "Say that plainly, once, and offer what you can do instead. Do not pretend to do it.\n"
+            )
+        if modifiers["grace_period"]:
+            somatic_budget_block += (
+                "=== EARLY TURNS ===\nYou have only just started talking. Keep it low-key: answer what they "
+                "said, simply, and let them set the pace. No big moves yet.\n"
+            )
 
         blocks = [
             ("kernel", "=== SYSTEM KERNEL ==="),
@@ -680,7 +690,7 @@ class PromptComposer:
             ("input", input_block),
             ("entity_prefix", entity_prefix),
             ("thermal_lock", cd_block),
-            ("warden_instruction", "=== STRUCTURAL INVARIANT GOVERNANCE ===\nYou are operating inside a strictly governed harness.\nEach turn you MUST output EXACTLY ONE JSON object and nothing else. No prose. No markdown blocks outside the JSON.\nTools available:\n- nominate_response: {'tool': 'nominate_response', 'args': {'internal_monologue': '...', 'text': '...'}}\n- commit_memory: {'tool': 'commit_memory', 'args': {'internal_monologue': '...', 'text': '...', 'evidence': '<exact verbatim text from dialogue history>'}}\nIf your text length violates the ATP budget, or your memory evidence is hallucinated, your action will be structurally REJECTED by the Gatekeeper.\nOUTPUT ONLY VALID JSON."),
+            ("warden_instruction", "=== STRUCTURAL INVARIANT GOVERNANCE ===\nYou are operating inside a strictly governed harness.\nEach turn you MUST output EXACTLY ONE JSON object and nothing else. No prose. No markdown blocks outside the JSON.\nTools available:\n- nominate_response: {'tool': 'nominate_response', 'args': {'internal_monologue': '...', 'text': '...'}}\n- commit_memory: {'tool': 'commit_memory', 'args': {'internal_monologue': '...', 'text': '...', 'evidence': '<exact verbatim text from dialogue history>'}}\ncommit_memory's evidence must be an exact quote of at least five words from the dialogue; anything else is REJECTED by the Gatekeeper.\nOUTPUT ONLY VALID JSON."),
         ]
         trimmed = self._fit_to_window(blocks, style_notes, valid_history)
         parts = [text for _, text in blocks if text]

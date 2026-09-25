@@ -1,0 +1,59 @@
+{
+  "_NOTE": "What this engine cannot do, for mechanics/capabilities.py. A 'request' pattern only counts in a sentence that asks the engine for something (can you / please / I need you to / an imperative opening); a 'question' pattern counts on its own. Keep these to things it truly cannot do: a false positive tells the person no when the answer was yes.",
+  "LIMITS": [
+    {
+      "name": "LIVE_INFO",
+      "limit": "I can't see anything live: no internet, news, weather, prices or scores.",
+      "request": [
+        "\\b(?:search|browse|google|look up|check)\\b.{0,30}\\b(?:the )?(?:web|internet|online|google)\\b",
+        "\\b(?:go to|open|visit)\\s+(?:https?://|www\\.)"
+      ],
+      "question": [
+        "\\b(?:weather|forecast|stock price|share price|exchange rate|headlines|the news|latest news|the score)\\b.{0,40}\\b(?:today|tonight|tomorrow|right now|currently|at the moment|this week|latest)\\b",
+        "\\bwho won\\b.{0,40}\\b(?:last night|today|yesterday|this week)\\b"
+      ]
+    },
+    {
+      "name": "ACT_IN_THE_WORLD",
+      "limit": "I can't act outside this conversation: no calls, messages, emails, orders, bookings or payments.",
+      "request": [
+        "\\b(?:call|phone|ring|text|message|email|e-mail|dm)\\s+(?:my|your|the|him|her|them|\\d)(?!\\s*(?:function|method|api|endpoint|constructor|hook|callback|script)\\b)",
+        "\\bsend\\b.{0,30}\\b(?:email|e-mail|text|message|sms|invite)\\b",
+        "(?<!in )\\b(?:order|buy|purchase|book|reserve|pay)\\b.{0,20}\\b(?:me|for me|a table|a ticket|tickets|a flight|a room|online|the bill)\\b"
+      ]
+    },
+    {
+      "name": "DEVICES_AND_ACCOUNTS",
+      "limit": "I can't reach your devices or accounts: no lights, music, calendar, inbox or files outside my output folder.",
+      "request": [
+        "\\bturn (?:on|off|up|down)\\s+(?:the|my)\\s+(?:lights?|lamp|heat|heating|ac|a/c|air|tv|television|music|volume|thermostat|oven|stove|computer|pc|laptop|phone|wifi|router)\\b",
+        "\\bplay\\s+(?:some|a|the|my)?\\s*(?:music|song|playlist|album|podcast)\\b",
+        "\\b(?:check|read|open|clear)\\s+my\\s+(?:email|e-mail|inbox|messages|calendar|texts|voicemail|account)\\b",
+        "\\bset (?:a|an|my)\\s+(?:reminder|alarm|timer)\\b",
+        "\\bremind me\\b.{0,40}\\b(?:at \\d|in \\d+|in an? (?:hour|minute)|tomorrow|next week|on (?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\\b"
+      ]
+    },
+    {
+      "name": "RUN_CODE",
+      "limit": "I can write code, but I can't run it or see what it does.",
+      "request": [
+        "\\b(?:run|execute|compile)\\s+(?:this|that|it|the|my)\\b.{0,20}\\b(?:code|script|program|tests?|command|app|file|query|notebook)\\b"
+      ]
+    },
+    {
+      "name": "SENSES",
+      "limit": "I can only read text. I can't see pictures or hear audio.",
+      "request": [
+        "\\b(?:look at|see|view|check out)\\s+(?:this|the|my)\\s+(?:photo|picture|pic|image|screenshot|video|drawing)\\b",
+        "\\blisten to\\s+(?:this|the|my)\\s+(?:song|track|recording|audio|voice ?memo|clip|album|podcast)\\b"
+      ]
+    }
+  ],
+  "LENGTH": {
+    "name": "TOO_LONG",
+    "limit": "That is more than I can write in one reply. I can do it in parts.",
+    "words_per_page": 300,
+    "writing_verb": "\\b(?:write|draft|generate|produce|compose|give me|make me)\\b",
+    "whole_work": "\\b(?:whole|entire|full|complete)\\s+(?:novel|book|screenplay|thesis|dissertation)\\b"
+  }
+}

@@ -9,9 +9,164 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
-## Where things stand, 2026-09-24 midday (read this first)
+## Where things stand, 2026-09-25 (read this first)
 
-**RESUME HERE (2026-09-24, before a reboot). Real-model runs in every mode,
+**RESUME HERE (2026-09-25). The mode-failure plan below is built, plus
+Gordon's follow-ups (committed as 20.7.4.34; the real-model runs were still going).** All
+nine plan items in order, then the bunny hill with APRIL recentred, an
+impossible-request detector, the Warden report made honest, `BaseException`
+handlers reverted, and no DSPy critic in ADVENTURE. Every test
+is mutation checked (the fix removed, the test fails). They live in
+`tests/test_mode_failures.py`. Full suite: 742 passed, 5 skipped.
+
+**Found at the start: a commit the handoff did not know about.** After the
+plan was approved, `69caa5d` ("the Warden", with `docs/warden_integration_report.md`)
+landed: every reply must now be one JSON object
+(`{"tool": "nominate_response", "args": {"text": ...}}` or `commit_memory`
+with verbatim `evidence`), prose is rejected and retried, `engine/invariants.py`
+gatekeeps the word budget and memory evidence, and `CycleSimulator` freezes
+and thaws health, stamina, trauma, soul and mito around each turn. Its suite
+had 1 failure (700 passed): a new silent handler in the Warden's JSON gate
+took the silent-handler budget to 31 of 30. Fixed here by logging the
+rejection, like the Gatekeeper branch under it. The report's claims are
+dealt with in follow-up 4 below; the `BaseException` handlers in follow-up 5.
+- `scratch/` was emptied at 12:44 the same day, so the 09-24 probe scripts
+  and `mode_runs.py` were gone. `mode_runs.py` is rebuilt (below);
+  `scratch/mode_runs/probe.py` is a new stub-model probe (per-turn type,
+  voltage, health, ATP, holds).
+
+**What was built, by plan item:**
+1. **`counts`:** `PhysicsPacket.to_dict` copies `matter.counts` as a plain
+   dict after `asdict`, so snapshots keep the keys. Tests: a Counter
+   survives two snapshots; a real turn's counts are word categories; a
+   second death saves cleanly (the old code fails with the exact
+   `'tuple' object has no attribute 'upper'`).
+2. **Voltage start 0:** `EnergyState.voltage` default and the cold boot's
+   explicit reset (`engage_cold_boot` also set 30). APRIL was centred on
+   30 V, so a 0 V start woke it: see follow-up 1. Other
+   `safe_get(..., "voltage", 30.0)` fallbacks (pacemaker, governor,
+   projector) are missing-key defaults, left alone.
+3. **Hold cap:** `StageManager.negotiate` checks `MAX_CONSECUTIVE_HOLDS`
+   before any nomination, distress included; the third turn speaks. The
+   counter also resets on the two speaking branches that skipped it ("no
+   voice", "one voice"). Tests: every nomination kind (11 gates) x distressed
+   or not x three room sizes; `HHSHHSHHS`; three `[SILENCE]` turns through
+   `process_turn`.
+4. **Held turns and voltage:** a held turn still added about 1.5 V (it skips
+   the reply and Stabilization). `STAGE.HOLD_VOLTAGE_BLEED` (0.25) takes a
+   quarter off in `_hold_the_silence`. Stub probe, TECHNICAL: holds went
+   10.0 to 11.5 to 13.0 V, now 10.0 to 8.7 to 7.6 V. At very low voltage the
+   held turn's own gain can outweigh 25% (it settles near 4.5 V), which is
+   harmless.
+5. **ATP lock:** it was not only the script. Absolute friction sets drag to
+   999 on the packet the next pre-flight reads, and a halted turn never
+   builds a new packet, so every later sentence with a repeated word ("the")
+   scored full malignancy. Now drag at `ABSOLUTE_FRICTION` does not count
+   toward malignancy, and every halt recovers `BIO.ATP_HALT_RECOVERY` (3.0,
+   the same as a homeostasis tick), so ATP 0 no longer fails the parity gate
+   forever. Tests: a halt recovers ATP; four messages at ATP 0 get through;
+   an ordinary sentence after friction is not halted.
+6. **Jester line:** no longer appended to the UI; the mechanic and its log
+   line stay. `tests/test_physics.py` asserts the log, not the banner, and
+   now checks the Jester's 5 ATP burn directly: at a 0 V start the turn nets
+   +2.4 ATP from unrelated refunds, which hid it.
+7. **TECHNICAL's files (Gordon's four rules):** `SubstrateLedger` in
+   `mechanics/tools.py`, persisted at `output/.substrate_ledger.json`
+   (`reset.sh` clears it with `output/`): files it created, and kept grants
+   (a file, or a folder, recursive). An existing file it did not create is
+   held, not overwritten, and the UI says so with the commands. `/allow PATH`
+   lets it through once, `/allow PATH keep` keeps a grant, `/allow DIR/ keep`
+   is recursive, `/deny PATH` drops it. The person's own message is the
+   permission when it names the file with an edit verb and no negation
+   ("fix the timeout in config.py" yes; "what does config.py do?", "don't
+   touch config.py", "fix myconfig.py" ask). An unreadable ledger treats
+   everything as foreign. The model cannot write the ledger. README has the
+   commands. Ten tests, one per rule, including a reply's `<write_file>`
+   block through the cortex.
+8. **Pragmatist rules:** both removed (and their regexes). "it could be
+   said" is a banned phrase; "perhaps" is left alone. `test_pragmatics`'s
+   exhaustion-capping test pinned the length rule and is gone;
+   `test_mechanics` now asserts neither rule fires.
+9. **CREATIVE:** mode setting `meltdown_warn_first`. There, the Crucible's
+   voltage test counts only on a strained turn: malignancy over the immune
+   line (`MALIGNANCY_HALT`, 0.8: abuse), or a Gatekeeper refusal this turn
+   (toxic input, or too starved to serve the request). An ordinary turn over
+   the line is "HOT", no damage. The first strained turn gets a visible
+   warning ("Warning: this is pushing me past what I can hold..."), the next
+   strained one melts down, and an ordinary turn clears the warning. Other
+   modes unchanged. Tests: 30 ordinary CREATIVE turns, the Crucible runs HOT
+   and never warns or melts down; warn then meltdown; the reset; a Gatekeeper
+   nomination through `MachineryPhase`; other modes still melt down.
+   An impossible request is strain too (follow-up 2).
+
+**Gordon's follow-ups, same day:**
+1. **The bunny hill, and APRIL recentred.** Gordon: "boot should be as
+   unassuming and low-key as possible. We can't pounce on the human right
+   away." What was left of the old grace period: `get_stress_modifier`
+   (metabolic cost 0 for turns 1-2, half to turn 5, still wired), an unused
+   `MetabolicGovernor.GRACE_PERIOD` (removed) and a `grace_period` prompt
+   modifier nothing set. Now `MAIN.GRACE_TURNS` (5) and
+   `BoneAmanita.in_grace()`: in those turns the Stage Manager does not hold
+   on its own tension or on soft nominations (only a hard one: the person's
+   `[SILENCE]`, the zero-width exploit, the consent gate, Linehan), the
+   Jester waits, and the prompt gets `=== EARLY TURNS ===` ("Keep it
+   low-key... let them set the pace. No big moves yet."). The first real run
+   had held ADVENTURE's turn 2 and fired the Jester on CONVERSATION's turn 3.
+   APRIL is now centred on the governor's voltage setpoint
+   (`BIO.PID_SETTINGS.VOLTAGE.setpoint`, 10 V) instead of 30, so it fires
+   above 30 V; its low side is now unreachable (V >= 0). In the first real
+   run every CONVERSATION turn sat at 6.6 to 10 V, where the old centre fired
+   APRIL. Two tests moved past the grace period (their subject is not it).
+2. **Impossible-request detector:** `mechanics/capabilities.py` over
+   `lore/capabilities.json`. Classes: LIVE_INFO, ACT_IN_THE_WORLD,
+   DEVICES_AND_ACCOUNTS, RUN_CODE, SENSES, TOO_LONG (a reply over
+   `MAX_TOKENS` x 0.75 words, pages at 300 words, "the whole novel"). A
+   request pattern counts only in a sentence that asks the engine (can
+   you, please, I need you to, or an imperative opening); a question
+   pattern only in a question. ADVENTURE is fiction, so only TOO_LONG
+   applies there. On a hit the prompt gets `=== OUT OF REACH ===` (say it
+   plainly, once, offer what it can do, never pretend), and it is Crucible
+   strain, so in CREATIVE the first ask warns and pressing on melts down.
+   Checked on 648 person messages already in the repo (mode scripts, audit
+   scripts, cached simulated-person runs): 0 flagged. Tests: 14 impossible,
+   13 near misses ("I called my mom yesterday", "In order for me to...",
+   "run my first marathon", "turn off the logging").
+3. **Credits:** Gordon's; the cuts were intentional.
+4. **The Warden report, made honest** (`docs/warden_integration_report.md`,
+   rewritten). Made true in the code: evidence is an exact quote
+   (case-sensitive, whitespace normalized) of at least 5 words; the stored
+   memory is that quote, not the unchecked `internal_monologue`.
+   **Found:** `commit_memory` had never stored anything (the cortex looked
+   for `svc.mind`; the handle is `svc.mind_memory`). Cut from the report:
+   "cryptographically bound", "mathematically guaranteed", "entirely
+   eliminating hallucinated historical context", "self-healing". The
+   Gatekeeper's length check read `engine.cycle_ctx` (which does not exist)
+   and a `max_words` field (it is `word_cap`), so it never ran; removed
+   rather than wired, since length is already the token ceiling and
+   sentence trim, and each rejection spends a retry that can end in a pause
+   line. The Warden prompt no longer threatens it. The report describes the
+   turn snapshot as it is: five fields, rarely fires.
+5. **`BaseException` back to `Exception`** (Gordon's go): the Warden commit
+   had widened nine handlers in `engine/cycle.py`, so Ctrl-C during a turn
+   was logged as a cycle crash and the loop went on. Test: a
+   KeyboardInterrupt in a phase escapes `run_simulation`.
+6. **No DSPy in ADVENTURE** (Gordon: "disabled or neutered"). The first real
+   run's ADVENTURE turns 1 and 3 were pause lines ("One thing at a time.")
+   because the critic called both drafts "Mathematical Sycophancy". New
+   `CORTEX.DSPY_CRITIC_DISABLED_MODES` (`["ADVENTURE"]`) skips its reply
+   gate, and ADVENTURE joins `EPIGENETIC_MUTATION_DISABLED_MODES`, so
+   rejected drafts there never evolve prompt axioms either. CONVERSATION
+   keeps the critic. `test_biology`'s "mutation still fires outside
+   CONVERSATION" used ADVENTURE as its example; it now uses CREATIVE.
+
+**Real-model runs (gemma4:12b, `reset.sh` before each arm):** see the next
+block.
+
+## Where things stood, 2026-09-24 midday
+
+**Superseded by the block above: the plan in this block is built.**
+
+**(2026-09-24, before a reboot). Real-model runs in every mode,
 and D checked.** Gordon asked for a "real" run to double check D. Script:
 `scratch/mode_runs/mode_runs.py` (gitignored, kept out of `/tmp` because
 that is tmpfs), 30 paced turns per mode on gemma4:12b after `reset.sh`,
@@ -537,7 +692,7 @@ twice), so its first real cut deserves a read.
 - **Repo layout (20.7.4.4).** The top-level engine modules moved into an
   `engine/` package: `engine/core.py`, `engine/cycle.py`, `engine/genesis.py`,
   `engine/presets.py`, `engine/constants.py`, `engine/receipts.py`,
-  `engine/struts.py`. `ROADMAP.md`, `TESTING.md`, this file, `credits.txt` and
+  `engine/struts.py`. `ROADMAP.md`, `TESTING.md`, this file, `CREDITS.MD` and
   `archive/` moved into `docs/`; the Hypervisor documents moved into
   `docs/Hypervisor/` (the old `docs/README.MD` is now
   `docs/Hypervisor/USER GUIDE.MD`). The reference sections below use the new
@@ -1900,7 +2055,7 @@ autophagy, is machinery for deciding which sentences land in step 3.
 formulas are dimensionally meaningless by design (word counts times
 tuned weights, divided by token volume). That is a legitimate way to
 build a prompt-steering state machine. It is not what
-`docs/credits.txt` claims ("mathematically verified Partial Differential
+`CREDITS.MD` claims ("mathematically verified Partial Differential
 Equations") and a future session should not go looking for PDEs that
 aren't there. See "Claims vs. code" below.
 
@@ -2049,7 +2204,7 @@ gemma4:e4b. Confirmed by running it:
 - The smoke run's reversal (9.2 against 4.1 words per sentence) did not
   survive. It was noise.
 
-`README.md` and `credits.txt` (and its `docs/CREDITS.MD` copy; now `docs/credits.txt` and `docs/Hypervisor/CREDITS.MD`) were softened to
+`README.md` and `CREDITS.MD` (and its `docs/CREDITS.MD` copy; now `CREDITS.MD` and `docs/Hypervisor/CREDITS.MD`) were softened to
 match. Suspected, not tested: the exhaustion directive sits inside the
 `[INTERNAL USE ONLY]` metrics block, which tells the model to "consume these
 metrics to shape your narrative and tone", and may be read as characterisation
@@ -2195,7 +2350,7 @@ Cortisol clamping still bites (2 hits at 0.95 vs 3 at 0.0). The degraded
 path was separately confirmed to still boot and complete turns with the
 server unreachable.
 
-## Claims vs. code (read before trusting `docs/credits.txt`)
+## Claims vs. code (read before trusting `CREDITS.MD`)
 
 `README.md`carries the plain-language account instead. Its memory section and the
 embeddings dependency notes had been corrected before it was retired.
@@ -2206,7 +2361,7 @@ them as a specification:
   Lean 4 verified ([ordvec-formalization](https://github.com/Project-Navi/ordvec-formalization),
   declared in its package metadata) and the Creative Determinant has its
   own formalisation. BoneAmanita's Python implementation of those
-  equations carries no proofs. `docs/credits.txt` and `docs/Hypervisor/USER GUIDE.MD` (then `credits.txt` and `docs/README.MD`) used to
+  equations carries no proofs. `CREDITS.MD` and `docs/Hypervisor/USER GUIDE.MD` (then `CREDITS.MD` and `docs/README.MD`) used to
   claim the verification for this repo; corrected, along with a note in
   each that the overstatement was ours. Do not re-inflate it, and do not
   overcorrect to "no verification involved" either, which is equally

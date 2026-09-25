@@ -330,10 +330,28 @@ class BoneAmanita:
     def _sync_physics_to_observer(self):
         self.observer.last_physics_packet = self.active_physics
 
+    ABSOLUTE_FRICTION = 999.0
+    MALIGNANCY_HALT = 0.8
+
+    out_of_reach = None
+    _capability_check = None
+
+    def _capabilities(self):
+        if self._capability_check is None:
+            from mechanics.capabilities import CapabilityCheck
+
+            max_tokens = float(safe_get(safe_get(self.config, "CORTEX", {}), "MAX_TOKENS", 4096))
+            self._capability_check = CapabilityCheck(max_reply_words=int(max_tokens * 0.75))
+        return self._capability_check
+
+    def in_grace(self) -> bool:
+        """The bunny hill: the first user turns stay low-key; nothing pounces."""
+        return self.tick_count < int(safe_get(safe_get(self.config, "MAIN", {}), "GRACE_TURNS", 5))
+
     def apply_absolute_friction(self, phys=None):
         phys = phys if phys is not None else self.active_physics
         if phys is not None:
-            safe_set(phys, "narrative_drag", 999.0)
+            safe_set(phys, "narrative_drag", self.ABSOLUTE_FRICTION)
         return phys
 
     def _unpack_anatomy(self, anatomy: Dict[str, Any]):
@@ -370,6 +388,8 @@ class BoneAmanita:
         self, msg: str, color: str = Prisma.RED, level: str = "CRIT"
     ) -> Dict[str, Any]:
         self.events.log(msg, level)
+        # A halt skips metabolism; without this, ATP 0 fails the parity gate forever.
+        self.restore_atp(float(safe_get(safe_get(self.config, "BIO", {}), "ATP_HALT_RECOVERY", 3.0)))
         phys = self.active_physics
         phys_dict = {}
         if phys is not None:
@@ -388,7 +408,11 @@ class BoneAmanita:
         if not active_phys:
             return None
         nav_drag = float(safe_get(active_phys, "narrative_drag", 0.0))
+        # A halted turn keeps its packet, so the last halt's friction would score every repeat as malignant.
+        if nav_drag >= self.ABSOLUTE_FRICTION:
+            nav_drag = 0.0
         m_a = self.navi_sad.calculate_malignancy_factor(user_message, nav_drag)
+        self.malignancy = m_a
         safe_set(active_phys, "m_a", m_a)
         chi = float(safe_get(active_phys, ["entropy", "chi"], 0.2))
         if (chi * m_a) > float(safe_get(active_phys, "i_c", 1.0)):
@@ -396,7 +420,7 @@ class BoneAmanita:
                 "Apoptotic Gate HALT!: Runaway loop exceeds Immune Competence.", "KERNEL", "CRIT"
             )
             return self.trigger_death(active_phys)
-        if m_a > 0.8 and float(safe_get(active_phys, "mu", 0.0)) < 0.2:
+        if m_a > self.MALIGNANCY_HALT and float(safe_get(active_phys, "mu", 0.0)) < 0.2:
             self.apply_absolute_friction(active_phys)
             safe_set(active_phys, "m_a", m_a * 0.5)
             self.drain_atp(max(10.0, m_a * 20.0))
@@ -461,6 +485,9 @@ class BoneAmanita:
             )
         if is_system:
             return self._halt_if_ethically_audited()
+        self.out_of_reach = self._capabilities().detect(user_message, getattr(self.cortex, "active_mode", ""))
+        if self.out_of_reach:
+            self.events.log(f"Out of reach ({self.out_of_reach.name}): '{self.out_of_reach.phrase}'", "SYS")
         if any(prion in clean_in for prion in self._SEMANTIC_PRIONS):
             return self._generate_halt("REFUSAL triggered by semantic prion.")
         if len(clean_in) > 15000:
@@ -802,7 +829,7 @@ class BoneAmanita:
             self.phys.valence = 0.8
             self.phys.psi = 0.0
             self.phys.chi = 0.0
-            self.phys.voltage = 30.0
+            self.phys.voltage = 0.0
             self.phys.narrative_drag = 0.0
         boot_prompt = (
             f"SYSTEM_BOOT: TARGET SEED: '{seed}'. "

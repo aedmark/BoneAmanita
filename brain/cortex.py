@@ -284,6 +284,8 @@ class TheCortex:
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
         modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)
+        eng_ref = getattr(getattr(self.svc, "orchestrator", None), "eng", None)
+        modifiers["grace_period"] = bool(getattr(eng_ref, "in_grace", lambda: False)())
         if not allow_loot or is_boot_sequence:
             modifiers["include_inventory"] = False
         if self.consultant and self.consultant.active:
@@ -416,7 +418,7 @@ class TheCortex:
         sim_result["logs"] = sim_result.get("logs", []) + extracted_logs
         sim_result["raw_content"] = final_output
         self.ballast_active = False
-        self._flush_substrate_writes(extracted_logs, sim_result)
+        self._flush_substrate_writes(extracted_logs, sim_result, user_input)
         self._post_flight_mutations(
             val_res, phys_state, sim_result, final_output, is_system, full_state
         )
@@ -676,8 +678,7 @@ class TheCortex:
             )
             is_valid = val_res.get("valid", False)
             trigger_jester = False
-            tick_count = getattr(eng, "tick_count", 0)
-            if tick_count > 2:
+            if not eng.in_grace():
                 if is_attractor or repetition >= 0.8:
                     trigger_jester = True
                 elif dimension <= 1.05 and not (not is_valid and dimension == 1.0):
@@ -696,11 +697,6 @@ class TheCortex:
                     eng.soul.force_mutation("JESTER")
                 mind_state = sim_result.setdefault("mind", {})
                 mind_state["lens"] = "JESTER"
-                if "ui" in sim_result:
-                    sim_result["ui"] = (
-                        str(sim_result.get("ui", ""))
-                        + f"\n\n{Prisma.VIOLET}[FALSE COHESION BREAK: The Jester has seized the architecture.]{Prisma.RST}"
-                    )
 
     def _execute_cognitive_loop(
         self,
@@ -748,6 +744,8 @@ class TheCortex:
                     raise ValueError("JSON missing 'tool' or 'args'")
             except (ValueError, Exception) as e:
                 rejected_by = "warden"
+                if self.events:
+                    self.events.log(f"{Prisma.RED}Warden rejected non-JSON output: {e}{Prisma.RST}", "CORTEX")
                 val_res["valid"] = False
                 val_res["feedback_instruction"] = f"CRITICAL FAILURE: Output must be EXACTLY ONE valid JSON object. {e}"
                 final_prompt = f"{base_prompt}\n\n=== SYSTEM REJECTION ===\nREASON: {val_res['feedback_instruction']}\n\n"
@@ -756,15 +754,9 @@ class TheCortex:
                 
             try:
                 corpus = list(getattr(self, "dialogue_buffer", []))
-                engine_ref = getattr(self.svc.orchestrator, "eng", None) if hasattr(self.svc, "orchestrator") else None
-                somatic_budget = None
-                if engine_ref and hasattr(engine_ref, "cycle_ctx") and hasattr(engine_ref.cycle_ctx, "somatic_budget"):
-                    somatic_budget = engine_ref.cycle_ctx.somatic_budget
-                    
                 mock_state = {
                     "physics": phys_state,
                     "mito_state": getattr(self.svc.bio.mito, "state", None) if (hasattr(self.svc, "bio") and self.svc.bio) else None,
-                    "somatic_budget": somatic_budget
                 }
                 
                 Gatekeeper.evaluate_state_transition({}, mock_state, parsed_action, corpus)
@@ -780,11 +772,16 @@ class TheCortex:
                 continue
                 
             if parsed_action.get("tool") == "commit_memory":
-                mem_text = parsed_action.get("args", {}).get("internal_monologue", "memory")
-                if hasattr(self.svc, "mind") and hasattr(self.svc.mind, "mem") and hasattr(self.svc.mind.mem, "encode"):
-                    self.svc.mind.mem.encode([mem_text], phys_state, "WARDEN_COMMIT")
+                # The memory is the verified quote itself, never the model's unchecked monologue.
+                evidence = " ".join(str(parsed_action.get("args", {}).get("evidence", "")).split())
+                memory = getattr(self.svc, "mind_memory", None)
+                if hasattr(memory, "encode"):
+                    kept = memory.encode(evidence.split(), {**phys_state, "raw_text": evidence}, "WARDEN_COMMIT")
                     if self.events:
-                        self.events.log(f"{Prisma.CYN}Evidence-gated memory committed.{Prisma.RST}", "CORTEX")
+                        self.events.log(
+                            f"{Prisma.CYN}Evidence-gated memory {'committed' if kept else 'verified but below the significance threshold; not kept'}.{Prisma.RST}",
+                            "CORTEX",
+                        )
                 
             # If passed, extract text for the rest of the loop
             raw_resp = parsed_action.get("args", {}).get("text", "")
@@ -815,6 +812,8 @@ class TheCortex:
                 not val_res.get("feedback_instruction")
                 and self.dspy_critic.enabled
                 and self.active_mode in ["ADVENTURE", "CONVERSATION"]
+                # Its "sycophancy" reads flagged ordinary play in ADVENTURE and left only pause lines.
+                and self.active_mode not in safe_get(safe_get(self.cfg, "CORTEX", {}), "DSPY_CRITIC_DISABLED_MODES", [])
                 and not is_boot_sequence
             ):
                 mem_core = getattr(self.svc.mind_memory, "memory_core", None)
@@ -967,7 +966,7 @@ class TheCortex:
         return final_output, raw_resp, extracted_logs, inv_logs, val_res, final_prompt, attempt
 
     def _flush_substrate_writes(
-        self, extracted_logs: List[str], sim_result: Dict[str, Any]
+        self, extracted_logs: List[str], sim_result: Dict[str, Any], user_input: str = ""
     ):
         eng_ref = getattr(self.svc.orchestrator, "eng", None)
         sub = getattr(eng_ref, "substrate", None)
@@ -1003,7 +1002,7 @@ class TheCortex:
             and hasattr(sub, "execute_writes")
         ):
             stamina = self.svc.bio.biometrics.stamina
-            s_logs, s_cost = sub.execute_writes(stamina)
+            s_logs, s_cost = sub.execute_writes(stamina, request_text=user_input)
             if s_logs:
                 sim_result["ui"] = (
                     str(sim_result.get("ui", "")) + "\n\n" + "\n".join(s_logs)
@@ -1295,6 +1294,7 @@ class TheCortex:
             "soul": soul_data,
             "world": world,
             "somatic_budget": somatic_budget,
+            "out_of_reach": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "out_of_reach", None),
             "village": village_data,
             "user_profile": {"name": "Traveler"},
             "vsl": self.consultant.state.__dict__

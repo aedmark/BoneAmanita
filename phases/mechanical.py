@@ -203,7 +203,16 @@ class MachineryPhase(SimulationPhase):
         self.eng.phys.pulse.update(
             getattr(ctx.physics, "repetition", 0.0), ctx.physics.voltage
         )
-        c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(phys_dict)
+        strained = (
+            float(getattr(self.eng, "malignancy", 0.0)) > self.eng.MALIGNANCY_HALT
+            or getattr(self.eng, "out_of_reach", None) is not None
+            or any(getattr(n, "gate", "") == "GATEKEEPER" for n in getattr(ctx, "nominations", []))
+        )
+        c_state, c_val, c_msg = self.eng.phys.crucible.audit_fire(
+            phys_dict,
+            warn_first=bool(self.eng.mode_settings.get("meltdown_warn_first", False)),
+            strained=strained,
+        )
         if c_msg:
             ctx.log(c_msg)
         if c_state == "MELTDOWN":

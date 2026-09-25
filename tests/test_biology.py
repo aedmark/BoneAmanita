@@ -164,7 +164,7 @@ class BiologyTests(BoneTestCase):
         msg, shift = dreamer.enter_rem_cycle(
             soul_snapshot={"archetype": "THE_VOID"},
             bio_state=bio_state,
-            active_mode="ADVENTURE",
+            active_mode="CREATIVE",  # ADVENTURE is disabled too since 20.7.4.34
         )
         dreamer.dspy_critic.evolve_prompt.assert_called_once()
         self.assertIn(

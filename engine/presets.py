@@ -112,6 +112,7 @@ class BonePresets:
             "atp_drain_enabled": True,
             "chaos_tax_enabled": False,
             "voltage_floor_override": 70.0,
+            "meltdown_warn_first": True,
             "active_mods": ["LIMINAL"],
             "default_ui_depth": "LITE",
         },
@@ -222,6 +223,7 @@ class BoneConfig:
             "EPIGENETIC_MUTATION_DISABLED_MODES",
             "KEYWORD_TRIGGERS_DISABLED_MODES",
             "MOOG_DISABLED_MODES",
+            "DSPY_CRITIC_DISABLED_MODES",
         ],
         "MACHINE": ["PACEMAKER_BOREDOM_THRESHOLD", "CRUCIBLE_MELTDOWN_VOLTAGE"],
         "DRIVERS": [
@@ -237,6 +239,7 @@ class BoneConfig:
             "ATP_IDLE_RECOVERY_PER_MIN",
             "ATP_IDLE_RECOVERY_CAP",
             "ATP_SILENCE_YIELD",
+            "ATP_HALT_RECOVERY",
             "ROS_DECAY_PER_TURN",
             "COUNTERFACTUAL_ATP_COST",
             "HLA_MASK_TAX_MAX",
@@ -254,6 +257,7 @@ class BoneConfig:
             "SYNTHESIS_ATP_FLOOR",
             "MAX_CONSECUTIVE_HOLDS",
             "SILENCE_COST",
+            "HOLD_VOLTAGE_BLEED",
         ],
         "SOMATIC_BUDGET": [
             "SENTENCE_CAP_DEFAULT",
@@ -319,6 +323,7 @@ class BoneConfig:
         "SYNTHESIS_ATP_FLOOR": 25.0,
         "MAX_CONSECUTIVE_HOLDS": 2,
         "SILENCE_COST": 2.0,
+        "HOLD_VOLTAGE_BLEED": 0.25,
     }
 
     GATE = {

@@ -773,7 +773,7 @@ reaches the prose through respiration, weakly. The exhaustion instruction is
 not obeyed as written and should either be reworded (a hard word or sentence
 budget stated outside the `[INTERNAL USE ONLY]` block is the obvious first
 try, and `audit_somatic.py` will measure it) or stop being described as a
-constraint. `README.md` and `credits.txt` now say this.
+constraint. `README.md` and `CREDITS.MD` now say this.
 
 **Found on the way.** Three failures of this document's usual kind, each
 silent:

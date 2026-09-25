@@ -145,7 +145,8 @@ class ArchitectureTests(BoneTestCase):
         mock_svc.mind_memory.graph = {}
         del mock_svc.mind_memory.nodes
         mock_eng = mock_svc.orchestrator.eng
-        mock_eng.tick_count = 3
+        mock_eng.tick_count = 6
+        mock_eng.in_grace.return_value = False  # past the bunny hill
         mock_eng.navi_sad.detect_point_attractor.return_value = True
         mock_eng.navi_sad.calculate_semantic_dimension.return_value = 1.0
         mock_eng.shared_lattice = None

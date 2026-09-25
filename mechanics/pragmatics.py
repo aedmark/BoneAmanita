@@ -5,8 +5,6 @@ from engine.core import Prisma
 
 
 class ThePragmatist:
-    _HEDGE_A_RE = re.compile(r"(?i)\bperhaps\b\s*")
-    _HEDGE_B_RE = re.compile(r"(?i)it could be said(?: that)?\s*")
 
     def __init__(self, events_ref=None):
         self.events = events_ref
@@ -15,21 +13,6 @@ class ThePragmatist:
         self, draft_text: str, user_prompt: str, physics: Dict[str, Any], stamina: float
     ) -> Tuple[str, bool]:
         is_phys_dict = isinstance(physics, dict)
-        drag = float(
-            physics.get("narrative_drag", 0.0)
-            if is_phys_dict
-            else getattr(physics, "narrative_drag", 0.0)
-        )
-        chi = float(
-            physics.get("entropy", 0.0)
-            if is_phys_dict
-            else getattr(physics, "entropy", 0.0)
-        )
-        voltage = float(
-            physics.get("voltage", 5.0)
-            if is_phys_dict
-            else getattr(physics, "voltage", 5.0)
-        )
         cf_expect = float(
             physics.get("cf_expect", 0.0)
             if is_phys_dict
@@ -40,7 +23,6 @@ class ThePragmatist:
             if is_phys_dict
             else getattr(physics, "pedagogical_mode", False)
         )
-        word_count = len(draft_text.split())
         lower_draft = draft_text.lower()
         # Negative comparisons are the gatekeeper's (NEGATIVE_COMPARISON), which can cut one sentence instead of the draft.
         if cf_expect > 0.7 and any(
@@ -69,29 +51,6 @@ class ThePragmatist:
                     "SYS",
                 )
             return self._apply_socratic_obfuscation(draft_text), False
-        max_words_allowed = max(20, int(500 - (drag * 50)))
-        if word_count > max_words_allowed and stamina < 50.0 and voltage < 20.0:
-            if self.events:
-                self.events.log(
-                    f"{Prisma.VIOLET}Draft is {word_count} words, limit is {max_words_allowed} due to Exhaustion. Forcing compression.{Prisma.RST}",
-                    "SYS",
-                )
-            return draft_text, True
-        lower_draft = draft_text.lower()
-        if (
-            chi < 0.4
-            and voltage < 20.0
-            and ("perhaps" in lower_draft or "it could be said" in lower_draft)
-        ):
-            if self.events:
-                self.events.log(
-                    f"{Prisma.VIOLET}System is stable but language is obscure/hedging.{Prisma.RST}",
-                    "SYS",
-                )
-            draft_text = self._HEDGE_A_RE.sub("", draft_text)
-            draft_text = self._HEDGE_B_RE.sub("", draft_text)
-            draft_text = draft_text.strip()
-            lower_draft = draft_text.lower()
         if "as an ai" in lower_draft or "as a language model" in lower_draft:
             if self.events:
                 self.events.log(

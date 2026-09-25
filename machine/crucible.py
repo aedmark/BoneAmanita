@@ -13,6 +13,7 @@ class TheCrucible:
         self.dampener_charges = int(safe_get(cfg, "CRUCIBLE_DAMPENER_CHARGES", 3))
         self.dampener_tolerance = float(safe_get(cfg, "DAMPENER_TOLERANCE", 15.0))
         self.instability_index = 0.0
+        self.warned = False
 
     def dampener_status(self):
         msg = (
@@ -47,7 +48,11 @@ class TheCrucible:
         msg = msg_template.format(reduction=reduction, reason=reason)
         return True, msg, reduction
 
-    def audit_fire(self, physics: dict) -> Tuple[str, float, Optional[str]]:
+    def audit_fire(
+        self, physics: dict, warn_first: bool = False, strained: bool = False
+    ) -> Tuple[str, float, Optional[str]]:
+        """warn_first: high voltage is the mode's normal state; only a strained turn
+        (abuse, or a request it cannot serve) counts, and the first one only warns."""
         current_drag = float(physics.get("narrative_drag", 0.0))
         if math.isinf(current_drag) or current_drag > 900.0:
             return "LOCKED", 0.0, ux("physics_strings", "crucible_holding") or ""
@@ -91,7 +96,20 @@ class TheCrucible:
         meltdown_at = float(
             safe_get(safe_get(self.cfg, "MACHINE", {}), "CRUCIBLE_MELTDOWN_VOLTAGE", 18.0)
         ) * float(safe_get(self.cfg, "GATE_TOLERANCE", 1.0))
+        if warn_first and not strained:
+            self.warned = False
         if voltage > meltdown_at:
+            if warn_first and not strained:
+                self.active_state = "HOT"
+                return "HOT", 0.0, msg
+            if warn_first and not self.warned:
+                self.warned = True
+                self.active_state = "WARNING"
+                return "WARNING", 0.0, ux_format(
+                    "physics_strings",
+                    "crucible_warning",
+                    default="Warning: this is pushing me past what I can hold. If it keeps coming like this, I start losing health.",
+                )
             if structure > 0.5:
                 gain = voltage * 0.1
                 cfg = safe_get(self.cfg, "MACHINE", {})

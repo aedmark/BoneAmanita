@@ -23,32 +23,15 @@ class Gatekeeper:
             if atp < 0.0:
                 raise InvariantViolation(f"ATP cannot be negative: {atp}")
             
-    @staticmethod
-    def check_response_budget(text: str, budget: Any) -> None:
-        """
-        Validate that the LLM's response respects the physical budget limits.
-        """
-        if not budget or not text:
-            return
-            
-        max_words = getattr(budget, "max_words", 9999)
-        word_count = len(text.split())
-        if word_count > max_words:
-            raise InvariantViolation(f"Response length ({word_count} words) exceeded somatic budget ({max_words} words)")
+    MIN_EVIDENCE_WORDS = 5
 
     @staticmethod
     def verify_evidence(claim_evidence: str, corpus: List[str]) -> bool:
-        """
-        Warden Pattern: Verify the exact evidence exists in the dialogue corpus.
-        """
-        if not claim_evidence:
+        """An exact quote (case and words; whitespace normalized) of at least MIN_EVIDENCE_WORDS from the dialogue."""
+        claim = " ".join(str(claim_evidence or "").split())
+        if len(claim.split()) < Gatekeeper.MIN_EVIDENCE_WORDS:
             return False
-            
-        claim_clean = claim_evidence.lower().strip()
-        for history_item in corpus:
-            if claim_clean in str(history_item).lower():
-                return True
-        return False
+        return any(claim in " ".join(str(item).split()) for item in corpus)
 
     @staticmethod
     def check_memory_commit(memory_action: dict, dialogue_corpus: List[str]) -> None:
@@ -63,7 +46,10 @@ class Gatekeeper:
             raise EvidenceGatedViolation("Memory commit rejected: No exact evidence cited.")
             
         if not Gatekeeper.verify_evidence(evidence, dialogue_corpus):
-            raise EvidenceGatedViolation(f"Memory commit rejected: Hallucinated evidence '{evidence}' not found in corpus.")
+            raise EvidenceGatedViolation(
+                f"Memory commit rejected: '{evidence}' is not an exact quote of at least "
+                f"{Gatekeeper.MIN_EVIDENCE_WORDS} words from the dialogue."
+            )
 
     @staticmethod
     def evaluate_state_transition(
@@ -84,10 +70,6 @@ class Gatekeeper:
         if llm_action:
             if llm_action.get("tool") == "commit_memory":
                 Gatekeeper.check_memory_commit(llm_action.get("args", {}), corpus)
-            elif llm_action.get("tool") == "nominate_response":
-                budget = new_state.get("somatic_budget")
-                text = llm_action.get("args", {}).get("text", "")
-                Gatekeeper.check_response_budget(text, budget)
 
     @staticmethod
     def freeze_engine_state(eng: Any) -> dict:

@@ -1220,7 +1220,7 @@ session. No live-model behavioral audit was run in the review or this follow-up.
 
 - HEAD at review: `b0a096e` (`7.0.14`). Findings apply to that commit **plus the
   working tree as reviewed**, not to a pristine checkout of the commit.
-- Pre-existing modified files: `.idea/BoneAmanita.iml`, `credits.txt`, `presets.py`.
+- Pre-existing modified files: `.idea/BoneAmanita.iml`, `CREDITS.MD`, `presets.py`.
 - Pre-existing staged deletions: `tools/cache/audit_somatic.jsonl` and
   `tools/cache/somatic_census.jsonl`.
 - Those edits and staged deletions were left intact. Do not restore old audit
@@ -1441,7 +1441,7 @@ earlier in this file about the governor's math without checking here first.
   `PICARD_TOL`) and the three dead `PhysicsPacket` methods
   (`get_creative_drive`, `get_viability_potential`, `get_principal_eigenvalue`,
   plus the module-level `principal_eigenvalue` helper) are removed.
-- **`credits.txt` rewritten** to credit Nelson accurately: the bitmap gate is
+- **`CREDITS.MD` rewritten** to credit Nelson accurately: the bitmap gate is
   his recommendation (and his own finding, independently, at 207,695 nodes,
   Pearson 0.992 against a corpus-mass scalar); the metabolic economy
   (`calculate_viability`/`update_coherence_debt`/`execute_metabolic_tick`) is
@@ -1521,7 +1521,7 @@ this diff and doing them as a separate follow-up is the lower-risk option if
 the suite is still red, (2) a decision on whether `CD.BETA` is dead config to
 remove or actually still needed somewhere, (3) `ROADMAP.md` Track B (B0-B3)
 still describes the OLD Laplacian/Picard design as current and has not been
-updated to point at the bitmap gate; only `credits.txt` and the code
+updated to point at the bitmap gate; only `CREDITS.MD` and the code
 comments were updated, and Track B needs a short correction note (same
 pattern as B4's) so the roadmap doesn't contradict the code. The draft reply
 itself (numbers, the wheel request platform details: Linux/CachyOS, x86_64,
@@ -1576,7 +1576,7 @@ already proves both reach the prompt:
 Those tests assert the instruction **arrives**. They say nothing about
 whether the model **obeys**, and that is the whole of C5. If the effect is
 not measurable then the somatic layer is decoration, and either the
-instruction needs strengthening or `README.md` and `credits.txt` need their
+instruction needs strengthening or `README.md` and `CREDITS.MD` need their
 claims softened. Both are acceptable outcomes. Finding no effect and saying
 so is a success.
 
@@ -1707,7 +1707,7 @@ suite, since it needs a live model and takes minutes.
 
 Update `ROADMAP.md` C5 with the measurement, and then reconcile the claims
 in `README.md` (the "Honest limits" section already flags this as untested)
-and `credits.txt`. If the effect is real, say how large. If it is not, say
+and `CREDITS.MD`. If the effect is real, say how large. If it is not, say
 that plainly and soften the claim. The precedent for this is B4 and the Lean
 4 correction: the overstatement was ours and the fix was to write down that
 it was ours.
