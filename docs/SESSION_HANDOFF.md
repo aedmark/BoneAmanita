@@ -68,6 +68,14 @@ keeps dialogue and person model; a round trip keeps Gordon's items and
 rewires dependents; a CONVERSATION boot switched to ADVENTURE gets working
 dependents, mutation checked; unknown names refused; `/preset` tuning-only).
 
+**(4) done (20.7.4.32): A8.** `NUM_CTX` 16384 from measurement; the composer
+fits the prompt to the window itself (code sweep first, then oldest
+dialogue, never kernel, persona, rules or the message); the compose receipt
+carries block sizes and what was trimmed. Found on the way: a TECHNICAL
+crash (a regex lost in 20.6.3), a third high-voltage replacement ("INCOMING
+SHOCKWAVE"), and D's two always-on pragmatist rules. Full numbers in
+`ROADMAP.md` A8.
+
 **THE PAGE TO UPLOAD (2026-09-24 night):** `tools/cache/panel_public_standalone.html`
 (gitignored; carries Gordon's address), built from rescue bone
 `20260924-161859` on 20.7.4.27 with the friend `082315` and vanilla `082744`
@@ -1677,7 +1685,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   native-Ollama and source-sweep change (2026-09-24): green (expect 698 passed, 5 skipped).
+   native-Ollama and source-sweep change (2026-09-24): green (expect 701 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1761,7 +1769,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 698 passed, 0 failed, 5 skipped** (2026-09-24 night), about
+- **Test suite: 701 passed, 0 failed, 5 skipped** (2026-09-24 night), about
   seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.
