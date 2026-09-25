@@ -77,8 +77,9 @@ it reproduces with a stub model (`scratch/mode_runs/crucible_probe.py`,
 - **Jester banner** (`brain/cortex.py:702`) and **file forging** to
   `output/`: design calls; `tests/test_physics.py` asserts the banner.
 
-**THE PLAN FOR THE NEXT SESSION (proposed to Gordon, not yet approved;
-confirm with him before changing code).** Recommended order:
+**THE PLAN FOR THE NEXT SESSION (approved by Gordon, 2026-09-24: "I also
+agree about the length rule and any of your suggestions you haven't
+specifically delegated to me"). Build it in this order:**
 1. **`counts`:** keep it a plain dict through `snapshot()` (coerce in
    `MaterialState` or convert before `asdict` in `PhysicsPacket.to_dict`).
    Add a test that snapshots a packet holding a real `Counter` and checks
@@ -86,8 +87,10 @@ confirm with him before changing code).** Recommended order:
 2. **Voltage start:** `EnergyState.voltage` default 30.0 to 0.0 (like
    `E_u`, 20.7.4.29). Check nothing relies on 30.
 3. **Hold cap:** the nomination branch in `StageManager.negotiate` must
-   respect `MAX_CONSECUTIVE_HOLDS`. Open question for Gordon: may a
-   distress-level nomination (magnitude >= 100) still hold past the cap?
+   respect `MAX_CONSECUTIVE_HOLDS`. Gordon: "Two turns of silence should
+   be the absolute max. Otherwise the user might think either the engine
+   is broken, or they are." No exceptions, distress nominations included:
+   the third turn always speaks. Test it with every nomination kind.
 4. **Held turns and voltage:** after 3, check whether held turns still
    ratchet voltage; if so, let a held turn bleed some voltage off.
 5. **ATP lock:** a halted or held turn still recovers some ATP, and
@@ -119,13 +122,23 @@ confirm with him before changing code).** Recommended order:
    rule needs a draft over `500 - drag*50` words with stamina under 50
    (replies run 40 to 80 words; stamina stays high), and the hedge rule
    needs "perhaps" or "it could be said". Recommendation: remove the
-   length rule, since the somatic budget already sets length from state;
-   for hedging, either remove the rule or move the phrases into
-   `lore/style_crimes.json`, where they apply by mode like the other
-   crimes. Tests must not break on either path.
-9. **Still waiting on Gordon:** CREATIVE's 70 V floor against its 27 V
-   meltdown line (which does he want: high voltage, or no meltdown?), and
-   whether a distress-level nomination may hold past the cap (item 3).
+   length rule, since the somatic budget already sets length from state
+   (approved). Hedging: remove the rule and add "it could be said" to
+   `lore/style_crimes.json`'s banned phrases, where it applies by mode.
+   Leave "perhaps" alone; it is ordinary English. Update tests that pin
+   either rule.
+9. **CREATIVE (Gordon's call):** "Creative should never melt down unless
+   the user is clearly abusing the system or asking something the system
+   is physically incapable of and ignoring caution." So high voltage is
+   CREATIVE's normal state and the 70 V floor alone must never melt it
+   down. Meltdown there needs one of: clear abuse (the malignancy/immune
+   signals), or a request the engine cannot do, after it has warned the
+   person and they pressed on. Design: CREATIVE's meltdown line sits
+   above its floor, or the Crucible skips the voltage test in CREATIVE and
+   melts down only on those signals; either way the warning comes first
+   and is visible to the person. Tests: 30 ordinary CREATIVE turns with
+   no health loss from the Crucible; an ignored warning can still melt
+   down.
 Then `reset.sh` and a fresh 30-turn real-model run per mode
 (`mode_runs.py`), compared with the table above. Full test suite before
 committing (701 passed, 5 skipped at 20.7.4.33).
