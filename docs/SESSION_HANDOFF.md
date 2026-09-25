@@ -94,9 +94,38 @@ confirm with him before changing code).** Recommended order:
    absolute friction's infinite drag must not persist into the malignancy
    score. Rerun ADVENTURE with non-repeating messages to separate the
    script artifact from the real lock.
-6. **Waiting on Gordon:** CREATIVE's 70 V floor against its 27 V meltdown
-   line (which does he want: high voltage, or no meltdown?), the Jester
-   banner in the reader's text, and TECHNICAL writing files unasked.
+6. **Jester line (Gordon's call: it is a technical line, never shown to
+   the player).** `brain/cortex.py:702` appends "[FALSE COHESION BREAK:
+   The Jester has seized the architecture.]" to `sim_result["ui"]`. Keep
+   the mechanic (ATP burn, entropy, drag, the JESTER lens) and the log
+   line; stop appending to the UI. `tests/test_physics.py` (around line
+   117) asserts the banner is in the UI: change it to assert the log
+   instead, and that the UI does not carry it.
+7. **TECHNICAL's files (Gordon's rules).** `TheSubstrate.execute_writes`
+   (`mechanics/tools.py:299`) is confined to `output/` but opens with "w"
+   and overwrites anything there. Gordon's rules:
+   - It may write new files and edit files it created, without asking.
+   - Editing an existing file it did not create needs permission. A grant
+     can be kept and recursive (a folder) or case by case.
+   - If the person asks it to edit a file, that request is the permission.
+   - When unsure, ask first: better than asking forgiveness later.
+   Needs a persisted ledger of files it created (it has none, and a new
+   session would otherwise treat its own old files as foreign), a
+   permission store with per-file and recursive grants, and a held write
+   that asks the person instead of overwriting. Tests for each rule.
+8. **The two voltage<20 pragmatist rules (Gordon's call: remove them or
+   put them to work).** `mechanics/pragmatics.py:73` and `:81`. They
+   never fired because of their other conditions, not voltage: the length
+   rule needs a draft over `500 - drag*50` words with stamina under 50
+   (replies run 40 to 80 words; stamina stays high), and the hedge rule
+   needs "perhaps" or "it could be said". Recommendation: remove the
+   length rule, since the somatic budget already sets length from state;
+   for hedging, either remove the rule or move the phrases into
+   `lore/style_crimes.json`, where they apply by mode like the other
+   crimes. Tests must not break on either path.
+9. **Still waiting on Gordon:** CREATIVE's 70 V floor against its 27 V
+   meltdown line (which does he want: high voltage, or no meltdown?), and
+   whether a distress-level nomination may hold past the cap (item 3).
 Then `reset.sh` and a fresh 30-turn real-model run per mode
 (`mode_runs.py`), compared with the table above. Full test suite before
 committing (701 passed, 5 skipped at 20.7.4.33).
