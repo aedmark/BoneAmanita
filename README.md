@@ -64,8 +64,10 @@ script; it leaves the setup configuration in place.
 
 ### Modes
 
-Set at boot, or switched in-session with `/mode`. Each selects a different
-tuning preset, and only Adventure has an inventory and a world to move through.
+Set at boot, or switched in-session with `/mode`; the conversation, memory
+and what the engine has read of you carry over, and Adventure's items and map
+come back if you return to it. Each mode selects a different tuning preset,
+and only Adventure has an inventory and a world to move through.
 
 | Mode | Tuning | For |
 |---|---|---|
@@ -83,7 +85,8 @@ tuning preset, and only Adventure has an inventory and a world to move through.
 | `/status` | Vitals: health, stamina, energy, the memory backend, and what it believes about you. |
 | `/diag` | This turn's receipts, plus anything silent or degraded. See below. |
 | `/save` | Persist state to disk. |
-| `/mode <name>` | Switch operational mode. |
+| `/mode <name>` | Switch the experience mode (Adventure, Conversation, Creative, Technical). |
+| `/preset <name>` | Load a tuning preset only (Zen Garden, Thunderdome, ...); the mode stays. |
 | `/idle`, `/sleep` | Enter a REM cycle, regenerating ATP and stamina. Dreams happen here. |
 | `/rest`, `/zen`, `/flush` | The hard reset. Severs context, drops drag to zero, restores stamina and ATP, purges trauma. |
 | `/truth <0-3>` | Adjust reality ambiguity. |

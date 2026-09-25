@@ -149,7 +149,8 @@ class CommandProcessor:
     DEFAULT_DESCS = {
         "hud": "Adjusts the VSL UI depth (warm, lite, core, deep)",
         "idle": "Enters REM cycle, regenerating ATP and Stamina",
-        "mode": "Engages hardwired mode chips (e.g., slash)",
+        "mode": "Switches the experience mode (ADVENTURE, CONVERSATION, CREATIVE, TECHNICAL)",
+        "preset": "Loads a tuning preset without changing the mode (ZEN_GARDEN, THUNDERDOME, ...)",
         "grief": "Attends the wake for a consumed memory",
         "hallucinate": "Disengages the thermal lock for a forced lateral paradigm shift",
         "layer": "Manipulates the Reality Stack depth",
@@ -352,13 +353,33 @@ class CommandProcessor:
             if names:
                 self.interface.log(f"{colour}  {label}: {', '.join(names)}{P.RST}")
 
+    TUNING_PRESETS = ("ZEN_GARDEN", "THUNDERDOME", "SANCTUARY", "LABORATORY", "STANDARD", "ZEN", "MANIC", "DEBUG")
+
     def _cmd_mode(self, parts):
+        """Switch the experience mode (ADVENTURE, CONVERSATION, CREATIVE, TECHNICAL); the conversation carries over."""
         if len(parts) < 2:
             self.interface.log(ux("command_alerts", "mode_usage"))
             return True
         mode_name = parts[1].upper()
-        if not hasattr(BonePresets, mode_name):
+        if mode_name not in BonePresets.MODES:
             msg = ux_format("command_alerts", "mode_unknown", default="Unknown mode: {mode}", mode=mode_name)
+            self.interface.log(f"{self.P.RED}{msg}{self.P.RST}")
+            return True
+        cost = float(safe_get(self.cmd_cfg, "COST_MODE", 10.0))
+        if self.tax.levy("MODE_SWITCH", {"stamina": cost}):
+            self.interface.eng.switch_mode(mode_name)
+            msg = ux_format("command_alerts", "mode_switched", default="Switched to {mode}", mode=mode_name)
+            self.interface.log(msg)
+        return True
+
+    def _cmd_preset(self, parts):
+        """Load a tuning preset only; the mode, prompt and role stay as they are."""
+        if len(parts) < 2:
+            self.interface.log(ux("command_alerts", "preset_usage"))
+            return True
+        mode_name = parts[1].upper()
+        if mode_name not in self.TUNING_PRESETS:
+            msg = ux_format("command_alerts", "preset_unknown", default="Unknown preset: {preset}", preset=mode_name)
             self.interface.log(f"{self.P.RED}{msg}{self.P.RST}")
             return True
         cost = float(safe_get(self.cmd_cfg, "COST_MODE", 10.0))
@@ -374,7 +395,7 @@ class CommandProcessor:
                 msg = ux_format("command_alerts", "mode_reconciled", default="Reconciled state to {mode}",
                                 mode=mode_name)
                 self.interface.log(f"{self.P.CYN}{msg}{self.P.RST}")
-            msg = ux_format("command_alerts", "mode_switched", default="Switched to {mode}", mode=mode_name)
+            msg = ux_format("command_alerts", "preset_loaded", default="Loaded preset {preset}", preset=mode_name)
             self.interface.log(msg)
         return True
 

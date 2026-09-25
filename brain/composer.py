@@ -475,10 +475,9 @@ class PromptComposer:
     def load_template(self, template_data: Dict[str, Any]):
         if template_data:
             self.active_template = template_data
-            if "style_guide" in template_data:
-                self.fog_protocol = template_data["style_guide"]
-            if "inventory_rules" in template_data:
-                self.inv_protocol = template_data["inventory_rules"]
+            # A /mode switch loads a new template; the old mode's rules must not linger.
+            self.fog_protocol = template_data.get("style_guide", [])
+            self.inv_protocol = template_data.get("inventory_rules", [])
 
     def compose(
         self,

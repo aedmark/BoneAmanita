@@ -170,7 +170,8 @@
     "save": "Persist state",
     "inventory": "Check pockets",
     "map": "Navigation check",
-    "mode": "Switch operational mode",
+    "mode": "Switch the experience mode; the conversation carries over",
+    "preset": "Load a tuning preset without changing the mode",
     "debug": "Toggle verbose logs",
     "exit": "Shutdown",
     "soul": "Introspection",
@@ -209,6 +210,7 @@
       "PROTOCOL": [
         "/save",
         "/mode",
+        "/preset",
         "/exit",
         "/help"
       ],
@@ -236,7 +238,10 @@
   },
   "command_alerts": {
     "reality_lock": "COMMAND REJECTED: Reality Depth {depth} prohibits administrative override.",
-    "mode_usage": "Usage: /mode [ZEN_GARDEN | THUNDERDOME | SANCTUARY]",
+    "mode_usage": "Usage: /mode [ADVENTURE | CONVERSATION | CREATIVE | TECHNICAL]",
+    "preset_usage": "Usage: /preset [ZEN_GARDEN | THUNDERDOME | SANCTUARY | LABORATORY | STANDARD | ZEN | MANIC | DEBUG]",
+    "preset_unknown": "Unknown preset: {preset}.",
+    "preset_loaded": "Loaded preset {preset}.",
     "mode_unknown": "Unknown mode: {mode}.",
     "mode_reconciled": "State reconciled to {mode} parameters.",
     "mode_switched": "Switched to {mode}.",

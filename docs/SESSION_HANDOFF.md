@@ -46,6 +46,28 @@ rescue 90% to 47%); the rate is the knob if that matters.
   protocol; the overlay only at 90, after the mode's rules); each of the
   three changes mutation checked.
 
+**(3) done (20.7.4.31): `/mode` switches the experience mode, as the README
+always promised.** It used to accept only tuning presets (its usage line
+listed ZEN_GARDEN, THUNDERDOME, SANCTUARY), so `/mode CONVERSATION` was
+"Unknown mode" and the prompt's mode was fixed at boot; its `hasattr` check
+would also have taken config sections like `/mode GATE`. Gordon's calls:
+presets move to `/preset` (limited to the eight real ones), and a switch
+keeps the conversation. `BoneAmanita.switch_mode` does what a boot into the
+mode would (tuning preset, `cortex.active_mode`, role mutation, reality
+layer, `GATE_TOLERANCE`, the mode's template and hard-wired mods, council
+suppression) while dialogue, memory and the person model carry over.
+Council members: `BoneGenesis._summon_village(existing=...)` reuses members;
+ones a switch suppresses are stashed and come back as they were (Gordon's
+items survive a round trip); Tinkerer, Town Hall and Gravedigger are rebuilt
+when Gordon or the Navigator is first summoned (a CONVERSATION boot never
+created Gordon, so they held `None`); the cortex's inventory handle and the
+Town Hall's `ITEM_DROP` subscription follow. `load_template` now replaces the
+old mode's style guide and inventory rules instead of keeping them. Tests:
+`tests/test_mode_switch.py` (a switch changes the next turn's prompt and
+keeps dialogue and person model; a round trip keeps Gordon's items and
+rewires dependents; a CONVERSATION boot switched to ADVENTURE gets working
+dependents, mutation checked; unknown names refused; `/preset` tuning-only).
+
 **THE PAGE TO UPLOAD (2026-09-24 night):** `tools/cache/panel_public_standalone.html`
 (gitignored; carries Gordon's address), built from rescue bone
 `20260924-161859` on 20.7.4.27 with the friend `082315` and vanilla `082744`
@@ -1655,7 +1677,7 @@ Two 2026-09-17 leftovers used to sit here as "do these first". Both are done:
    scripted `toast` censuses (2026-09-21/22) reached turn 30 with at most one
    hold.
 2. ~~**Run the full suite.**~~ **Done.** Last full run, 2026-09-23, after the
-   native-Ollama and source-sweep change (2026-09-24): green (expect 694 passed, 5 skipped).
+   native-Ollama and source-sweep change (2026-09-24): green (expect 698 passed, 5 skipped).
 
 **Engine-side next work** is `ROADMAP.md` D2 and D2b's two-model statistical
 passes (implemented and tool-verified, not yet run), then whatever the
@@ -1739,7 +1761,7 @@ aren't there. See "Claims vs. code" below.
 
 ## Current state: what's actually built and confirmed working
 
-- **Test suite: 694 passed, 0 failed, 5 skipped** (2026-09-24 night), about
+- **Test suite: 698 passed, 0 failed, 5 skipped** (2026-09-24 night), about
   seven minutes. Green. Needs `ordvec` from PyPI and `mistral-nemo` in Ollama. The skips are
   live-backend tests behind `BONE_EMBED_LIVE_TEST=1`; run with that set
   when touching embeddings or the resonance classifier.

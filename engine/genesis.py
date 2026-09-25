@@ -1,4 +1,4 @@
-from typing import Any, Dict, Set
+from typing import Any, Dict, Set, Optional
 
 from archetypes.symbiosis import SymbiosisManager
 from archetypes.village import (
@@ -27,6 +27,17 @@ from protocols import (
 from soul import NarrativeSelf, TheOroboros
 from spores import LiteraryReproduction
 from engine.struts import audit_cfg, safe_get, safe_set, ux, ux_format
+
+# Suppression key -> the attribute the village member lives under.
+VILLAGE_KEYS = {
+    "GORDON": "gordon", "NAVIGATOR": "navigator", "DEATH": "death_gen", "REPRO": "repro",
+    "TINKERER": "tinkerer", "BUREAU": "bureau", "TOWN_HALL": "town_hall", "ZEN": "zen",
+    "CRITICS": "critics", "THERAPY": "therapy", "LIMBO": "limbo", "KINTSUGI": "kintsugi",
+    "THERAPIST": "therapist", "GRAVEDIGGER": "gravedigger",
+}
+# Members built holding Gordon or the Navigator; rebuilt when either is first summoned.
+DEPENDS_ON = {"TINKERER": ("GORDON",), "GRAVEDIGGER": ("GORDON",), "TOWN_HALL": ("GORDON", "NAVIGATOR")}
+
 
 class BoneGenesis:
     @staticmethod
@@ -142,10 +153,13 @@ class BoneGenesis:
         suppressed: Set[str],
         boot_mode: str = "ADVENTURE",
         config_ref=None,
+        existing: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """The village for a mode. `existing` (by suppression key) hands back members to keep across a /mode switch."""
         c = config_ref
+        existing = existing or {}
         if_active = lambda key, cls, *args, **kwargs: (
-            None if key in suppressed else cls(*args, **kwargs)
+            None if key in suppressed else (existing.get(key) or cls(*args, **kwargs))
         )
         gordon = if_active(
             "GORDON", GordonKnot, events=events, mode=boot_mode, config_ref=c

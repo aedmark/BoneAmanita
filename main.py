@@ -25,7 +25,7 @@ from engine.core import (
     TheObserver,
 )
 from engine.cycle import GeodesicOrchestrator
-from engine.genesis import BoneGenesis
+from engine.genesis import DEPENDS_ON, VILLAGE_KEYS, BoneGenesis
 from mechanics.commands import CommandProcessor
 from mechanics.lexicon import LexiconService
 from mechanics.setup import ConfigWizard
@@ -212,6 +212,59 @@ class BoneAmanita:
                     self.consultant.state.active_modules.append(mod)
             msg_mods = ux("main_strings", "hardwired_mods")
             self.events.log(msg_mods.format(mods=", ".join(active_mods)), "SYS")
+
+    def switch_mode(self, mode: str) -> None:
+        """Switch the experience mode mid-session: prompt, role, rules, tuning and council.
+
+        The conversation carries over (dialogue, memory, the person model); Gordon and the
+        Navigator keep their items and map. Everything else is set as a boot into `mode` would.
+        """
+        mode = mode.upper()
+        if mode not in BonePresets.MODES:
+            raise ValueError(f"Unknown mode: {mode}")
+        old_mods = set(self.mode_settings.get("active_mods", []))
+        self.boot_mode = mode
+        self.mode_settings = BonePresets.MODES[mode]
+        self.sys_config["boot_mode"] = mode
+        self.sys_config["mode_settings"] = self.mode_settings
+        self.suppressed_agents = list(self.mode_settings.get("village_suppression", []))
+        self._resummon_village()
+        tuning_key = self.mode_settings.get("tuning", "STANDARD")
+        if hasattr(BonePresets, tuning_key):
+            self.config.load_preset(getattr(BonePresets, tuning_key))
+        self.cortex.active_mode = mode
+        self.cortex.svc.inventory = getattr(self.village, "gordon", None)
+        if self.consultant:
+            stale = old_mods - set(self.mode_settings.get("active_mods", []))
+            self.consultant.state.active_modules = [
+                m for m in self.consultant.state.active_modules if m not in stale
+            ]
+        self._apply_boot_mode()
+
+    def _resummon_village(self) -> None:
+        suppressed = set(self.suppressed_agents)
+        # Members a switch suppresses are kept aside, so switching back returns them as they were.
+        stash = getattr(self, "_village_stash", {})
+        existing = {key: getattr(self.village, attr, None) or stash.get(key) for key, attr in VILLAGE_KEYS.items()}
+        existing = {key: member for key, member in existing.items() if member is not None}
+        self._village_stash = {key: member for key, member in existing.items() if key in suppressed}
+        newly = {key for key in VILLAGE_KEYS if key not in existing and key not in suppressed}
+        for member, needs in DEPENDS_ON.items():
+            if newly & set(needs):
+                existing.pop(member, None)
+        old_town_hall = getattr(self.village, "town_hall", None)
+        bundle = BoneGenesis._summon_village(
+            self.events, self.embryo, self.akashic, suppressed, self.boot_mode, self.config, existing=existing
+        )
+        for attr, member in bundle.items():
+            setattr(self.village, attr, member)
+        self.village.suppressed_agents = self.suppressed_agents
+        town_hall = getattr(self.village, "town_hall", None)
+        if town_hall is not old_town_hall:
+            if old_town_hall:
+                self.events.unsubscribe("ITEM_DROP", old_town_hall.on_item_drop)
+            if town_hall:
+                self.events.subscribe("ITEM_DROP", town_hall.on_item_drop)
 
     @property
     def health(self) -> float:
