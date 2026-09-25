@@ -1736,7 +1736,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.13 (2026-09-23)
+year and 930 commits of solo development, v20.7.4.32 (2026-09-24)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.
