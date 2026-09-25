@@ -11,6 +11,45 @@ each session; that one is the standing reference for how to run it again.
 
 ## Where things stand, 2026-09-24 midday (read this first)
 
+**RESUME HERE (2026-09-24, before a reboot). Real-model runs in every mode,
+and D checked.** Gordon asked for a "real" run to double check D. Script:
+`scratch/mode_runs/mode_runs.py` (gitignored, kept out of `/tmp` because
+that is tmpfs), 30 paced turns per mode on gemma4:12b after `reset.sh`,
+results in `scratch/mode_runs/mode_runs.jsonl`. Run from the repo root:
+`.venv/bin/python scratch/mode_runs/mode_runs.py OUT.jsonl CONVERSATION ADVENTURE TECHNICAL CREATIVE`.
+
+| Mode | Reached the model | The rest | End |
+|---|---|---|---|
+| CONVERSATION | 28/30 | 2 SILENCE | healthy |
+| ADVENTURE | 8/30 | 16 SYSTEM_HALT at ATP 0, 6 SILENCE | health 51 |
+| TECHNICAL | 1/30 | 8 SILENCE, then 21 DEATH | health 0 |
+| CREATIVE | 4/30 | 27 DEATH | health 0 |
+
+**D: harmless in practice.** The two pragmatist voltage<20 rules fired 0
+times in every mode. Nothing changed.
+
+**Found, nothing fixed or committed yet (Gordon picks what to chase):**
+1. Stage Manager holds run past `MAX_CONSECUTIVE_HOLDS` (2): TECHNICAL
+   held turns 1 to 8. Health drains 10 to 18 per held turn while ATP rises.
+2. CREATIVE drains about 30 health per replied turn (65, 33, 2, dead by
+   turn 3); the UI shows "[ATP]: Neural Overclock (-10.0)".
+3. Death is permanent, and every later turn logs "Save Failed: 'tuple'
+   object has no attribute 'upper'".
+4. ADVENTURE replies get "[FALSE COHESION BREAK: The Jester has seized the
+   architecture.]" appended to what the player sees.
+5. TECHNICAL turn 0 wrote `output/metabolism.py` from the model's file
+   block ("File forging consumed 16.2 ATP"). `output/` is gitignored and
+   `reset.sh` clears it; whether the engine should write files unasked is
+   the question.
+
+**Next step when Gordon says go:** find what drains health.
+`scratch/mode_runs/health_trace.py` records every write to
+`Biometrics.health` with its caller (`trace_field` from
+`tools/audit_somatic_census.py`). After `reset.sh`:
+`.venv/bin/python scratch/mode_runs/health_trace.py scratch/mode_runs/mode_runs.py CREATIVE 6`,
+then the same with TECHNICAL. Then report findings 1 to 5 ranked, with
+causes, and ask which to fix.
+
 **2026-09-24 night, Gordon's order of work:** (1) audit the HIGH_VOLTAGE
 style guide, (2) the person model's starting exhaustion, (3) make `/mode`
 switch modes, (4) `ROADMAP.md` A8. **(2) done (20.7.4.29):**
@@ -1736,7 +1775,7 @@ to read until a run regenerates it.
 BoneAmanita is a **stateful prompt-construction engine with a
 retry/filter loop**, wrapped around a plain OpenAI-compatible
 `/chat/completions` call. ~31k lines of Python across ~220 files, one
-year and 930 commits of solo development, v20.7.4.32 (2026-09-24)
+year and 930 commits of solo development, v20.7.4.33 (2026-09-24)
 
 That plain description is not a demotion, it is the thing to hold onto
 when reading the code, because the vocabulary actively works against it.
