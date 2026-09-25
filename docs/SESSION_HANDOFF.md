@@ -77,6 +77,35 @@ it reproduces with a stub model (`scratch/mode_runs/crucible_probe.py`,
 - **Jester banner** (`brain/cortex.py:702`) and **file forging** to
   `output/`: design calls; `tests/test_physics.py` asserts the banner.
 
+**THE PLAN FOR THE NEXT SESSION (proposed to Gordon, not yet approved;
+confirm with him before changing code).** Recommended order:
+1. **`counts`:** keep it a plain dict through `snapshot()` (coerce in
+   `MaterialState` or convert before `asdict` in `PhysicsPacket.to_dict`).
+   Add a test that snapshots a packet holding a real `Counter` and checks
+   the keys survive, and one that a second death saves cleanly.
+2. **Voltage start:** `EnergyState.voltage` default 30.0 to 0.0 (like
+   `E_u`, 20.7.4.29). Check nothing relies on 30.
+3. **Hold cap:** the nomination branch in `StageManager.negotiate` must
+   respect `MAX_CONSECUTIVE_HOLDS`. Open question for Gordon: may a
+   distress-level nomination (magnitude >= 100) still hold past the cap?
+4. **Held turns and voltage:** after 3, check whether held turns still
+   ratchet voltage; if so, let a held turn bleed some voltage off.
+5. **ATP lock:** a halted or held turn still recovers some ATP, and
+   absolute friction's infinite drag must not persist into the malignancy
+   score. Rerun ADVENTURE with non-repeating messages to separate the
+   script artifact from the real lock.
+6. **Waiting on Gordon:** CREATIVE's 70 V floor against its 27 V meltdown
+   line (which does he want: high voltage, or no meltdown?), the Jester
+   banner in the reader's text, and TECHNICAL writing files unasked.
+Then `reset.sh` and a fresh 30-turn real-model run per mode
+(`mode_runs.py`), compared with the table above. Full test suite before
+committing (701 passed, 5 skipped at 20.7.4.33).
+
+**The probe scripts are local only:** `scratch/` is gitignored, so they
+exist on Gordon's machine, not in the repo. Each boots the engine with
+`provider: "mock"`, patches saves into a temp dir, and prints per-turn
+state; run them from the repo root with `.venv/bin/python`.
+
 **2026-09-24 night, Gordon's order of work:** (1) audit the HIGH_VOLTAGE
 style guide, (2) the person model's starting exhaustion, (3) make `/mode`
 switch modes, (4) `ROADMAP.md` A8. **(2) done (20.7.4.29):**
