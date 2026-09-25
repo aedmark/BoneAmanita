@@ -365,6 +365,8 @@ class TheTclWeaver:
     _PUNC_RE = re.compile(r"[^\w\s\.,!?]*$")
     _WORD_SPLIT_RE = re.compile(r"\W+")
     _CLEAN_RE = re.compile(r"[^a-zA-Z0-9]")
+    # Lost when 20.6.3 hoisted the regexes; quantum_comb still used it, so a chaotic turn crashed.
+    _QUANTUM_REGEX = re.compile(r"(?i).*(?:ous|ful|ic|ish|ly)[.,!?]*$")
 
     @classmethod
     def get_instance(cls):

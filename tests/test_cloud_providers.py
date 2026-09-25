@@ -69,14 +69,15 @@ def test_ollama_uses_the_native_endpoint_with_its_own_context():
     assert sent['think'] is False and sent['stream'] is False
     assert set(sent) == {'model', 'messages', 'stream', 'options', 'think'}
     opts = sent['options']
-    assert opts['num_ctx'] == 32768
+    assert opts['num_ctx'] == 16384
     assert (opts['temperature'], opts['top_p'], opts['num_predict'], opts['stop']) == (0.8, 0.9, 500, ['end'])
-    assert llm.last_usage == {'prompt_tokens': 12, 'output_tokens': 3, 'done_reason': 'stop', 'num_ctx': 32768}
+    assert llm.last_usage == {'prompt_tokens': 12, 'output_tokens': 3, 'done_reason': 'stop', 'num_ctx': 16384}
 
 
 def test_ollama_reply_room_is_the_context_left_after_the_prompt():
     llm = LLMInterface(provider='ollama', model='m', base_url='http://host:11434/api/chat')
-    long_prompt = 'x' * 90000
+    long_prompt = 'x' * 35000
     _, url, sent = _ollama_send(llm, {'model': 'm', 'messages': [{'role': 'user', 'content': long_prompt}], 'max_tokens': 4096})
     assert url == 'http://host:11434/api/chat'
-    assert sent['options']['num_predict'] == 32768 - 90000 // 3 - 64
+    from brain.composer import CHARS_PER_TOKEN
+    assert sent['options']['num_predict'] == 16384 - int(35000 / CHARS_PER_TOKEN) - 64

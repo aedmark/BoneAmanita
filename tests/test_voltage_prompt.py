@@ -9,7 +9,8 @@ conversation runs, the prompt ended "[SYSTEM EXHAUSTED. LOW ENERGY PROSE.]" on 2
 from tests.base import BoneTestCase
 
 BANNERS = ("SYSTEM EXHAUSTED", "RAW CORTEX STREAM", "VOLTAGE SURGE", "HIGH VOLTAGE DETECTED")
-OLD_PROTOCOL = ("You are not talking to anyone", "METABOLIC OVERRIDE", "raw, brutal fact", "bleeding data")
+OLD_PROTOCOL = ("You are not talking to anyone", "METABOLIC OVERRIDE", "raw, brutal fact", "bleeding data",
+                "INCOMING SHOCKWAVE", "RECENT THOUGHTS", "memory streams strained")
 
 
 class VoltageKeepsTheConversation(BoneTestCase):
@@ -29,6 +30,7 @@ class VoltageKeepsTheConversation(BoneTestCase):
             prompt = self.compose(voltage)
             self.assertIn("RESPOND, DO NOT NARRATE", prompt, voltage)
             self.assertIn("computer program", prompt, voltage)
+            self.assertIn("=== PARTNER INPUT ===", prompt, voltage)
             for banner in BANNERS + OLD_PROTOCOL:
                 self.assertNotIn(banner, prompt, (voltage, banner))
 

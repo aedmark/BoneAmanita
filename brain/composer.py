@@ -31,6 +31,10 @@ class EmptyReplyError(SynapseError):
     """The model answered with HTTP 200 and no content."""
 
 
+# A conservative characters-per-token estimate: prose measured 3.5-3.9 on gemma4:12b, code 2.88.
+CHARS_PER_TOKEN = 2.5
+
+
 class LLMInterface:
     STOP_SEQUENCES = (
         "=== PARTNER INPUT ===",
@@ -91,10 +95,10 @@ class LLMInterface:
         """Ollama's own /api/chat, the only endpoint that honours num_ctx; /v1 runs every model at 4096."""
         root = re.sub(r"/(v1/chat/completions|v1|api/chat)/?$", "", self.base_url.rstrip("/"))
         c_cfg = safe_get(self.cfg, "CORTEX", {})
-        num_ctx = int(safe_get(c_cfg, "NUM_CTX", 32768))
+        num_ctx = int(safe_get(c_cfg, "NUM_CTX", 16384))
         prompt_chars = sum(len(str(m.get("content", ""))) for m in payload.get("messages", []))
-        # A conservative 3 characters per token: the reply may use whatever the prompt leaves.
-        room = max(256, num_ctx - prompt_chars // 3 - 64)
+        # The reply may use whatever the prompt leaves.
+        room = max(256, num_ctx - int(prompt_chars / CHARS_PER_TOKEN) - 64)
         options = {"num_ctx": num_ctx, "num_predict": min(int(payload.get("max_tokens") or room), room)}
         for key in ("temperature", "top_p", "frequency_penalty", "presence_penalty", "stop"):
             if key in payload:
@@ -622,11 +626,6 @@ class PromptComposer:
         mode_trigger = f"[MODE: {active_mode_name}]"
         dialogue_block = f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
         input_block = f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
-        if voltage > 60:
-            dialogue_block = f"=== RECENT THOUGHTS ===\n{history_str}\n[Standard memory streams strained by high voltage. Narrative fragmented.]\n\n"
-            input_block = (
-                f"=== INCOMING SHOCKWAVE ===\n[VECTOR]: {self._sanitize(user_query)}\n"
-            )
         last_exits = ""
         if active_mode_name == "ADVENTURE":
             for entry in reversed(raw_history):
@@ -682,6 +681,7 @@ class PromptComposer:
             ("entity_prefix", entity_prefix),
             ("thermal_lock", cd_block),
         ]
+        trimmed = self._fit_to_window(blocks, style_notes, valid_history)
         parts = [text for _, text in blocks if text]
         prompt = "\n".join(parts)
         has_band = "thermal_openness" in (phys_ref or {})
@@ -695,12 +695,51 @@ class PromptComposer:
                 "directives": len(style_notes),
                 "mode": active_mode_name,
                 "blocks": [name for name, text in blocks if text],
+                "block_chars": {name: len(text) for name, text in blocks if text},
+                "trimmed": trimmed,
             },
-            detail=""
-            if has_band
-            else "governor declined to measure the regime; model samples at its default",
+            detail=(f"trimmed to fit the context window: {', '.join(trimmed)}. " if trimmed else "")
+            + (""
+               if has_band
+               else "governor declined to measure the regime; model samples at its default"),
         )
         return prompt
+
+    def _fit_to_window(self, blocks: list, style_notes: list, valid_history: list) -> list:
+        """Trim the lowest-priority blocks until the prompt leaves room for a reply; returns what went.
+
+        The code sweep goes first, then the oldest dialogue. The kernel, persona, rules and the
+        person's message are never cut: left to Ollama, an overflow is cut from the top, the kernel.
+        """
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        num_ctx = int(safe_get(c_cfg, "NUM_CTX", 16384))
+        reserve = min(int(safe_get(c_cfg, "MAX_TOKENS", 4096)), num_ctx // 4)
+        budget = int((num_ctx - reserve) * CHARS_PER_TOKEN)
+
+        def size():
+            return sum(len(text) + 1 for _, text in blocks if text)
+
+        def put(name, text):
+            blocks[[n for n, _ in blocks].index(name)] = (name, text)
+
+        trimmed = []
+        if size() > budget:
+            # It arrives as a bulleted directive ("- CRITICAL STRUCTURAL CONTEXT ...").
+            kept = [n for n in style_notes if "CRITICAL STRUCTURAL CONTEXT" not in str(n)[:40]]
+            if len(kept) < len(style_notes):
+                style_notes[:] = kept
+                put("persona", "\n".join(style_notes))
+                trimmed.append("code sweep")
+        dropped = 0
+        while size() > budget and valid_history:
+            valid_history.pop()  # newest first, so the oldest entry is last
+            dropped += 1
+            put("dialogue", "=== RECENT DIALOGUE ===\n" + "\n\n".join(reversed(valid_history)) + "\n\n")
+        if dropped:
+            trimmed.append(f"{dropped} oldest dialogue entries")
+        if size() > budget:
+            trimmed.append("still over budget; nothing left that may be cut")
+        return trimmed
 
     def _build_persona_block(
         self,

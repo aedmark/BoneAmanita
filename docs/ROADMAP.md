@@ -526,7 +526,38 @@ the `/mode` warning; `--save` with a test that it never touches `lore/`.
 **Not in scope:** tuning mid-panel-run. The census boots a stock engine and
 must keep doing so.
 
-## A8. Right-size the context window (plan, not started; drafted 2026-09-24)
+## A8. Right-size the context window (done 2026-09-24, 20.7.4.32; plan kept below)
+
+**Measured.** Largest composed prompt per mode over 30 paced turns (stand-in
+model; exact counts from Ollama's `prompt_eval_count`): CONVERSATION 2,162
+tokens (2,407 in the real rescue run), ADVENTURE 1,830, CREATIVE 1,323,
+TECHNICAL **5,668** with the code sweep. Characters per token: prose 3.5-3.9,
+code **2.88**, so the shared estimate is now 2.5 (`CHARS_PER_TOKEN`).
+Window cost on `gemma4:12b`: 8.1 GB at 4096 and **8.4 GB at 8192, 16384
+and 32768 alike**, load about 2 s at each (the first, 3.6 s, was a cold
+start); its sliding-window attention keeps the reservation nearly flat, so
+the premise "32k is heavy" did not hold on this model (it would on one
+without that design).
+**Chosen:** `NUM_CTX` 16384, the smallest bucket that fits every mode's
+largest prompt plus the 4,096-token reply ceiling. **Built:**
+`PromptComposer._fit_to_window` cuts the code sweep first, then the oldest
+dialogue, never the kernel, persona, rules or the person's message, and the
+`composer.compose` receipt now carries `block_chars` and `trimmed`
+(`tests/test_context_window.py`, mutation checked).
+**Found on the way:** (1) TECHNICAL crashed on any turn at chi >= 0.5:
+20.6.3 removed `TheTclWeaver._QUANTUM_REGEX` but kept its use (restored,
+tested). (2) The high-voltage audit had missed a third replacement: above a
+hard-coded 60 the dialogue block became "RECENT THOUGHTS... memory streams
+strained" and the person's message "INCOMING SHOCKWAVE [VECTOR]", dropping
+the `=== PARTNER INPUT ===` marker; removed under the same approval as A.
+(3) In the stand-in measurement TECHNICAL reached the model on 2 of 30
+turns, CREATIVE 4 and ADVENTURE 10 (holds and ATP halts); not chased,
+since a fixed 70-word stand-in reply may trip the economy and repetition
+checks those modes lean on. (4) D, `VOLTAGE_LOW`: besides the reply prefix
+(neutral since 20.7.4.30), `mechanics/pragmatics.py` gates two rules on a
+hard-coded `voltage < 20`, a length rewrite at engine stamina < 50 and a
+"perhaps" strip at chi < 0.4; both effectively always on in conversation,
+neither mislabels the engine's state; left as they are.
 
 20.7.4.20 made the engine ask Ollama for its own window (`CORTEX.NUM_CTX`,
 native `/api/chat`) and set it to 32768 to match the baseline arms. That

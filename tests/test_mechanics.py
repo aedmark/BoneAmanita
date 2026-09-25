@@ -112,3 +112,12 @@ class MechanicsTests(BoneTestCase):
                     patch("mechanics.terminal.time.sleep") as sleep, patch("sys.stdout"):
                 typewriter("slow words", speed=0.01)
             self.assertEqual(sleep.called, sleeps)
+
+
+class QuantumCombDoesNotCrash(BoneTestCase):
+    def test_a_chaotic_turn_combs_adverbs_instead_of_crashing(self):
+        """20.6.3 dropped _QUANTUM_REGEX but kept its use; any turn at chi >= 0.5 crashed in Gordon's filters."""
+        from mechanics.tools import TheTclWeaver
+
+        combed = TheTclWeaver.get_instance().quantum_comb("The wonderful dog slowly waited", 1.0)
+        self.assertEqual(combed, "The dog waited")
