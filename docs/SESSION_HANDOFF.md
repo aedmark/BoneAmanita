@@ -42,13 +42,40 @@ times in every mode. Nothing changed.
    `reset.sh` clears it; whether the engine should write files unasked is
    the question.
 
-**Next step when Gordon says go:** find what drains health.
-`scratch/mode_runs/health_trace.py` records every write to
-`Biometrics.health` with its caller (`trace_field` from
-`tools/audit_somatic_census.py`). After `reset.sh`:
-`.venv/bin/python scratch/mode_runs/health_trace.py scratch/mode_runs/mode_runs.py CREATIVE 6`,
-then the same with TECHNICAL. Then report findings 1 to 5 ranked, with
-causes, and ask which to fix.
+**Traced (2026-09-24, after the reboot), still nothing changed.** All of
+it reproduces with a stub model (`scratch/mode_runs/crucible_probe.py`,
+`hold_probe.py`, `voltage_trace.py`, `death_run.py`, `counts_spy.py`):
+- **`counts` corrupts every turn, in every mode.** `PhysicsPacket.to_dict`
+  uses `dataclasses.asdict`, which copies a `Counter` as
+  `Counter(pairs)`, so each `snapshot()` nests the keys a tuple deeper
+  (`{'heavy': 2}` to `{('heavy', 2): 1}`). The Metabolism phase
+  (`phases/biological.py:332`) swaps in a snapshot, so Navigation,
+  Machinery (forge, theremin), Reality Filter (antigens), Soul and
+  Cognition all read zeros. It is also finding 3: after the first death
+  purges the cortex's packet, `mitosis` falls back to the observer's and
+  calls `.upper()` on a tuple key. `test_matter_is_not_flattened` saw the
+  symptom once but tests an empty dict, not a Counter.
+- **All health loss is one site:** the Crucible's MELTDOWN
+  (`phases/mechanical.py:210`), voltage over 18 x `GATE_TOLERANCE` with
+  kappa at or under 0.5, costing voltage x 0.5 health every turn.
+- **Turn 0 melts down in every mode** at about 30 V:
+  `EnergyState.voltage` defaults to 30.0 (`physics/models.py:26`).
+- **CREATIVE contradicts itself:** `voltage_floor_override` 70 against a
+  meltdown line of 27 (18 x 1.5), so 34.75 damage a turn, dead by turn 3.
+- **Holds bypass `MAX_CONSECUTIVE_HOLDS`:** the nomination branch at the top
+  of `StageManager.negotiate` never checks the counter (TECHNICAL: PINKER
+  then MOOG, 6 holds running). A held turn returns before the cortex, whose
+  reply physics are the only thing that brings voltage down, while soul
+  dignity (+2) and input voltage (+50%) keep adding: about +4 V a held turn
+  until meltdown every turn.
+- **ADVENTURE's ATP lock:** the immune check (`main.py:399`) halts and
+  drains up to 20 ATP when malignancy (exact repeats, scaled by drag) passes
+  0.8; absolute friction sets drag to infinity, which maxes it for any
+  later repeat; at ATP 0 the parity gate (`main.py:436`) refuses every
+  message and nothing in pre-flight restores ATP. The script's cycled
+  messages (exact repeats from turn 10) are partly an artifact.
+- **Jester banner** (`brain/cortex.py:702`) and **file forging** to
+  `output/`: design calls; `tests/test_physics.py` asserts the banner.
 
 **2026-09-24 night, Gordon's order of work:** (1) audit the HIGH_VOLTAGE
 style guide, (2) the person model's starting exhaustion, (3) make `/mode`
