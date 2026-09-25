@@ -82,7 +82,7 @@ class TheBudgetAnswersDistress(BoneTestCase):
     def test_a_distressed_message_reaches_the_prompt_as_a_tight_budget(self):
         """End to end: person model, biological phase, budget, composer."""
         self.engine.cortex.active_mode = "CONVERSATION"
-        self.engine.cortex.llm.generate = MagicMock(return_value="That sounds like a hard night.")
+        self.engine.cortex.llm.generate = MagicMock(return_value='{"tool": "nominate_response", "args": {"text": "That sounds like a hard night."}}')
         self.engine.cortex.dspy_critic.enabled = False
         self.engine.process_turn(TURN_22)
         prompts = [c.args[0] for c in self.engine.cortex.llm.generate.call_args_list if "=== PARTNER INPUT ===" in c.args[0]]

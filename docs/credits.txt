@@ -13,23 +13,15 @@ We would like to explicitly acknowledge the following individuals and architectu
 * **Creator: Andrew Edmark** - BoneAmanita introduced the **continuous state space** and **Semantic Bio-Physics** to the LLM. By giving the system a simulated body and treating every word as a biological event, BoneAmanita translated abstract metaphors into literal computational constraints. It tracks exhaustion and metabolism as persistent state and turns them into instructions to the model. Those instructions are requests, not enforcement: measured against two local models, low energy shortens sentences by about 10% and the instruction to answer in three sentences is not obeyed. An earlier version of this sentence said the physics "physically enforce" exhaustion; that overstatement was ours.
 
 ### The Creative Determinant & Project Navi - https://project-navi.github.io
-* **Creator: Nelson Spence** - Spence's work runs in three places here, and it is worth being precise about which, because an earlier version of this file was not.
-
-    **The governor's regime gate is his, twice over.** Every turn, `CyberneticGovernor._bitmap_regulation` scores the utterance against all of memory in one pass over `ordvec`'s sign bitmap, and reads three scalars off the result: `z_top10`, how far the neighbourhood stands above the corpus null in standard deviations of the sign-agreement distribution; `sharpness`; and the corpus size. `z_top10` selects the macro policy and sets the sampling temperature. That design is his recommendation, given to us directly, and the finding behind it is his too: he built the Laplacian version first at 207,695 nodes, then audited it into the ground when a corpus-mass scalar reproduced its routing signal at Pearson 0.992 in a millisecond, and bitmap popcount features then beat the scalar at zero added compute.
-
-    **The metabolic economy is the Creative Determinant proper.** `calculate_viability`, `update_coherence_debt` and `execute_metabolic_tick` drive the ATP and ROS accounting, and the saturation penalty caps runaway voltage. This is the part of his mathematics that is still solving his equations, and it is load bearing.
-
-    **The measurement discipline is his as well.** `navi-fractal`'s habit of refusing to return a dimension when R squared says the data will not support one is the single most useful idea this project has taken from him, and it now governs the governor: when there is too little memory for a corpus null worth comparing against, the engine declines to emit a regime signal at all and writes a receipt saying it was not measured. `navi-SAD`'s permutation entropy work detects conversational point attractors.
-
-    *What we removed, and why it is here:* until this revision the governor built a graph Laplacian over a memory subgraph and solved a nonlinear elliptic BVP by Picard iteration, and this file described that as the control loop. Instrumented on our own code with a subgraph seeded denser than a real session, the Laplacian contributed **1.53%** of the eigenvalue it produced, and the voltage input contributed nothing measurable: the reported number came back byte-identical at every voltage from 15 to 90. What remained after the topology and the voltage cancelled was the mean `ordvec` similarity, computed the expensive way. Spence predicted the magnitude from two numbers in an email before we measured it. The Laplacian and the Picard iteration are gone; the claim that they steered anything was ours, not his.
-
-    *On availability:* `ordvec` 0.5.0 is the last public build. We have added opportunistic support for 8-bit quantization arriving in a private `0.10.0` wheel (the upstream repo is currently locked at `0.5.0`).
-
+* **Creator: Nelson Spence** - Spence's work runs in three places here:
+    **The governor's regime gate
+    **The metabolic economy is the Creative Determinant proper.
+    **The measurement discipline is basically `navi-fractal`
+    *On availability:* `ordvec` 0.5.0 is the latest public build.
     *On verification:* `ordvec` carries a Lean 4 formalisation, so the candidate selection underneath both the subconscious memory search and the governor's regime gate rests on machine-checked code, and the Creative Determinant has a formalisation of its own. What is *not* verified is BoneAmanita's own implementation, which is ordinary Python and carries no proofs.
 
-### Sycophancy Logic - https://github.com/bradsadevnow/semantic-hallucination-generators
-* **Creator: Bradley (bradsadevnow)** - Bradley architected the "Gloss" framework, a brilliant piece of satirical infrastructure designed to mock VC-bloat and AI sycophancy. We use the output of this satire as antigens for our biomechanical engine.
-
+### Gating, Steering, and other Governance Logic - https://github.com/bradsadevnow/
+* **Creator: Bradley (bradsadevnow)** - Bradley architects brilliant pieces of software and logic that we are eternally grateful for being allowed to adapt into this project.
 ### SPECIAL THANKS & ETERNAL GRATITUDE
 
 * **Mike Singleton** - https://www.linkedin.com/in/mikesingleton/

@@ -495,7 +495,7 @@ class RandomTest(BoneTestCase):
             return_value={"valid": False, "feedback_instruction": "Always fails"}
         )
         self.engine.cortex.dspy_critic.enabled = False
-        self.engine.cortex.llm.generate = MagicMock(return_value="A plain reply with nothing wrong in it.")
+        self.engine.cortex.llm.generate = MagicMock(return_value='{"tool": "nominate_response", "args": {"text": "A plain reply with nothing wrong in it."}}')
         ledger = ReceiptLedger.get_instance()
         ledger.begin_turn()
         ctx = CycleContext(input_text="Tell me a simple story.", is_system_event=False)
@@ -521,7 +521,7 @@ class RandomTest(BoneTestCase):
             side_effect=lambda text, _state: {"valid": True, "content": text, "meta_logs": []}
         )
         self.engine.cortex.llm.generate = MagicMock(
-            side_effect=["Honestly it is a rare privilege to help with this.", "Start with the tire story."]
+            side_effect=['{"tool": "nominate_response", "args": {"text": "Honestly it is a rare privilege to help with this."}}', '{"tool": "nominate_response", "args": {"text": "Start with the tire story."}}']
         )
         ctx = CycleContext(input_text="Help me with the toast.", is_system_event=False)
         ctx.physics = PhysicsPacket()
@@ -544,7 +544,8 @@ class RandomTest(BoneTestCase):
         self.engine.cortex.validator.validate = MagicMock(
             side_effect=lambda text, _state: {"valid": True, "content": text, "meta_logs": []}
         )
-        self.engine.cortex.llm.generate = MagicMock(side_effect=drafts)
+        json_drafts = [f'{{"tool": "nominate_response", "args": {{"text": "{d}"}}}}' for d in drafts]
+        self.engine.cortex.llm.generate = MagicMock(side_effect=json_drafts)
         ctx = CycleContext(input_text=message, is_system_event=False)
         ctx.physics = PhysicsPacket()
         ctx.bio_result = {"mito": {"atp_pool": 100.0, "ros_buildup": 0.0}}
@@ -632,7 +633,7 @@ class RandomTest(BoneTestCase):
         "Show, do not tell", and "weight" three times, with "RESPOND, DO NOT NARRATE" fifth of six rules."""
         self.engine.cortex.active_mode = "CONVERSATION"
         self.engine.cortex.dspy_critic.enabled = False
-        self.engine.cortex.llm.generate = MagicMock(return_value="Start with the tire story.")
+        self.engine.cortex.llm.generate = MagicMock(return_value='{"tool": "nominate_response", "args": {"text": "Start with the tire story."}}')
         from engine.struts import safe_get
 
         # Above VOLTAGE_HIGH the HIGH_VOLTAGE guide replaces the mode's; the test engine boots hot.
@@ -679,7 +680,7 @@ class RandomTest(BoneTestCase):
             return_value={"valid": False, "feedback_instruction": "Always fails"}
         )
         if hasattr(self.engine.cortex, "llm"):
-            self.engine.cortex.llm.generate = MagicMock(return_value="Bad output")
+            self.engine.cortex.llm.generate = MagicMock(return_value='{"tool": "nominate_response", "args": {"text": "Bad output"}}')
 
         from engine.core import CycleContext
         from physics.models import PhysicsPacket

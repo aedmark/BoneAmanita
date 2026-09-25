@@ -110,7 +110,7 @@ class TopologicalPrimitivesTest(BoneTestCase):
         self.engine.tick_count = 6
         self.engine.cortex.dspy_critic.enabled = False
         with patch.object(
-            self.engine.cortex.llm, "generate", return_value="I agree completely."
+            self.engine.cortex.llm, "generate", return_value='{"tool": "nominate_response", "args": {"text": "I agree completely."}}'
         ):
             result = self.engine.process_turn("Do you agree?")
         self.assertIn(

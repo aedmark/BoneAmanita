@@ -15,7 +15,7 @@ class ModeSwitch(BoneTestCase):
         super().setUp()
         self.engine.bio.mito.state.atp_pool = 100.0
         self.engine.cortex.dspy_critic.enabled = False
-        self.engine.cortex.llm.generate = MagicMock(return_value="Start with the tire story.")
+        self.engine.cortex.llm.generate = MagicMock(return_value='{"tool": "nominate_response", "args": {"text": "Start with the tire story."}}')
         self.log = self.engine.cmd.interface.log = MagicMock()
 
     def turn_prompt(self, message: str) -> str:

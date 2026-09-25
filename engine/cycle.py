@@ -216,7 +216,7 @@ class PhaseExecutor:
                 continue
             try:
                 ctx = phase.run(ctx)
-            except Exception as e:
+            except BaseException as e:
                 simulator.handle_phase_crash(ctx, phase.name, e)
                 break
         return ctx
@@ -256,7 +256,19 @@ class CycleSimulator:
         ]
 
     def run_simulation(self, ctx: CycleContext) -> CycleContext:
-        ctx = self.executor.execute_phases(self, ctx)
+        from engine.invariants import Gatekeeper, InvariantViolation
+        frozen_state = Gatekeeper.freeze_engine_state(self.eng)
+        
+        try:
+            ctx = self.executor.execute_phases(self, ctx)
+            mito_state = getattr(self.eng.bio.mito, "state", None) if hasattr(self.eng, "bio") and getattr(self.eng.bio, "mito", None) else None
+            Gatekeeper.check_metabolic_bounds(None, mito_state, {})
+        except BaseException as e:
+            Gatekeeper.thaw_engine_state(self.eng, frozen_state)
+            self.eng.events.log(f"Global Invariant Breach in turn cycle: {e}. State rolled back.", "SYS_ERR")
+            ctx.logs.append(f"Global Invariant Breach: {e}")
+            ctx.refusal_triggered = True
+            
         if (
             hasattr(self.eng, "telemetry")
             and hasattr(self.eng, "cortex")
@@ -411,7 +423,7 @@ class GeodesicOrchestrator:
                         continue
                     self.last_rem_tick = current_time
                     self._process_rem_tick()
-            except Exception as e:
+            except BaseException as e:
                 self.eng.events.log(
                     f"Daemon Engine Crash: {e}\n{traceback.format_exc()}", "CYCLE", "CRIT"
                 )
@@ -454,7 +466,7 @@ class GeodesicOrchestrator:
         if self.eng.consolidator:
             try:
                 self.eng.consolidator.trigger_autophagy()
-            except Exception as e:
+            except BaseException as e:
                 self.eng.events.log(f"REM Autophagy failure: {e}", "DEBUG")
         cortex = getattr(self.eng, "cortex", None)
         if cortex and hasattr(cortex, "worry_ledger") and cortex.worry_ledger:
@@ -478,7 +490,7 @@ class GeodesicOrchestrator:
                     self.dream_log.append(
                         f"  • {Prisma.strip(dream_txt)} (Shadow cast involving: {safe_obj})"
                     )
-            except Exception as e:
+            except BaseException as e:
                 self.eng.events.log(f"Dream generation failed in REM: {e}", "DEBUG")
 
         self._submit_background(_bg_hallucinate, trauma_level, objects)
@@ -617,7 +629,7 @@ class GeodesicOrchestrator:
                     self.eng.health = 0.0
                 else:
                     self._topology_collapse_strikes = 0
-            except Exception as e:
+            except BaseException as e:
                 self.eng.events.log(f"Async Topology Error: {e}", "CYCLE", "WARN")
 
         if isinstance(actual_adj, dict):
@@ -787,7 +799,7 @@ class GeodesicOrchestrator:
                 metrics["a"] = getattr(self.eng.governor, "last_a", 0.0)
                 metrics["thermal_z"] = getattr(self.eng.governor, "last_z", None)
             return ctx
-        except Exception as e:
+        except BaseException as e:
             full_trace = traceback.format_exc()
             self.eng.events.log(f"CYCLE CRASH: {e}\n{full_trace}", "CYCLE", "CRIT")
             if ctx is None:
@@ -908,7 +920,7 @@ class GeodesicOrchestrator:
                                 "kappa",
                                 max(0.5, float(getattr(active_phys, "kappa", 0.0))),
                             )
-            except Exception as e:
+            except BaseException as e:
                 self.eng.events.log(f"Async WLS Heuristic Error: {e}", "DEBUG")
 
         if clean_message != "(Waiting)":
@@ -957,7 +969,7 @@ class GeodesicOrchestrator:
                                     1.0,
                                     float(getattr(ctx.physics, "entropy", 0.0)) + 0.6,
                                 )
-                except Exception as e:
+                except BaseException as e:
                     self.eng.events.log(
                         f"Async navi-SAD Evaluation Error: {e}", "DEBUG"
                     )

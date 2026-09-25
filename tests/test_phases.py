@@ -25,6 +25,9 @@ class PhaseBoundaryTests(BoneTestCase):
         self.ctx.physics = PhysicsPacket.void_state()
         self.engine.stamina = 100.0
         self.engine.health = 100.0
+        from unittest.mock import MagicMock
+        if hasattr(self.engine, "cortex") and hasattr(self.engine.cortex, "llm"):
+            self.engine.cortex.llm.generate = MagicMock(return_value='{"tool": "nominate_response", "args": {"text": "A mock response"}}')
         self.engine.set_atp(100.0)
 
     def test_metabolism_clamping(self):

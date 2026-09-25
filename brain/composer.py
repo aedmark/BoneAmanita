@@ -680,6 +680,7 @@ class PromptComposer:
             ("input", input_block),
             ("entity_prefix", entity_prefix),
             ("thermal_lock", cd_block),
+            ("warden_instruction", "=== STRUCTURAL INVARIANT GOVERNANCE ===\nYou are operating inside a strictly governed harness.\nEach turn you MUST output EXACTLY ONE JSON object and nothing else. No prose. No markdown blocks outside the JSON.\nTools available:\n- nominate_response: {'tool': 'nominate_response', 'args': {'internal_monologue': '...', 'text': '...'}}\n- commit_memory: {'tool': 'commit_memory', 'args': {'internal_monologue': '...', 'text': '...', 'evidence': '<exact verbatim text from dialogue history>'}}\nIf your text length violates the ATP budget, or your memory evidence is hallucinated, your action will be structurally REJECTED by the Gatekeeper.\nOUTPUT ONLY VALID JSON."),
         ]
         trimmed = self._fit_to_window(blocks, style_notes, valid_history)
         parts = [text for _, text in blocks if text]

@@ -655,7 +655,7 @@ class TheCortex:
                         sim_result["ui"] = (
                             str(sim_result.get("ui", "")) + f"\n\n{audit['ui']}"
                         )
-                except Exception as e:
+                except (ValueError, Exception) as e:
                     if self.events:
                         self.events.log(
                             f"{Prisma.RED}[BUREAU ERROR] Audit bypassed: {e}{Prisma.RST}",
@@ -725,6 +725,69 @@ class TheCortex:
             val_res = {"valid": False}
             rejected_by, reject_detail = "validator", ""
             raw_resp = self.llm.generate(final_prompt, llm_params)
+            
+            import json
+            from engine.invariants import Gatekeeper, InvariantViolation
+            from engine.receipts import issue as issue_receipt
+            
+            parsed_action = None
+            try:
+                import re
+                match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw_resp, re.S)
+                if match:
+                    json_str = match.group(1)
+                else:
+                    json_str = raw_resp
+                s_idx = json_str.find('{')
+                e_idx = json_str.rfind('}')
+                if s_idx == -1 or e_idx == -1:
+                    raise ValueError("No JSON object found")
+                parsed_action = json.loads(json_str[s_idx:e_idx+1])
+                
+                if "tool" not in parsed_action or "args" not in parsed_action:
+                    raise ValueError("JSON missing 'tool' or 'args'")
+            except (ValueError, Exception) as e:
+                rejected_by = "warden"
+                val_res["valid"] = False
+                val_res["feedback_instruction"] = f"CRITICAL FAILURE: Output must be EXACTLY ONE valid JSON object. {e}"
+                final_prompt = f"{base_prompt}\n\n=== SYSTEM REJECTION ===\nREASON: {val_res['feedback_instruction']}\n\n"
+                issue_receipt("warden.json_gate", "rejected non-JSON LLM output", result_count=0, degraded=False, inputs={"raw": raw_resp}, detail=str(e))
+                continue
+                
+            try:
+                corpus = list(getattr(self, "dialogue_buffer", []))
+                engine_ref = getattr(self.svc.orchestrator, "eng", None) if hasattr(self.svc, "orchestrator") else None
+                somatic_budget = None
+                if engine_ref and hasattr(engine_ref, "cycle_ctx") and hasattr(engine_ref.cycle_ctx, "somatic_budget"):
+                    somatic_budget = engine_ref.cycle_ctx.somatic_budget
+                    
+                mock_state = {
+                    "physics": phys_state,
+                    "mito_state": getattr(self.svc.bio.mito, "state", None) if (hasattr(self.svc, "bio") and self.svc.bio) else None,
+                    "somatic_budget": somatic_budget
+                }
+                
+                Gatekeeper.evaluate_state_transition({}, mock_state, parsed_action, corpus)
+                
+            except InvariantViolation as e:
+                rejected_by = "gatekeeper"
+                val_res["valid"] = False
+                val_res["feedback_instruction"] = f"INVARIANT_BREACH: {e}"
+                if self.events:
+                    self.events.log(f"{Prisma.RED}Gatekeeper rejected response: {e}{Prisma.RST}", "CORTEX")
+                final_prompt = f"{base_prompt}\n\n=== SYSTEM REJECTION ===\nREASON: {val_res['feedback_instruction']}\n\n"
+                issue_receipt("gatekeeper.invariant", "rejected physically invalid state transition", result_count=0, degraded=False, inputs={"action": parsed_action}, detail=str(e))
+                continue
+                
+            if parsed_action.get("tool") == "commit_memory":
+                mem_text = parsed_action.get("args", {}).get("internal_monologue", "memory")
+                if hasattr(self.svc, "mind") and hasattr(self.svc.mind, "mem") and hasattr(self.svc.mind.mem, "encode"):
+                    self.svc.mind.mem.encode([mem_text], phys_state, "WARDEN_COMMIT")
+                    if self.events:
+                        self.events.log(f"{Prisma.CYN}Evidence-gated memory committed.{Prisma.RST}", "CORTEX")
+                
+            # If passed, extract text for the rest of the loop
+            raw_resp = parsed_action.get("args", {}).get("text", "")
             if firewall_active:
                 original_len = len(raw_resp)
                 raw_resp = self.LEXICAL_PURGE_PATTERN.sub("", raw_resp).strip()
@@ -927,7 +990,7 @@ class TheCortex:
                         sub.queue_write(
                             clean_path, safe_content.replace("|||NEWLINE|||", "\n")
                         )
-                except Exception as e:
+                except (ValueError, Exception) as e:
                     err_msg = f"Failed to parse or write file block. {e}"
                     if self.events:
                         self.events.log(
@@ -1033,7 +1096,7 @@ class TheCortex:
                 )
 
             return True, ""
-        except Exception as e:
+        except (ValueError, Exception) as e:
             if self.events:
                 self.events.log(
                     f"{Prisma.OCHRE}[HEURISTIC AUDIT ERROR]: {e} - Bypassing.{Prisma.RST}",
@@ -1188,7 +1251,7 @@ class TheCortex:
                     final_response=response,
                 )
                 tel.log_crystal(crystal)
-        except Exception as e:
+        except (ValueError, Exception) as e:
             print(f"\n{Prisma.RED}[TELEMETRY CRASH]: {e}{Prisma.RST}")
 
     def gather_state(self, sim_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -1533,7 +1596,7 @@ class TheCortex:
                                 self.linear_router.ingest_artifact(
                                     os.path.basename(module), f.read()
                                 )
-                except Exception as e:
+                except (ValueError, Exception) as e:
                     if self.events:
                         self.events.log(
                             f"[CORTEX] Linear stock ingestion failed: {e}. Linear memory is barren.",
