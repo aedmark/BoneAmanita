@@ -95,7 +95,7 @@ class ToleranceReachesTheGates(BoneTestCase):
     def test_the_crucible_meltdown_line_scales(self):
         cfg = self.engine.config
         crucible = TheCrucible(config_ref=cfg)
-        physics = {"narrative_drag": 1.0, "voltage": 22.0, "kappa": 0.2}
+        physics = {"narrative_drag": 1.0, "voltage": 30.0, "kappa": 0.2}
 
         cfg.GATE_TOLERANCE = 1.0
         state, damage, _ = crucible.audit_fire(dict(physics))
@@ -107,7 +107,7 @@ class ToleranceReachesTheGates(BoneTestCase):
         self.assertNotEqual(
             state,
             "MELTDOWN",
-            "22.0 volts is under the conversation meltdown line (18 * 1.6) and "
+            "30.0 volts is under the conversation meltdown line (25 * 1.6) and "
             "must not cost health.",
         )
 

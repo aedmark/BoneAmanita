@@ -489,8 +489,7 @@
     "cortex_prefix_high": "\nSystem:",
     "cortex_prefix_low": "\nSystem:",
     "cortex_prefix_norm": "\nSystem:",
-    "pinker_cf_gate": "[PINKER - Executive Layer]: Structural rot critical. Counterfactual Gating engaged. I am deleting this generation path to save the host.",
-    "moog_scar_log": "[MOOG - Affective Layer]: Productive Worry activated. Logging G\u00f6del Scar. Immune Competence (I_c) permanently increased.",
+    "pinker_strain_gate": "[PINKER]: strain {strain:.0f} over {limit:.0f} (drag {drag:.1f}, entropy {chi:.2f}, malignancy {m_a:.2f}). Holding this turn.",
     "noetic_ignition": "Cognition active. Ignition: {ignition:.2f}"
   },
   "council_strings": {

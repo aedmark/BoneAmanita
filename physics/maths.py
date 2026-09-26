@@ -129,11 +129,12 @@ class NaviSADProtocol:
         packet = getattr(obs, "last_physics_packet", None)
         return float(getattr(packet, "i_c", 1.0)) < 0.4
 
+    LOOP_FLOOR = 0.5
+
     def detect_point_attractor(self) -> bool:
+        """A full window of steady, substantial repetition. Steady near-zero is ordinary language."""
         if len(self.attention_proxy_history) < self.history_size:
             return False
         recent = list(self.attention_proxy_history)
         mean = sum(recent) / len(recent)
-        return (sum((x - mean) ** 2 for x in recent) / len(recent)) < 0.01 and recent[
-            -1
-        ] > 0.0
+        return (sum((x - mean) ** 2 for x in recent) / len(recent)) < 0.01 and mean >= self.LOOP_FLOOR

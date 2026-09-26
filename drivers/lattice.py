@@ -56,14 +56,14 @@ class SharedLatticeDriver:
         floor = base * self._user_cfg("STAMINA_FLOOR_FRACTION", 0.5)
         return max(floor, min(base + headroom, base + resonance_gain - trauma_cost))
 
-    def read_disengagement(self, text: str) -> float:
+    def read_disengagement(self, text: str, count_repetition: bool = True) -> float:
         words = text.split()
         if not words:
             return 1.0
 
         intra = 1.0 - (len(set(w.lower() for w in words)) / len(words))
         cross = 1.0 if text.strip() in self._recent_texts else 0.0
-        repetition = max(intra, cross)
+        repetition = max(intra, cross) if count_repetition else 0.0
 
         baseline = (
             sum(self._length_baseline) / len(self._length_baseline)
@@ -94,6 +94,7 @@ class SharedLatticeDriver:
         input_phys: Any,
         atp_pool: float,
         is_user_turn: bool = True,
+        count_repetition: bool = True,
     ) -> tuple[List[str], float]:
         logs = []
         atp_deduction = 0.0
@@ -114,7 +115,7 @@ class SharedLatticeDriver:
             )
 
         if is_user_turn and first_pass_this_turn:
-            disengagement = self.read_disengagement(text)
+            disengagement = self.read_disengagement(text, count_repetition)
             rate = (
                 self._user_cfg("DISENGAGEMENT_RATE", 0.15)
                 if disengagement > self.u.E_u

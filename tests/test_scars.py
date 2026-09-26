@@ -21,7 +21,7 @@ from physics.models import PhysicsPacket, EnergyState
 class CounterfactualToxicityLeavesAScar(BoneTestCase):
     TOXIC = {"narrative_drag": 1.5, "chi": 0.8, "m_a": 1.0}
 
-    def test_the_cortex_rejection_records_a_scar_and_keeps_the_mind_online(self):
+    def test_the_cortex_rejection_keeps_the_mind_online(self):
         self.engine.config.GATE_TOLERANCE = 1.0
         akashic = self.engine.akashic
         before = len(akashic.scar_map)
@@ -36,7 +36,8 @@ class CounterfactualToxicityLeavesAScar(BoneTestCase):
         self.assertFalse(ctx.refusal_triggered)
         
         self.assertEqual(ctx.nominations[0].packet.get("type"), "COUNTERFACTUAL_REJECTION")
-        self.assertEqual(len(akashic.scar_map), before + 1)
+        # PINKER no longer records a scar (20.7.4.36, Gordon: rename it honestly); ROS_PANIC still does.
+        self.assertEqual(len(akashic.scar_map), before)
         self.assertTrue(self.engine.system_health.components_online["mind"])
 
     def test_every_scar_writer_reaches_the_akashic_record(self):

@@ -112,10 +112,8 @@ class ArchitectureTests(BoneTestCase):
             "COUNTERFACTUAL_REJECTION",
             "[FAIL] Cortex failed to detect Counterfactual Toxicity.",
         )
-        self.assertTrue(
-            mock_svc.akashic.record_scar.called,
-            "[FAIL] Cortex failed to record a trauma scar upon toxicity rejection.",
-        )
+        # PINKER no longer records a scar (20.7.4.36); ROS_PANIC in phases/cognitive.py still does.
+        self.assertFalse(mock_svc.akashic.record_scar.called)
 
         self.assertFalse(
             any(

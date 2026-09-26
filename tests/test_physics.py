@@ -117,7 +117,10 @@ class TopologicalPrimitivesTest(BoneTestCase):
             self.engine.cortex.llm, "generate", return_value='{"tool": "nominate_response", "args": {"text": "I agree completely."}}'
         ), patch.object(self.engine.events, "log", side_effect=spy), patch.object(
             self.engine, "drain_atp", wraps=self.engine.drain_atp
-        ) as drain:
+        ) as drain, patch.object(
+            # A real loop: the Jester no longer fires on a flat reading alone (20.7.4.36).
+            self.engine.navi_sad, "detect_point_attractor", return_value=True
+        ):
             result = self.engine.process_turn("Do you agree?")
         self.assertTrue(
             any("The Jester detected a Point Attractor" in line for line in logged),

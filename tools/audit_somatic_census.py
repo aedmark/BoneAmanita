@@ -663,7 +663,7 @@ def report(records: list, model: str, topic: str = None) -> int:
         + 30 * (r.get("gate_inputs", {}).get("m_a") or 0.0)
         for r in rows
     ]
-    print(f"    {'PINKER total':<16} {spread(pinker)}   (gate fires above CORTEX.COUNTERFACTUAL_ROS_GATE)")
+    print(f"    {'PINKER total':<16} {spread(pinker)}   (gate fires above CORTEX.PINKER_STRAIN_GATE)")
 
     print("\n  Where health went (summed over the run, largest movers first):")
     h_totals = {}

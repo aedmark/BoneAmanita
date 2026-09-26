@@ -708,6 +708,7 @@ class GeodesicOrchestrator:
                     self.eng._mito_state.atp_pool if self.eng._mito_state else 100.0
                 ),
                 is_user_turn=not ctx.is_system_event,
+                count_repetition=self.eng.repetition_counts(),
             )
             ctx.logs.extend(lattice_logs)
             if atp_deduction > 0:

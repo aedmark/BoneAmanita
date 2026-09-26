@@ -54,7 +54,7 @@ class MachineContractTests(BoneTestCase):
         crucible = TheCrucible(config_ref=self.config)
         raw_physics = {
             "narrative_drag": 2.0,
-            "voltage": 19.0,
+            "voltage": 30.0,
             "kappa": 0.8,
             "system_surge_event": False,
         }

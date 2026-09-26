@@ -282,6 +282,7 @@ class ObservationPhase(SimulationPhase):
                 sys_phys=ctx.physics,
                 input_phys=input_phys,
                 atp_pool=current_atp,
+                count_repetition=self.eng.repetition_counts(),
             )
             for s_log in shared_logs:
                 ctx.log(s_log)

@@ -48,8 +48,13 @@ class TheCrucible:
         msg = msg_template.format(reduction=reduction, reason=reason)
         return True, msg, reduction
 
+    def home_voltage(self) -> float:
+        """The governor's setpoint: where the engine lives, so voltage there is not instability."""
+        bio = safe_get(self.cfg, "BIO", {})
+        return float(safe_get(safe_get(safe_get(bio, "PID_SETTINGS", {}), "VOLTAGE", {}), "setpoint", 10.0))
+
     def audit_fire(
-        self, physics: dict, warn_first: bool = False, strained: bool = False
+        self, physics: dict, warn_first: bool = False, strained: bool = False, voltage_floor: float = 0.0
     ) -> Tuple[str, float, Optional[str]]:
         """warn_first: high voltage is the mode's normal state; only a strained turn
         (abuse, or a request it cannot serve) counts, and the first one only warns."""
@@ -58,7 +63,8 @@ class TheCrucible:
             return "LOCKED", 0.0, ux("physics_strings", "crucible_holding") or ""
         voltage = float(physics.get("voltage", 0.0))
         structure = float(physics.get("kappa", 0.0))
-        ideal_voltage = structure * 20.0
+        # kappa*20 alone read every ordinary voltage as instability and ratcheted drag to its clamp.
+        ideal_voltage = max(self.home_voltage(), float(voltage_floor or 0.0)) + structure * 20.0
         delta = voltage - ideal_voltage
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
         if abs(self.instability_index) < 0.1:
@@ -93,9 +99,11 @@ class TheCrucible:
                 voltage=voltage,
             )
             return "SURGE", 0.0, msg
-        meltdown_at = float(
-            safe_get(safe_get(self.cfg, "MACHINE", {}), "CRUCIBLE_MELTDOWN_VOLTAGE", 18.0)
-        ) * float(safe_get(self.cfg, "GATE_TOLERANCE", 1.0))
+        meltdown_at = (
+            self.home_voltage()
+            * float(safe_get(safe_get(self.cfg, "MACHINE", {}), "CRUCIBLE_MELTDOWN_HOME_MULT", 2.5))
+            * float(safe_get(self.cfg, "GATE_TOLERANCE", 1.0))
+        )
         if warn_first and not strained:
             self.warned = False
         if voltage > meltdown_at:

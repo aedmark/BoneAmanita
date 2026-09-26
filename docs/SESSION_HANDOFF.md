@@ -9,9 +9,103 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
-## Where things stand, 2026-09-25 (read this first)
+## Where things stand, 2026-09-25 evening (read this first)
 
-**RESUME HERE (2026-09-25). The mode-failure plan below is built, plus
+**RESUME HERE (2026-09-25 evening). Gordon asked: audit and optimize PINKER,
+explain the meltdowns on silent turns, stop ADVENTURE punishing repeats, and
+move learned lore into `saves/`. All four are built (committed as 20.7.4.36
+while the real-model run was still going); Gordon took every recommendation below.** Full suite 762
+passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
+run; they all read live engine data).
+
+**Built:**
+- **ADVENTURE repeats are play.** `CORTEX.REPETITION_EXEMPT_MODES`
+  (`["ADVENTURE"]`) and `BoneAmanita.repetition_counts()`. In ADVENTURE the
+  immune malignancy score is 0 (no "Optimization velocity unsafe" halts, no
+  point-attractor history), and the person model does not read repeats as
+  withdrawal (`read_disengagement(..., count_repetition)`). The exhaustion
+  and contradiction halt still runs. Gordon's premise was that the engine's
+  own word-for-word room descriptions were punished; nothing checks the
+  engine's output for repetition (the examine cache replays freely). It was
+  the player's repeated input. Tests: 12 identical ADVENTURE turns never
+  halt, CONVERSATION still does, E_u stays under 0.15 in ADVENTURE; each
+  gate mutation checked (the second person-model call site is never the
+  turn's first pass, so its flag is inert).
+- **Learned lore lives in `saves/`.** `LoreManifest.save` never writes
+  `lore/`: it writes only what differs from the factory file to
+  `<AKASHIC.SAVE_DIR>/lore/<category>.json` (lists as additions), and loading
+  merges that overlay onto the factory file, so a later factory edit is not
+  masked. `reset.sh` clears it with `saves/`. Protected categories
+  (system_prompts, lexicon, ...) still refuse to save, so evolved axioms
+  and learned lexicon still never persist. `test_lore.test_save_to_disk`
+  pinned the old write into `lore/` and now pins the opposite.
+
+**PINKER, audited (stub-model probes: `scratch/mode_runs/pinker_probe.py`,
+`phase_trace.py`, `jester_probe.py`; always `reset.sh` first).** PINKER is
+`simulated_ros = drag*5 + chi*20 + m_a*30` against
+`COUNTERFACTUAL_ROS_GATE` (35) x tolerance (CREATIVE at least 1.5). It is not
+ROS; it adds up what other systems did to drag and chi:
+1. **The Crucible's regulator ratchets drag.** Its ideal voltage is
+   `kappa*20`, and kappa is mostly 0, so any ordinary voltage reads as
+   instability and drag climbs +3 to +5 a turn toward its clamp of 10. In
+   CREATIVE the 70 V floor pins drag at 10 every turn: 50 of PINKER's 52.5.
+2. **The Jester fires on every valid turn after the grace period.** It
+   reads `omega_r` (semantic dimension), but `nominate_toxicity` writes the
+   computed dimension into a `dump_state` copy and drops it, and
+   `phases/cognitive.py` caps `omega_r` at 1.0, so the Jester always sees
+   <= 1.05 ("flat logic"). Each firing: -5 ATP, entropy 0.99 (chi about 0.5
+   the next turn, 10 of PINKER), +5 drag, soul mutated to JESTER. Even wired
+   correctly, dimension is exactly 1.0 whenever novelty is 0, which is most
+   calm turns. (Also true before this session: the 09-24 ADVENTURE banners.)
+3. **Navigation adds a flat +3 drag every turn** (gravity).
+4. **MOOG's drag of about 55** is the Soul-phase BENEDICT|GORDON "Dignity
+   Lock" (+50); GORDON's trigger needs drag over 5, which item 1 supplies.
+
+Probe, 30 turns each, silences / PINKER / MOOG / meltdowns / Jester turns:
+TECHNICAL as is 9/6/3/3/16; with the Jester wired (J) 8/5/3/3/8; with the
+Crucible's ideal voltage at `max(governor setpoint, mode floor) + kappa*20`
+(C) 0/0/0/2/25; J+C 0/0/0/2/12. CREATIVE as is 3/4/0/0/22; C or J+C
+0/0/0/0/12-25.
+
+**The meltdowns on silent turns:** coincidence of cause, not cause and
+effect. The Crucible runs in Machinery, before Arbitration decides a hold;
+late in a TECHNICAL session both the meltdown (voltage over 18) and PINKER
+(drag, chi) fire off the same drift. With C there are no holds and still 2
+meltdowns. TECHNICAL's voltage is the running mean of the text's tension
+(`observer.voltage_history`), which technical messages push to 17-20 V,
+plus the Soul phase's +2 when dignity is high; its meltdown line is a flat
+18 V (tolerance 1.0).
+
+**Gordon's calls, built:**
+- **C, the Crucible measures from home.** Ideal voltage is
+  `max(governor setpoint, mode floor) + kappa*20` (`TheCrucible.home_voltage`,
+  `voltage_floor` passed by MachineryPhase), so ordinary voltage no longer
+  ratchets drag.
+- **Meltdown line relative to home:** `home * MACHINE.CRUCIBLE_MELTDOWN_HOME_MULT
+  (2.5) * GATE_TOLERANCE`, 25 V at tolerance 1.0; replaces
+  `CRUCIBLE_MELTDOWN_VOLTAGE` (18). Two tests that used 19 V and 22 V as
+  "over the line" now use 30 V.
+- **The Jester answers real loops.** It computes the semantic dimension
+  itself and fires only when a loop (`detect_point_attractor`, or
+  repetition >= 0.8) and a flat dimension (<= 1.05) coincide. The point
+  attractor now needs a full window of steady repetition with a mean of at
+  least `NaviSADProtocol.LOOP_FLOOR` (0.5); steady near-zero was ordinary
+  language. Tests that relied on "flat" alone now supply a loop.
+- **PINKER, named for what it adds up:** same formula as `strain`,
+  `CORTEX.PINKER_STRAIN_GATE` (35, was `COUNTERFACTUAL_ROS_GATE`), and the log
+  says "strain N over L (drag, entropy, malignancy)". It no longer records
+  an Akashic scar or logs "Productive Worry" (ROS_PANIC still scars); the
+  `moog_scar_log` string is gone. Its packet type stays
+  `COUNTERFACTUAL_REJECTION`, shared with ROS_PANIC and a terminal state.
+  `ROADMAP.md` still shows the old key names in its dated entries.
+
+Stub probe after all of it (30 turns, silences / PINKER / MOOG / meltdowns /
+Jester turns): CONVERSATION 0/0/0/0/0, ADVENTURE 1/0/1/0/0, TECHNICAL
+0/0/0/1/0, CREATIVE 0/0/0/0/0. Real-model run: see below when it lands.
+
+## Where things stood, 2026-09-25 (afternoon)
+
+**The mode-failure plan below is built, plus
 Gordon's follow-ups (committed as 20.7.4.34), then the turn-0 narration fix
 and the real-model results (20.7.4.35).** All
 nine plan items in order, then the bunny hill with APRIL recentred, an

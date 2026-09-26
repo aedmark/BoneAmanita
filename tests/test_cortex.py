@@ -142,11 +142,12 @@ class CortexArchitectTests(BoneTestCase):
             "[FAIL] Failed to trigger Counterfactual Rejection.",
         )
         self.assertIn(
-            "Structural rot critical",
+            "[PINKER]: strain",
             nom.packet.get("ui", ""),
             "[FAIL] Missing Pinker gate rejection log.",
         )
-        self.mock_services.akashic.record_scar.assert_called_once()
+        # PINKER no longer records a scar (20.7.4.36).
+        self.mock_services.akashic.record_scar.assert_not_called()
 
 
 if __name__ == "__main__":

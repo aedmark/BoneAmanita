@@ -5,6 +5,7 @@ per fix in the plan (SESSION_HANDOFF.md, "THE PLAN FOR THE NEXT SESSION").
 """
 
 import json
+import os
 from collections import Counter
 from unittest.mock import MagicMock
 
@@ -433,7 +434,8 @@ class TheBunnyHill(BoneTestCase):
         for tick, fires in ((1, False), (int(self.engine.config.MAIN.GRACE_TURNS), True)):
             with self.subTest(tick=tick):
                 self.engine.tick_count = tick
-                with patch.object(self.engine, "drain_atp", wraps=self.engine.drain_atp) as drain:
+                with patch.object(self.engine, "drain_atp", wraps=self.engine.drain_atp) as drain, \
+                        patch.object(self.engine.navi_sad, "detect_point_attractor", return_value=True):
                     self.engine.process_turn("Do you agree?")
                 self.assertEqual(5.0 in [c.args[0] for c in drain.call_args_list], fires)
 
@@ -672,3 +674,207 @@ class TurnZeroDoesNotNarrate(BoneTestCase):
         themes = " ".join(d for d in mind["style_directives"] if "SHADOW CAST" in d)
         self.assertIn("lighthouse", themes)
         self.assertNotIn("day", re.findall(r"\[([^\]]*)\]", themes)[0].split(", "))
+
+
+class AdventureRepeatsAreCommands(BoneTestCase):
+    """Gordon: in ADVENTURE, repeating "look" or "north" is play; nothing should treat it as a loop."""
+
+    def run_repeats(self, mode):
+        self.engine.cmd.interface.log = MagicMock()
+        self.engine.switch_mode(mode)
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value=reply("The room is as you left it."))
+        types = []
+        for _ in range(12):
+            self.engine.set_atp(100.0)
+            types.append(self.engine.process_turn("I look around the room carefully.").get("type"))
+        return types
+
+    def test_adventure_never_halts_on_repeats(self):
+        self.assertNotIn("SYSTEM_HALT", self.run_repeats("ADVENTURE"))
+
+    def test_adventure_repeats_do_not_read_as_withdrawal(self):
+        """Counted, twelve identical messages push E_u toward 1 (0.15 of the gap each turn)."""
+        self.run_repeats("ADVENTURE")
+        self.assertLess(self.engine.shared_lattice.u.E_u, 0.15)
+
+    def test_conversation_still_does(self):
+        self.assertIn("SYSTEM_HALT", self.run_repeats("CONVERSATION"))
+
+    def test_the_person_model_can_ignore_repetition(self):
+        from drivers.lattice import SharedLatticeDriver
+
+        lattice = SharedLatticeDriver()
+        for _ in range(3):
+            lattice._recent_texts.append("look")
+            lattice._length_baseline.append(1)
+        self.assertEqual(lattice.read_disengagement("look"), 1.0)
+        self.assertLess(lattice.read_disengagement("look", count_repetition=False), 1.0)
+
+
+class LearnedLoreLivesInSaves(BoneTestCase):
+    """Gordon: "All akashic lore that's not factory default absolutely needs to be saved and loaded
+    into the saves folder, not the engine itself!" The CREATIVE run wrote an item into lore/gordon.json."""
+
+    def setUp(self):
+        import tempfile
+
+        super().setUp()
+        self.lore_patcher.stop()
+        self.addCleanup(self.lore_patcher.start)
+        self.factory, self.saves = tempfile.mkdtemp(), tempfile.mkdtemp()
+        self.write(self.factory, {"ITEM_REGISTRY": {"LAMP": {"value": 1}}, "RECIPES": [{"ingredient": "A"}]})
+
+    def write(self, directory, data):
+        with open(f"{directory}/gordon.json", "w", encoding="utf-8") as f:
+            json.dump(data, f)
+
+    def read(self, directory):
+        with open(f"{directory}/gordon.json", encoding="utf-8") as f:
+            return json.load(f)
+
+    def manifest(self):
+        from engine.core import LoreManifest
+
+        return LoreManifest(data_dir=self.factory, save_dir=self.saves)
+
+    def learn(self):
+        lore = self.manifest()
+        data = lore.get("GORDON")
+        data["ITEM_REGISTRY"]["ASCENDED_ARTIFACT"] = {"value": 50}
+        data["RECIPES"].append({"ingredient": "B"})
+        lore.inject("GORDON", data)
+        lore.save("GORDON")
+
+    def test_the_factory_file_is_never_written(self):
+        self.learn()
+        self.assertEqual(self.read(self.factory), {"ITEM_REGISTRY": {"LAMP": {"value": 1}}, "RECIPES": [{"ingredient": "A"}]})
+
+    def test_what_was_learned_loads_back_from_saves(self):
+        self.learn()
+        data = self.manifest().get("GORDON")
+        self.assertIn("ASCENDED_ARTIFACT", data["ITEM_REGISTRY"])
+        self.assertIn("LAMP", data["ITEM_REGISTRY"])
+        self.assertEqual(data["RECIPES"], [{"ingredient": "A"}, {"ingredient": "B"}])
+        self.assertNotIn("LAMP", self.read(self.saves)["ITEM_REGISTRY"], "the overlay copied factory data")
+
+    def test_a_later_factory_edit_is_not_masked(self):
+        self.learn()
+        self.write(self.factory, {"ITEM_REGISTRY": {"LAMP": {"value": 2}}, "RECIPES": [{"ingredient": "A"}, {"ingredient": "C"}]})
+        data = self.manifest().get("GORDON")
+        self.assertEqual(data["ITEM_REGISTRY"]["LAMP"], {"value": 2})
+        self.assertEqual(data["RECIPES"], [{"ingredient": "A"}, {"ingredient": "C"}, {"ingredient": "B"}])
+
+    def test_the_engine_saves_under_the_akashic_save_dir(self):
+        from engine.core import LoreManifest
+
+        default = LoreManifest()
+        self.assertEqual(default.SAVE_DIR, os.path.join(str(self.engine.config.AKASHIC.SAVE_DIR), "lore"))
+        self.assertNotEqual(os.path.abspath(default.SAVE_DIR), os.path.abspath(default.DATA_DIR))
+
+
+class TheCrucibleMeasuresFromHome(BoneTestCase):
+    """Its ideal was kappa*20 (mostly 0), so ordinary voltage ratcheted drag to 10 and fed PINKER."""
+
+    def fire(self, crucible, volts, turns=10, **kw):
+        physics = {"narrative_drag": 1.0, "voltage": volts, "kappa": 0.0}
+        for _ in range(turns):
+            physics["narrative_drag"] = 1.0
+            state, _, _ = crucible.audit_fire(physics, **kw)
+        return state, physics["narrative_drag"]
+
+    def test_home_voltage_does_not_ratchet_drag(self):
+        from machine.crucible import TheCrucible
+
+        crucible = TheCrucible(self.engine.config)
+        _, drag = self.fire(crucible, crucible.home_voltage() + 2.0)
+        self.assertLess(drag, 2.5)
+
+    def test_a_mode_floor_is_home_for_that_mode(self):
+        from machine.crucible import TheCrucible
+
+        _, drag = self.fire(TheCrucible(self.engine.config), 70.0, warn_first=True, voltage_floor=70.0)
+        self.assertLess(drag, 2.5)
+
+    def test_the_meltdown_line_follows_home_voltage(self):
+        from machine.crucible import TheCrucible
+
+        self.engine.config.GATE_TOLERANCE = 1.0
+        crucible = TheCrucible(self.engine.config)
+        line = crucible.home_voltage() * float(self.engine.config.MACHINE.CRUCIBLE_MELTDOWN_HOME_MULT)
+        self.assertEqual(line, 25.0)
+        self.assertEqual(crucible.audit_fire({"narrative_drag": 1.0, "voltage": line - 1, "kappa": 0.0})[0], "REGULATED")
+        self.assertEqual(crucible.audit_fire({"narrative_drag": 1.0, "voltage": line + 1, "kappa": 0.0})[0], "MELTDOWN")
+
+    def test_creative_passes_its_floor_to_the_crucible(self):
+        self.engine.cmd.interface.log = MagicMock()
+        self.engine.switch_mode("CREATIVE")
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value=reply("The lamp turns."))
+        crucible = self.engine.phys.crucible
+        drags = []
+        real = crucible.audit_fire
+
+        def spy(physics, **kw):
+            out = real(physics, **kw)
+            drags.append(physics["narrative_drag"])
+            return out
+
+        crucible.audit_fire = spy
+        for i in range(6):
+            self.engine.process_turn(CREATIVE_MESSAGES[i])
+        self.assertTrue(drags)
+        self.assertLess(max(drags), 5.0, drags)
+
+
+class TheJesterAnswersRealLoops(BoneTestCase):
+    """It read a dimension nobody wrote (always 1.0) and fired on every turn after the grace period."""
+
+    def jester_fires(self, attractor):
+        from unittest.mock import patch
+
+        self.engine.tick_count = int(self.engine.config.MAIN.GRACE_TURNS)
+        self.engine.host_stats.efficiency_index = 1.0
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value=reply("Sure, that works."))
+        fired = []
+        real = self.engine.events.log
+        with patch.object(self.engine.navi_sad, "detect_point_attractor", return_value=attractor), \
+                patch.object(self.engine.events, "log", side_effect=lambda t, *a, **k: (fired.append(1) if "Jester detected" in str(t) else None) or real(t, *a, **k)), \
+                patch.object(self.engine.navi_sad, "calculate_semantic_dimension", wraps=self.engine.navi_sad.calculate_semantic_dimension) as dim:
+            self.engine.process_turn("What do you think about the plan?")
+        return bool(fired), dim
+
+    def test_a_calm_turn_is_not_a_loop(self):
+        fired, _ = self.jester_fires(attractor=False)
+        self.assertFalse(fired)
+
+    def test_a_flat_loop_still_brings_the_jester(self):
+        fired, dim = self.jester_fires(attractor=True)
+        self.assertTrue(fired)
+        self.assertTrue(dim.called, "the Jester never measured the dimension")
+
+    def test_steady_near_zero_repetition_is_not_an_attractor(self):
+        from physics import NaviSADProtocol
+
+        navi = NaviSADProtocol()
+        navi.attention_proxy_history.extend([0.05] * navi.history_size)
+        self.assertFalse(navi.detect_point_attractor())
+        navi.attention_proxy_history.extend([1.0] * navi.history_size)
+        self.assertTrue(navi.detect_point_attractor())
+
+
+
+class PinkerSaysWhatItMeasures(BoneTestCase):
+    def test_the_hold_names_its_inputs_and_leaves_no_scar(self):
+        from engine.core import CycleContext
+        from physics.models import EnergyState
+
+        self.engine.tick_count = int(self.engine.config.MAIN.GRACE_TURNS)
+        self.engine.config.GATE_TOLERANCE = 1.0
+        before = len(self.engine.akashic.scar_map)
+        ctx = CycleContext(input_text="test", physics=PhysicsPacket(narrative_drag=6.0, energy=EnergyState(chi=0.5, m_a=0.1)))
+        self.engine.cortex.nominate_toxicity(ctx)
+        self.assertEqual([n.gate for n in ctx.nominations], ["PINKER"])
+        self.assertIn("strain 43 over 35", ctx.nominations[0].reason)
+        self.assertEqual(len(self.engine.akashic.scar_map), before)

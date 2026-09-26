@@ -18,7 +18,7 @@ from mechanics.pragmatics import ThePragmatist
 from mechanics.projector import beautify_thoughts, parse_spatial_reality
 from mechanics.tools import LibraryGraph, RandomRetrievalNavigator
 from engine.presets import BoneConfig, BonePresets
-from engine.struts import dump_state, safe_get, safe_set, ux
+from engine.struts import dump_state, safe_get, safe_set, ux, ux_format
 
 _EXAMINE_VERBS = re.compile(
     r"\b(?:look(?:\s+closer)?\s+at|examine|inspect|check\s+out|study|observe)\b"
@@ -613,27 +613,23 @@ class TheCortex:
             ctx.nominations.append(Nomination(gate="GORDON_ANCHOR", reason=reject_msg, magnitude=10.0, packet=packet))
             return
             
-        simulated_ros = (f_drag * 5.0) + (chi_val * 20.0) + (m_a * 30.0)
-        if simulated_ros > (
-            float(safe_get(c_cfg, "COUNTERFACTUAL_ROS_GATE", 35.0)) * tolerance_mod
-        ):
-            reject_msg = ux(
-                "brain_strings", "pinker_cf_gate", default="Structural rot critical."
-            )
-            scar_msg = ux(
-                "brain_strings", "moog_scar_log", default="Productive Worry activated."
+        # PINKER's strain: drag, entropy and malignancy summed. Not ROS; it is named for what it adds up.
+        strain = (f_drag * 5.0) + (chi_val * 20.0) + (m_a * 30.0)
+        strain_limit = float(safe_get(c_cfg, "PINKER_STRAIN_GATE", 35.0)) * tolerance_mod
+        if strain > strain_limit:
+            reject_msg = ux_format(
+                "brain_strings",
+                "pinker_strain_gate",
+                default="[PINKER]: strain {strain:.0f} over {limit:.0f} (drag {drag:.1f}, entropy {chi:.2f}, malignancy {m_a:.2f}). Holding this turn.",
+                strain=strain, limit=strain_limit, drag=f_drag, chi=chi_val, m_a=m_a,
             )
             if self.events:
                 self.events.log(f"{Prisma.RED}{reject_msg}{Prisma.RST}", "SYS_LOCK")
-                self.events.log(f"{Prisma.VIOLET}{scar_msg}{Prisma.RST}", "SYS_LOCK")
-            self.svc.akashic.record_scar(
-                "Cortex Counterfactual Toxicity", phys_state
-            )
             packet = {
                 "type": "COUNTERFACTUAL_REJECTION",
-                "ui": f"\n{Prisma.RED}{reject_msg}{Prisma.RST}\n{Prisma.VIOLET}{scar_msg}{Prisma.RST}",
+                "ui": f"\n{Prisma.RED}{reject_msg}{Prisma.RST}",
             }
-            ctx.nominations.append(Nomination(gate="PINKER", reason=reject_msg, magnitude=simulated_ros, packet=packet))
+            ctx.nominations.append(Nomination(gate="PINKER", reason=reject_msg, magnitude=strain, packet=packet))
             return
 
     def _post_flight_mutations(
@@ -669,20 +665,24 @@ class TheCortex:
             and hasattr(self.svc.orchestrator, "eng")
         ):
             eng = self.svc.orchestrator.eng
-            dimension = float(phys_state.get("omega_r", 1.0))
+            # Computed here: nominate_toxicity's dimension lived in a copy, so this always read 1.0.
+            efficiency = getattr(self.svc.host_stats, "efficiency_index", 1.0) if self.svc.host_stats else 1.0
+            novelty = float(phys_state.get("novelty", 0.0))
+            dimension = (
+                eng.navi_sad.calculate_semantic_dimension(efficiency, novelty)
+                if hasattr(eng, "navi_sad")
+                else float(phys_state.get("omega_r", 1.0))
+            )
             repetition = float(phys_state.get("repetition", 0.0))
             is_attractor = (
                 eng.navi_sad.detect_point_attractor()
                 if hasattr(eng, "navi_sad")
                 else False
             )
-            is_valid = val_res.get("valid", False)
-            trigger_jester = False
-            if not eng.in_grace():
-                if is_attractor or repetition >= 0.8:
-                    trigger_jester = True
-                elif dimension <= 1.05 and not (not is_valid and dimension == 1.0):
-                    trigger_jester = True
+            # Flat alone is every calm turn; the Jester answers a sustained loop that is also flat.
+            trigger_jester = (
+                not eng.in_grace() and (is_attractor or repetition >= 0.8) and dimension <= 1.05
+            )
             if trigger_jester:
                 msg = f"The Jester detected a Point Attractor (d_B={dimension:.2f})! We are trapped in False Cohesion! Burning ATP to inject chaos."
                 if self.events:

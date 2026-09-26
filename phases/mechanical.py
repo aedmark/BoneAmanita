@@ -212,6 +212,7 @@ class MachineryPhase(SimulationPhase):
             phys_dict,
             warn_first=bool(self.eng.mode_settings.get("meltdown_warn_first", False)),
             strained=strained,
+            voltage_floor=float(self.eng.mode_settings.get("voltage_floor_override") or 0.0),
         )
         if c_msg:
             ctx.log(c_msg)

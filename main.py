@@ -344,6 +344,11 @@ class BoneAmanita:
             self._capability_check = CapabilityCheck(max_reply_words=int(max_tokens * 0.75))
         return self._capability_check
 
+    def repetition_counts(self) -> bool:
+        """In ADVENTURE a player repeats "look" and "north" as play, not as a loop or withdrawal."""
+        exempt = safe_get(safe_get(self.config, "CORTEX", {}), "REPETITION_EXEMPT_MODES", [])
+        return getattr(self.cortex, "active_mode", "") not in exempt
+
     def in_grace(self) -> bool:
         """The bunny hill: the first user turns stay low-key; nothing pounces."""
         return self.tick_count < int(safe_get(safe_get(self.config, "MAIN", {}), "GRACE_TURNS", 5))
@@ -411,7 +416,7 @@ class BoneAmanita:
         # A halted turn keeps its packet, so the last halt's friction would score every repeat as malignant.
         if nav_drag >= self.ABSOLUTE_FRICTION:
             nav_drag = 0.0
-        m_a = self.navi_sad.calculate_malignancy_factor(user_message, nav_drag)
+        m_a = self.navi_sad.calculate_malignancy_factor(user_message, nav_drag) if self.repetition_counts() else 0.0
         self.malignancy = m_a
         safe_set(active_phys, "m_a", m_a)
         chi = float(safe_get(active_phys, ["entropy", "chi"], 0.2))

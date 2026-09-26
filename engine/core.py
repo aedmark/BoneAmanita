@@ -345,10 +345,14 @@ class LoreManifest:
     _instance = None
     _lock = threading.Lock()
 
-    def __init__(self, data_dir: Optional[str] = None, config_ref: Any = None):
+    def __init__(self, data_dir: Optional[str] = None, config_ref: Any = None, save_dir: Optional[str] = None):
         self.cfg = config_ref or BoneConfig
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.DATA_DIR: str = data_dir or os.path.join(base_dir, "lore")
+        # lore/ is factory data; what the engine learns is an overlay under saves/, cleared by reset.sh.
+        self.SAVE_DIR: str = save_dir or os.path.join(
+            str(safe_get(safe_get(self.cfg, "AKASHIC", {}), "SAVE_DIR", "saves")), "lore"
+        )
         self._cache: Dict[str, Any] = {}
 
     @classmethod
@@ -372,9 +376,39 @@ class LoreManifest:
             return data
         return data.get(sub_key) if isinstance(data, dict) else None
 
+    _APPEND = "__append__"
+
+    @classmethod
+    def _overlay(cls, factory: Any, current: Any) -> Any:
+        """What `current` adds to or changes in `factory`; lists record only their additions."""
+        if isinstance(factory, dict) and isinstance(current, dict):
+            return {k: cls._overlay(factory.get(k), v) for k, v in current.items() if k not in factory or factory[k] != v}
+        if isinstance(factory, list) and isinstance(current, list):
+            return {cls._APPEND: [x for x in current if x not in factory]}
+        return current
+
+    @classmethod
+    def _merge(cls, factory: Any, overlay: Any) -> Any:
+        if isinstance(overlay, dict) and set(overlay) == {cls._APPEND}:
+            base = list(factory) if isinstance(factory, list) else []
+            return base + [x for x in overlay[cls._APPEND] if x not in base]
+        if isinstance(factory, dict) and isinstance(overlay, dict):
+            merged = dict(factory)
+            for k, v in overlay.items():
+                merged[k] = cls._merge(factory.get(k), v)
+            return merged
+        return overlay
+
     def _load_from_disk(self, category: str) -> Optional[Dict]:
+        factory = self._read_json(self.DATA_DIR, category)
+        learned = self._read_json(self.SAVE_DIR, category)
+        if learned is None:
+            return factory
+        return self._merge(factory if factory is not None else {}, learned)
+
+    def _read_json(self, directory: str, category: str) -> Optional[Dict]:
         safe_category = os.path.basename(category)
-        filepath = os.path.join(self.DATA_DIR, f"{safe_category}.json")
+        filepath = os.path.join(directory, f"{safe_category}.json")
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -423,11 +457,14 @@ class LoreManifest:
                 f"{Prisma.YEL}Refusing to save null cache for '{cat_key}'.{Prisma.RST}"
             )
             return
-        filepath = os.path.join(self.DATA_DIR, f"{cat_key}.json")
+        factory = self._read_json(self.DATA_DIR, cat_key)
+        learned = self._overlay(factory if factory is not None else {}, self._cache[cat_key])
+        filepath = os.path.join(self.SAVE_DIR, f"{cat_key}.json")
         try:
+            os.makedirs(self.SAVE_DIR, exist_ok=True)
             with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(self._cache[cat_key], f, indent=2, cls=JSONEncoder)
-            logger.info(f"{Prisma.GRY}Persisted '{cat_key}'.{Prisma.RST}")
+                json.dump(learned, f, indent=2, cls=JSONEncoder)
+            logger.info(f"{Prisma.GRY}Persisted what was learned in '{cat_key}' to {filepath}.{Prisma.RST}")
         except Exception as e:
             err_msg = f"Failed to save '{cat_key}': {e}"
             logger.critical(f"{Prisma.RED}{err_msg}{Prisma.RST}")
