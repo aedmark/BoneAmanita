@@ -399,10 +399,15 @@ class DigestiveTrack:
         bio_cfg = safe_get(self.cfg, "BIO", {})
         v_thresh = float(safe_get(bio_cfg, "VOLTAGE_BONUS_THRESHOLD", 8.0))
         p_bonus = float(safe_get(bio_cfg, "PROTEASE_BONUS", 5.0))
+        ramp = max(0.1, float(safe_get(bio_cfg, "VOLTAGE_BONUS_RAMP", 4.0)))
 
-        if float(safe_get(phys, "voltage", 0.0)) > v_thresh and found_enzymes:
-            found_enzymes.append("PROTEASE")
-            total_atp = total_atp + p_bonus
+        voltage = float(safe_get(phys, "voltage", 0.0))
+        if found_enzymes:
+            # A ramp centred on the threshold, not a cliff: half the bonus at the threshold.
+            share = min(1.0, max(0.0, (voltage - v_thresh) / ramp + 0.5))
+            total_atp = total_atp + p_bonus * share
+            if voltage > v_thresh:
+                found_enzymes.append("PROTEASE")
 
         if found_enzymes:
             dominant = Counter(found_enzymes).most_common(1)[0][0]

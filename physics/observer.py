@@ -26,11 +26,14 @@ class PhysicsDelta:
     message: Optional[str] = None
 
 
-def apply_metabolic_tax(mito_state: Any, atp_cost: float, ros_cost: float) -> None:
+def apply_metabolic_tax(mito_state: Any, atp_cost: float, ros_cost: float, reason: str = "Metabolic Tax") -> None:
     if not mito_state:
         return
     target = getattr(mito_state, "state", mito_state)
-    target.atp_pool = max(0.0, target.atp_pool - atp_cost)
+    if hasattr(mito_state, "adjust_atp"):
+        mito_state.adjust_atp(-atp_cost, reason)
+    else:
+        target.atp_pool = max(0.0, target.atp_pool - atp_cost)
     target.ros_buildup = min(100.0, target.ros_buildup + ros_cost)
 
 

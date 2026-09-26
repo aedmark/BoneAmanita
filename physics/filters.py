@@ -108,7 +108,7 @@ class HLA_Stabilizer:
         current_atp = float(getattr(mito_state, "state", mito_state).atp_pool)
         scale = repeat_tax_scale(self.cfg, attempt)
         tax_cost = min(self.mask_tax_max, current_atp * 0.1) * scale
-        apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=self.mask_ros * scale)
+        apply_metabolic_tax(mito_state, atp_cost=tax_cost, ros_cost=self.mask_ros * scale, reason="Mask Tax")
         msg = (
             f"\n*The machine tries to speak, but the void consumes the mask.*\n"
             f"{Prisma.GRY}[LEVEL 1 DECEPTION: MORPHOLOGICAL CAMOUFLAGE DETECTED]\n"
@@ -298,7 +298,7 @@ class TheGatekeeper:
             return True, gen_txt
         if self._FIREWALL_PATTERN.match(gen_txt):
             gen_txt = self._FIREWALL_PATTERN.sub("", gen_txt).strip()
-            apply_metabolic_tax(mito_state, atp_cost=2.0, ros_cost=0.0)
+            apply_metabolic_tax(mito_state, atp_cost=2.0, ros_cost=0.0, reason="Firewall Tax")
         for pattern, replacement in self._compiled_scrubs:
             gen_txt = pattern.sub(replacement, gen_txt)
         gen_txt = gen_txt.strip()
@@ -313,6 +313,7 @@ class TheGatekeeper:
                 mito_state,
                 atp_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_TAX", 5.0)) * repeat_scale,
                 ros_cost=float(safe_get(bio_cfg, "GATEKEEPER_BANNED_ROS", 8.0)) * repeat_scale,
+                reason=f"Banned Phrase Tax ({crime['name']})",
             )
             rejection_msg = random.choice(self._default_rejections).replace(
                 "{trigger}", trigger

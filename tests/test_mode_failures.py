@@ -912,3 +912,49 @@ class CouplingLetsThePlayerPlay(BoneTestCase):
         GatekeeperPhase(self.engine).run(ctx)
         self.assertEqual(float(ctx.physics.narrative_drag), 1.0)
         self.assertTrue(any("Do NOT fulfill the action" in m.get("log", "") for m in ctx.council_mandates))
+
+
+class TheProteaseBonusRamps(BoneTestCase):
+    """The 20.7.4.37 TECHNICAL run lost 15 ATP to voltage sitting at 7 instead of 8: the
+    +5 protease bonus was all or nothing at the threshold."""
+
+    def harvest_at(self, voltage):
+        track = self.engine.soma.digestive
+        track._digest_words = MagicMock(side_effect=lambda words: (10.0, ["X"], 0.0, 1))
+        _, atp, _ = track.harvest({"voltage": voltage, "clean_words": ["word"]}, [])
+        return atp
+
+    def test_no_step_at_the_threshold(self):
+        steps = [self.harvest_at(8.0 + d) - self.harvest_at(8.0 + d - 0.1) for d in (-1.0, -0.05, 0.0, 0.05, 1.0)]
+        self.assertTrue(all(abs(s) < 0.2 for s in steps), steps)
+
+    def test_nothing_well_below_full_at_home(self):
+        self.assertAlmostEqual(self.harvest_at(5.0), 10.0)
+        self.assertAlmostEqual(self.harvest_at(8.0), 12.5)
+        self.assertAlmostEqual(self.harvest_at(10.0), 15.0)
+        self.assertAlmostEqual(self.harvest_at(14.0), 15.0)
+
+
+class EveryATPChangeHasAReason(BoneTestCase):
+    """Direct atp_pool writes never reached adjust_atp, so a run's ATP ledger could not name them."""
+
+    def test_the_premise_shock_is_ledgered(self):
+        from engine.core import CycleContext
+        from phases.mechanical import GatekeeperPhase
+
+        gordon = self.engine.village.gordon
+        gordon.mode = "ADVENTURE"
+        gordon.inventory = [i for i in gordon.inventory if i != "KEY"]
+        self.engine.bio.mito.adjust_atp = MagicMock()
+        ctx = CycleContext(input_text="I unlock the door.", is_system_event=False)
+        ctx.physics = PhysicsPacket()
+        GatekeeperPhase(self.engine).run(ctx)
+        self.engine.bio.mito.adjust_atp.assert_called_once_with(-15.0, "Somatic Shock (Premise Violation)")
+
+    def test_filter_taxes_are_ledgered(self):
+        from physics.observer import apply_metabolic_tax
+
+        mito = self.engine.bio.mito
+        mito.adjust_atp = MagicMock()
+        apply_metabolic_tax(mito, atp_cost=2.0, ros_cost=0.0, reason="Firewall Tax")
+        mito.adjust_atp.assert_called_once_with(-2.0, "Firewall Tax")

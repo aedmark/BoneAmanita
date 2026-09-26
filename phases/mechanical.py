@@ -96,9 +96,7 @@ class GatekeeperPhase(SimulationPhase):
                 ctx.log(f"{Prisma.OCHRE}[GORDON] {log_msg}. Applying Somatic Shock.{Prisma.RST}")
                 shock_damage = 15.0
                 if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
-                    self.eng.bio.mito.state.atp_pool = max(
-                        0.0, self.eng.bio.mito.state.atp_pool - shock_damage
-                    )
+                    self.eng.bio.mito.adjust_atp(-shock_damage, "Somatic Shock (Premise Violation)")
                     ctx.log(
                         f"{Prisma.RED}[BIOLOGY] Somatic Shock detected. Burned {shock_damage} ATP.{Prisma.RST}"
                     )

@@ -164,6 +164,30 @@ script's `reply` field is the dialogue buffer entry ("Traveler: ...\nSystem:
 ..."), not what the player sees; and `CyberneticGovernor.target_v` is 8.0
 while the Crucible's home voltage is 10.
 
+**Built after the rerun (not yet committed):**
+- **The protease cliff is a ramp.** `harvest` pays `PROTEASE_BONUS` x
+  a share that climbs linearly across `BIO.VOLTAGE_BONUS_RAMP` (4 V) centred
+  on the 8 V threshold: nothing at 6 V, half at 8 V, all of it at 10 V
+  (home). The PROTEASE enzyme label still needs voltage over 8 (it feeds
+  adrenaline through `body_config.json`, which raises the voltage PID's
+  setpoint, so the label may be its own feedback loop; the new recording
+  will show it). Tests: no step at the threshold, the ramp's end points;
+  mutation checked.
+- **Every ATP change the engine makes has a name.** `apply_metabolic_tax`
+  (mask, firewall and banned-phrase taxes) and GORDON's premise-violation
+  Somatic Shock wrote `atp_pool` directly; they now go through
+  `adjust_atp` with a reason. `set_atp` and player `/commands` still set it
+  directly, by design. Tests mutation checked. Full suite 769 passed, 5
+  skipped.
+- **The mode run script records everything per turn**
+  (`scratch/mode_runs/mode_runs.py`, gitignored): all six hormones and
+  glimmers, the mito state (ROS, membrane potential), every physics packet
+  scalar, the person model (`E_u`, `distress_u` and the rest), the
+  governor, the Crucible's detail, malignancy and time delta, an ATP ledger
+  (each `adjust_atp` call with reason, asked and applied), whatever ATP
+  moved outside the ledger (`atp_unledgered`), what digestion paid and at
+  what voltage, and every log line. About 3.5 KB a turn.
+
 ## Where things stood, 2026-09-25 (afternoon)
 
 **The mode-failure plan below is built, plus
