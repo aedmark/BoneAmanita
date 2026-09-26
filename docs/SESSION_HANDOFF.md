@@ -164,7 +164,7 @@ script's `reply` field is the dialogue buffer entry ("Traveler: ...\nSystem:
 ..."), not what the player sees; and `CyberneticGovernor.target_v` is 8.0
 while the Crucible's home voltage is 10.
 
-**Built after the rerun (not yet committed):**
+**Built after the rerun (Gordon committed it as "Protease fixes", 5e798f5):**
 - **The protease cliff is a ramp.** `harvest` pays `PROTEASE_BONUS` x
   a share that climbs linearly across `BIO.VOLTAGE_BONUS_RAMP` (4 V) centred
   on the 8 V threshold: nothing at 6 V, half at 8 V, all of it at 10 V
@@ -179,8 +179,11 @@ while the Crucible's home voltage is 10.
   `adjust_atp` with a reason. `set_atp` and player `/commands` still set it
   directly, by design. Tests mutation checked. Full suite 769 passed, 5
   skipped.
-- **The mode run script records everything per turn**
-  (`scratch/mode_runs/mode_runs.py`, gitignored): all six hormones and
+- **The mode run script records everything per turn** and now lives in
+  the repo as `tools/mode_runs.py` (the 09-24 copy was lost with
+  `scratch/`; `docs/TESTING.md` has its entry). With no arms it runs all
+  five, each in its own process after `reset.sh`. Output still goes under
+  `scratch/` (gitignored). It records all six hormones and
   glimmers, the mito state (ROS, membrane potential), every physics packet
   scalar, the person model (`E_u`, `distress_u` and the rest), the
   governor, the Crucible's detail, malignancy and time delta, an ATP ledger

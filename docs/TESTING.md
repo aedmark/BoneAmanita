@@ -421,6 +421,20 @@ model actually said needs the live `--model` run. `--trace-drag` additionally
 logs every `narrative_drag` write of 8+ with the code line that made it — this
 is how the `BENEDICT|GORDON` +50 synergy was originally traced to its source.
 
+### `mode_runs.py`: the real-model mode runs
+
+Not part of the scoring pipeline either. `python tools/mode_runs.py
+scratch/mode_runs/OUT.jsonl [ARM ...]` drives a live engine through 30 paced
+turns per arm (CONVERSATION, ADVENTURE, ADVENTURE_CYCLED, TECHNICAL, CREATIVE;
+all five when none are named), each arm in a fresh process after `reset.sh`.
+One JSON row per turn: the turn type, health, ATP, voltage, Crucible state,
+holds, Warden and Gatekeeper rejections, all six hormones, the mito state,
+every physics scalar, the person model, the governor, an ATP ledger (every
+`adjust_atp` with its reason, plus whatever moved outside it), what digestion
+paid at what voltage, and every log line. The `reply` field is the dialogue
+buffer entry ("Traveler: ... System: ..."), not the screen text; `ui_tail`
+is the screen. `BONE_MODEL` and `PACE` override the model and the pause.
+
 ### `audit_somatic.py` — a different axis, worth knowing about separately
 
 Older sibling (ROADMAP C5/D2), not part of this comparison chain. Answers a
