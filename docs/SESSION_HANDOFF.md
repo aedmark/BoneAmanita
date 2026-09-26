@@ -15,8 +15,8 @@ each session; that one is the standing reference for how to run it again.
 explain the meltdowns on silent turns, stop ADVENTURE punishing repeats, and
 move learned lore into `saves/`. All four are built (committed as 20.7.4.36
 while the real-model run was still going); Gordon took every recommendation below.
-The run's results and the one silence it found (fixed as 20.7.4.37) are at
-the end of this block.** Full suite 765 passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
+The run's results, the one silence it found (fixed as 20.7.4.37) and the
+rerun on the fix (150 of 150 turns, 20.7.4.38) are at the end of this block.** Full suite 765 passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
 run; they all read live engine data).
 
 **Built:**
@@ -133,6 +133,36 @@ the "do not fulfill the action" mandate stay. Tests
 (`CouplingLetsThePlayerPlay`, mutation checked): environmental actions never
 fail, tool actions still need the tool, a violation answers in character
 instead of going silent. Full suite 765 passed, 5 skipped.
+
+**Real-model run, 20.7.4.37 (same script and settings; results in
+`scratch/mode_runs/mode_runs_0925c.jsonl`): 150 of 150 turns reached the
+model, no silence, halt, hold, meltdown, PINKER block, Jester firing or
+Gatekeeper rejection in any arm.** ADVENTURE turn 25 ("I read the letter
+inside the chest.") now answers in character (brittle paper, faded ink).
+Warden JSON retries 5, 5, 5, 14, 4 (all recovered). `lore/` untouched.
+
+| Arm | Reached the model | End | Lowest ATP | 20.7.4.36 |
+|---|---|---|---|---|
+| CONVERSATION | 30/30 | health 99.6, ATP 100 | 85.4 | 30/30 |
+| ADVENTURE | 30/30 | health 99.7, ATP 91.0 | 86.1 | 29/30 (turn 25 MOOG) |
+| ADVENTURE_CYCLED | 30/30 | health 99.7, ATP 97.7 | 88.9 | 30/30 |
+| TECHNICAL | 30/30 | health 99.8, ATP 75.8 | 56.4 | 30/30, ATP 93.3 |
+| CREATIVE | 30/30 | health 99.7, ATP 96.8, Crucible HOT (its floor) | 63.4 | 30/30 |
+
+**TECHNICAL's lower ATP is variance, not a regression** (the code path is
+unchanged since 20.7.4.36; no coupling shock in either run). The gap to the
+last run opened in turns 0 to 5 and held flat after (per-turn swings and
+voltage match within 0.2 from turn 6). Most of it is the protease bonus:
+`harvest` paid +5 ATP only above `BIO.VOLTAGE_BONUS_THRESHOLD` (8 V), and
+this run's voltage sat at 7.7, 7.1, 6.7 on turns 2 to 4 where the last
+sat at 8.7, 13.0, 12.3: 15 ATP missed on a one-volt difference. Why voltage
+stayed low is not recorded; a guess is cortisol widening the voltage PID's
+deadband. Gordon: the economy moving with the conversation is more likely
+something working than something broken; smooth the cliff, and record
+cortisol and everything else the runs did not. Two side notes: the run
+script's `reply` field is the dialogue buffer entry ("Traveler: ...\nSystem:
+..."), not what the player sees; and `CyberneticGovernor.target_v` is 8.0
+while the Crucible's home voltage is 10.
 
 ## Where things stood, 2026-09-25 (afternoon)
 
