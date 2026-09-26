@@ -1,0 +1,275 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>BoneAmanita Adventure Rerun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root {
+  --ground: #f3f5f2;
+  --paper: #fbfcfa;
+  --ink: #1b221f;
+  --muted: #5b6862;
+  --rule: #d6dcd6;
+  --accent: #1e5d69;
+  --accent-soft: #dfecee;
+  --good: #2c7a4d;
+  --good-soft: #e1f0e6;
+  --warn: #a8701a;
+  --warn-soft: #f6ecd8;
+  --bad: #ad3e2c;
+  --bad-soft: #f6e1dc;
+  --bar: #9fb9be;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #111614;
+    --paper: #171d1a;
+    --ink: #e3e9e4;
+    --muted: #97a59e;
+    --rule: #2b3531;
+    --accent: #72b6c3;
+    --accent-soft: #1b3035;
+    --good: #6cc193;
+    --good-soft: #17301f;
+    --warn: #e0ad5a;
+    --warn-soft: #34290f;
+    --bad: #ec8a76;
+    --bad-soft: #3a1c16;
+    --bar: #3f6870;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #111614;
+  --paper: #171d1a;
+  --ink: #e3e9e4;
+  --muted: #97a59e;
+  --rule: #2b3531;
+  --accent: #72b6c3;
+  --accent-soft: #1b3035;
+  --good: #6cc193;
+  --good-soft: #17301f;
+  --warn: #e0ad5a;
+  --warn-soft: #34290f;
+  --bad: #ec8a76;
+  --bad-soft: #3a1c16;
+  --bar: #3f6870;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font: 16px/1.6 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  padding-inline: 20px;
+  padding-block: 40px 72px;
+}
+main { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+h1, h2, h3 { font-family: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif; text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: 2.3rem; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.5rem; font-weight: 600; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.eyebrow { font: 500 0.75rem/1 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+header { display: flex; flex-direction: column; gap: 14px; border-bottom: 1px solid var(--rule); padding-bottom: 28px; }
+.lede { font-size: 1.1rem; color: var(--ink); }
+.meta { font: 0.85rem/1.5 "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); }
+code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.88em; }
+code { background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; }
+.verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.v { background: var(--paper); border: 1px solid var(--rule); border-left: 4px solid var(--c); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.v strong { font-family: "IBM Plex Sans Condensed", sans-serif; font-size: 1.05rem; }
+.v span { color: var(--muted); font-size: 0.92rem; line-height: 1.45; }
+.c-good { --c: var(--good); } .c-warn { --c: var(--warn); } .c-bad { --c: var(--bad); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); background: var(--paper); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 600 0.72rem/1.3 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--ground); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; font-family: "IBM Plex Mono", ui-monospace, monospace; white-space: nowrap; }
+.pill { display: inline-block; font: 600 0.72rem/1 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.04em; padding: 4px 7px; border-radius: 3px; white-space: nowrap; }
+.p-good { color: var(--good); background: var(--good-soft); }
+.p-warn { color: var(--warn); background: var(--warn-soft); }
+.p-bad { color: var(--bad); background: var(--bad-soft); }
+.p-note { color: var(--accent); background: var(--accent-soft); }
+dl { display: grid; grid-template-columns: minmax(130px, 190px) 1fr; gap: 10px 20px; margin: 0; }
+dt { font-weight: 600; }
+dd { margin: 0; color: var(--ink); }
+dd em { color: var(--muted); font-style: normal; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: 2px 0; } dd { margin-bottom: 10px; } }
+.finding { border-top: 1px solid var(--rule); padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.finding .head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.bars { display: flex; flex-direction: column; gap: 8px; background: var(--paper); border: 1px solid var(--rule); padding: 16px; }
+.bar-row { display: grid; grid-template-columns: 92px 1fr 88px; gap: 12px; align-items: center; font-size: 0.85rem; }
+.bar-row .lab { font-family: "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); }
+.track { height: 14px; background: var(--ground); border: 1px solid var(--rule); position: relative; }
+.fill { height: 100%; background: var(--bar); }
+.fill.crash { background: repeating-linear-gradient(45deg, var(--bad) 0 4px, var(--bad-soft) 4px 8px); }
+.bar-row .val { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; text-align: right; }
+.note { font-size: 0.88rem; color: var(--muted); }
+.callout { background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+ol, ul { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 8px; max-width: 72ch; }
+.tally { display: flex; flex-wrap: wrap; gap: 8px; }
+footer { border-top: 1px solid var(--rule); padding-top: 18px; }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">BoneAmanita · mode run 0926c · 26 September 2026</div>
+    <h1>The ADVENTURE rerun, and what the receipts saw</h1>
+    <p class="lede">Two arms, sixty turns, on the build with the examine-cache fix, the crash-text fix and the renamed ledger line. The headline fix held. The run also showed that this week's run summaries undercounted blank replies, and that the receipt ledger caught what the run script missed.</p>
+    <p class="meta">Model gemma4:12b · 30 scripted turns per arm · 10 s between turns · <code>reset.sh</code> before each arm · code 20.7.4.43 plus uncommitted crash-text and ledger-name changes · data: <code>scratch/mode_runs/mode_runs_0926c.jsonl</code>, receipts: <code>scratch/mode_runs/telemetry_0926c/</code></p>
+  </header>
+
+  <section aria-labelledby="verdict">
+    <h2 id="verdict">In one screen</h2>
+    <div class="verdict">
+      <div class="v c-good"><strong>Turn 16 is fixed</strong><span>The exact repeat of turn 6 now answers from the examine memory ("You've already looked at this. Recalling."). Last run it printed a Python traceback and took cognition offline for the rest of the arm.</span></div>
+      <div class="v c-good"><strong>No crash text on screen</strong><span>Zero tracebacks in the UI across 60 turns, zero phase crashes, and the ATP ledger closes to within 0.02 on every turn.</span></div>
+      <div class="v c-bad"><strong>3 blank replies</strong><span>ADVENTURE turns 4 and 19, ADVENTURE_CYCLED turn 3. Each time the Warden rejected the last draft it was allowed, and the player got nothing.</span></div>
+      <div class="v c-warn"><strong>Memory recall never runs</strong><span>The recall gate declined on every turn in both arms, and on every turn of every mode in the last full run. Scope and depth never pass its 0.6 threshold.</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="what">
+    <h2 id="what">What this run is</h2>
+    <p>A mode run drives the real engine through a fixed script of player messages, one arm per mode, and records the engine's full state after every turn. It does not judge whether the prose is good. It checks that the engine keeps answering, stays in a healthy state and spends its energy for reasons it can name.</p>
+    <p><strong>ADVENTURE</strong> plays thirty different moves through a text adventure: walking, opening, reading, searching. <strong>ADVENTURE_CYCLED</strong> plays the first ten of those moves three times over, word for word. It exists to test the engine's handling of exact repeats, which a text adventure produces constantly when a player re-examines a room. Its turns 16 and 26 repeat turn 6 ("I kneel by the stream and look at the stones."), the turn that crashed last run.</p>
+  </section>
+
+  <section aria-labelledby="measure">
+    <h2 id="measure">What each measurement means</h2>
+    <dl>
+      <dt>Reply on screen</dt><dd>Whether the player saw any reply text below the log panel. <em>This week's summaries used a different check (below), which could not see a blank.</em></dd>
+      <dt>Health</dt><dd>The engine's structural integrity, 0 to 100. It drops on crashes and meltdowns; it sat at 99.7 throughout.</dd>
+      <dt>ATP</dt><dd>The engine's energy budget, 0 to 100. Generating tokens, style taxes and the per-turn economic tax spend it; digestion of the player's words, rest near the zone's home voltage and idle time earn it. Every change now carries a reason in a per-turn ledger.</dd>
+      <dt>Voltage</dt><dd>How charged the exchange reads. Each turn it is set to 30 × a running average of <code>beta_index</code>, a measure of the text. Each zone has a home voltage (COURTYARD 8, FORGE 15).</dd>
+      <dt>Zone</dt><dd>The engine's current register, chosen from voltage and drag: COURTYARD is calm, FORGE is working heat.</dd>
+      <dt>Crucible</dt><dd>The overheating check. REGULATED is normal; a MELTDOWN line sits at 2.5 × the zone's home voltage (20 V in COURTYARD, 37.5 V in FORGE).</dd>
+      <dt>Warden rejection</dt><dd>The model must answer with one JSON object. A reply that is not valid JSON is rejected and the model is asked again, up to twice.</dd>
+      <dt>Phase crash</dt><dd>A step of the turn pipeline raised an error. The engine survives it, but the turn is cut short.</dd>
+      <dt>Receipt</dt><dd>A short record a subsystem issues when it does its work: what it did, a result count, and whether it ran on a fallback. Covered in its own section below.</dd>
+    </dl>
+  </section>
+
+  <section aria-labelledby="results">
+    <h2 id="results">The run</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Arm</th><th>Replies on screen</th><th>Blank</th><th>Health</th><th>ATP end / lowest</th><th>Voltage range</th><th>Zones (turns)</th><th>Crucible</th><th>Warden rejections</th></tr></thead>
+        <tbody>
+          <tr><td>ADVENTURE</td><td class="num">28 / 30</td><td class="num">4, 19</td><td class="num">99.7</td><td class="num">97.7 / 84.1</td><td class="num">6.2 to 15.0</td><td>FORGE 23, COURTYARD 7</td><td><span class="pill p-good">REGULATED 30</span></td><td class="num">6</td></tr>
+          <tr><td>ADVENTURE_CYCLED</td><td class="num">29 / 30</td><td class="num">3</td><td class="num">99.7</td><td class="num">96.3 / 85.3</td><td class="num">6.2 to 14.7</td><td>FORGE 23, COURTYARD 7</td><td><span class="pill p-good">REGULATED 30</span></td><td class="num">3</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Gatekeeper rejections, meltdowns, Jester firings and phase crashes: zero in both arms. Mean turn time 9.7 s and 7.3 s; the cycled arm is faster because a repeated examine is answered from memory without calling the model.</p>
+    <p>The numbers read as healthy. Voltage settles at each zone's home, well below either meltdown line, and ATP never dropped under 84. Turns 16 and 26 of the cycled arm both logged the examine-memory recall and put the same scene on screen as turn 6, which is the intended behaviour: a player re-reading a room gets the same room.</p>
+  </section>
+
+  <section aria-labelledby="findings">
+    <h2 id="findings">What the data means</h2>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-bad">Real bug</span><h3>A rejected final draft leaves the player with a blank screen</h3></div>
+      <p>The engine allows two drafts per turn. If both fail, a short pause line ("One thing at a time.") is supposed to take the place of the reply, and the Warden report says so. In <code>brain/cortex.py</code> the Warden's JSON check ends its branch with <code>continue</code>, which skips the block that installs the pause line on the last attempt. When the last draft is the one the Warden rejects, the loop ends with an empty reply. All three blanks in this run happened this way, and so did every blank earlier in the week except the fourteen caused by one crash (below).</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-bad">Correction</span><h3>This week's "150 of 150" summaries missed the blanks</h3></div>
+      <p>The run script decided a turn was answered if its <code>reply</code> field was non-empty. That field is the engine's dialogue-memory entry, which always begins with the player's own line ("Traveler: …"), so it is never empty. Counted from what reached the screen instead, the week looks like this:</p>
+      <div class="bars" role="img" aria-label="Blank replies per run: 0925 8 of 150, 0925b 6 of 150, 0925c 10 of 150, 0926a 15 of 150, 0926b 25 of 150 including 14 after one crash, 0926c 3 of 60">
+        <div class="bar-row"><span class="lab">0925</span><div class="track"><div class="fill" style="width:32%"></div></div><span class="val">8 / 150</span></div>
+        <div class="bar-row"><span class="lab">0925b</span><div class="track"><div class="fill" style="width:24%"></div></div><span class="val">6 / 150</span></div>
+        <div class="bar-row"><span class="lab">0925c</span><div class="track"><div class="fill" style="width:40%"></div></div><span class="val">10 / 150</span></div>
+        <div class="bar-row"><span class="lab">0926a</span><div class="track"><div class="fill" style="width:60%"></div></div><span class="val">15 / 150</span></div>
+        <div class="bar-row"><span class="lab">0926b</span><div class="track" style="display:flex"><div class="fill" style="width:44%"></div><div class="fill crash" style="width:56%"></div></div><span class="val">25 / 150</span></div>
+        <div class="bar-row"><span class="lab">0926c</span><div class="track"><div class="fill" style="width:12%"></div></div><span class="val">3 / 60</span></div>
+      </div>
+      <p class="note">Bar length is the blank count on a scale of 0 to 25. The hatched part of 0926b is the 14 turns lost after one crash (next finding). Every other blank followed a Warden rejection; TECHNICAL, whose code-heavy replies break the JSON most often, had the most (13 of 30 in 0926a).</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-bad">Real bug</span><h3>One crash silenced the rest of the last run's cycled arm</h3></div>
+      <p>When a pipeline step crashes, the engine marks that part of itself offline and skips it from then on. The only thing that brings it back is a REM tick, which needs about a minute of idle time. A conversation paced at ten seconds a turn never idles that long. In run 0926b, the turn-16 crash took cognition offline and turns 16 to 29 all came back blank. The crash itself is fixed; the recovery rule is not.</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-warn">Design question</span><h3>Recall is gated behind a threshold nothing reaches</h3></div>
+      <p>The engine only searches its memory when the turn's <code>scope</code> or <code>depth</code> exceeds 0.6. Across all 210 turns of runs 0926b and 0926c, the highest scope was exactly 0.6 (in TECHNICAL; the gate needs more than 0.6) and the highest depth 0.43. So memory recall has not run once, in any mode, in the runs that record these values.</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-warn">Design question</span><h3>The evidence-gated memory tool has never been used</h3></div>
+      <p>The Warden offers the model a second tool, <code>commit_memory</code>, which stores a memory only if it quotes the dialogue exactly. In 360 turns today the model never called it, so the check behind it has never run against real output.</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-note">Cosmetic</span><h3>The soul's paradigm name keeps growing</h3></div>
+      <p>Each time a paradigm crystallizes, the name gains a suffix. By turn 19 the log panel read "Soul permanently mutated into THE ARCHITECT-NARRATOR-NARRATOR-NARRATOR-NARRATOR."</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="receipts">
+    <h2 id="receipts">How the receipt system is doing</h2>
+    <p>Twelve subsystems are expected to issue a receipt as they work, and two more only when their event happens (a draft sent back, a sentence cut). The ledger then reports three ways a subsystem can mislead by omission: <strong>silent</strong> (expected, never reported), <strong>always degraded</strong> (ran on a fallback every time) and <strong>always empty</strong> (ran, returned nothing, every time). The live engine shows this as <code>/receipts</code>; receipts also go to the telemetry trace.</p>
+
+    <div class="callout">
+      <strong>Verdict: the receipts work, and in this run they were the best witness.</strong>
+      <span><code>cortex.somatic</code> recorded a "failed" outcome on exactly the three turns that went blank, which the run script missed. The weak points are in how the ledger is read, not in whether receipts get written.</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Subsystem</th><th>ADVENTURE</th><th>CYCLED</th><th>What it says</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">cortex.somatic</td><td class="num">30</td><td class="num">30</td><td>Reply outcome per turn: complied 21, re-asked 7, failed 2 (cycled: 28, 1, 1). The failures match the blank turns exactly.</td><td><span class="pill p-good">Working</span></td></tr>
+          <tr><td class="mono">embeddings.embed_batch</td><td class="num">105</td><td class="num">55</td><td>Every call vectorized over HTTP, none on the hash fallback. Cached examine turns skip it, hence fewer in the cycled arm.</td><td><span class="pill p-good">Working</span></td></tr>
+          <tr><td class="mono">composer.compose</td><td class="num">31</td><td class="num">31</td><td>Prompt assembled every turn; degraded on 11 and 15 turns because the governor had not measured yet, so the model sampled at its default temperature.</td><td><span class="pill p-good">Working</span></td></tr>
+          <tr><td class="mono">governor.bitmap_gate</td><td class="num">31</td><td class="num">31</td><td>Declines until memory holds 32 items, then reads the regime: from ledger turn 12 and 16. The two degraded entries are the boot turns.</td><td><span class="pill p-good">Working</span></td></tr>
+          <tr><td class="mono">physics.word_resolution</td><td class="num">31</td><td class="num">31</td><td>Words resolved to lexicon categories; a word guessed from its spelling now and then.</td><td><span class="pill p-good">Working</span></td></tr>
+          <tr><td class="mono">stage.negotiate</td><td class="num">30</td><td class="num">30</td><td>Mostly "one voice, nothing to negotiate", sometimes "no voice triggered".</td><td><span class="pill p-good">Working</span></td></tr>
+          <tr><td class="mono">cortex.redraft / salvage</td><td class="num">6 / 1</td><td class="num">0 / 0</td><td>Drafts sent back for banned phrases ("nestled", "Dust motes", "landscape", "the weight of"); one sentence cut.</td><td><span class="pill p-good">Working</span></td></tr>
+          <tr><td class="mono">warden.json_gate</td><td class="num">7</td><td class="num">4</td><td>Issued only on a rejection, with a result count of 0. Listed as always expected, so a clean session reads "silent" and a session with rejections reads "always empty".</td><td><span class="pill p-warn">Misfiled</span></td></tr>
+          <tr><td class="mono">gatekeeper.invariant</td><td class="num">0</td><td class="num">0</td><td>Issued only when a memory commit fails its quote check. No commit was ever attempted, so it reads "silent".</td><td><span class="pill p-warn">Misfiled</span></td></tr>
+          <tr><td class="mono">lattice.infer_and_couple</td><td class="num">61</td><td class="num">61</td><td>Twice per turn. Its result count is the number of log lines it wrote, normally 0, so it reads "always empty"; the real content is in its inputs (the person model's state).</td><td><span class="pill p-warn">Misleading count</span></td></tr>
+          <tr><td class="mono">cortex.recall</td><td class="num">31</td><td class="num">31</td><td>"Declined to recall" on every turn: scope and depth below 0.6.</td><td><span class="pill p-bad">Real signal</span></td></tr>
+          <tr><td class="mono">cortex.query_neighborhood</td><td class="num">0</td><td class="num">0</td><td>Never reached, because recall never runs.</td><td><span class="pill p-bad">Real signal</span></td></tr>
+          <tr><td class="mono">memory.retrieve_semantic</td><td class="num">0</td><td class="num">0</td><td>Never reached, same cause.</td><td><span class="pill p-bad">Real signal</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>What <code>/receipts</code> would have told you</h3>
+    <p>Six flags: three silent (<code>gatekeeper.invariant</code>, <code>cortex.query_neighborhood</code>, <code>memory.retrieve_semantic</code>) and three always empty (<code>warden.json_gate</code>, <code>cortex.recall</code>, <code>lattice.infer_and_couple</code>). Three of them are the one real problem, recall never running, seen from three places. The other three are false alarms from how those subsystems are filed or counted.</p>
+    <div class="tally"><span class="pill p-bad">3 real, 1 root cause</span><span class="pill p-warn">2 misfiled</span><span class="pill p-warn">1 misleading count</span></div>
+
+    <h3>Where the system falls short</h3>
+    <ul>
+      <li><strong>Receipts do not survive a run.</strong> They go to the telemetry trace, and <code>reset.sh</code> deletes <code>logs/</code> before every arm. This report exists because the traces were copied out during the run. The run script's per-turn rows do not include them.</li>
+      <li><strong>The scorecard only looks at the whole session.</strong> A subsystem that reported on turn 1 counts as "seen" forever. In run 0926b cognition went offline for 14 turns and the ledger would not have flagged it, because the subsystems had already reported earlier.</li>
+      <li><strong>False alarms train people to ignore it.</strong> Half of the six flags here are noise from filing and counting, which makes the real flag easier to dismiss.</li>
+      <li><strong>The ledger keeps the last 512 receipts.</strong> This run issued about 12 a turn, so a long session judges "always" over roughly the last 40 turns only.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="next">
+    <h2 id="next">What to fix, in order</h2>
+    <ol>
+      <li><strong>Pause line on a rejected final draft.</strong> Route a Warden or Gatekeeper rejection on the last attempt to the same fallback as every other rejection. Small, and it removes nearly every blank this week.</li>
+      <li><strong>Count blanks from the screen.</strong> The run script should check the text after the log panel, and store receipts with each turn.</li>
+      <li><strong>Bring a crashed part back sooner.</strong> For example, retry it at the start of the next turn instead of waiting for a REM tick. This one is your call on the design.</li>
+      <li><strong>Refile the receipts.</strong> Move <code>warden.json_gate</code> and <code>gatekeeper.invariant</code> to the event-only list, give <code>lattice.infer_and_couple</code> a meaningful result count, and add a per-turn check for subsystems that stopped reporting.</li>
+      <li><strong>Decide what recall should need.</strong> Either lower the 0.6 gate or change how scope and depth are measured; the data says the gate is closed for every mode today.</li>
+      <li><strong>Find out why <code>commit_memory</code> goes unused</strong>, then the paradigm name suffix.</li>
+    </ol>
+  </section>
+
+  <footer>
+    <p class="note">Counts come from the run rows and the two telemetry traces named at the top. "Ledger turn" in the receipts is offset by two from the script's turn numbers (the boot sequence takes the first two). Blank replies were counted as turns where nothing follows the log panel's divider; one earlier run's turn 0 had text on screen but an empty dialogue entry, which is why the screen, not the dialogue memory, is the measure used here.</p>
+  </footer>
+</main>
+
+</body></html>
