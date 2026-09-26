@@ -185,7 +185,8 @@ class ProtocolLifecycleTests(BoneTestCase):
 
     def test_grief_protocol_activation(self):
         self.engine.bio.endo.glimmers = 0
-        self.engine.mind.mem.graph["project_fail"] = {"mass": 50.0}
+        # A real node shape (edges, not a bare mass); the bare dict crashed Navigation every turn.
+        self.engine.mind.mem.graph["project_fail"] = {"edges": {"deadline": 50.0}, "is_diamond": False}
         snapshot = self.engine.process_turn("We lost the project. [grief]")
         final_glimmers = self.engine.bio.endo.glimmers
         self.assertGreater(

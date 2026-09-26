@@ -273,6 +273,21 @@ What the recording showed:
   Flow Boost). Test mutation checked. `set_atp` still sets directly (boot,
   reboot, absolute resets). Full suite 773 passed, 5 skipped.
 
+**Phase crashes now fail the test suite (built after 20.7.4.41, not yet
+committed).** `PhaseExecutor` catches a crashed phase, logs it and ends the
+turn early, so a test could pass through a crash: the missing `zone_home`
+import above raised on every turn and the full suite still passed.
+`tests/conftest.py` wraps `CycleSimulator.handle_phase_crash` for every test
+and fails the test (with the traceback) if any phase crashed; engine
+behaviour is unchanged. A test that crashes a phase on purpose opts out with
+`ALLOWS_PHASE_CRASH = True` on its class or `@pytest.mark.allows_phase_crash`
+(none needs it today). The first run found one: `test_protocols`
+`test_grief_protocol_activation` planted a memory node shaped
+`{"mass": 50.0}` with no `edges`, so Navigation raised `KeyError: 'edges'`
+and the rest of the turn never ran (0.12 s; the whole turn now runs, 4.5 s).
+Fixed in the test with a real node shape; the engine code is right. Full
+suite 773 passed, 5 skipped.
+
 ## Where things stood, 2026-09-25 (afternoon)
 
 **The mode-failure plan below is built, plus

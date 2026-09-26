@@ -579,3 +579,7 @@ concluding a run is stuck.
    `body.somatic_metrics`, and `tests/test_audit_somatic.py` checks that
    importing the census leaves the backend unset. Before trusting a `bone`
    run, grep its log for `hash coordinates` and `falling back to PID`.
+10. **A crashed phase does not fail a turn.** `PhaseExecutor` logs it and
+    ends the turn early. `tests/conftest.py` turns any such crash into a test
+    failure; opt out only for a test that crashes a phase on purpose
+    (`ALLOWS_PHASE_CRASH = True` or `@pytest.mark.allows_phase_crash`).
