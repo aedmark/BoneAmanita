@@ -18,6 +18,7 @@ Four tracks, in dependency order:
 - **D. The Somatic Contract**: the person's state shapes the reply, the
   engine's state sets what it can afford, and neither is performed. Added
   after C5 found the somatic layer mostly decorative.
+- **E. The Halcyon Integration**: Porting Iris's SQLite persistence and strict `NOMINATE` gate into BoneAmanita to replace JSON quicksaves and rigidly enforce actions.
 
 ## The thesis: all three problems are one problem
 

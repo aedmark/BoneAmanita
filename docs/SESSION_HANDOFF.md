@@ -9,6 +9,14 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
+## Where things stand, 2026-09-26 (Halcyon Integration Plan)
+
+**RESUME HERE (2026-09-26). Gordon aligned on a major architectural pivot: porting the best parts of Brad's Iris/Halcyon repo into BoneAmanita.**
+BoneAmanita owns the conversation loop, the Bio-Physics engine (ATP/Cortisol), and the Lexical Firewall. We will retain this as the core engine. However, we will rip out Brad's `iris/store.py` (SQLite atomic persistence) and `iris/kernel.py` (the strict `NOMINATE` gate) and wire them into the tail end of BoneAmanita's `cycle.py`.
+- **Why?** It replaces fragile JSON quicksaves with atomic SQLite commits (saving biological state + memory simultaneously).
+- **How?** BoneAmanita's filter handles style and biological enforcement. The Halcyon Gate handles memory constraints and action validity. The vector `spores/` stay for subconscious recall, but a structured Graph memory is introduced for factual persistence.
+**Next step:** Extract `store.py` and `kernel.py` from the Iris repo and begin the surgical graft into `cycle.py`.
+
 ## Where things stand, 2026-09-25 evening (read this first)
 
 **RESUME HERE (2026-09-25 evening). Gordon asked: audit and optimize PINKER,
