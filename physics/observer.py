@@ -15,7 +15,7 @@ from physics.maths import (
 from physics.models import EnergyState, MaterialState, PhysicsPacket, SpatialState
 from engine.presets import BoneConfig
 from engine.receipts import issue as issue_receipt
-from engine.struts import safe_get, safe_set, ux
+from engine.struts import safe_get, safe_set, ux, zone_home
 
 @dataclass
 class PhysicsDelta:
@@ -543,8 +543,6 @@ class CycleStabilizer:
         self.cfg = config_ref or BoneConfig
         self.last_tick_time = time.time()
         self.pending_drag = 0.0
-        phys_cfg = safe_get(self.cfg, "PHYSICS", {})
-        self.manifolds = safe_get(phys_cfg, "MANIFOLDS", {})
         cfg_deep = safe_get(self.cfg, "PHYSICS_DEEP", {})
         self.HARD_FUSE_VOLTAGE = float(safe_get(cfg_deep, "HARD_FUSE_VOLTAGE", 200.0))
         if hasattr(self.events, "subscribe"):
@@ -580,11 +578,7 @@ class CycleStabilizer:
         self.last_tick_time = now
         if not self.governor:
             return applied_correction
-        manifold_key = safe_get(physics, "manifold", "DEFAULT")
-        cfg = self.manifolds.get(
-            manifold_key, self.manifolds.get("DEFAULT", {"voltage": 10.0, "drag": 1.0})
-        )
-        target_v, target_d = cfg.get("voltage", 10.0), cfg.get("drag", 1.0)
+        target_v, target_d = zone_home(self.cfg, safe_get(physics, "manifold", "DEFAULT"))
         if safe_get(physics, "flow_state", "LAMINAR") in (
             "SUPERCONDUCTIVE",
             "FLOW_BOOST",

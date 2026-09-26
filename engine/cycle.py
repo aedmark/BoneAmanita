@@ -450,7 +450,7 @@ class GeodesicOrchestrator:
     def _process_rem_tick(self):
         bio_cfg = getattr(self.eng.config, "BIO", None)
         rem_atp_drain = float(getattr(bio_cfg, "REM_ATP_DRAIN", 2.0))
-        self.eng.drain_atp(rem_atp_drain)
+        self.eng.drain_atp(rem_atp_drain, "REM Tick")
         if _mito_state := self.eng._mito_state:
             _mito_state.ros_buildup = max(0.0, _mito_state.ros_buildup - 0.1)
         if hasattr(self.eng, "system_health"):
@@ -712,7 +712,7 @@ class GeodesicOrchestrator:
             )
             ctx.logs.extend(lattice_logs)
             if atp_deduction > 0:
-                self.eng.drain_atp(atp_deduction)
+                self.eng.drain_atp(atp_deduction, "Lattice Coupling")
             u_exhaustion = float(safe_get(ctx.user_state, ["E_u", "E"], 0.0))
             res_delta = float(
                 safe_get(ctx.shared_dyn, ["delta", "resonance_delta"], 0.0)

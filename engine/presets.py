@@ -235,7 +235,6 @@ class BoneConfig:
         ],
         "BIO": [
             "GOVERNOR_THRESHOLDS",
-            "PID_SETTINGS",
             "GENTLE_COST_SCALE",
             "ATP_IDLE_RECOVERY_PER_MIN",
             "ATP_IDLE_RECOVERY_CAP",

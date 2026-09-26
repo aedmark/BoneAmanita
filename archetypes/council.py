@@ -6,6 +6,7 @@ from typing import Any, Dict
 from archetypes.symbiosis import get_symbiont
 from engine.constants import Prisma
 from engine.core import LoreManifest, safe_get, ux, ux_format
+from engine.struts import zone_home
 from engine.presets import BoneConfig
 
 class TheVillageCouncil:
@@ -16,8 +17,8 @@ class TheVillageCouncil:
         def gv(k, d=0.0):
             return float(safe_get(p, k, d))
 
-        # The governor's voltage setpoint is where the engine lives; APRIL fires on distance from it.
-        v_home = float(safe_get(safe_get(safe_get(safe_get(BoneConfig, "BIO", {}), "PID_SETTINGS", {}), "VOLTAGE", {}), "setpoint", 10.0))
+        # The zone's home voltage is where the engine lives; APRIL fires on distance from it.
+        v_home = zone_home(BoneConfig, safe_get(p, "manifold", None))[0]
         V, F = gv("voltage", v_home), gv("narrative_drag", 0.6)
         P = (
             float(_bio_state.get("stamina", 100.0))

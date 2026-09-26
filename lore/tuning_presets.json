@@ -416,20 +416,6 @@
     "CLICHE_TAX_RATE": 0.5,
     "MAX_SAFE_BURN": 25.0,
     "ANAEROBIC_THRESHOLD": 40.0,
-    "PID_SETTINGS": {
-      "VOLTAGE": {
-        "kp": 0.2,
-        "ki": 0.15,
-        "kd": 0.1,
-        "setpoint": 10.0
-      },
-      "DRAG": {
-        "kp": 0.2,
-        "ki": 0.15,
-        "kd": 0.1,
-        "setpoint": 1.5
-      }
-    },
     "AUTOPHAGY_MIN_HEALTH": 10.0,
     "AUTOPHAGY_BURN": 5.0,
     "VOLTAGE_OVERLOAD": 30.0,

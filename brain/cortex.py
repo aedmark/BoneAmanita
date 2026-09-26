@@ -688,7 +688,7 @@ class TheCortex:
                 if self.events:
                     self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "SYS")
                 if hasattr(eng, "drain_atp"):
-                    eng.drain_atp(5.0)
+                    eng.drain_atp(5.0, "Jester")
                 phys_state["entropy"] = 0.99
                 phys_state["narrative_drag"] = (
                     float(phys_state.get("narrative_drag", 0.0)) + 5.0

@@ -169,7 +169,7 @@ class ObservationPhase(SimulationPhase):
                     float(safe_get(target_cfg, "MAX_HEALTH", 100.0)),
                     self.eng.health + (hours_passed * 10.0),
                 )
-                self.eng.restore_atp(hours_passed * 25.0)
+                self.eng.restore_atp(hours_passed * 25.0, "Long Absence Rest")
                 ctx.log(
                     f"{Prisma.GRN}[BIO]: Retroactive metabolism applied for {hours_passed:.1f} hours of absence. ATP and Health restored.{Prisma.RST}"
                 )

@@ -13,7 +13,6 @@ from .regulation import (
     BioFeedback,
     EndocrineRegulator,
     MetabolicGovernor,
-    PIDController,
 )
 from .somatic import SynestheticCortex
 from .system import BioSystem, SomaticLoop
@@ -30,7 +29,6 @@ __all__ = [
     "EndocrineSystem",
     "EndocrineRegulator",
     "SemanticEndocrinologist",
-    "PIDController",
     "MetabolicGovernor",
     "BioFeedback",
     "SynestheticCortex",

@@ -2,7 +2,7 @@ import math
 from typing import Optional, Tuple
 
 from engine.presets import BoneConfig
-from engine.struts import safe_get, ux, ux_format
+from engine.struts import safe_get, ux, ux_format, zone_home
 
 class TheCrucible:
     def __init__(self, config_ref=None):
@@ -48,10 +48,9 @@ class TheCrucible:
         msg = msg_template.format(reduction=reduction, reason=reason)
         return True, msg, reduction
 
-    def home_voltage(self) -> float:
-        """The governor's setpoint: where the engine lives, so voltage there is not instability."""
-        bio = safe_get(self.cfg, "BIO", {})
-        return float(safe_get(safe_get(safe_get(bio, "PID_SETTINGS", {}), "VOLTAGE", {}), "setpoint", 10.0))
+    def home_voltage(self, zone: Optional[str] = None) -> float:
+        """The zone's home voltage: where the engine lives, so voltage there is not instability."""
+        return zone_home(self.cfg, zone)[0]
 
     def audit_fire(
         self, physics: dict, warn_first: bool = False, strained: bool = False, voltage_floor: float = 0.0
@@ -64,7 +63,8 @@ class TheCrucible:
         voltage = float(physics.get("voltage", 0.0))
         structure = float(physics.get("kappa", 0.0))
         # kappa*20 alone read every ordinary voltage as instability and ratcheted drag to its clamp.
-        ideal_voltage = max(self.home_voltage(), float(voltage_floor or 0.0)) + structure * 20.0
+        home = self.home_voltage(physics.get("manifold"))
+        ideal_voltage = max(home, float(voltage_floor or 0.0)) + structure * 20.0
         delta = voltage - ideal_voltage
         self.instability_index = (self.instability_index * 0.7) + (delta * 0.3)
         if abs(self.instability_index) < 0.1:
@@ -100,7 +100,7 @@ class TheCrucible:
             )
             return "SURGE", 0.0, msg
         meltdown_at = (
-            self.home_voltage()
+            home
             * float(safe_get(safe_get(self.cfg, "MACHINE", {}), "CRUCIBLE_MELTDOWN_HOME_MULT", 2.5))
             * float(safe_get(self.cfg, "GATE_TOLERANCE", 1.0))
         )

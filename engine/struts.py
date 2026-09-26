@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Tuple
 from engine.constants import Prisma
 
 logger = logging.getLogger("bone")
@@ -72,6 +72,13 @@ def dump_state(obj: Any) -> dict:
         return vars(obj)
     except TypeError:
         return {k: getattr(obj, k) for k in getattr(obj, "__slots__", []) if hasattr(obj, k)}
+
+def zone_home(cfg: Any, zone: Any) -> Tuple[float, float]:
+    """The engine's one home (voltage, drag): the zone's entry in PHYSICS.MANIFOLDS, else DEFAULT."""
+    manifolds = safe_get(safe_get(cfg, "PHYSICS", {}), "MANIFOLDS", {}) or {}
+    home = manifolds.get(str(zone or "").upper()) or manifolds.get("DEFAULT") or {}
+    return float(home.get("voltage", 10.0)), float(home.get("drag", 1.5))
+
 
 def safe_set(obj: Any, key: str, value: Any) -> None:
     if obj is None:

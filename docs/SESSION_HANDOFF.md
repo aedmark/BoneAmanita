@@ -16,7 +16,9 @@ explain the meltdowns on silent turns, stop ADVENTURE punishing repeats, and
 move learned lore into `saves/`. All four are built (committed as 20.7.4.36
 while the real-model run was still going); Gordon took every recommendation below.
 The run's results, the one silence it found (fixed as 20.7.4.37) and the
-rerun on the fix (150 of 150 turns, 20.7.4.38) are at the end of this block.** Full suite 765 passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
+rerun on the fix (150 of 150 turns, 20.7.4.38) are at the end of this block,
+followed by the voltage trace, one home voltage (Gordon's option A) and its
+mode run (150 of 150 again).** Full suite 765 passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
 run; they all read live engine data).
 
 **Built:**
@@ -156,8 +158,10 @@ voltage match within 0.2 from turn 6). Most of it is the protease bonus:
 `harvest` paid +5 ATP only above `BIO.VOLTAGE_BONUS_THRESHOLD` (8 V), and
 this run's voltage sat at 7.7, 7.1, 6.7 on turns 2 to 4 where the last
 sat at 8.7, 13.0, 12.3: 15 ATP missed on a one-volt difference. Why voltage
-stayed low is not recorded; a guess is cortisol widening the voltage PID's
-deadband. Gordon: the economy moving with the conversation is more likely
+stayed low: voltage is set each turn by the VSL consultant (30 x an
+average of `beta_index`, below), so beta ran lower early in this run. (An
+earlier guess here, cortisol widening the PID deadband, was wrong: that PID
+never runs.) Gordon: the economy moving with the conversation is more likely
 something working than something broken; smooth the cliff, and record
 cortisol and everything else the runs did not. Two side notes: the run
 script's `reply` field is the dialogue buffer entry ("Traveler: ...\nSystem:
@@ -169,9 +173,9 @@ while the Crucible's home voltage is 10.
   a share that climbs linearly across `BIO.VOLTAGE_BONUS_RAMP` (4 V) centred
   on the 8 V threshold: nothing at 6 V, half at 8 V, all of it at 10 V
   (home). The PROTEASE enzyme label still needs voltage over 8 (it feeds
-  adrenaline through `body_config.json`, which raises the voltage PID's
-  setpoint, so the label may be its own feedback loop; the new recording
-  will show it). Tests: no step at the threshold, the ramp's end points;
+  adrenaline through `body_config.json`; the adrenaline-raised setpoint
+  that could have looped back is in `MetabolicGovernor.regulate`, which
+  never runs, so there is no loop). Tests: no step at the threshold, the ramp's end points;
   mutation checked.
 - **Every ATP change the engine makes has a name.** `apply_metabolic_tax`
   (mask, firewall and banned-phrase taxes) and GORDON's premise-violation
@@ -190,6 +194,84 @@ while the Crucible's home voltage is 10.
   (each `adjust_atp` call with reason, asked and applied), whatever ATP
   moved outside the ledger (`atp_unledgered`), what digestion paid and at
   what voltage, and every log line. About 3.5 KB a turn.
+
+**Found after 20.7.4.40: who actually sets voltage (Gordon asked why the
+governor aims at 8 while the Crucible's home is 10).** Traced per phase and
+per write with a stub model (`scratch/mode_runs/voltage_trace.py`):
+- **The VSL consultant sets it.** `cortex._apply_vsl_overlay` runs every
+  turn (the consultant is on by default) and replaces voltage with
+  `consultant.state.B * 30`, where `B = 0.8 B + 0.2 beta_index`. So voltage
+  after the reply is 30 x a running average of `beta_index`, whatever the
+  earlier phases did (Soul +2, Observation +0.5, Navigation -0.5 are all
+  overwritten).
+- **`MetabolicGovernor` (`BIO.PID_SETTINGS`, setpoint 10) never regulates.**
+  Its `regulate` has no caller; only `assess` (the Sanctuary's safe-zone
+  distance) and the manifold `shift` run. The Crucible's `home_voltage()`
+  reads this unused setpoint.
+- **`CyberneticGovernor`** is recalibrated every turn by `CycleStabilizer`
+  to the manifold's voltage (`PHYSICS.MANIFOLDS`: COURTYARD 8, DEFAULT 10,
+  LABORATORY 12, FORGE 15, SANCTUARY 20; hence `target_v` 8.0), then
+  pushes by `(target - v) * dt * 0.5 * stress`, `dt` capped at 1 s. The
+  bitmap path (target from 30% of `VOLTAGE_MAX` up) did not measure in the
+  stub. Its push lands after the reply, so it only reaches the next turn's
+  pre-reply phases (Metabolism's harvest, the Crucible) before the VSL
+  line overwrites it again.
+So there are three homes (the Crucible's 10, the manifold's 8 to 20, the
+bitmap's 30+) and none of them is where voltage goes: it goes where beta
+takes it.
+
+**Gordon chose A, one home (built, not yet committed):** voltage stays the
+VSL measurement, and everything that asks "where does the engine live"
+reads the zone's entry in `PHYSICS.MANIFOLDS` through one helper,
+`engine.struts.zone_home(cfg, zone)` (DEFAULT when the zone has none):
+- the Crucible (`home_voltage(zone)`, from the physics packet's
+  `manifold`): its ideal and its meltdown line (home x 2.5 x tolerance).
+  COURTYARD's line drops from 25 to 20 V, LABORATORY 30, FORGE 37.5,
+  SANCTUARY 50;
+- APRIL's distance-from-home in the Village Council;
+- `CycleStabilizer`'s target for `CyberneticGovernor` (it already read the
+  same table; now through the helper);
+- `MetabolicGovernor.assess`, the Sanctuary's safe zone.
+Removed: `PIDController`, `MetabolicGovernor.regulate`/`recalibrate` (never
+called) and `BIO.PID_SETTINGS`. Tests (`OneHomeVoltage`): the meltdown line,
+the stabilizer target and the safe zone per zone, APRIL's zone; mutation
+checked (the stabilizer test passes on the old code, as expected, since it
+read the same table). The first stabilizer test run caught a missing
+import that the full suite had not, because the phase executor catches
+phase errors. Full suite 772 passed, 5 skipped. 
+
+**Mode run on one home (2026-09-26, `tools/mode_runs.py`, gemma4:12b;
+`scratch/mode_runs/mode_runs_0926a.jsonl`, the first run with the full
+per-turn recording): 150 of 150 turns reached the model.** No silence,
+halt, hold, meltdown, PINKER block, Jester firing or Gatekeeper rejection;
+no phase crash in any log. `lore/` untouched by the run.
+
+| Arm | Reached | Zones (turns) | Crucible | End | Lowest ATP | Max V | Warden retries |
+|---|---|---|---|---|---|---|---|
+| CONVERSATION | 30/30 | COURTYARD 27, FORGE 3 | regulated | health 99.6, ATP 100 | 88.8 | 10.0 | 6 |
+| ADVENTURE | 30/30 | FORGE 23, COURTYARD 7 | regulated | 99.7, 92.8 | 85.3 | 15.0 | 3 |
+| ADVENTURE_CYCLED | 30/30 | FORGE 23, COURTYARD 7 | regulated | 99.7, 97.1 | 86.9 | 14.7 | 2 |
+| TECHNICAL | 30/30 | FORGE 26, COURTYARD 4 | regulated | 99.8, 97.6 | 57.6 | 16.4 | 20 |
+| CREATIVE | 30/30 | FORGE 27, COURTYARD 3 | HOT (its floor) | 99.7, 99.1 | 87.7 | 14.5 | 5 |
+
+What the recording showed:
+- Voltage sits at the zone's home: COURTYARD arms around 7 to 10, FORGE
+  arms around 13 to 15 (FORGE's home 15, meltdown line 37.5). Nothing came
+  near a meltdown line.
+- Cortisol was 0.0 on every TECHNICAL turn, confirming the cortisol guess
+  above was wrong.
+- The protease ramp pays partial bonuses at 7 to 9 V (TECHNICAL turns 0 to
+  3) instead of the old all-or-nothing step.
+- **Every turn lost 1.5 to 2.1 ATP outside the ledger** (`atp_unledgered`):
+  `BoneAmanita.drain_atp`/`restore_atp` went through `set_atp`, not
+  `adjust_atp`. The steady one is Metabolism's Economic Tax
+  (`_apply_economic_stimulus`, up to 1.5 a turn from the host's
+  efficiency index). **Fixed after the run (in the probe worktree, so the
+  live arms were not changed mid-run):** both now call `adjust_atp` with a
+  reason, and every caller names one (Economic Tax, Lattice Coupling, REM
+  Tick, Jester, Halt Recovery, Malignancy Halt, Long Absence Rest, Hubris
+  Flow Boost). Test mutation checked. `set_atp` still sets directly (boot,
+  reboot, absolute resets). Full suite 773 passed, 5 skipped.
 
 ## Where things stood, 2026-09-25 (afternoon)
 

@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from body.endocrine import EndocrineSystem
 from body.metabolism import DigestiveTrack, MitochondrialForge
 from body.models import BiologicalImpulse, Biometrics, MitochondrialState
-from body.regulation import BioFeedback, MetabolicGovernor, PIDController
+from body.regulation import BioFeedback, MetabolicGovernor
 from body.somatic import SynestheticCortex
 from body.system import BioSystem
 from engine.presets import BoneConfig
@@ -103,17 +103,6 @@ class BiologyArchitectureTests(BoneTestCase):
         self.assertTrue(
             hits > 0,
             "[FAIL] DigestiveTrack failed to register valid hits for non-antigen words.",
-        )
-
-    def test_pid_controller_math(self):
-        pid = PIDController(
-            kp=0.5, ki=0.0, kd=0.0, setpoint=10.0, output_limits=(-10.0, 10.0)
-        )
-
-        output = pid.update(measurement=5.0, dt=1.0)
-
-        self.assertEqual(
-            output, 2.5, "[FAIL] PID Controller proportional math is incorrect."
         )
 
     def test_biofeedback_autophagy(self):

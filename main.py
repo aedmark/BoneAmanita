@@ -307,13 +307,13 @@ class BoneAmanita:
     def _mito_state(self):
         return self.bio.mito.state
 
-    def drain_atp(self, amount: float):
-        if state := self._mito_state:
-            self.set_atp(state.atp_pool - amount)
+    def drain_atp(self, amount: float, reason: str = "ATP Drain"):
+        if self._mito_state:
+            self.bio.mito.adjust_atp(-float(amount), reason)
 
-    def restore_atp(self, amount: float):
-        if state := self._mito_state:
-            self.set_atp(state.atp_pool + amount)
+    def restore_atp(self, amount: float, reason: str = "ATP Restore"):
+        if self._mito_state:
+            self.bio.mito.adjust_atp(float(amount), reason)
 
     def set_atp(self, amount: float):
         if state := self._mito_state:
@@ -394,7 +394,7 @@ class BoneAmanita:
     ) -> Dict[str, Any]:
         self.events.log(msg, level)
         # A halt skips metabolism; without this, ATP 0 fails the parity gate forever.
-        self.restore_atp(float(safe_get(safe_get(self.config, "BIO", {}), "ATP_HALT_RECOVERY", 3.0)))
+        self.restore_atp(float(safe_get(safe_get(self.config, "BIO", {}), "ATP_HALT_RECOVERY", 3.0)), "Halt Recovery")
         phys = self.active_physics
         phys_dict = {}
         if phys is not None:
@@ -428,7 +428,7 @@ class BoneAmanita:
         if m_a > self.MALIGNANCY_HALT and float(safe_get(active_phys, "mu", 0.0)) < 0.2:
             self.apply_absolute_friction(active_phys)
             safe_set(active_phys, "m_a", m_a * 0.5)
-            self.drain_atp(max(10.0, m_a * 20.0))
+            self.drain_atp(max(10.0, m_a * 20.0), "Malignancy Halt")
             return self._generate_halt(
                 "Optimization velocity unsafe. Applying absolute friction (F ->  )."
             )

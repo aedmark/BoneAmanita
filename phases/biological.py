@@ -160,7 +160,7 @@ class MetabolismPhase(SimulationPhase):
         amplification_penalty = mu * math.exp(m_a)
         total_tax = base_cost + amplification_penalty
         if total_tax > 0:
-            self.eng.drain_atp(total_tax)
+            self.eng.drain_atp(total_tax, "Economic Tax")
             msg = ux("cycle_strings", "metabolism_tax")
             log_msg = (
                 f"{Prisma.OCHRE}{msg.format(tax_burn=round(total_tax, 2))}{Prisma.RST}"
@@ -230,7 +230,7 @@ class MetabolismPhase(SimulationPhase):
         ctx.log(msg)
         if evt == "FLOW_BOOST":
             boost = ctx.limits.get("HUBRIS_ATP_BOOST", 20.0)
-            self.eng.restore_atp(boost)
+            self.eng.restore_atp(boost, "Hubris Flow Boost")
         elif evt == "ICARUS_CRASH":
             damage = ctx.limits.get("HUBRIS_DAMAGE", 15.0)
             ctx.log(

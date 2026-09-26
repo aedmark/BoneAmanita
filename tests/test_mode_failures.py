@@ -958,3 +958,59 @@ class EveryATPChangeHasAReason(BoneTestCase):
         mito.adjust_atp = MagicMock()
         apply_metabolic_tax(mito, atp_cost=2.0, ros_cost=0.0, reason="Firewall Tax")
         mito.adjust_atp.assert_called_once_with(-2.0, "Firewall Tax")
+
+
+    def test_drain_and_restore_are_ledgered(self):
+        mito = self.engine.bio.mito
+        mito.adjust_atp = MagicMock()
+        self.engine.drain_atp(1.5, "Economic Tax")
+        self.engine.restore_atp(3.0, "Halt Recovery")
+        self.assertEqual([c.args for c in mito.adjust_atp.call_args_list], [(-1.5, "Economic Tax"), (3.0, "Halt Recovery")])
+
+
+class OneHomeVoltage(BoneTestCase):
+    """The Crucible and APRIL measured from BIO.PID_SETTINGS (10 V), a PID that never ran; the
+    stabilizer steered to the zone's manifold. Every consumer now reads the zone's home."""
+
+    ZONES = {"COURTYARD": 8.0, "LABORATORY": 12.0, "FORGE": 15.0}
+
+    def test_the_crucible_meltdown_line_follows_the_zone(self):
+        from machine.crucible import TheCrucible
+
+        self.engine.config.GATE_TOLERANCE = 1.0
+        mult = float(self.engine.config.MACHINE.CRUCIBLE_MELTDOWN_HOME_MULT)
+        for zone, home in self.ZONES.items():
+            with self.subTest(zone=zone):
+                line = home * mult
+                below = {"narrative_drag": 1.0, "voltage": line - 1, "kappa": 0.0, "manifold": zone}
+                above = dict(below, voltage=line + 1)
+                self.assertEqual(TheCrucible(self.engine.config).audit_fire(below)[0], "REGULATED")
+                self.assertEqual(TheCrucible(self.engine.config).audit_fire(above)[0], "MELTDOWN")
+
+    def test_the_stabilizer_steers_to_the_zone_home(self):
+        from physics.observer import CycleStabilizer
+
+        governor = MagicMock()
+        governor.regulate.return_value = (0.0, 0.0)
+        stabilizer = CycleStabilizer(MagicMock(), governor, config_ref=self.engine.config)
+        for zone, home in self.ZONES.items():
+            with self.subTest(zone=zone):
+                stabilizer.stabilize(PhysicsPacket(voltage=home, manifold=zone))
+                self.assertEqual(governor.recalibrate.call_args[0][0], home)
+
+    def test_the_safe_zone_is_the_zone_home(self):
+        governor = self.engine.bio.governor
+        for zone, home in self.ZONES.items():
+            with self.subTest(zone=zone):
+                governor.mode = zone
+                self.assertTrue(governor.assess({"voltage": home + 5.0, "narrative_drag": 1.5})[0])
+                self.assertFalse(governor.assess({"voltage": home + 7.0, "narrative_drag": 1.5})[0])
+
+    def test_april_measures_from_the_zone_home(self):
+        from unittest.mock import patch
+
+        from archetypes.council import TheVillageCouncil
+
+        with patch("archetypes.council.zone_home", return_value=(15.0, 1.5)) as home:
+            TheVillageCouncil._evaluate(PhysicsPacket(voltage=15.0, manifold="FORGE"), {})
+        self.assertEqual(home.call_args[0][1], "FORGE")
