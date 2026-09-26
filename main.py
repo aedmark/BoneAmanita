@@ -5,9 +5,14 @@ import random
 import re
 import time
 import traceback
+import yaml
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Dict, Optional, Tuple
+
+from engine.gate.store import Store
+from engine.gate.kernel import Gate, Boundary
+from engine.gate.tools import TOOLS, build_invariants
 
 from archetypes.council import CouncilChamber
 from body import SomaticLoop
@@ -175,6 +180,17 @@ class BoneAmanita:
         self.orchestrator.cortex = self.cortex
         self.orchestrator.start_daemon()
         self.mind.mem.lex = self.lex
+
+        # Halcyon Gate Integration
+        self.store = Store(path="saves/iris.db", state_dir="saves")
+        try:
+            with open("engine/gate/boundary.yaml") as f:
+                b_spec = yaml.safe_load(f)
+            self.boundary = Boundary(b_spec)
+            self.gate_tools = TOOLS
+            self.gate_invariants = build_invariants(b_spec.get("limits", {}))
+        except FileNotFoundError:
+            self.events.log(f"{Prisma.RED}CRITICAL: engine/gate/boundary.yaml not found.{Prisma.RST}", "SYS")
 
     def _validate_state(self):
         tuning_key = self.mode_settings.get("tuning", "STANDARD")

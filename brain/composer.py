@@ -690,7 +690,7 @@ class PromptComposer:
             ("input", input_block),
             ("entity_prefix", entity_prefix),
             ("thermal_lock", cd_block),
-            ("warden_instruction", "=== STRUCTURAL INVARIANT GOVERNANCE ===\nYou are operating inside a strictly governed harness.\nEach turn you MUST output EXACTLY ONE JSON object and nothing else. No prose. No markdown blocks outside the JSON.\nTools available:\n- nominate_response: {'tool': 'nominate_response', 'args': {'internal_monologue': '...', 'text': '...'}}\n- commit_memory: {'tool': 'commit_memory', 'args': {'internal_monologue': '...', 'text': '...', 'evidence': '<exact verbatim text from dialogue history>'}}\ncommit_memory's evidence must be an exact quote of at least five words from the dialogue; anything else is REJECTED by the Gatekeeper.\nOUTPUT ONLY VALID JSON."),
+            ("warden_instruction", "=== HALCYON GATE GOVERNANCE ===\nYou write in plain language. That is what you say, and it is ALWAYS kept, word for word, as your rationale. Say what you actually think.\n\nWhen you want to mutate your memory or state, you embed literal NOMINATE commands on their own lines anywhere in your response.\nSyntax: NOMINATE what=<path> verb=<verb> args=<key:value>\n\nAllowed Grammar:\n" + state.get("meta", {}).get("halcyon_grammar", "  verb=relate (writes edges) args=...\n  verb=create (writes nodes) args=...\n  verb=remember (writes self/memory) args=...") + "\n\nIf you just want to talk, do not output any NOMINATE lines."),
         ]
         trimmed = self._fit_to_window(blocks, style_notes, valid_history)
         parts = [text for _, text in blocks if text]

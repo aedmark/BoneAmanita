@@ -729,64 +729,8 @@ class TheCortex:
             from engine.receipts import issue as issue_receipt
             
             parsed_action = None
-            try:
-                import re
-                match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw_resp, re.S)
-                if match:
-                    json_str = match.group(1)
-                else:
-                    json_str = raw_resp
-                s_idx = json_str.find('{')
-                e_idx = json_str.rfind('}')
-                if s_idx == -1 or e_idx == -1:
-                    raise ValueError("No JSON object found")
-                parsed_action = json.loads(json_str[s_idx:e_idx+1])
-                
-                if "tool" not in parsed_action or "args" not in parsed_action:
-                    raise ValueError("JSON missing 'tool' or 'args'")
-            except (ValueError, Exception) as e:
-                rejected_by = "warden"
-                if self.events:
-                    self.events.log(f"{Prisma.RED}Warden rejected non-JSON output: {e}{Prisma.RST}", "CORTEX")
-                val_res["valid"] = False
-                val_res["feedback_instruction"] = f"CRITICAL FAILURE: Output must be EXACTLY ONE valid JSON object. {e}"
-                final_prompt = f"{base_prompt}\n\n=== SYSTEM REJECTION ===\nREASON: {val_res['feedback_instruction']}\n\n"
-                issue_receipt("warden.json_gate", "rejected non-JSON LLM output", result_count=0, degraded=False, inputs={"raw": raw_resp}, detail=str(e))
-                continue
-                
-            try:
-                corpus = list(getattr(self, "dialogue_buffer", []))
-                mock_state = {
-                    "physics": phys_state,
-                    "mito_state": getattr(self.svc.bio.mito, "state", None) if (hasattr(self.svc, "bio") and self.svc.bio) else None,
-                }
-                
-                Gatekeeper.evaluate_state_transition({}, mock_state, parsed_action, corpus)
-                
-            except InvariantViolation as e:
-                rejected_by = "gatekeeper"
-                val_res["valid"] = False
-                val_res["feedback_instruction"] = f"INVARIANT_BREACH: {e}"
-                if self.events:
-                    self.events.log(f"{Prisma.RED}Gatekeeper rejected response: {e}{Prisma.RST}", "CORTEX")
-                final_prompt = f"{base_prompt}\n\n=== SYSTEM REJECTION ===\nREASON: {val_res['feedback_instruction']}\n\n"
-                issue_receipt("gatekeeper.invariant", "rejected physically invalid state transition", result_count=0, degraded=False, inputs={"action": parsed_action}, detail=str(e))
-                continue
-                
-            if parsed_action.get("tool") == "commit_memory":
-                # The memory is the verified quote itself, never the model's unchecked monologue.
-                evidence = " ".join(str(parsed_action.get("args", {}).get("evidence", "")).split())
-                memory = getattr(self.svc, "mind_memory", None)
-                if hasattr(memory, "encode"):
-                    kept = memory.encode(evidence.split(), {**phys_state, "raw_text": evidence}, "WARDEN_COMMIT")
-                    if self.events:
-                        self.events.log(
-                            f"{Prisma.CYN}Evidence-gated memory {'committed' if kept else 'verified but below the significance threshold; not kept'}.{Prisma.RST}",
-                            "CORTEX",
-                        )
-                
-            # If passed, extract text for the rest of the loop
-            raw_resp = parsed_action.get("args", {}).get("text", "")
+            # Halcyon Gate natively handles NOMINATE strings inside raw_resp.
+            # JSON extraction and older Gatekeeper rules are bypassed.
             if firewall_active:
                 original_len = len(raw_resp)
                 raw_resp = self.LEXICAL_PURGE_PATTERN.sub("", raw_resp).strip()

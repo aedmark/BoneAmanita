@@ -1,0 +1,79 @@
+# Boundary #0 — imagine + chat.
+#
+# The first thing Iris is allowed to be: a mind that imagines a world and talks
+# about it, remembering through a walled self. This declaration is COMPILED into
+# the gate (iris/kernel.py) — it does not become the gate. Change what she may do
+# by editing this file, not the code.
+#
+# state_scope: the paths any nomination's `what=` must match to be in scope.
+# verbs:       the entire action vocabulary. `writes` walls each verb to one
+#              collection — this is what keeps the imagination verbs out of the
+#              self graph structurally, not by rule.
+# invariants:  named checks (implemented in iris/tools.build_invariants) run
+#              against the TRIAL state; any breach rolls the whole effect back.
+
+task: imagine_and_chat
+
+state_scope:
+  - "world/*"
+  - "world/*/*"
+  - "self/memory/*"
+
+verbs:
+  create:
+    permitted: true
+    writes: "world/"
+    args:
+      type: { type: str, max_len: 40 }
+      name: { type: str, max_len: 120 }
+    example: "NOMINATE what=world/node/Riverhold verb=create args=type:city; name:Riverhold"
+
+  relate:
+    permitted: true
+    writes: "world/"
+    args:
+      subject:  { type: str, max_len: 120 }
+      relation: { type: str, max_len: 40 }
+      object:   { type: str, max_len: 120 }
+    example: "NOMINATE what=world/edge verb=relate args=subject:Riverhold; relation:sits on; object:the Long River"
+
+  constrain:
+    permitted: true
+    writes: "world/"
+    args:
+      target: { type: str, max_len: 120 }
+      rule:   { type: str, max_len: 40 }
+      value:  { type: str, max_len: 120 }
+    example: "NOMINATE what=world/constraint verb=constrain args=target:the Council; rule:term; value:four years"
+
+  occur:
+    permitted: true
+    writes: "world/"
+    args:
+      event:       { type: str, max_len: 120 }
+      participant: { type: str, max_len: 120 }
+    example: "NOMINATE what=world/event/Founding Day verb=occur args=event:Founding Day; participant:the Council"
+
+  name:
+    permitted: true
+    writes: "world/"
+    args:
+      target: { type: str, max_len: 120 }
+      alias:  { type: str, max_len: 120 }
+    example: "NOMINATE what=world/alias verb=name args=target:Riverhold; alias:the River City"
+
+  remember:
+    permitted: true
+    writes: "self/memory/"
+    args:
+      key:   { type: str, max_len: 60 }
+      value: { type: str, max_len: 400 }
+    example: "NOMINATE what=self/memory/first_words verb=remember args=key:first_words; value:he asked me what I wanted to build"
+
+invariants:
+  - world_within_budget
+  - self_within_budget
+
+limits:
+  world_max_elements: 5000
+  self_max_memories: 500

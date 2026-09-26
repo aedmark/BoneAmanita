@@ -1344,3 +1344,17 @@ shippable and each makes the next one verifiable.
   original assessment as an option. Given the stated goal is a
   biological harness rather than a prompt tool, the breadth is the
   point; withdrawn as a recommendation.
+
+## Track E: The Halcyon Integration
+
+**Status:** IN PROGRESS (Gate and Store integrated, Grammar migrated).
+
+BoneAmanita's original design relied on JSON parsing and a custom Gatekeeper to enforce memory boundaries (`commit_memory`). This proved fragile, prone to formatting errors, and consumed unnecessary tokens.
+
+Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-default SQLite boundary (`kernel.py` and `store.py`). Rather than forcing JSON, the LLM outputs plain text and embeds `NOMINATE what=... verb=...` string commands. The Gate processes the string and atomically commits it to SQLite, keeping the surrounding prose as the rationale.
+
+**Integration Steps:**
+- ~~1. Extract `store.py` and `kernel.py` from `bone-iris` and graft into `engine/cycle.py`.~~ (Done 2026-09-26)
+- ~~2. Migrate Prompt Composer: Strip JSON enforcement, inject Halcyon `NOMINATE` grammar.~~ (Done 2026-09-26)
+- [ ] 3. Backfill tests: Ensure all legacy memory mechanisms (like the Lexicon) are either updated to use the SQLite state or formally deprecated.
+- [ ] 4. Clean up `engine/invariants.py`: The old JSON-based `Gatekeeper` is now largely redundant. Remove it or adapt it to run as a plugin for the Halcyon Gate.

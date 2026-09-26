@@ -775,6 +775,35 @@ class GeodesicOrchestrator:
                 user_message if not is_system else "(Waiting)", ctx
             )
             ctx = self.simulator.run_simulation(ctx)
+            
+            # --- Halcyon Gate Integration ---
+            if hasattr(self.eng, "store") and hasattr(self.eng, "boundary"):
+                from engine.gate.kernel import Gate
+                import copy
+                
+                # We only adjudicate if NOMINATE is found or if we want to run the Gate on every output.
+                # Halcyon runs it on every output to capture rationale.
+                if ctx.bureau_ui and getattr(self.eng, "sycophancy_streak", 0) < 3:
+                    try:
+                        seq, state = self.eng.store.state()
+                        gate = Gate(self.eng.boundary, copy.deepcopy(state), self.eng.gate_tools, self.eng.gate_invariants)
+                        receipt = gate.adjudicate(ctx.bureau_ui)
+                        
+                        self.eng.store.commit_cycle(
+                            trace_id=ctx.trace_id,
+                            new_state=gate.state,
+                            expected_sequence=seq,
+                            receipt=receipt,
+                            raw=ctx.bureau_ui
+                        )
+                        
+                        if receipt["decision"] == "DENY" or any(c[1] == "ERROR" for c in receipt["decision_basis"]):
+                            # Force a retry or biological penalty?
+                            self.eng.events.log(f"Gate Denied Action: {receipt['decision_basis']}", "KERNEL")
+                            ctx.bureau_ui += "\n[SYSTEM_LOG: Action Denied by Gate]"
+                    except Exception as e:
+                        self.eng.events.log(f"Gate Error: {e}", "KERNEL")
+
             post_logs = [e["text"] for e in self.eng.events.flush()]
             ctx.logs.extend(post_logs)
             self._verify_semantic_topology(ctx)
