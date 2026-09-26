@@ -1357,4 +1357,4 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
 - ~~1. Extract `store.py` and `kernel.py` from `bone-iris` and graft into `engine/cycle.py`.~~ (Done 2026-09-26)
 - ~~2. Migrate Prompt Composer: Strip JSON enforcement, inject Halcyon `NOMINATE` grammar.~~ (Done 2026-09-26)
 - [ ] 3. Backfill tests: Ensure all legacy memory mechanisms (like the Lexicon) are either updated to use the SQLite state or formally deprecated.
-- [ ] 4. Clean up `engine/invariants.py`: The old JSON-based `Gatekeeper` is now largely redundant. Remove it or adapt it to run as a plugin for the Halcyon Gate.
+- ~~4. Clean up `engine/invariants.py`~~ (Done 2026-09-26): The old JSON-based `Gatekeeper` is now largely redundant. Remove it or adapt it to run as a plugin for the Halcyon Gate.
