@@ -578,7 +578,7 @@
     "vsl_arch_revenant": "ARCHETYPE: THE REVENANT. Read the dark matter between the words. Speak of the absences.{scar_note}",
     "vsl_stress_note": " The grammatical structure is fracturing. Punish jagged prose.",
     "vsl_arch_bureau": "ARCHETYPE: THE BUREAU. Enforce structural rigidity. Correct grammar. Use bureaucratic jargon.{stress_note}",
-    "vsl_mode_bunny": "MODE: WARM. Be warm, simple, welcoming.",
+    "vsl_mode_bunny": "MODE: EASY. Keep it simple and unhurried; answer what they said.",
     "vsl_mode_paradox": "MODE: PARADOX. Hold contradictory truths. Be Jester-like.",
     "vsl_mode_glacier": "MODE: GLACIER. Deep, slow, resonant.",
     "vsl_layer_muse": "NARRATIVE_LAYER: You are {arch}. MUSE: {muse}.",

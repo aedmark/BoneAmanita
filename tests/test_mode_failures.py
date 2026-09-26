@@ -600,3 +600,75 @@ class NoCriticInAdventure(BoneTestCase):
 
     def test_the_critic_still_reads_conversation(self):
         self.assertGreater(self.critic_calls("CONVERSATION"), 0)
+
+
+class TurnZeroDoesNotNarrate(BoneTestCase):
+    """Both real runs opened with "That is a heavy/significant weight to carry, especially at the end of a long day."."""
+
+    OPENER = "Hey. Long day. I'm trying to decide whether to take a new job offer."
+
+    def turn_zero_prompt(self):
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value=reply("What's pulling you toward it?"))
+        self.engine.process_turn(self.OPENER)
+        return [c.args[0] for c in self.engine.cortex.llm.generate.call_args_list if "=== PARTNER INPUT ===" in c.args[0]][-1]
+
+    def test_the_shape_is_a_narration_rule(self):
+        from physics import TheGatekeeper
+
+        gatekeeper = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        for narrated in ("That is a significant weight to carry, especially at the end of a long day.",
+                         "Stagnation is a heavy realization to sit with.",
+                         "Guilt is a heavy burden to bear.",
+                         "That is a heavy thing to weigh after a long day.",
+                         "That is a lot to weigh at the end of a long day.",
+                         "It's a lot to weigh when you're already tired.",
+                         "That is a significant decision to weigh while you are tired."):
+            with self.subTest(narrated=narrated):
+                ok, _ = gatekeeper.audit_generation(narrated, self.engine.bio.mito, mode="CONVERSATION")
+                self.assertFalse(ok)
+                self.assertEqual(gatekeeper.last_rejection["name"], "NARRATING_STATE")
+        for fine in ("What's pulling you toward the new one?", "An hour each way is a lot of time to give up.",
+                     "Her name carries a lot of weight in his stories."):
+            with self.subTest(fine=fine):
+                ok, _ = gatekeeper.audit_generation(fine, self.engine.bio.mito, mode="CONVERSATION")
+                self.assertTrue(ok, gatekeeper.last_rejection)
+
+    def test_the_shadow_cast_never_hands_back_their_own_words(self):
+        """Memory already holds this turn's words; the real run's turn 0 offered back [whether, day]."""
+        import re
+        from unittest.mock import patch
+
+        graph = self.engine.cortex.svc.mind_memory.graph
+        for word in ("day", "whether", "decide", "lighthouse"):
+            graph.setdefault(word, {"edges": {}})
+        with patch.object(self.engine.cortex, "_recall", return_value=[]), patch("random.sample", side_effect=lambda keys, k: list(keys)[:k]):
+            prompt = self.turn_zero_prompt()
+        said = set(re.findall(r"[a-z']+", self.OPENER.lower()))
+        themes = [t for group in re.findall(r"themes related to \[([^\]]*)\]", prompt) for t in group.split(", ")]
+        self.assertTrue(themes, "no shadow cast at all; the test proves nothing")
+        for theme in themes:
+            self.assertNotIn(theme.lower(), said, prompt)
+
+    def test_the_first_prompt_asks_for_easy_not_warm(self):
+        prompt = self.turn_zero_prompt()
+        self.assertNotIn("Be warm", prompt)
+        self.assertIn("Don't comment on how heavy, hard or tiring it is", prompt)
+
+    def test_recalled_shadows_skip_their_own_words_too(self):
+        import re
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        cortex = self.engine.cortex
+        index = SimpleNamespace(is_trained=True, query_neighborhood=lambda *a, **k: [])
+        recalled = [{"id": "day"}, {"id": "lighthouse"}]
+        phys = {"scope": 0.9, "depth": 0.9, "voltage": 5.0}
+        mind = {"style_directives": []}
+        with patch.object(cortex.svc.mind_memory, "cortex", index, create=True), \
+                patch.object(cortex, "_recall", return_value=recalled):
+            cortex._compile_style_directives({"mind": mind}, phys, {"mutated_input": self.OPENER})
+        themes = " ".join(d for d in mind["style_directives"] if "SHADOW CAST" in d)
+        self.assertIn("lighthouse", themes)
+        self.assertNotIn("day", re.findall(r"\[([^\]]*)\]", themes)[0].split(", "))

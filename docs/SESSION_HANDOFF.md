@@ -12,12 +12,13 @@ each session; that one is the standing reference for how to run it again.
 ## Where things stand, 2026-09-25 (read this first)
 
 **RESUME HERE (2026-09-25). The mode-failure plan below is built, plus
-Gordon's follow-ups (committed as 20.7.4.34; the real-model runs were still going).** All
+Gordon's follow-ups (committed as 20.7.4.34), then the turn-0 narration fix
+and the real-model results (20.7.4.35).** All
 nine plan items in order, then the bunny hill with APRIL recentred, an
 impossible-request detector, the Warden report made honest, `BaseException`
 handlers reverted, and no DSPy critic in ADVENTURE. Every test
 is mutation checked (the fix removed, the test fails). They live in
-`tests/test_mode_failures.py`. Full suite: 742 passed, 5 skipped.
+`tests/test_mode_failures.py`. Full suite: 746 passed, 5 skipped.
 
 **Found at the start: a commit the handoff did not know about.** After the
 plan was approved, `69caa5d` ("the Warden", with `docs/warden_integration_report.md`)
@@ -158,9 +159,74 @@ dealt with in follow-up 4 below; the `BaseException` handlers in follow-up 5.
    rejected drafts there never evolve prompt axioms either. CONVERSATION
    keeps the critic. `test_biology`'s "mutation still fires outside
    CONVERSATION" used ADVENTURE as its example; it now uses CREATIVE.
+7. **Turn 0 narrated** (after the 20.7.4.34 commit, Gordon: "fix the turn 0
+   narration"). Both real CONVERSATION runs opened "That is a
+   heavy/significant weight to carry, especially at the end of a long day."
+   Two causes in the turn-0 prompt: SHADOW CAST offered the person's own
+   words ("themes related to [day, whether]"; memory is empty after
+   `reset.sh`, so the graph only held this message), and the VSL bunny line
+   said "MODE: WARM. Be warm, simple, welcoming." Now: shadow cast never
+   offers words from the current message (both the recall path and the
+   random-graph fallback); the bunny line is "MODE: EASY. Keep it simple and
+   unhurried; answer what they said."; EARLY TURNS adds "Don't comment on
+   how heavy, hard or tiring it is; start with the thing itself."; and
+   NARRATING_STATE catches "weight/burden/load to carry/bear/sit with",
+   "a heavy thing/realization to sit with/carry/weigh", "after/at the end of
+   a long day" and "when/while you're (already) tired/drained/exhausted".
+   Against 657 recorded replies the new shapes hit only narration of the
+   person's state; "carries a lot of weight" was tried and dropped ("A
+   rocking chair carries a lot of weight in a room like that"). Real model,
+   fresh boot, the same opener five times: narrated openers 5 of 5 before,
+   1 of 5 after the prompt changes alone ("a decision to weigh while you
+   are tired", which the rule now catches); most of the rest ask what makes
+   them hesitate. Built in a worktree so the running arms used the committed
+   code.
 
-**Real-model runs (gemma4:12b, `reset.sh` before each arm):** see the next
-block.
+**Real-model runs, 20.7.4.34 (gemma4:12b, `reset.sh` before each arm, 10 s
+pace).** Script `scratch/mode_runs/mode_runs.py` (rebuilt: 30 distinct
+messages per mode, plus ADVENTURE_CYCLED, ADVENTURE's first ten cycled three
+times like the 09-24 script); results in `scratch/mode_runs/mode_runs_0925.jsonl`.
+Against 09-24's table:
+
+| Arm | Reached the model | The rest | End | 09-24 |
+|---|---|---|---|---|
+| CONVERSATION | 30/30 | none | health 99.6 | 28/30, healthy |
+| ADVENTURE | 27/30 | 3 SILENCE | health 99.7 | 8/30 (cycled script) |
+| ADVENTURE_CYCLED | 13/30 | 3 SILENCE, 14 SYSTEM_HALT | health 99.7, ATP 3 | (same script as above) |
+| TECHNICAL | 20/30 | 10 SILENCE | health 93.6 (2 meltdowns) | 1/30, dead |
+| CREATIVE | 21/30 | 9 SILENCE | health 99.7, Crucible HOT all 30 | 4/30, dead by turn 3 |
+
+No holds past two in a row anywhere, no Jester banner, no "Save Failed", no
+crash. Warden JSON retries: 4, 4, 1, 10, 5 (all recovered). No impossible
+request in these scripts, so CREATIVE never warned.
+
+**Found in the runs, not changed (Gordon's call):**
+- **ADVENTURE_CYCLED halts every turn from 16 on**, and that is the
+  immune check doing its job on exact repeats, not the old lock: the
+  non-repeating ADVENTURE arm had no halts, and a stub probe
+  (`scratch/mode_runs/repeat_release.py`) shows the cycled script followed
+  by novel messages lets go after two of them. Each halt drains 10+ ATP and
+  recovers 3, so ATP sits at 3 while the repeats go on.
+- **PINKER is now most of the silence:** 7 of TECHNICAL's 10 holds (MOOG the
+  other 3) and all 9 of CREATIVE's. The cap keeps it to two in a row. Worth a
+  look at what PINKER's simulated ROS reads in those modes.
+- **TECHNICAL's 2 meltdowns are on held turns:** the recorded 13.5 to 13.9 V
+  is after the hold's 25% bleed, so the Crucible saw about 18.5 V against
+  TECHNICAL's 18 V line (tolerance 1.0).
+- **The engine writes tracked lore:** Akashic crystallization
+  (`brain/akashic.py`, `lore.save("GORDON")`) added an
+  `ASCENDED_ARTIFACT_4_3007` item to `lore/gordon.json` during the CREATIVE
+  arm (and recipes go there too). `reset.sh` does not undo it; the README
+  says learned material lives in `saves/`. Restored by hand here so it was
+  not committed.
+- **The test suite is not isolated from a real run's leftovers:** after the
+  runs, `test_silence_costs_something_but_not_a_generation` failed (a held
+  turn came out 0.42 ATP ahead) until `reset.sh` cleared `memories/`; the
+  test engines read the working directory. Run `reset.sh` before the suite
+  after any real run.
+- The first, pre-follow-up runs are in `mode_runs_0925_pre.jsonl`
+  (CONVERSATION 30/30; ADVENTURE's early turns showed the pounce and the
+  DSPy pause lines that follow-ups 1 and 6 fixed).
 
 ## Where things stood, 2026-09-24 midday
 

@@ -1466,6 +1466,8 @@ class TheCortex:
         depth_val = float(phys.get("depth", 0.0))
         omega_r = float(phys.get("omega_r", 0.5))
         query_text = str(sim_result.get("mutated_input") or "").strip()
+        # A shadow from this very message only hands the person's words back to them.
+        said = set(re.findall(r"[a-z']+", query_text.lower()))
         if scope_val > 0.6 or depth_val > 0.6:
             if scope_val > 0.8:
                 phys["lateral_search"] = True
@@ -1512,17 +1514,15 @@ class TheCortex:
                 and hasattr(self.svc.mind_memory, "graph")
                 and self.svc.mind_memory.graph
             ):
-                keys = list(self.svc.mind_memory.graph.keys())
+                keys = [k for k in self.svc.mind_memory.graph.keys() if str(k).lower() not in said]
                 shadow_nodes = (
                     [{"id": k} for k in random.sample(keys, min(2, len(keys)))]
                     if keys
                     else []
                 )
-        if shadow_nodes:
-            shadow_concepts = [
-                self._label_shadow_node(n) for n in shadow_nodes
-            ]
-            shadow_concepts = [s for s in shadow_concepts if s]
+        shadow_concepts = [self._label_shadow_node(n) for n in shadow_nodes]
+        shadow_concepts = [s for s in shadow_concepts if s and s.lower() not in said]
+        if shadow_concepts:
             shadow_str = ", ".join(shadow_concepts)
             phys["shadow_nodes_offered"] = shadow_concepts
             phys["shadow_cast"] = shadow_str

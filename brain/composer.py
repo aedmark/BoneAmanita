@@ -675,7 +675,7 @@ class PromptComposer:
         if modifiers["grace_period"]:
             somatic_budget_block += (
                 "=== EARLY TURNS ===\nYou have only just started talking. Keep it low-key: answer what they "
-                "said, simply, and let them set the pace. No big moves yet.\n"
+                "said, simply, and let them set the pace. Don't comment on how heavy, hard or tiring it is; start with the thing itself. No big moves yet.\n"
             )
 
         blocks = [

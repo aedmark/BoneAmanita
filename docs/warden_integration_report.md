@@ -25,8 +25,9 @@ and the model is asked again with the reason. Only `args.text` goes on to
 the rest of the pipeline (lexical firewall, validator, style rules), so prose
 outside the JSON never reaches the person.
 
-On gemma4:12b, 6 of 30 CONVERSATION replies were rejected once for not being
-JSON and all passed on the retry (2026-09-25 real-model run).
+On gemma4:12b (2026-09-25 real-model run, 30 turns per arm), replies rejected
+for not being JSON: 4 in CONVERSATION, 4 and 1 in the two ADVENTURE arms, 10
+in TECHNICAL, 5 in CREATIVE. Every one passed on the retry.
 
 ## The Gatekeeper: evidence-gated memory
 
