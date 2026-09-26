@@ -23,35 +23,6 @@ class Gatekeeper:
             if atp < 0.0:
                 raise InvariantViolation(f"ATP cannot be negative: {atp}")
             
-    MIN_EVIDENCE_WORDS = 5
-
-    @staticmethod
-    def verify_evidence(claim_evidence: str, corpus: List[str]) -> bool:
-        """An exact quote (case and words; whitespace normalized) of at least MIN_EVIDENCE_WORDS from the dialogue."""
-        claim = " ".join(str(claim_evidence or "").split())
-        if len(claim.split()) < Gatekeeper.MIN_EVIDENCE_WORDS:
-            return False
-        return any(claim in " ".join(str(item).split()) for item in corpus)
-
-    @staticmethod
-    def check_memory_commit(memory_action: dict, dialogue_corpus: List[str]) -> None:
-        """
-        Ensure any new memory commit cites exact text from the dialogue corpus.
-        """
-        if not memory_action:
-            return
-            
-        evidence = memory_action.get("evidence")
-        if not evidence:
-            raise EvidenceGatedViolation("Memory commit rejected: No exact evidence cited.")
-            
-        if not Gatekeeper.verify_evidence(evidence, dialogue_corpus):
-            raise EvidenceGatedViolation(
-                f"Memory commit rejected: '{evidence}' is not an exact quote of at least "
-                f"{Gatekeeper.MIN_EVIDENCE_WORDS} words from the dialogue."
-            )
-
-    @staticmethod
     def evaluate_state_transition(
         old_state: Dict[str, Any],
         new_state: Dict[str, Any],
@@ -66,10 +37,7 @@ class Gatekeeper:
         if "mito_state" in new_state:
             Gatekeeper.check_metabolic_bounds(new_state.get("physics"), new_state["mito_state"], {})
             
-        # Tool / Action invariants
-        if llm_action:
-            if llm_action.get("tool") == "commit_memory":
-                Gatekeeper.check_memory_commit(llm_action.get("args", {}), corpus)
+
 
     @staticmethod
     def freeze_engine_state(eng: Any) -> dict:

@@ -659,6 +659,16 @@ class GeodesicOrchestrator:
                     f"{Prisma.GRY}{ux('cycle_strings', 'orch_physics_init') or 'Initial physics state established.'}{Prisma.RST}",
                     "SYS",
                 )
+            
+            # Fetch SQLite Halcyon state
+            if hasattr(self.eng, 'store'):
+                try:
+                    _, db_state = self.eng.store.state()
+                    ctx.world_state = db_state.get('world', {})
+                    ctx.mind_state = db_state.get('self', {})
+                except Exception as e:
+                    self.eng.events.log(f'Failed to fetch db state: {e}', 'ORCH')
+                    
             ctx.validator = self.congruence_validator
             ctx.reality_stack = self.eng.reality_stack
             ctx.user_name = self.eng.user_name
