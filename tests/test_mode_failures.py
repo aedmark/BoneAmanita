@@ -878,3 +878,37 @@ class PinkerSaysWhatItMeasures(BoneTestCase):
         self.assertEqual([n.gate for n in ctx.nominations], ["PINKER"])
         self.assertIn("strain 43 over 35", ctx.nominations[0].reason)
         self.assertEqual(len(self.engine.akashic.scar_map), before)
+
+
+class CouplingLetsThePlayerPlay(BoneTestCase):
+    """The 20.7.4.36 run's one ADVENTURE silence: "I read the letter inside the chest." failed coupling
+    ("letter" is not a readable type), the +50 drag tripped MOOG, and the player got silence."""
+
+    def gordon(self):
+        gordon = self.engine.village.gordon
+        gordon.mode = "ADVENTURE"
+        return gordon
+
+    def test_environmental_actions_never_fail(self):
+        for text in ("I read the letter inside the chest.", "I examine the strange idol.",
+                     "I look at the mural.", "I push the heavy door."):
+            with self.subTest(text=text):
+                self.assertIsNone(self.gordon().enforce_object_action_coupling(text, "COURTYARD"))
+
+    def test_tool_actions_still_need_the_tool(self):
+        gordon = self.gordon()
+        gordon.inventory = [i for i in gordon.inventory if i != "KEY"]
+        self.assertIsNotNone(gordon.enforce_object_action_coupling("I unlock the door.", "COURTYARD"))
+
+    def test_a_violation_answers_in_character_instead_of_going_silent(self):
+        from engine.core import CycleContext
+        from phases.mechanical import GatekeeperPhase
+
+        gordon = self.gordon()
+        gordon.inventory = [i for i in gordon.inventory if i != "KEY"]
+        ctx = CycleContext(input_text="I unlock the door.", is_system_event=False)
+        ctx.physics = PhysicsPacket()
+        ctx.physics.narrative_drag = 1.0
+        GatekeeperPhase(self.engine).run(ctx)
+        self.assertEqual(float(ctx.physics.narrative_drag), 1.0)
+        self.assertTrue(any("Do NOT fulfill the action" in m.get("log", "") for m in ctx.council_mandates))

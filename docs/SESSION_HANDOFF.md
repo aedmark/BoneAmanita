@@ -14,8 +14,9 @@ each session; that one is the standing reference for how to run it again.
 **RESUME HERE (2026-09-25 evening). Gordon asked: audit and optimize PINKER,
 explain the meltdowns on silent turns, stop ADVENTURE punishing repeats, and
 move learned lore into `saves/`. All four are built (committed as 20.7.4.36
-while the real-model run was still going); Gordon took every recommendation below.** Full suite 762
-passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
+while the real-model run was still going); Gordon took every recommendation below.
+The run's results and the one silence it found (fixed as 20.7.4.37) are at
+the end of this block.** Full suite 765 passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
 run; they all read live engine data).
 
 **Built:**
@@ -101,7 +102,37 @@ plus the Soul phase's +2 when dignity is high; its meltdown line is a flat
 
 Stub probe after all of it (30 turns, silences / PINKER / MOOG / meltdowns /
 Jester turns): CONVERSATION 0/0/0/0/0, ADVENTURE 1/0/1/0/0, TECHNICAL
-0/0/0/1/0, CREATIVE 0/0/0/0/0. Real-model run: see below when it lands.
+0/0/0/1/0, CREATIVE 0/0/0/0/0.
+
+**Real-model run, 20.7.4.36 (gemma4:12b, same script, `reset.sh` before each
+arm; results in `scratch/mode_runs/mode_runs_0925b.jsonl`).** Against the
+20.7.4.34 run below:
+
+| Arm | Reached the model | The rest | End | 20.7.4.34 |
+|---|---|---|---|---|
+| CONVERSATION | 30/30 | none | health 99.6, ATP 100 | 30/30 |
+| ADVENTURE | 29/30 | 1 SILENCE (turn 25, MOOG) | health 99.7, ATP 83.4 | 27/30 |
+| ADVENTURE_CYCLED | 30/30 | none | health 99.7, ATP 98.1 | 13/30, 14 halts, ATP 3 |
+| TECHNICAL | 30/30 | none | health 99.8, ATP 93.3, Crucible regulated | 20/30, 2 meltdowns |
+| CREATIVE | 30/30 | none | health 99.7, ATP 91.1, Crucible HOT (its floor) | 21/30 |
+
+No meltdown, PINKER block, Jester firing or Gatekeeper rejection anywhere.
+Warden JSON retries 7, 2, 3, 12, 9 (all recovered). Turn 0 no longer
+narrates. Learned lenses went to `saves/lore/lenses.json`; `lore/` was
+untouched and a `system_prompts.json` write was refused, as intended.
+
+**The one silence, fixed after the run (20.7.4.37).** ADVENTURE turn 25, "I
+read the letter inside the chest.": "letter" is not a readable item type, so
+object-action coupling failed; the violation added +50 drag (9 after the
+Crucible clamp, over MOOG's 8), and MOOG held the turn, so the in-character
+failure the violation asks for never reached the player. Gordon: environmental
+actions shouldn't fail coupling. `enforce_object_action_coupling` now skips
+read, inspect, examine, look, push and pull (only tool actions need the tool),
+and the GatekeeperPhase violation no longer adds drag; the 15 ATP shock and
+the "do not fulfill the action" mandate stay. Tests
+(`CouplingLetsThePlayerPlay`, mutation checked): environmental actions never
+fail, tool actions still need the tool, a violation answers in character
+instead of going silent. Full suite 765 passed, 5 skipped.
 
 ## Where things stood, 2026-09-25 (afternoon)
 

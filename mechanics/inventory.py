@@ -112,28 +112,16 @@ class GordonKnot:
                 if required_loc not in current_zone.lower():
                     msg = ux("gordon_strings", "premise_loc")
                     return f"{Prisma.SLATE}{msg.format(loc=required_loc, zone=current_zone)}{Prisma.RST}"
+        environmental_actions = {"read", "inspect", "examine", "look", "push", "pull"}
         for action, req_objs in self.action_coupling.items():
+            # Reading or looking at what the story put in the scene is play; only tool actions need the tool.
+            if action in environmental_actions:
+                continue
             if all(w in tokens for w in action.split()) and re.search(
                 rf"\b(?:i\s+(?:will\s+)?{action}|to\s+{action}|{action}\s+(?:the|a|an|my|some|it|this|that)|{action}ing)\b|^{action}\b",
                 text,
             ):
-                has_required_item = False
-                environmental_actions = {
-                    "read",
-                    "inspect",
-                    "examine",
-                    "look",
-                    "push",
-                    "pull",
-                }
-                for obj in req_objs:
-                    if obj.upper() in self.inventory:
-                        has_required_item = True
-                        break
-                    obj_clean = obj.lower().replace("_", " ")
-                    if action in environmental_actions and obj_clean in text:
-                        has_required_item = True
-                        break
+                has_required_item = any(obj.upper() in self.inventory for obj in req_objs)
                 if not has_required_item:
                     return f"{Prisma.SLATE}{(ux('gordon_strings', 'premise_req') or '').format(action=action, req_str=', '.join(req_objs))}{Prisma.RST}"
         environmental_verbs = {"read", "inspect", "examine", "look"}

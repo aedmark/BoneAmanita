@@ -1,7 +1,7 @@
 from typing import Any
 
 from engine.constants import Prisma
-from engine.core import CycleContext, LoreManifest
+from engine.core import CycleContext
 from mechanics.projector import SoulDashboard
 from phases.base import SimulationPhase, _deep_update, _safe_dict
 from physics import TheGatekeeper
@@ -63,9 +63,6 @@ class GatekeeperPhase(SimulationPhase):
         super().__init__(engine_ref)
         self.name = "GATEKEEP"
         self.gatekeeper = TheGatekeeper(self.eng.lex, config_ref=self.eng.config)
-        self.max_drag = float(
-            LoreManifest.get_instance().get("PHYSICS_CONSTANTS", "DRAG_MAX") or 100.0
-        )
 
     def run(self, ctx: CycleContext):
         if ctx.is_system_event:
@@ -95,11 +92,8 @@ class GatekeeperPhase(SimulationPhase):
                     ux("cycle_strings", "gatekeep_log_premise")
                     or f"Premise Violation: {coupling_error}"
                 )
-                ctx.log(
-                    f"{Prisma.OCHRE}[GORDON] {log_msg}. Applying massive Narrative Drag and Somatic Shock.{Prisma.RST}"
-                )
-                current_drag = float(getattr(ctx.physics, "narrative_drag", 0.0))
-                ctx.physics.narrative_drag = min(self.max_drag, current_drag + 50.0)
+                # No drag: +50 tripped MOOG, and the silent hold replaced the in-character failure asked for below.
+                ctx.log(f"{Prisma.OCHRE}[GORDON] {log_msg}. Applying Somatic Shock.{Prisma.RST}")
                 shock_damage = 15.0
                 if hasattr(self.eng, "bio") and hasattr(self.eng.bio, "mito"):
                     self.eng.bio.mito.state.atp_pool = max(
