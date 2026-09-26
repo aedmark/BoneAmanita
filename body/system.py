@@ -245,7 +245,7 @@ class SomaticLoop:
         is_safe, _ = self.bio.governor.assess(phys)
         if is_safe:
             b.stamina = min(max_stamina, b.stamina + 3.0)
-            self.bio.mito.adjust_atp(3.0, "PID Homeostasis")
+            self.bio.mito.adjust_atp(3.0, "Homeostasis (near zone home)")
             self.bio.mito.state.ros_buildup = max(
                 0.0, self.bio.mito.state.ros_buildup - 2.0
             )

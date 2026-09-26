@@ -39,7 +39,8 @@ def audit_handlers(files):
                 isinstance(n, ast.Call)
                 and (
                     (isinstance(n.func, ast.Attribute) and n.func.attr in LOGGING_ATTRS)
-                    or (isinstance(n.func, ast.Name) and n.func.id == "print")
+                    # record_crash writes the traceback to crashes.log and telemetry.
+                    or (isinstance(n.func, ast.Name) and n.func.id in {"print", "record_crash"})
                 )
                 for n in inner
             )

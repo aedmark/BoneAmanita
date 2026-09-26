@@ -574,6 +574,23 @@ class TheObserver:
         }
 
 
+def record_crash(eng: Any, label: str, error: BaseException) -> None:
+    """A crash's traceback goes to <telemetry dir>/crashes.log and telemetry, never the player's screen."""
+    import traceback
+
+    trace = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+    telemetry = getattr(eng, "telemetry", None)
+    log_dir = getattr(telemetry, "log_dir", None) or "logs/telemetry"
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        with open(os.path.join(log_dir, "crashes.log"), "a", encoding="utf-8") as f:
+            f.write(f"--- {time.strftime('%Y-%m-%d %H:%M:%S')} {label}\n{trace}\n")
+    except OSError as e:
+        logger.warning(f"Could not write crashes.log ({e}); the crash was: {label}")
+    if telemetry is not None and hasattr(telemetry, "record_event"):
+        telemetry.record_event({"_type": "CRASH", "timestamp": time.time(), "label": label, "trace": trace})
+
+
 @dataclass
 class SystemHealth:
     components_online: Dict[str, bool] = field(
@@ -598,12 +615,6 @@ class SystemHealth:
         self.errors.append(ErrorLog(component, msg, severity=severity))
         if self.observer:
             self.observer.log_error(component)
-        if self.events:
-            self.events.log(
-                f"SystemHealth Failure [{component}]: {msg}",
-                source="HEALTH",
-                level=severity,
-            )
         if severity in ("CRITICAL", "ERROR"):
             self.components_online[component.lower()] = False
         return ux_format("core_strings", "health_offline", component=component, msg=msg)

@@ -2,7 +2,6 @@
 import logging
 import random
 import re
-import traceback
 import unicodedata
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
@@ -237,11 +236,9 @@ class TheGatekeeper:
             if strip_rate > m_a_thresh:
                 return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
         except Exception as e:
-            logger.error(
-                f"{Prisma.RED}CSF wash raised on {raw_len} chars of input; "
-                f"rejecting the turn as FATAL_ENCODING.{Prisma.RST}\n"
-                + "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            )
+            from engine.core import record_crash
+
+            record_crash(None, f"CSF wash raised on {raw_len} chars of input (FATAL_ENCODING)", e)
             return reject("FATAL_ENCODING", "gatekeeper_cursed")
         if strip_rate > 0:
             ctx.clean_words = self.lex.clean(ctx.input_text)

@@ -115,7 +115,8 @@ class SilentExceptionHandlers(unittest.TestCase):
                             and n.func.attr
                             in {"log", "warning", "error", "critical", "exception", "print"}
                         )
-                        or (isinstance(n.func, ast.Name) and n.func.id == "print")
+                        # record_crash writes the traceback to crashes.log and telemetry.
+                        or (isinstance(n.func, ast.Name) and n.func.id in {"print", "record_crash"})
                     )
                     for n in inner
                 )

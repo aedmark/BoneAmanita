@@ -445,13 +445,11 @@ class CycleReporter:
                 ctx, self.eng.tick_count, self.eng.events.flush()
             )
         except Exception as e:
-            import traceback
+            from engine.core import record_crash
 
-            full_trace = traceback.format_exc()
             l_crash = ux("cycle_reporter", "crash_prefix") or "CRITICAL FAILURE:"
-            err_msg = f"{l_crash} {e}\n{full_trace}"
-            if hasattr(self.eng, "events"):
-                self.eng.events.log(f"{Prisma.RED}{err_msg}{Prisma.RST}", "REPORTER", "CRIT")
+            record_crash(self.eng, l_crash, e)
+            err_msg = ux("cycle_reporter", "crash_ui") or f"{l_crash} the frame could not be drawn."
             return {
                 "type": "CRITICAL_RENDER_FAIL",
                 "ui": f"{Prisma.RED}{err_msg}{Prisma.RST}",

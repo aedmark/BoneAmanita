@@ -3,7 +3,6 @@ import queue
 import random
 import threading
 import time
-import traceback
 import uuid
 from collections import Counter, deque
 from concurrent.futures import ThreadPoolExecutor
@@ -12,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from engine.constants import Prisma
-from engine.core import CycleContext, LoreManifest
+from engine.core import CycleContext, LoreManifest, record_crash
 from drivers import CongruenceValidator
 from machine import PanicRoom
 from mechanics.reporter import CycleReporter
@@ -293,10 +292,7 @@ class CycleSimulator:
             default="!!! CRITICAL {phase_name} CRASH !!!",
             phase_name=phase_name,
         )
-        formatted_trace = traceback.format_exc()
-        self.eng.events.log(
-            f"{Prisma.RED}{msg_crash}\n{formatted_trace}{Prisma.RST}", "CYCLE", "CRIT"
-        )
+        record_crash(self.eng, msg_crash, error)
         ctx.logs.append("CRITICAL FAILURE")
         narrative = LoreManifest.get_instance().get("narrative_data") or {}
         cathedral_logs = narrative.get("CATHEDRAL_COLLAPSE_LOGS", ["System Failure."])
@@ -424,9 +420,7 @@ class GeodesicOrchestrator:
                     self.last_rem_tick = current_time
                     self._process_rem_tick()
             except Exception as e:
-                self.eng.events.log(
-                    f"Daemon Engine Crash: {e}\n{traceback.format_exc()}", "CYCLE", "CRIT"
-                )
+                record_crash(self.eng, "Daemon Engine Crash", e)
                 if task_acquired:
                     self.output_queue.put(
                         {
@@ -502,15 +496,7 @@ class GeodesicOrchestrator:
             error = future.exception()
             if error is None:
                 return
-            detail = "".join(
-                traceback.format_exception(type(error), error, error.__traceback__)
-            )
-            self.eng.events.log(
-                f"{Prisma.RED}Background task {getattr(fn, '__name__', fn)!s} failed:"
-                f"{Prisma.RST}\n{detail}",
-                "CYCLE",
-                "ERROR",
-            )
+            record_crash(self.eng, f"Background task {getattr(fn, '__name__', fn)!s} failed", error)
 
         future = self._async_pool.submit(fn, *args)
         future.add_done_callback(_report)
@@ -801,8 +787,7 @@ class GeodesicOrchestrator:
                 metrics["thermal_z"] = getattr(self.eng.governor, "last_z", None)
             return ctx
         except Exception as e:
-            full_trace = traceback.format_exc()
-            self.eng.events.log(f"CYCLE CRASH: {e}\n{full_trace}", "CYCLE", "CRIT")
+            record_crash(self.eng, "CYCLE CRASH", e)
             if ctx is None:
                 ctx = CycleContext(input_text=user_message)
                 ctx.trace_id = cycle_id
@@ -1077,22 +1062,12 @@ class GeodesicOrchestrator:
 
     @staticmethod
     def _generate_crash_report(e: Optional[Exception]) -> Dict[str, Any]:
-        if e is not None:
-            full_trace = "".join(
-                traceback.format_exception(type(e), e, e.__traceback__)
-            )
-        else:
-            full_trace = (
-                "Biological execution halted. No standard Python exception provided."
-            )
         safe_phys = PanicRoom.get_safe_physics()
         safe_bio = PanicRoom.get_safe_bio()
         msg = ux_format(
             "cycle_strings",
             "orch_reality_fracture",
-            default="\n*** REALITY FRACTURE: {error} ***\n{trace}\n[System stabilized in Safe Mode]",
-            error=e,
-            trace=full_trace,
+            default="\n*** REALITY FRACTURE ***\n[System stabilized in Safe Mode]",
         )
         ui_report = f"{Prisma.RED}{msg}{Prisma.RST}"
         return {

@@ -23,6 +23,7 @@ from engine.core import (
     SystemHealth,
     TelemetryService,
     TheObserver,
+    record_crash,
 )
 from engine.cycle import GeodesicOrchestrator
 from engine.genesis import DEPENDS_ON, VILLAGE_KEYS, BoneGenesis
@@ -620,15 +621,12 @@ class BoneAmanita:
                         break
                     self.events.log("Discarded stale async snapshot [Ticket mismatch].", "DEBUG")
             except (queue.Empty, Exception) as e:
-                err_msg = (
-                    f"Cognitive Loop Timeout ({timeout_val}s). The engine was paralyzed by overthinking."
-                    if isinstance(e, queue.Empty)
-                    else str(e)
-                )
-                self.events.log(
-                    f"ORCHESTRATOR COLLAPSE: {err_msg}\n{traceback.format_exc()}",
-                    "KERNEL", "CRIT",
-                )
+                if isinstance(e, queue.Empty):
+                    err_msg = f"Cognitive Loop Timeout ({timeout_val}s). The engine was paralyzed by overthinking."
+                else:
+                    record_crash(self, "ORCHESTRATOR COLLAPSE", e)
+                    err_msg = "The turn could not complete."
+                self.events.log(f"ORCHESTRATOR COLLAPSE: {err_msg}", "KERNEL", "CRIT")
                 return {
                     "ui": f"{Prisma.RED}CRITICAL ORCHESTRATOR FAILURE: {err_msg}{Prisma.RST}",
                     "logs": ["CRITICAL FAILURE"],
@@ -909,7 +907,8 @@ if __name__ == "__main__":
         err_msg = "".join(
             traceback.format_exception(exc_type, exc_value, exc_traceback)
         )
-        print(f"\n{Prisma.RED}FATAL UNHANDLED EXCEPTION:\n{err_msg}{Prisma.RST}")
+        record_crash(None, "FATAL UNHANDLED EXCEPTION", exc_value)
+        print(f"\n{Prisma.RED}FATAL UNHANDLED EXCEPTION ({exc_type.__name__}); details in logs/telemetry/crashes.log{Prisma.RST}")
         if tel := TelemetryService.get_instance():
             tel.record_event(
                 {

@@ -1,5 +1,7 @@
 """tests/test_random.py"""
 
+import os
+
 from unittest.mock import MagicMock, patch
 
 from archetypes.village import DeathGen
@@ -35,6 +37,9 @@ class RandomTest(BoneTestCase):
         self.assertTrue(cost > 0, "Rummaging cost no stamina.")
 
     def test_cortex_collapse_graceful_handling(self):
+        crash_log = os.path.join(self.engine.telemetry.log_dir, "crashes.log")
+        if os.path.exists(crash_log):
+            os.remove(crash_log)
         with patch.object(
             self.engine.orchestrator.simulator,
             "run_simulation",
@@ -50,11 +55,10 @@ class RandomTest(BoneTestCase):
             "Engine did not log the critical failure.",
         )
 
-        logs = self.engine.events.flush()
-        self.assertTrue(
-            any("CYCLE CRASH" in str(log) for log in logs),
-            "Event bus failed to broadcast the cycle crash.",
-        )
+        # The traceback goes to the crash log, never the screen.
+        self.assertNotIn("Simulated Core Simulator Collapse", str(result.get("ui", "")))
+        with open(crash_log, encoding="utf-8") as f:
+            self.assertIn("Simulated Core Simulator Collapse", f.read())
 
     def test_decoupled_json_configs(self):
         manifest = LoreManifest.get_instance()

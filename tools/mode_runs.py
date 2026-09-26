@@ -186,6 +186,16 @@ def run(mode_arm, out):
         return spy(text, *a, **k)
 
     eng.events.log = log_all
+    # Crash detail no longer reaches the event log (it goes to crashes.log), so catch it here.
+    crashes = []
+    sim = eng.orchestrator.simulator
+    real_crash = sim.handle_phase_crash
+
+    def on_crash(ctx, phase_name, error):
+        crashes.append(f"{phase_name}: {type(error).__name__}: {error}")
+        return real_crash(ctx, phase_name, error)
+
+    sim.handle_phase_crash = on_crash
     mito = eng.bio.mito
     real_adjust = mito.adjust_atp
 
@@ -211,7 +221,7 @@ def run(mode_arm, out):
     out.write(json.dumps({"mode": mode_arm, "turn": "boot", "type": boot.get("type"), "health": eng.health}) + "\n")
     for i, msg in enumerate(MESSAGES[mode_arm]):
         before = dict(counts)
-        turn_logs.clear(); ledger.clear(); harvests.clear()
+        turn_logs.clear(); ledger.clear(); harvests.clear(); crashes.clear()
         atp_before = mito.state.atp_pool
         t0 = time.time()
         res = eng.process_turn(msg) or {}
@@ -242,11 +252,12 @@ def run(mode_arm, out):
             "atp_unledgered": round(mito.state.atp_pool - atp_before - sum(e[2] for e in ledger), 2),
             "harvest": list(harvests),
             "logs": list(turn_logs),
+            "phase_crashes": list(crashes),
         }
         out.write(json.dumps(row) + "\n")
         out.flush()
         print(mode_arm, i, row["type"], row["health"], row["atp"], row["voltage"], row["crucible"],
-              row["warden_rejects"], flush=True)
+              row["warden_rejects"], *(["PHASE_CRASH"] if row["phase_crashes"] else []), flush=True)
         time.sleep(PACE)
     eng.shutdown()
 

@@ -1032,3 +1032,26 @@ class AnExamineRepeatAnswersFromMemory(BoneTestCase):
         self.assertEqual(self.engine.cortex.llm.generate.call_count, calls)
         self.assertIn("Moss-covered stones", result.get("ui", ""))
         self.assertNotIn("Traceback", result.get("ui", ""))
+
+
+class CrashDetailStaysOffScreen(BoneTestCase):
+    """20.7.4.42 run: a crashed phase put its traceback on the player's screen."""
+
+    ALLOWS_PHASE_CRASH = True
+
+    def test_a_phase_crash_shows_no_traceback(self):
+        from unittest.mock import patch
+
+        from phases.mechanical import StabilizationPhase
+
+        crash_log = os.path.join(self.engine.telemetry.log_dir, "crashes.log")
+        if os.path.exists(crash_log):
+            os.remove(crash_log)
+        self.engine.cortex.llm.generate = MagicMock(return_value=reply("The kettle is on."))
+        with patch.object(StabilizationPhase, "run", side_effect=RuntimeError("sentinel-7731")):
+            result = self.engine.process_turn("Tell me about your morning.")
+        ui = str(result.get("ui", ""))
+        self.assertNotIn("sentinel-7731", ui)
+        self.assertNotIn("Traceback", ui)
+        with open(crash_log, encoding="utf-8") as f:
+            self.assertIn("sentinel-7731", f.read())

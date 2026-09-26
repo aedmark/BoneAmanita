@@ -322,6 +322,37 @@ Gatekeeper rejection. The ATP ledger now closes: `atp_unledgered` is within
   `assess` finds voltage and drag near the zone home; the name predates
   the PID's removal). Nothing broken; the style gate is what CREATIVE pays for.
 
+**Crash text stays off the player's screen; the ledger name is honest
+(built after 20.7.4.43, not yet committed; Gordon asked for both).**
+- Every event reaches the UI's log panel whatever its level, and the `bone`
+  logger prints to the player's terminal, so crash detail had nine ways out:
+  the phase crash header and trace, `SystemHealth.report_failure`'s raw
+  error, the whole-turn crash (event and the REALITY FRACTURE report,
+  which printed `{error}` and `{trace}`), the renderer's own crash, the
+  daemon crash, background-task failures, the orchestrator collapse
+  (`str(e)` in the UI), the input filter's CSF-wash error and the global
+  excepthook. All now go through `engine.core.record_crash(eng, label,
+  error)`: the full traceback to `<telemetry dir>/crashes.log` and a
+  telemetry `CRASH` event. The player sees only the in-world lines
+  ("CATHEDRAL COLLAPSE: ...", "... Switching to Panic Protocol.",
+  "*** REALITY FRACTURE ***", "RENDERER CRASH: the frame could not be
+  drawn.", "The turn could not complete."); the excepthook prints one line
+  naming the file. `mechanics/terminal.py` still prints the trace on exit
+  in TECHNICAL boot mode, which reads as deliberate; left.
+- The silent-handler audit (test and `tools/audit_handlers.py`) counts
+  `record_crash` as logging, since it writes the log.
+- `tools/mode_runs.py` records `phase_crashes` per turn (the crash no longer
+  reaches the event log it read) and prints PHASE_CRASH on the progress line.
+- "PID Homeostasis" is now "Homeostasis (near zone home)": +3 ATP and
+  stamina a turn while `assess` finds voltage and drag near the zone home.
+- Tests: `CrashDetailStaysOffScreen` (a crashed phase leaves no traceback
+  on screen and the trace lands in crashes.log) and
+  `test_cortex_collapse_graceful_handling` rewritten the same way for a
+  whole-turn crash; both mutation checked (each first clears crashes.log,
+  after a stale file once let one pass). Full suite 775 passed, 5 skipped.
+- Rerun of ADVENTURE and ADVENTURE_CYCLED on it:
+  `scratch/mode_runs/mode_runs_0926c.jsonl` (below when it lands).
+
 Full suite 774 passed, 5 skipped.
 
 ## Where things stood, 2026-09-25 (afternoon)

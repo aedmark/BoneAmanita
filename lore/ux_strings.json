@@ -141,6 +141,7 @@
     "sensation_prefix": "SENSATION:",
     "flux_header": "\u250c\u2500 [SYSTEM FLUX]",
     "crash_prefix": "RENDERER CRASH:",
+    "crash_ui": "RENDERER CRASH: the frame could not be drawn.",
     "flux_symbols": {
       "voltage_icon": "\u26a1",
       "default_icon": "\u2693",
@@ -407,7 +408,7 @@
     "sim_cathedral_collapse": "CATHEDRAL COLLAPSE: \"{eulogy}\"",
     "sim_panic_switch": "{phase_name} FAILURE: Switching to Panic Protocol.",
     "orch_physics_bypass": "\u26a0PHYSICS BYPASS: Running on Panic Protocol.",
-    "orch_reality_fracture": "\n*** REALITY FRACTURE: {error} ***\n{trace}\n[System stabilized in Safe Mode]",
+    "orch_reality_fracture": "\n*** REALITY FRACTURE ***\n[System stabilized in Safe Mode]",
     "gatekeep_log_agency": "Command Rejected (Agency Lock)",
     "gatekeep_log_premise": "Premise Violation: Object-Action Coupling Failed",
     "gatekeep_bureau_injunction": "Bureaucratic Injunction.",
