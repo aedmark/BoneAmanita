@@ -1014,3 +1014,21 @@ class OneHomeVoltage(BoneTestCase):
         with patch("archetypes.council.zone_home", return_value=(15.0, 1.5)) as home:
             TheVillageCouncil._evaluate(PhysicsPacket(voltage=15.0, manifold="FORGE"), {})
         self.assertEqual(home.call_args[0][1], "FORGE")
+
+
+class AnExamineRepeatAnswersFromMemory(BoneTestCase):
+    """2026-09-26 run: a repeated ADVENTURE examine hit the examine cache, which never set
+    attempt_count; the somatic receipt then raised and the player saw a traceback."""
+
+    def test_a_repeated_examine_answers_from_memory(self):
+        self.engine.cmd.interface.log = MagicMock()
+        self.engine.switch_mode("ADVENTURE")
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value=reply("Moss-covered stones sit at the bottom."))
+        msg = "I kneel by the stream and look at the stones."
+        self.engine.process_turn(msg)
+        calls = self.engine.cortex.llm.generate.call_count
+        result = self.engine.process_turn(msg)
+        self.assertEqual(self.engine.cortex.llm.generate.call_count, calls)
+        self.assertIn("Moss-covered stones", result.get("ui", ""))
+        self.assertNotIn("Traceback", result.get("ui", ""))

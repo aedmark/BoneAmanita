@@ -329,6 +329,8 @@ class TheCortex:
             cognitive_retries = min(cognitive_retries, somatic_budget.retry_allowance)
         final_output, inv_logs, extracted_logs = "", [], []
         raw_resp: str = ""
+        # Only the cognitive loop re-asks; the council and the examine cache answer on the first try.
+        attempt_count = 0
         val_res: Dict[str, Any] = {"valid": False}
         if "[COUNCIL]" in user_input.upper():
             final_output, extracted_logs = self._run_council_debate(user_input)

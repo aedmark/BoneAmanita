@@ -18,7 +18,8 @@ while the real-model run was still going); Gordon took every recommendation belo
 The run's results, the one silence it found (fixed as 20.7.4.37) and the
 rerun on the fix (150 of 150 turns, 20.7.4.38) are at the end of this block,
 followed by the voltage trace, one home voltage (Gordon's option A) and its
-mode run (150 of 150 again).** Full suite 765 passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
+mode run (150 of 150 again), the phase-crash guard, and the 20.7.4.42 run
+with the examine-cache crash it found (fixed as 20.7.4.43).** Full suite 765 passed, 5 skipped, after `reset.sh` (Gordon: always reset before any test or
 run; they all read live engine data).
 
 **Built:**
@@ -287,6 +288,41 @@ behaviour is unchanged. A test that crashes a phase on purpose opts out with
 and the rest of the turn never ran (0.12 s; the whole turn now runs, 4.5 s).
 Fixed in the test with a real node shape; the engine code is right. Full
 suite 773 passed, 5 skipped.
+
+**Mode run on 20.7.4.42 (2026-09-26, `tools/mode_runs.py`, gemma4:12b;
+`scratch/mode_runs/mode_runs_0926b.jsonl`): 150 of 150 turns reached the
+model; no silence, halt, meltdown, PINKER block, Jester firing or
+Gatekeeper rejection. The ATP ledger now closes: `atp_unledgered` is within
+0.02 on every turn. One real failure, below.**
+
+| Arm | Reached | Zones (turns) | Crucible | End | Lowest ATP | Max V | Warden retries |
+|---|---|---|---|---|---|---|---|
+| CONVERSATION | 30/30 | COURTYARD 24, FORGE 6 | regulated | health 99.6, ATP 100 | 89.3 | 10.0 | 8 |
+| ADVENTURE | 30/30 | FORGE 23, COURTYARD 7 | regulated | 99.7, 97.3 | 85.1 | 15.0 | 7 |
+| ADVENTURE_CYCLED | 30/30 (turn 16 crashed, below) | FORGE 23, COURTYARD 7 | regulated | 99.7, 100 | 85.5 | 15.0 | 4 |
+| TECHNICAL | 30/30 | FORGE 24, COURTYARD 6 | regulated | 99.8, 96.2 | 69.1 | 16.8 | 17 |
+| CREATIVE | 30/30 | FORGE 27, COURTYARD 3 | HOT (its floor) | 99.7, 76.2 | 51.2 | 14.5 | 7 |
+
+- **ADVENTURE_CYCLED turn 16 showed the player a Python traceback.** The
+  turn repeated turn 6 word for word ("I kneel by the stream and look at
+  the stones."), so the examine cache answered it; that path never set
+  `attempt_count`, and the somatic receipt below it (`elif attempt_count >
+  0`, from 7.0.14.3) raised `UnboundLocalError`. The phase executor caught
+  it and the crash text reached the screen. It needs a cache hit and an
+  active somatic budget on the same turn, which no earlier run produced.
+  **Fixed (20.7.4.43):** `attempt_count = 0` with the other defaults in
+  `process_context`. Test `AnExamineRepeatAnswersFromMemory` (a repeated
+  examine answers from the cache with no new generation and no traceback)
+  reproduced the crash before the fix.
+- **CREATIVE's ATP (76.2, lowest 51.2) read off the ledger:** token
+  generation -141.5 over the arm, the Economic Tax -53.1, one mitophagy
+  reset -30, metabolic burn -30, and banned-phrase taxes (`the weight of`
+  -22, NEGATIVE_COMPARISON -18); the largest income was Symbiotic Yield
+  +117.2 and "PID Homeostasis" +88.2 (`body/system.py`: +3 a turn while
+  `assess` finds voltage and drag near the zone home; the name predates
+  the PID's removal). Nothing broken; the style gate is what CREATIVE pays for.
+
+Full suite 774 passed, 5 skipped.
 
 ## Where things stood, 2026-09-25 (afternoon)
 
