@@ -14,7 +14,8 @@ from tests.base import BoneTestCase
 
 
 def reply(text: str) -> str:
-    return json.dumps({"tool": "nominate_response", "args": {"text": text}})
+    """A model draft: plain prose since the Halcyon migration (no JSON envelope)."""
+    return text
 
 
 class CountsSurviveSnapshots(BoneTestCase):
@@ -522,49 +523,6 @@ class ImpossibleRequests(BoneTestCase):
             states.append(crucible.active_state)
         self.assertEqual(states[0], "WARNING")
         self.assertIn(states[1], ("MELTDOWN", "RITUAL"), "the voltage test did not apply after the warning")
-
-
-class EvidenceGatedMemory(BoneTestCase):
-    """The Warden report's claims, made true: exact quotes, and the quote is what is kept."""
-
-    SAID = "Traveler: My sister Ana moved to Lisbon last spring and I miss her.\nSystem: That's a long way."
-
-    def test_only_an_exact_quote_of_real_length_passes(self):
-        from engine.invariants import Gatekeeper
-
-        corpus = [self.SAID]
-        self.assertTrue(Gatekeeper.verify_evidence("My sister Ana moved to Lisbon", corpus))
-        self.assertTrue(Gatekeeper.verify_evidence("My sister  Ana\\nmoved to Lisbon".replace("\\n", "\n"), corpus))
-        for fake in ("my sister ana moved to lisbon", "My sister Ana moved to Porto", "Lisbon", "I", ""):
-            with self.subTest(fake=fake):
-                self.assertFalse(Gatekeeper.verify_evidence(fake, corpus))
-
-    def turn_with(self, *actions):
-        self.engine.cortex.dspy_critic.enabled = False
-        self.engine.cortex.dialogue_buffer.append(self.SAID)
-        self.engine.cortex.llm.generate = MagicMock(side_effect=[json.dumps(a) for a in actions])
-        encode = self.engine.cortex.svc.mind_memory.encode = MagicMock(return_value=True)
-        self.engine.process_turn("Anyway, how do I stay close to her?")
-        return [c for c in encode.call_args_list if c.args[2] == "WARDEN_COMMIT"]
-
-    def test_the_memory_kept_is_the_quote_not_the_monologue(self):
-        encode = self.turn_with({
-            "tool": "commit_memory",
-            "args": {"internal_monologue": "Ana is a surgeon who hates me.", "text": "Call her on Sundays.",
-                     "evidence": "My sister Ana moved to Lisbon last spring"},
-        })
-        self.assertEqual(len(encode), 1)
-        words, physics, _ = encode[0].args
-        self.assertEqual(physics["raw_text"], "My sister Ana moved to Lisbon last spring")
-        self.assertEqual(words, "My sister Ana moved to Lisbon last spring".split())
-        self.assertNotIn("surgeon", str(encode[0]))
-
-    def test_an_invented_quote_is_rejected_and_nothing_is_kept(self):
-        encode = self.turn_with(
-            {"tool": "commit_memory", "args": {"text": "Call her.", "evidence": "My sister Ana is a surgeon in Lisbon"}},
-            {"tool": "nominate_response", "args": {"text": "Call her on Sundays."}},
-        )
-        self.assertEqual(encode, [])
 
 
 class CtrlCReachesThePerson(BoneTestCase):

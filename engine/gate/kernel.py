@@ -126,6 +126,9 @@ class Gate:
             result = self._affect(verb, what, args_or_why)
             err = None
         except Exception as e:  # an attempt that raises is still receipted
+            from engine.core import record_crash
+
+            record_crash(None, f"Halcyon verb {verb!r} raised", e)
             result, err = {"error": f"{type(e).__name__}: {e}"}, e
         finally:
             self.state = saved

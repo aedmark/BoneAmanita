@@ -385,20 +385,95 @@ class Store:
             row = db.execute("SELECT * FROM turns WHERE id=?", (turn_id,)).fetchone()
         return dict(row)
 
-    def commit_cycle(self, trace_id: str, new_state: dict, expected_sequence: int, receipt: dict, raw: str) -> None:
+    def commit_cycle(self, trace_id: str, new_state: dict, expected_sequence: int, receipt: dict, raw: str,
+                     *, user_text: str = "", display: str = "", boundary_hash: str = "") -> dict:
+        """One engine turn, atomically: canonical state plus its audit trail (turn, messages, proposal,
+        receipt, gate decision, mutation), in the shape Brad's `finalize` writes."""
         now = time.time()
         with self.transaction(immediate=True) as db:
-            db.execute("PRAGMA foreign_keys = OFF;")
             current_sequence, old_state = self.state(db)
             if current_sequence != expected_sequence:
                 raise StateConflict(current_sequence)
-            
+            outcome = receipt_outcome(receipt)
             state_changed = new_state != old_state and receipt["decision"] == "ACCEPT"
+            next_sequence = current_sequence + 1 if state_changed else current_sequence
             if state_changed:
                 db.execute(
                     "UPDATE canonical_state SET sequence=?, world_json=?, self_json=?, updated_at=? WHERE singleton=1",
-                    (current_sequence + 1, json.dumps(new_state["world"]), json.dumps(new_state["self"]), now),
+                    (next_sequence, json.dumps(new_state["world"]), json.dumps(new_state["self"]), now),
                 )
+            conversation_id = self._session_conversation(db, user_text, now)
+            ordinal = db.execute(
+                "SELECT COALESCE(MAX(ordinal),0)+1 n FROM turns WHERE conversation_id=?", (conversation_id,)
+            ).fetchone()["n"]
+            turn_id = _id("turn")
+            db.execute(
+                "INSERT INTO turns (id,conversation_id,ordinal,status,outcome,context_state_sequence,created_at,completed_at) "
+                "VALUES (?,?,?,'complete',?,?,?,?)",
+                (turn_id, conversation_id, ordinal, outcome, current_sequence, now, now),
+            )
+            db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,NULL,NULL,'final',?)",
+                       (_id("msg"), turn_id, conversation_id, "user", user_text, user_text, now))
+            db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,NULL,NULL,'final',?)",
+                       (_id("msg"), turn_id, conversation_id, "assistant", raw, display, now))
+            proposal = proposal_from(raw, receipt)
+            proposal_id = None
+            if proposal:
+                proposal_id = _id("prop")
+                db.execute(
+                    "INSERT INTO proposals VALUES (?,?,?,?,?,?,?,?,?)",
+                    (proposal_id, turn_id, proposal["raw_line"], proposal.get("what_path"),
+                     proposal.get("verb"), proposal.get("raw_args"),
+                     json.dumps(proposal.get("normalized_args")) if proposal.get("normalized_args") else None,
+                     proposal["parse_status"], now),
+                )
+            receipt_id = _id("rcpt")
+            db.execute(
+                "INSERT INTO receipts VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (receipt_id, turn_id, receipt["decision"], outcome,
+                 json.dumps(receipt["claim"]) if receipt.get("claim") else None,
+                 receipt["rationale"], json.dumps(receipt["decision_basis"]),
+                 json.dumps(receipt["result"]) if receipt.get("result") is not None else None,
+                 boundary_hash, now),
+            )
+            admission, execution, persistence, terminal = decision_dimensions(receipt, state_changed)
+            db.execute(
+                "INSERT INTO gate_decisions VALUES (?,?,?,?,?,?,?,?,?)",
+                (_id("gate"), turn_id, proposal_id, admission, execution, persistence,
+                 terminal, json.dumps(receipt["decision_basis"]), now),
+            )
+            if state_changed:
+                claim = receipt["claim"]
+                db.execute(
+                    "INSERT INTO mutations VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (_id("mut"), turn_id, current_sequence, next_sequence, claim["verb"],
+                     claim["what"], json.dumps(claim["args"]), json.dumps(receipt.get("result")),
+                     json.dumps({"before": old_state, "after": new_state}), now),
+                )
+        return {"turn_id": turn_id, "outcome": outcome, "state_sequence": next_sequence,
+                "receipt_id": receipt_id, "proposal_id": proposal_id}
+
+    def _session_conversation(self, db: sqlite3.Connection, first_text: str, now: float) -> str:
+        """Every turn of one engine session belongs to one conversation, created on its first turn."""
+        if getattr(self, "_conversation_id", None) is None:
+            self._conversation_id = _id("conv")
+            title = " ".join(str(first_text or "").split())[:56] or "BoneAmanita session"
+            db.execute("INSERT INTO conversations VALUES (?, ?, ?, ?, NULL)", (self._conversation_id, title, now, now))
+        else:
+            db.execute("UPDATE conversations SET updated_at=? WHERE id=?", (now, self._conversation_id))
+        return self._conversation_id
+
+    def audit(self, table: str, limit: int = 50) -> list[dict]:
+        """Rows of one audit table, newest first."""
+        if table not in {"turns", "messages", "proposals", "receipts", "gate_decisions", "mutations"}:
+            raise ValueError(f"not an audit table: {table}")
+        db = self.connect()
+        try:
+            rows = db.execute(f"SELECT * FROM {table} ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            db.close()
+
     def _apply_affect_values(self, db: sqlite3.Connection, source_event_id: str,
                              values: dict[str, float], now: float) -> dict:
         if db.execute("SELECT 1 FROM affect_history WHERE source_event_id=?", (source_event_id,)).fetchone():
@@ -695,6 +770,24 @@ class ConversationBusy(Exception):
 class StateConflict(Exception):
     def __init__(self, sequence: int):
         self.sequence = sequence
+
+
+def proposal_from(raw: str, receipt: dict) -> dict | None:
+    """The nomination as the model wrote it, parsed or not (Brad's server.proposal_from)."""
+    from .kernel import NOMINATION
+
+    lines = [line.strip() for line in str(raw or "").splitlines() if line.strip()]
+    matches = [(line, NOMINATION.match(line)) for line in lines if NOMINATION.match(line)]
+    if not matches:
+        nomination_like = next((line for line in lines if line.startswith("NOMINATE")), None)
+        return {"raw_line": nomination_like, "parse_status": "malformed"} if nomination_like else None
+    if len(matches) > 1:
+        return {"raw_line": "\n".join(line for line, _ in matches), "parse_status": "multiple"}
+    line, match = matches[0]
+    claim = receipt.get("claim")
+    return {"raw_line": line, "what_path": match.group("what"), "verb": match.group("verb"),
+            "raw_args": match.group("args"), "normalized_args": claim.get("args") if claim else None,
+            "parse_status": "valid"}
 
 
 def receipt_outcome(receipt: dict) -> str:

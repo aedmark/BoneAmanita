@@ -9,14 +9,14 @@ logger = logging.getLogger("bone")
 DEFAULT_CAPACITY = 512
 
 CORE_SUBSYSTEMS = (
-    "gatekeeper.invariant",
-    "warden.json_gate",
     "composer.compose",
     "cortex.query_neighborhood",
     "cortex.recall",
     "cortex.somatic",
     "embeddings.embed_batch",
     "governor.bitmap_gate",
+    "halcyon.gate",
+    "halcyon.recall",
     "lattice.infer_and_couple",
     "memory.retrieve_semantic",
     "physics.word_resolution",

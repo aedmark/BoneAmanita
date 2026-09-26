@@ -628,6 +628,12 @@ class GeodesicOrchestrator:
                     "DEBUG",
                 )
 
+    def _shows_gate_denials(self) -> bool:
+        """TECHNICAL mode and the DEEP HUD show the gate's denials; everywhere else they stay in the audit."""
+        mode = str(getattr(getattr(self.eng, "cortex", None), "active_mode", "")).upper()
+        depth = getattr(self.eng, "ui_mode", None) or (getattr(self.eng, "mode_settings", {}) or {}).get("default_ui_depth", "WARM")
+        return mode == "TECHNICAL" or str(depth).upper() == "DEEP"
+
     def _execute_core_cycle(
         self, user_message: str, is_system: bool = False
     ) -> CycleContext:
@@ -660,14 +666,12 @@ class GeodesicOrchestrator:
                     "SYS",
                 )
             
-            # Fetch SQLite Halcyon state
+            # Fetch SQLite Halcyon state; its own field, since world_state and mind_state carry the engine's.
             if hasattr(self.eng, 'store'):
                 try:
-                    _, db_state = self.eng.store.state()
-                    ctx.world_state = db_state.get('world', {})
-                    ctx.mind_state = db_state.get('self', {})
+                    _, ctx.halcyon_state = self.eng.store.state()
                 except Exception as e:
-                    self.eng.events.log(f'Failed to fetch db state: {e}', 'ORCH')
+                    record_crash(self.eng, "Halcyon state read", e)
                     
             ctx.validator = self.congruence_validator
             ctx.reality_stack = self.eng.reality_stack
@@ -787,32 +791,44 @@ class GeodesicOrchestrator:
             ctx = self.simulator.run_simulation(ctx)
             
             # --- Halcyon Gate Integration ---
-            if hasattr(self.eng, "store") and hasattr(self.eng, "boundary"):
+            # The gate reads the accepted draft as the model wrote it (prose plus any NOMINATE line), not the rendered screen.
+            model_raw = getattr(getattr(self.eng, "cortex", None), "last_model_raw", "")
+            if hasattr(self.eng, "store") and hasattr(self.eng, "boundary") and model_raw:
                 from engine.gate.kernel import Gate
                 import copy
-                
-                # We only adjudicate if NOMINATE is found or if we want to run the Gate on every output.
-                # Halcyon runs it on every output to capture rationale.
-                if ctx.bureau_ui and getattr(self.eng, "sycophancy_streak", 0) < 3:
+
+                if getattr(self.eng, "sycophancy_streak", 0) < 3:
                     try:
                         seq, state = self.eng.store.state()
                         gate = Gate(self.eng.boundary, copy.deepcopy(state), self.eng.gate_tools, self.eng.gate_invariants)
-                        receipt = gate.adjudicate(ctx.bureau_ui)
-                        
+                        receipt = gate.adjudicate(model_raw)
+
                         self.eng.store.commit_cycle(
                             trace_id=ctx.trace_id,
                             new_state=gate.state,
                             expected_sequence=seq,
                             receipt=receipt,
-                            raw=ctx.bureau_ui
+                            raw=model_raw,
+                            user_text="" if is_system else user_message,
+                            display=self.eng.cortex._strip_nominations(model_raw),
+                            boundary_hash=getattr(self.eng, "boundary_hash", ""),
                         )
-                        
-                        if receipt["decision"] == "DENY" or any(c[1] == "ERROR" for c in receipt["decision_basis"]):
-                            # Force a retry or biological penalty?
+                        applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
+                        ReceiptLedger.get_instance().issue(
+                            "halcyon.gate",
+                            receipt["decision"],
+                            result_count=1 if applied else 0,
+                            inputs={"claim": receipt.get("claim"), "result": receipt.get("result")},
+                            detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "",
+                        )
+
+                        denied = receipt["decision"] == "DENY" or any(c[1] == "ERROR" for c in receipt["decision_basis"])
+                        # Gordon: the player sees a denial only in TECHNICAL mode or on the DEEP HUD; it is always in the audit.
+                        if denied and self._shows_gate_denials():
                             self.eng.events.log(f"Gate Denied Action: {receipt['decision_basis']}", "KERNEL")
                             ctx.bureau_ui += "\n[SYSTEM_LOG: Action Denied by Gate]"
                     except Exception as e:
-                        self.eng.events.log(f"Gate Error: {e}", "KERNEL")
+                        record_crash(self.eng, "Halcyon gate", e)
 
             post_logs = [e["text"] for e in self.eng.events.flush()]
             ctx.logs.extend(post_logs)

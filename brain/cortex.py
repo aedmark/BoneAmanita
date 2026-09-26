@@ -70,6 +70,7 @@ class TheCortex:
 
     def __init__(self, services: CortexServices, llm_client=None):
         self.ballast_active = False
+        self.last_model_raw = ""
         self.svc = services
         self.cfg = services.config_ref or BoneConfig
         self.events = services.events
@@ -212,6 +213,8 @@ class TheCortex:
             )
 
     def process_context(self, ctx: Any) -> Dict[str, Any]:
+        # The accepted draft as the model wrote it, NOMINATE lines included; empty when no draft was accepted.
+        self.last_model_raw = ""
         user_input = ctx.input_text or ""
         is_system = getattr(ctx, "is_system_event", False)
         mode_settings = BonePresets.MODES.get(
@@ -281,6 +284,7 @@ class TheCortex:
                         },
                     )
             self.last_shadow_nodes = []
+        sim_result["halcyon_recall"] = self._halcyon_recall(ctx, user_input)
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
         modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)
@@ -723,14 +727,11 @@ class TheCortex:
             val_res = {"valid": False}
             rejected_by, reject_detail = "validator", ""
             raw_resp = self.llm.generate(final_prompt, llm_params)
-            
-            import json
-            from engine.invariants import Gatekeeper, InvariantViolation
             from engine.receipts import issue as issue_receipt
-            
-            parsed_action = None
-            # Halcyon Gate natively handles NOMINATE strings inside raw_resp.
-            # JSON extraction and older Gatekeeper rules are bypassed.
+
+            # NOMINATE lines go to the Halcyon gate, verbatim with the draft; the person sees only the prose.
+            model_raw = raw_resp
+            raw_resp = self._strip_nominations(raw_resp)
             if firewall_active:
                 original_len = len(raw_resp)
                 raw_resp = self.LEXICAL_PURGE_PATTERN.sub("", raw_resp).strip()
@@ -832,6 +833,7 @@ class TheCortex:
             if val_res.get("valid"):
                 final_output = val_res["content"]
                 extracted_logs = val_res.get("meta_logs", [])
+                self.last_model_raw = model_raw
                 if val_res.get("learned_triplet") and self.events:
                     self.events.publish(
                         "SYNTAX_CORRECTED", {"triplet": val_res["learned_triplet"]}
@@ -864,6 +866,7 @@ class TheCortex:
                 if val_res.get("valid"):
                     final_output = val_res["content"]
                     extracted_logs = val_res.get("meta_logs", [])
+                    self.last_model_raw = model_raw
                     issue_receipt(
                         "cortex.salvage",
                         "cut",
@@ -987,6 +990,35 @@ class TheCortex:
             for m in mandates
         ]
         return final_text, meta_logs
+
+    def _halcyon_recall(self, ctx: Any, user_input: str) -> Optional[Dict[str, Any]]:
+        """What the model kept through the gate, ranked against this turn; None when there is no store."""
+        state = getattr(ctx, "halcyon_state", None)
+        if not state:
+            return None
+        from engine.gate.recall import recall
+        from engine.receipts import issue as issue_receipt
+
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        found = recall(
+            state,
+            user_input,
+            max_memories=int(safe_get(c_cfg, "HALCYON_RECALL_MEMORIES", 12)),
+            max_facts=int(safe_get(c_cfg, "HALCYON_RECALL_FACTS", 12)),
+        )
+        issue_receipt(
+            "halcyon.recall",
+            "handed the model what it kept through the gate",
+            result_count=len(found["memories"]) + len(found["facts"]),
+            inputs=dict(found["held"]),
+            detail="" if found["held"]["memories"] or found["held"]["facts"] else "nothing kept yet",
+        )
+        return found
+
+    @staticmethod
+    def _strip_nominations(text: str) -> str:
+        """Any NOMINATE line, well formed or not, is for the gate; a malformed one must not reach the person either."""
+        return "\n".join(l for l in str(text or "").splitlines() if not l.strip().startswith("NOMINATE")).strip()
 
     def _pause_line(self) -> str:
         """What the person sees when every draft was rejected: a short shared pause, never the engine's state.
@@ -1250,9 +1282,11 @@ class TheCortex:
                 "timestamp": time.time(),
                 "mode_settings": mode_settings,
                 "active_mode": self.active_mode,
+                "halcyon_grammar": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "halcyon_grammar", ""),
             },
             "dialogue_history": self.dialogue_buffer,
             "recent_logs": sim_result.get("logs", []),
+            "halcyon_recall": sim_result.get("halcyon_recall"),
         }
         if hasattr(self.svc, "symbiosis") and self.svc.symbiosis:
             full_state["reality_directive"] = self.svc.symbiosis.generate_anchor(

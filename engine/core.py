@@ -186,6 +186,8 @@ class CycleContext:
     bio_snapshot: Optional[Dict] = None
     world_state: Dict = field(default_factory=dict)
     mind_state: Dict = field(default_factory=dict)
+    # The Halcyon store's canonical graphs ({"world": ..., "self": ...}), read at the start of the turn.
+    halcyon_state: Dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
     bureau_ui: str = ""
     user_profile: Dict = field(

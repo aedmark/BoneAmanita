@@ -114,7 +114,7 @@ class TopologicalPrimitivesTest(BoneTestCase):
             logged.append(str(text))
             return real_log(text, *args, **kwargs)
         with patch.object(
-            self.engine.cortex.llm, "generate", return_value='{"tool": "nominate_response", "args": {"text": "I agree completely."}}'
+            self.engine.cortex.llm, "generate", return_value='I agree completely.'
         ), patch.object(self.engine.events, "log", side_effect=spy), patch.object(
             self.engine, "drain_atp", wraps=self.engine.drain_atp
         ) as drain, patch.object(

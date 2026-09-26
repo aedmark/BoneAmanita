@@ -684,13 +684,14 @@ class PromptComposer:
             ("vsl_hijack", vsl_hijack),
             ("directives", system_injection),
             ("shared_reality", shared_reality_block),
+            ("halcyon_recall", self._recall_block(state.get("halcyon_recall"))),
             ("dialogue", dialogue_block),
             ("somatic_budget", somatic_budget_block),
             ("mode_trigger", mode_trigger),
             ("input", input_block),
             ("entity_prefix", entity_prefix),
             ("thermal_lock", cd_block),
-            ("warden_instruction", "=== HALCYON GATE GOVERNANCE ===\nYou write in plain language. That is what you say, and it is ALWAYS kept, word for word, as your rationale. Say what you actually think.\n\nWhen you want to mutate your memory or state, you embed literal NOMINATE commands on their own lines anywhere in your response.\nSyntax: NOMINATE what=<path> verb=<verb> args=<key:value>\n\nAllowed Grammar:\n" + state.get("meta", {}).get("halcyon_grammar", "  verb=relate (writes edges) args=...\n  verb=create (writes nodes) args=...\n  verb=remember (writes self/memory) args=...") + "\n\nIf you just want to talk, do not output any NOMINATE lines."),
+            ("warden_instruction", self._halcyon_instruction(state.get("meta", {}).get("halcyon_grammar", ""))),
         ]
         trimmed = self._fit_to_window(blocks, style_notes, valid_history)
         parts = [text for _, text in blocks if text]
@@ -715,6 +716,34 @@ class PromptComposer:
                else "governor declined to measure the regime; model samples at its default"),
         )
         return prompt
+
+    @staticmethod
+    def _recall_block(found: Optional[dict]) -> str:
+        """What the model kept through the Halcyon gate, handed back; empty when it kept nothing."""
+        if not isinstance(found, dict) or not (found.get("memories") or found.get("facts")):
+            return ""
+        lines = ["=== WHAT YOU REMEMBER ===",
+                 "You chose to keep these. Use them where they bear on this turn; do not recite them."]
+        lines += [f"- {key}: {value}" for key, value in found.get("memories", [])]
+        if found.get("facts"):
+            lines.append("Established in the world:")
+            lines += [f"- {fact}" for fact in found["facts"]]
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _halcyon_instruction(grammar: str) -> str:
+        """The Halcyon gate's grammar, or nothing when no boundary is loaded."""
+        if not grammar or not isinstance(grammar, str):
+            return ""
+        return (
+            "=== HALCYON GATE GOVERNANCE ===\n"
+            "You write in plain language. That is what you say, and it is ALWAYS kept, word for word, as your rationale. Say what you actually think.\n\n"
+            "When you want to change your memory or the world, add ONE literal NOMINATE line on its own line; the person never sees it.\n"
+            "Syntax: NOMINATE what=<path> verb=<verb> args=<key>:<value>; <key>:<value>\n"
+            "Use exactly the args listed for the verb. At most one NOMINATE line per reply.\n\n"
+            "Allowed grammar:\n" + grammar + "\n\n"
+            "If you just want to talk, do not output any NOMINATE lines."
+        )
 
     def _fit_to_window(self, blocks: list, style_notes: list, valid_history: list) -> list:
         """Trim the lowest-priority blocks until the prompt leaves room for a reply; returns what went.

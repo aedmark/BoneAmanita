@@ -76,6 +76,21 @@ TOOLS = {
 }
 
 
+# ── grammar: what the model is told it may nominate ────────────────────────
+
+def grammar_text(spec: dict) -> str:
+    """The permitted verbs with their exact arg names and an example, from the declaration."""
+    lines = []
+    for verb, d in spec.get("verbs", {}).items():
+        if not d.get("permitted"):
+            continue
+        args = "; ".join(f"{k}:<{r.get('type', 'str')}>" for k, r in d.get("args", {}).items())
+        lines.append(f"  verb={verb} (writes {d['writes']}) args={args}")
+        if d.get("example"):
+            lines.append(f"    example: {d['example']}")
+    return "\n".join(lines)
+
+
 # ── invariants: pure checks over a candidate (trial) state ─────────────────
 # Built from the declaration so the numbers live in the boundary file, not here.
 

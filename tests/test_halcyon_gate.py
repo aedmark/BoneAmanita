@@ -1,35 +1,233 @@
+"""The Halcyon gate as BoneAmanita runs it: one NOMINATE line per reply, adjudicated from the model's
+own draft, committed to the SQLite store, never shown to the person."""
+
+import copy
+from unittest.mock import MagicMock, patch
+
+from engine.receipts import ReceiptLedger
 from tests.base import BoneTestCase
-from main import BoneAmanita
-import json
+
+PROSE = "The river runs east past the mill."
+REMEMBER = "NOMINATE what=self/memory/river verb=remember args=key:river; value:runs east past the mill"
+
 
 class TestHalcyonGate(BoneTestCase):
+    def turn(self, draft, message="Tell me about the river."):
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value=draft)
+        return self.engine.process_turn(message)
+
+    def gate_receipts(self):
+        return ReceiptLedger.get_instance().for_subsystem("halcyon.gate")
+
     def test_gate_initialization(self):
         engine = self.engine
-        self.assertTrue(hasattr(engine, "store"))
-        self.assertTrue(hasattr(engine, "boundary"))
-        self.assertTrue(hasattr(engine, "gate_tools"))
-        self.assertTrue(hasattr(engine, "gate_invariants"))
-        
-        # Test basic store functionality
+        for attr in ("store", "boundary", "gate_tools", "gate_invariants"):
+            self.assertTrue(hasattr(engine, attr), attr)
         seq, state = engine.store.state()
-        self.assertGreaterEqual(seq, 0)
+        self.assertEqual(seq, 0)
         self.assertIn("world", state)
         self.assertIn("self", state)
 
-    def test_gate_deny(self):
-        ctx = self.engine.orchestrator._execute_core_cycle("This is my thought process.\nNOMINATE what=world/nodes verb=create args=name:TestNode;type:concept")
-        # Should be denied if it breaks an invariant or wasn't formatted perfectly, but actually if the LLM output was forced to be NOMINATE, 
-        # it should run through the gate in cycle.py. 
-        # Wait, the LLM output is generated inside _execute_core_cycle, so we can't inject NOMINATE directly unless we mock the LLM.
-        # But we can test the Gate class directly.
+    def test_the_gate_accepts_a_well_formed_nomination(self):
         from engine.gate.kernel import Gate
-        import copy
+
         seq, state = self.engine.store.state()
         gate = Gate(self.engine.boundary, copy.deepcopy(state), self.engine.gate_tools, self.engine.gate_invariants)
         receipt = gate.adjudicate("This is my thought process.\nNOMINATE what=world/nodes verb=create args=name:TestNode;type:concept")
         self.assertEqual(receipt["decision"], "ACCEPT")
-        
         self.engine.store.commit_cycle("test-trace", gate.state, seq, receipt, "raw")
         seq2, state2 = self.engine.store.state()
-        self.assertEqual(seq2, 1)
+        self.assertEqual(seq2, seq + 1)
         self.assertIn("entity:testnode", state2["world"]["nodes"])
+
+    def test_the_prompt_carries_the_declared_grammar(self):
+        # It read a meta key nothing set, so the model saw "args=..." and never the real arg names.
+        self.turn(PROSE)
+        prompt = self.engine.cortex.llm.generate.call_args[0][0]
+        self.assertIn("verb=relate (writes world/) args=subject:<str>; relation:<str>; object:<str>", prompt)
+        self.assertIn("verb=remember (writes self/memory/) args=key:<str>; value:<str>", prompt)
+        self.assertNotIn("args=...", prompt)
+
+    def test_the_limits_come_from_the_boundary(self):
+        # build_invariants was handed the limits dict and looked for "limits" inside it: the caps fell to 10000.
+        breach = self.engine.gate_invariants["self_within_budget"]
+        state = {"self": {"memory": {f"k{i}": "v" for i in range(501)}}, "world": {}}
+        self.assertIsNotNone(breach(state))
+        state["self"]["memory"].pop("k0")
+        self.assertIsNone(breach(state))
+
+    def test_a_nomination_never_reaches_the_person(self):
+        result = self.turn(f"{PROSE}\n{REMEMBER}")
+        self.assertIn(PROSE, result.get("ui", ""))
+        self.assertNotIn("NOMINATE", result.get("ui", ""))
+        self.assertNotIn("NOMINATE", self.engine.cortex.dialogue_buffer[-1])
+
+    def test_the_gate_commits_what_the_draft_nominated(self):
+        self.turn(f"{PROSE}\n{REMEMBER}")
+        _, state = self.engine.store.state()
+        self.assertEqual(state["self"]["memory"].get("river"), "runs east past the mill")
+        receipt = self.gate_receipts()[-1]
+        self.assertEqual((receipt.effect, receipt.result_count), ("ACCEPT", 1))
+
+    def test_the_gate_reads_the_draft_not_the_screen(self):
+        # It adjudicated the rendered UI, so the "verbatim rationale" was log bullets.
+        from engine.gate.kernel import Gate
+
+        seen = []
+        real = Gate.adjudicate
+
+        def spy(gate, text):
+            seen.append(text)
+            return real(gate, text)
+
+        with patch.object(Gate, "adjudicate", spy):
+            self.turn(f"{PROSE}\n{REMEMBER}")
+        self.assertEqual(seen, [f"{PROSE}\n{REMEMBER}"])
+
+    def test_a_turn_without_a_nomination_is_receipted_as_noop(self):
+        self.turn(PROSE)
+        receipt = self.gate_receipts()[-1]
+        self.assertEqual((receipt.effect, receipt.result_count), ("NOOP", 0))
+        self.assertEqual(self.engine.store.state()[0], 0)
+
+    def test_an_out_of_scope_nomination_is_denied_and_nothing_changes(self):
+        self.turn(f"{PROSE}\nNOMINATE what=self/identity verb=remember args=key:name; value:Iris")
+        self.assertEqual(self.gate_receipts()[-1].effect, "DENY")
+        self.assertEqual(self.engine.store.state()[0], 0)
+
+    def test_the_store_does_not_replace_the_engines_own_state(self):
+        # The turn loaded world and self into world_state and mind_state, which the engine uses for its own data.
+        self.turn(f"{PROSE}\n{REMEMBER}")
+        captured = []
+        sim = self.engine.orchestrator.simulator
+        real = sim.run_simulation
+
+        def spy(ctx):
+            captured.append((dict(ctx.halcyon_state), dict(ctx.mind_state), dict(ctx.world_state)))
+            return real(ctx)
+
+        with patch.object(sim, "run_simulation", spy):
+            self.turn(PROSE, "And the mill?")
+        halcyon, mind, world = captured[0]
+        self.assertEqual(halcyon["self"]["memory"]["river"], "runs east past the mill")
+        self.assertNotIn("memory", mind)
+        self.assertNotIn("nodes", world)
+
+
+class TheAuditTrail(BoneTestCase):
+    """commit_cycle updated canonical state only; the receipts, proposals, gate decisions and mutations
+    tables stayed empty, so nothing the gate decided was kept."""
+
+    turn = TestHalcyonGate.turn
+
+    def test_an_accepted_nomination_leaves_its_whole_trail(self):
+        self.turn(f"{PROSE}\n{REMEMBER}")
+        store = self.engine.store
+        (receipt,) = store.audit("receipts")
+        self.assertEqual((receipt["decision"], receipt["outcome"]), ("ACCEPT", "committed"))
+        self.assertEqual(receipt["rationale"], f"{PROSE}\n{REMEMBER}")
+        self.assertTrue(receipt["boundary_hash"].startswith("sha256:"))
+        (proposal,) = store.audit("proposals")
+        self.assertEqual((proposal["verb"], proposal["parse_status"]), ("remember", "valid"))
+        (decision,) = store.audit("gate_decisions")
+        self.assertEqual((decision["admission"], decision["persistence"]), ("admitted", "committed"))
+        (mutation,) = store.audit("mutations")
+        self.assertEqual((mutation["state_sequence_before"], mutation["state_sequence_after"]), (0, 1))
+        roles = sorted(m["role"] for m in store.audit("messages"))
+        self.assertEqual(roles, ["assistant", "user"])
+        assistant = next(m for m in store.audit("messages") if m["role"] == "assistant")
+        self.assertNotIn("NOMINATE", assistant["display_content"])
+        db = store.connect()
+        try:
+            self.assertEqual(db.execute("PRAGMA foreign_key_check").fetchall(), [])
+        finally:
+            db.close()
+
+    def test_a_plain_turn_is_receipted_without_a_proposal_or_mutation(self):
+        self.turn(PROSE)
+        store = self.engine.store
+        self.assertEqual([r["decision"] for r in store.audit("receipts")], ["NOOP"])
+        self.assertEqual(store.audit("proposals"), [])
+        self.assertEqual(store.audit("mutations"), [])
+
+    def test_a_malformed_nomination_is_kept_in_the_audit_and_off_the_screen(self):
+        result = self.turn(f"{PROSE}\nNOMINATE remember that the river runs east")
+        self.assertNotIn("NOMINATE", result.get("ui", ""))
+        (proposal,) = self.engine.store.audit("proposals")
+        self.assertEqual(proposal["parse_status"], "malformed")
+
+    def test_turns_of_one_session_share_a_conversation(self):
+        self.turn(PROSE)
+        self.turn(PROSE, "And the mill?")
+        turns = self.engine.store.audit("turns")
+        self.assertEqual(len({t["conversation_id"] for t in turns}), 1)
+        self.assertEqual(sorted(t["ordinal"] for t in turns), [1, 2])
+
+
+class DenialsShowOnlyWhereAsked(BoneTestCase):
+    """Gordon: the player doesn't need to see a denial unless in TECHNICAL mode or on the DEEP HUD."""
+
+    turn = TestHalcyonGate.turn
+    OUT_OF_SCOPE = f"{PROSE}\nNOMINATE what=self/identity verb=remember args=key:name; value:Iris"
+
+    def test_hidden_in_conversation(self):
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self.engine.ui_mode = "WARM"
+        self.assertNotIn("Action Denied by Gate", self.turn(self.OUT_OF_SCOPE).get("ui", ""))
+        self.assertEqual(self.engine.store.audit("receipts")[0]["decision"], "DENY")
+
+    def test_shown_in_technical_and_on_the_deep_hud(self):
+        for mode, depth in (("TECHNICAL", "WARM"), ("CONVERSATION", "DEEP")):
+            with self.subTest(mode=mode, depth=depth):
+                self.engine.cortex.active_mode = mode
+                self.engine.ui_mode = depth
+                self.assertIn("Action Denied by Gate", self.turn(self.OUT_OF_SCOPE).get("ui", ""))
+
+
+class TheModelGetsItsMemoriesBack(BoneTestCase):
+    """What the model keeps through the gate is handed back in the next prompt."""
+
+    turn = TestHalcyonGate.turn
+
+    def prompt(self):
+        return self.engine.cortex.llm.generate.call_args[0][0]
+
+    def test_a_kept_memory_comes_back_next_turn(self):
+        self.turn(f"{PROSE}\n{REMEMBER}")
+        self.turn("The mill is quiet.", "Which way does the river run?")
+        self.assertIn("=== WHAT YOU REMEMBER ===", self.prompt())
+        self.assertIn("- river: runs east past the mill", self.prompt())
+        receipt = ReceiptLedger.get_instance().for_subsystem("halcyon.recall")[-1]
+        self.assertEqual(receipt.result_count, 1)
+
+    def test_nothing_kept_means_no_block(self):
+        self.turn(PROSE)
+        self.assertNotIn("WHAT YOU REMEMBER", self.prompt())
+        receipt = ReceiptLedger.get_instance().for_subsystem("halcyon.recall")[-1]
+        self.assertEqual((receipt.result_count, receipt.detail), (0, "nothing kept yet"))
+
+    def test_the_turn_decides_what_comes_back_first(self):
+        from engine.gate.recall import recall
+
+        # The lantern is the oldest memory, so only relevance can put it first.
+        memory = {"lantern": "the brass lantern hangs by the north door"}
+        memory.update({f"note{i}": f"an ordinary detail number {i}" for i in range(20)})
+        state = {"self": {"memory": memory}, "world": {"nodes": {}, "edges": [], "constraints": []}}
+        found = recall(state, "Where did I leave the lantern?", max_memories=3)
+        self.assertEqual(found["memories"][0][0], "lantern")
+        self.assertEqual(len(found["memories"]), 3)
+        self.assertEqual(found["held"]["memories"], 21)
+
+    def test_world_facts_about_what_the_turn_names_come_first(self):
+        from engine.gate.kernel import Gate
+
+        _, state = self.engine.store.state()
+        gate = Gate(self.engine.boundary, copy.deepcopy(state), self.engine.gate_tools, self.engine.gate_invariants)
+        for line in ("NOMINATE what=world/edge verb=relate args=subject:Riverhold; relation:sits on; object:the Long River",
+                     "NOMINATE what=world/edge verb=relate args=subject:Ashford; relation:trades with; object:the coast"):
+            gate.adjudicate(f"Noted.\n{line}")
+        from engine.gate.recall import recall
+
+        found = recall(gate.state, "Tell me about Riverhold.", max_facts=1)
+        self.assertEqual(found["facts"], ["Riverhold sits on the Long River"])

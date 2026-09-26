@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import queue
@@ -12,7 +13,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from engine.gate.store import Store
 from engine.gate.kernel import Gate, Boundary
-from engine.gate.tools import TOOLS, build_invariants
+from engine.gate.tools import TOOLS, build_invariants, grammar_text
 
 from archetypes.council import CouncilChamber
 from body import SomaticLoop
@@ -182,13 +183,19 @@ class BoneAmanita:
         self.mind.mem.lex = self.lex
 
         # Halcyon Gate Integration
-        self.store = Store(path="saves/iris.db", state_dir="saves")
+        db_path = os.environ.get("BONE_HALCYON_DB") or "saves/iris.db"
+        self.store = Store(path=db_path, state_dir=os.path.dirname(db_path) or ".")
+        self.halcyon_grammar = ""
         try:
-            with open("engine/gate/boundary.yaml") as f:
-                b_spec = yaml.safe_load(f)
+            with open("engine/gate/boundary.yaml", "rb") as f:
+                b_bytes = f.read()
+            b_spec = yaml.safe_load(b_bytes)
+            self.boundary_hash = "sha256:" + hashlib.sha256(b_bytes).hexdigest()
             self.boundary = Boundary(b_spec)
             self.gate_tools = TOOLS
-            self.gate_invariants = build_invariants(b_spec.get("limits", {}))
+            # build_invariants reads spec["limits"] itself; passing the limits dict dropped the caps.
+            self.gate_invariants = build_invariants(b_spec)
+            self.halcyon_grammar = grammar_text(b_spec)
         except FileNotFoundError:
             self.events.log(f"{Prisma.RED}CRITICAL: engine/gate/boundary.yaml not found.{Prisma.RST}", "SYS")
 

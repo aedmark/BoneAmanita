@@ -428,12 +428,14 @@ scratch/mode_runs/OUT.jsonl [ARM ...]` drives a live engine through 30 paced
 turns per arm (CONVERSATION, ADVENTURE, ADVENTURE_CYCLED, TECHNICAL, CREATIVE;
 all five when none are named), each arm in a fresh process after `reset.sh`.
 One JSON row per turn: the turn type, health, ATP, voltage, Crucible state,
-holds, Warden and Gatekeeper rejections, all six hormones, the mito state,
-every physics scalar, the person model, the governor, an ATP ledger (every
-`adjust_atp` with its reason, plus whatever moved outside it), what digestion
-paid at what voltage, and every log line. The `reply` field is the dialogue
-buffer entry ("Traveler: ... System: ..."), not the screen text; `ui_tail`
-is the screen. `BONE_MODEL` and `PACE` override the model and the pause.
+holds, `blank` (nothing on screen below the log panel), the Halcyon gate's
+decision (`gate`), redrafts, the turn's receipts, all six hormones, the mito
+state, every physics scalar, the person model, the governor, an ATP ledger
+(every `adjust_atp` with its reason, plus whatever moved outside it), what
+digestion paid at what voltage, phase crashes and every log line. The
+`reply` field is the dialogue buffer entry ("Traveler: ... System: ..."),
+which is never empty, so count silences with `blank`; `ui_tail` is the
+screen. `BONE_MODEL` and `PACE` override the model and the pause.
 
 ### `audit_somatic.py` — a different axis, worth knowing about separately
 

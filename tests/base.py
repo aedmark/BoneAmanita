@@ -3,7 +3,9 @@
 import io
 import json
 import os
+import shutil
 import sys
+import tempfile
 import time
 import unittest
 import warnings
@@ -64,6 +66,11 @@ class BoneTestCase(unittest.TestCase):
         # depend on either. `tests/test_embeddings.py` covers the live paths with
         # mocked transport plus an opt-in integration test.
         os.environ["BONE_EMBED_BACKEND"] = "hash"
+        # Each test gets its own Halcyon store; a shared saves/iris.db made sequence numbers depend on test order.
+        self._halcyon_dir = tempfile.mkdtemp(prefix="halcyon_test_")
+        os.environ["BONE_HALCYON_DB"] = os.path.join(self._halcyon_dir, "iris.db")
+        self.addCleanup(shutil.rmtree, self._halcyon_dir, True)
+        self.addCleanup(os.environ.pop, "BONE_HALCYON_DB", None)
         SemanticEmbedder.reset()
         self.original_stdout = sys.stdout
         self.tee = TeeOutput(sys.stdout, "test_output_full.log")

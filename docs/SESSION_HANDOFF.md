@@ -16,6 +16,72 @@ BoneAmanita owns the conversation loop, the Bio-Physics engine (ATP/Cortisol), a
 - **Why?** It replaces fragile JSON quicksaves with atomic SQLite commits (saving biological state + memory simultaneously).
 - **How?** BoneAmanita's filter handles style and biological enforcement. The Halcyon Gate handles memory constraints and action validity. The vector `spores/` stay for subconscious recall, but a structured Graph memory is introduced for factual persistence.
 **Next step:** Extract `store.py` and `kernel.py` from the Iris repo and begin the surgical graft into `cycle.py`.
+(Done by Gordon: 57eb7ff and 8d625af.)
+
+**Review of the graft, fixed (2026-09-26, not yet committed; Gordon asked for 1 to 5, then the test backfill).**
+1. **The model never saw the grammar.** The composer read `meta.halcyon_grammar`, which nothing set, so the
+   prompt showed `args=...` and never the real arg names; almost any nomination would fail the gate's args
+   check. `engine.gate.tools.grammar_text(spec)` renders each permitted verb from `boundary.yaml` (its
+   collection, exact args, the example line); `main.py` keeps it as `halcyon_grammar`, the cortex puts it
+   in `meta`, and `PromptComposer._halcyon_instruction` builds the block (args separated by `;`, at most one
+   NOMINATE line, the block left out when no boundary is loaded).
+2. **The limits were ignored.** `build_invariants(b_spec.get("limits"))` handed it the limits dict, and it
+   looks for `limits` inside, so the caps fell to 100000/10000 instead of 5000/500. It gets the spec now.
+3. **NOMINATE lines reached the person.** The cortex now splits them out of each draft as it is generated
+   (`TheCortex._strip_nominations`), so they never reach the validator, the screen or the dialogue buffer.
+4. **The gate adjudicated the rendered screen** (`ctx.bureau_ui`, log bullets and all), so the "verbatim
+   rationale" was UI text. The cortex keeps the accepted draft as the model wrote it
+   (`last_model_raw`, reset at the top of every turn; empty for the pause line, the examine cache and the
+   council) and the gate reads that. No accepted draft, no adjudication. Each adjudication issues a
+   `halcyon.gate` receipt (decision; result 1 when the effect applied), now on the receipts roll call in
+   place of `warden.json_gate` and `gatekeeper.invariant`, which nothing issues any more. A gate error goes
+   to `crashes.log` (`record_crash`), as does a verb that raises inside the kernel.
+5. **The store overwrote the engine's own state.** The turn loaded `world`/`self` into `ctx.world_state` and
+   `ctx.mind_state`, which carry the engine's data (ADVENTURE's room, the mind's lens). They go into
+   `ctx.halcyon_state` now.
+
+**Tests backfilled.** `tests/test_halcyon_gate.py` (10): the store starts empty, a well-formed nomination
+is accepted and committed, the prompt carries the declared grammar, the limits come from the boundary,
+NOMINATE never reaches the screen or the dialogue, the gate commits what the draft nominated, the gate reads
+the draft not the screen, a turn without a nomination is a NOOP, an out-of-scope nomination is denied and
+nothing changes, the store does not replace the engine's state. Each fix mutation checked (reverting it
+fails its test). `EvidenceGatedMemory` removed (it tested the deleted quote check); every JSON-envelope mock
+reply is plain prose now (`reply()` in `test_mode_failures.py`, and `test_random`, `test_mode_switch`,
+`test_distress`, `test_physics`, `test_phases`). `BoneTestCase` gives every test its own store
+(`BONE_HALCYON_DB` in a temp dir); `main.py` honours that variable and defaults to `saves/iris.db`.
+`tools/mode_runs.py` drops the dead Warden counter and records `blank` (from the screen), `gate`,
+`redrafts` and the turn's receipts. Full suite 782 passed, 5 skipped.
+
+**Then (Gordon: save the audit trail, use the memories, show denials only where asked):**
+- **The audit trail is saved.** `Store.commit_cycle` now writes one engine turn the way Brad's `finalize`
+  does, in one transaction with foreign keys on (the `PRAGMA foreign_keys = OFF` is gone): a conversation
+  per engine session, the turn, the user and assistant messages (raw with NOMINATE lines, display
+  without), the proposal (`proposal_from`, ported from Brad's server: valid, malformed or multiple), the
+  receipt with the verbatim rationale and the boundary's sha256, the gate decision (admission, execution,
+  persistence, terminal stage) and, when state changed, the mutation with before and after.
+  `Store.audit(table)` reads it back. `_strip_nominations` now hides any line starting `NOMINATE` (Brad's
+  display rule), so a malformed one stays off the screen too; it is still kept in the audit.
+- **Denials show only in TECHNICAL mode or on the DEEP HUD** (`GeodesicOrchestrator._shows_gate_denials`;
+  DEEP is a HUD depth, `ui_mode`/`default_ui_depth`, not a mode). Elsewhere a denial is only in the receipt
+  and the audit; it is kept off the event log as well, since every event reaches the log panel.
+- **The model gets its memories back (phase 1 of the plan in ROADMAP Track E).** `engine/gate/recall.py`
+  ranks what the store holds against the turn: `self/memory` entries by word overlap then recency, world
+  facts (edges, constraints, typed nodes) with those naming an entity the turn mentions first. The cortex
+  hands the result to the composer as a `WHAT YOU REMEMBER` block (after the shared reality, before the
+  dialogue; left out when nothing is kept), capped by `CORTEX.HALCYON_RECALL_MEMORIES` and
+  `HALCYON_RECALL_FACTS` (12 each), and issues a `halcyon.recall` receipt (items handed back; now on the
+  roll call).
+- Tests (`tests/test_halcyon_gate.py`, 20 now): the whole audit trail for an accepted nomination, a plain
+  turn with no proposal or mutation, a malformed nomination kept in the audit and off the screen, one
+  conversation per session, denials hidden in CONVERSATION and shown in TECHNICAL and on the DEEP HUD, a
+  kept memory back in the next prompt, no block when nothing is kept, relevance over recency, facts about
+  a named entity first. Each mutation checked (one survived at first: the relevance test's memory was also
+  the newest; fixed). Full suite 792 passed, 5 skipped.
+- Correction to the 09-25 and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which
+  is never empty. Counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies,
+  nearly all a Warden JSON rejection on the last allowed draft (that path is gone with the JSON gate), and
+  14 of 0926b's after one crash left cognition offline until a REM tick that a paced session never reaches.
+  Full write-up: `docs/bonereport.html`.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

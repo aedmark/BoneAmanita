@@ -1356,5 +1356,13 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
 **Integration Steps:**
 - ~~1. Extract `store.py` and `kernel.py` from `bone-iris` and graft into `engine/cycle.py`.~~ (Done 2026-09-26)
 - ~~2. Migrate Prompt Composer: Strip JSON enforcement, inject Halcyon `NOMINATE` grammar.~~ (Done 2026-09-26)
-- [ ] 3. Backfill tests: Ensure all legacy memory mechanisms (like the Lexicon) are either updated to use the SQLite state or formally deprecated.
+- ~~Review fixes~~ (Done 2026-09-26): the real grammar in the prompt, the boundary's limits, NOMINATE kept off the screen, the gate reading the model's draft, the store kept out of `world_state`/`mind_state`, the full audit trail in SQLite, denials shown only in TECHNICAL or on the DEEP HUD.
+- **Memory recall plan** (what the model keeps through the gate must come back to it):
+  - ~~Phase 1, hand it back~~ (Done 2026-09-26): `engine/gate/recall.py` ranks `self/memory` and world facts against the turn (word overlap, then recency; facts naming a mentioned entity first) into a capped `WHAT YOU REMEMBER` prompt block, with a `halcyon.recall` receipt.
+  - Phase 2, rank by meaning: embed each memory once on write with the engine's embedder and rank by similarity to the turn; word overlap stays as the fallback when the embedder is degraded.
+  - Phase 3, prove it is used: a real-model probe that states a fact early and asks for it later, per mode, measuring whether the model nominates it, the gate accepts it and the later reply uses it; the gate and recall receipts give the rates.
+  - Phase 4, ADVENTURE continuity: rooms, exits and items the model establishes go through `create`/`relate`, so the world graph, not the examine cache, holds what is true in the story (decide alongside step 3).
+  - Phase 5, forgetting: before the 500-memory cap starts denying writes, REM consolidation merges repeated keys and evicts the least-recalled (needs a per-memory recall count, e.g. `memory_entries`).
+  - Phase 6, show it: a `/memory` command (TECHNICAL and DEEP) listing what is kept and the recent audit (`Store.audit`).
+- [ ] 3. Backfill tests: Ensure all legacy memory mechanisms (like the Lexicon) are either updated to use the SQLite state or formally deprecated. (Partly done 2026-09-26: the gate's own behaviour is pinned in `tests/test_halcyon_gate.py`, the JSON-era tests are gone or converted to plain-prose drafts; the Lexicon and `spores/` decision is still open.)
 - ~~4. Clean up `engine/invariants.py`~~ (Done 2026-09-26): The old JSON-based `Gatekeeper` is now largely redundant. Remove it or adapt it to run as a plugin for the Halcyon Gate.

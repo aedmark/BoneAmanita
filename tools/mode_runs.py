@@ -165,15 +165,11 @@ def run(mode_arm, out):
 
     mode = mode_arm.split("_")[0]
     eng = BoneAmanita({"provider": "ollama", "model": MODEL, "user_name": "T", "boot_mode": mode})
-    counts = {"warden": 0, "gatekeeper": 0}
+    from engine.receipts import ReceiptLedger
+
     real_log = eng.events.log
 
     def spy(text, *a, **k):
-        t = str(text)
-        if "Warden rejected" in t:
-            counts["warden"] += 1
-        if "Gatekeeper rejected" in t:
-            counts["gatekeeper"] += 1
         return real_log(text, *a, **k)
 
     eng.events.log = spy
@@ -220,21 +216,25 @@ def run(mode_arm, out):
     boot = eng.engage_cold_boot() or {}
     out.write(json.dumps({"mode": mode_arm, "turn": "boot", "type": boot.get("type"), "health": eng.health}) + "\n")
     for i, msg in enumerate(MESSAGES[mode_arm]):
-        before = dict(counts)
         turn_logs.clear(); ledger.clear(); harvests.clear(); crashes.clear()
         atp_before = mito.state.atp_pool
         t0 = time.time()
         res = eng.process_turn(msg) or {}
         phys = eng.observer.last_physics_packet
         ui = Prisma.strip(str(res.get("ui", "")))
+        receipts = ReceiptLedger.get_instance().for_turn()
+        # What the person saw below the log panel; the dialogue entry always starts "Traveler:" so it never reads empty.
+        screen = (ui.split("────────")[-1] if "────────" in ui else ui).strip()
         row = {
             "mode": mode_arm, "turn": i, "msg": msg, "type": res.get("type"),
             "health": round(eng.health, 1), "atp": round(eng.bio.mito.state.atp_pool, 1),
             "voltage": round(float(phys.voltage), 1) if phys is not None else None,
             "crucible": eng.phys.crucible.active_state,
             "holds": getattr(getattr(eng, "stage_manager", None), "consecutive_holds", None),
-            "warden_rejects": counts["warden"] - before["warden"],
-            "gatekeeper_rejects": counts["gatekeeper"] - before["gatekeeper"],
+            "blank": not screen,
+            "gate": [r.effect for r in receipts if r.subsystem == "halcyon.gate"],
+            "redrafts": sum(1 for r in receipts if r.subsystem == "cortex.redraft"),
+            "receipts": [r.to_dict() for r in receipts],
             "reply": getattr(eng.cortex, "dialogue_buffer", [""])[-1][-600:] if eng.cortex.dialogue_buffer else "",
             "ui_tail": ui[-400:],
             "jester_in_ui": "FALSE COHESION" in ui,
@@ -257,7 +257,8 @@ def run(mode_arm, out):
         out.write(json.dumps(row) + "\n")
         out.flush()
         print(mode_arm, i, row["type"], row["health"], row["atp"], row["voltage"], row["crucible"],
-              row["warden_rejects"], *(["PHASE_CRASH"] if row["phase_crashes"] else []), flush=True)
+              ",".join(row["gate"]) or "-", *(["BLANK"] if row["blank"] else []),
+              *(["PHASE_CRASH"] if row["phase_crashes"] else []), flush=True)
         time.sleep(PACE)
     eng.shutdown()
 
