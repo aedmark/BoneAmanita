@@ -110,6 +110,10 @@ class Store:
           singleton INTEGER PRIMARY KEY CHECK(singleton = 1), sequence INTEGER NOT NULL,
           world_json TEXT NOT NULL, self_json TEXT NOT NULL, updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS engine_checkpoint (
+          singleton INTEGER PRIMARY KEY CHECK(singleton = 1), snapshot_json TEXT NOT NULL,
+          state_sequence INTEGER NOT NULL, updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS seed_imports (
           seed_id TEXT NOT NULL, seed_version INTEGER NOT NULL, seed_hash TEXT NOT NULL,
           source_path TEXT NOT NULL, state_sequence INTEGER NOT NULL, imported_at REAL NOT NULL,
@@ -452,6 +456,32 @@ class Store:
                 )
         return {"turn_id": turn_id, "outcome": outcome, "state_sequence": next_sequence,
                 "receipt_id": receipt_id, "proposal_id": proposal_id}
+
+    def save_checkpoint(self, snapshot: dict) -> int:
+        """BoneAmanita's resume point (was saves/quicksave.json): one row, replaced atomically,
+        tagged with the canonical sequence it was taken against. Returns that sequence."""
+        payload = json.dumps(snapshot)
+        now = time.time()
+        with self.transaction(immediate=True) as db:
+            sequence, _ = self.state(db)
+            db.execute(
+                "INSERT INTO engine_checkpoint VALUES (1, ?, ?, ?) ON CONFLICT(singleton) DO UPDATE SET "
+                "snapshot_json=excluded.snapshot_json, state_sequence=excluded.state_sequence, updated_at=excluded.updated_at",
+                (payload, sequence, now),
+            )
+        return sequence
+
+    def checkpoint(self) -> dict | None:
+        """The last saved resume point, or None if the engine has never saved one."""
+        db = self.connect()
+        try:
+            row = db.execute("SELECT * FROM engine_checkpoint WHERE singleton=1").fetchone()
+        finally:
+            db.close()
+        if row is None:
+            return None
+        return {"snapshot": json.loads(row["snapshot_json"]), "state_sequence": row["state_sequence"],
+                "updated_at": row["updated_at"]}
 
     def _session_conversation(self, db: sqlite3.Connection, first_text: str, now: float) -> str:
         """Every turn of one engine session belongs to one conversation, created on its first turn."""

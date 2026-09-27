@@ -77,6 +77,34 @@ reply is plain prose now (`reply()` in `test_mode_failures.py`, and `test_random
   kept memory back in the next prompt, no block when nothing is kept, relevance over recency, facts about
   a named entity first. Each mutation checked (one survived at first: the relevance test's memory was also
   the newest; fixed). Full suite 792 passed, 5 skipped.
+
+**After a system crash (2026-09-26 evening): swept, nothing lost.** Working tree clean and in sync with
+origin; `git fsck` clean apart from 12 dangling commits, all dropped stashes from mutation checks (every
+fix they held is in HEAD, and the one exception, a `test_stage_manager` edit, was reverted on purpose);
+every tracked JSON/YAML parses and every Python file compiles; the scratch runs, telemetry copies and
+`tools/cache` are intact; no other Claude session touched the Halcyon work (it came from outside); full
+suite unchanged at 792 passed.
+
+**Roadmap step 3, Gordon's call: move every learned or session store into the Halcyon store**, one at a
+time with tests (list in ROADMAP Track E, 3a to 3g); keep `spores/`, telemetry, the crash log, tool grants
+and config. **3a, the Chronos quicksave, is done (not yet committed):**
+- `Store.save_checkpoint(snapshot)` / `Store.checkpoint()`: one `engine_checkpoint` row, replaced in a
+  transaction and tagged with the canonical sequence it was taken against. `ChronosKeeper.save_checkpoint`
+  writes there (the JSON round trip with `default=str` stays, so values JSON cannot hold become text, as
+  before); `resume_checkpoint` reads it back, and an old `saves/quicksave.json` is imported once and renamed
+  `quicksave.json.imported`. The temp-file/fsync/rename code is gone; the transaction does that job.
+- **A bug the end-to-end test found, older than the migration:** the dialogue buffer is a `deque`, and
+  `default=str` saved it as the text `"deque([...], maxlen=15)"`; `restore_context` then sliced that string,
+  so every resume filled the dialogue with its last 15 characters. The checkpoint now saves a list, and
+  `_history_from` recovers the dialogue from saves written the old way.
+- The checkpoint and the gate's commit are separate transactions in the same file (the checkpoint is taken
+  at the end of `process_turn`, after the gate commits), so a crash between them loses at most that turn's
+  checkpoint, as with the JSON file; the sequence tag says which canonical state a checkpoint matches.
+- Tests: `tests/test_quicksave.py` rewritten for the store (8: the checkpoint is in the store and no file is
+  written, an unserializable save and a write failing inside the transaction both keep the previous one,
+  resume, the sequence tag, the legacy import and rename, the deque-as-text recovery, and a real engine turn
+  resumed by a second engine), each mutation checked; `test_macro`'s hydration test checks the store.
+  README and the resume string updated. Full suite 795 passed, 5 skipped.
 - Correction to the 09-25 and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which
   is never empty. Counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies,
   nearly all a Warden JSON rejection on the last allowed draft (that path is gone with the JSON gate), and

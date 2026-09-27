@@ -2,7 +2,6 @@ import dataclasses
 import json
 import logging
 import os
-import tempfile
 import time
 from typing import Any, Dict, Optional, Tuple
 
@@ -36,10 +35,11 @@ class ChronosKeeper:
         }
 
     def save_checkpoint(self, history: Optional[list] = None) -> str:
-        temp_path = None
+        """The resume point goes to the Halcyon store (one atomic row); a failure keeps the previous one."""
         try:
-            os.makedirs(self.SAVE_DIR, exist_ok=True)
-            continuity_packet = self._build_continuity_packet()
+            store = getattr(self.eng, "store", None)
+            if store is None:
+                raise RuntimeError("no Halcyon store to checkpoint into")
             start_history = (
                 history if history is not None else self.eng.cortex.dialogue_buffer
             )
@@ -50,53 +50,48 @@ class ChronosKeeper:
                 "soul_data": self.eng.soul.to_dict(),
                 "village_data": self._gather_village_state(),
                 "user_model": self._gather_user_model(),
-                "continuity": continuity_packet,
+                "continuity": self._build_continuity_packet(),
                 "timestamp": time.time(),
-                "chat_history": start_history,
+                # A list: the buffer is a deque, which default=str saved as the text "deque([...])".
+                "chat_history": list(start_history),
             }
-            path = os.path.join(self.SAVE_DIR, "quicksave.json")
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                dir=self.SAVE_DIR,
-                prefix=".quicksave-",
-                suffix=".tmp",
-                delete=False,
-            ) as f:
-                temp_path = f.name
-                json.dump(state_data, f, indent=2, default=str)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(temp_path, path)
-            temp_path = None
+            # default=str turns what JSON cannot hold into text, as the old quicksave did.
+            store.save_checkpoint(json.loads(json.dumps(state_data, default=str)))
             msg_save = ux("protocol_strings", "chronos_save_success")
-            return msg_save.format(path=path)
+            return msg_save.format(path=f"{store.path} (engine_checkpoint)")
         except Exception as e:
             self.eng.events.log(
                 (ux("protocol_strings", "chronos_save_failed_log")).format(e=e),
                 "SYS_ERR",
             )
             return (ux("protocol_strings", "chronos_save_failed_msg")).format(e=e)
-        finally:
-            if temp_path is not None:
-                try:
-                    os.unlink(temp_path)
-                except OSError as e:
-                    logger.warning(
-                        "Could not remove checkpoint temporary file %s: %s", temp_path, e
-                    )
+
+    def _load_checkpoint(self) -> Optional[Dict[str, Any]]:
+        """The store's resume point; a pre-SQLite saves/quicksave.json is imported once and renamed."""
+        store = getattr(self.eng, "store", None)
+        if store is None:
+            return None
+        saved = store.checkpoint()
+        if saved is not None:
+            return saved["snapshot"]
+        legacy = os.path.join(self.SAVE_DIR, "quicksave.json")
+        if not os.path.exists(legacy):
+            return None
+        with open(legacy, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        store.save_checkpoint(data)
+        os.replace(legacy, legacy + ".imported")
+        return data
 
     def resume_checkpoint(self) -> Tuple[bool, list]:
-        path = os.path.join(self.SAVE_DIR, "quicksave.json")
-        if not os.path.exists(path):
-            msg = ux("protocol_strings", "chronos_resume_none")
-            print(f"{Prisma.GRY}{msg}{Prisma.RST}")
-            return False, []
         try:
+            data = self._load_checkpoint()
+            if data is None:
+                msg = ux("protocol_strings", "chronos_resume_none")
+                print(f"{Prisma.GRY}{msg}{Prisma.RST}")
+                return False, []
             msg1 = ux("protocol_strings", "chronos_resume_hydrating")
-            print(f"{Prisma.CYN}{msg1.format(path=path)}{Prisma.RST}")
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            print(f"{Prisma.CYN}{msg1.format(path=getattr(self.eng.store, 'path', 'the store'))}{Prisma.RST}")
             self.eng.health = data.get("health", 100.0)
             self.eng.stamina = data.get("stamina", 100.0)
             self.eng.trauma_accum = data.get("trauma_accum", {})
@@ -118,7 +113,7 @@ class ChronosKeeper:
                     print(
                         f"{Prisma.GRY}Timeline absolute. Kernel Hash [{current_hash}] locked.{Prisma.RST}"
                     )
-            restored_history = data.get("chat_history", [])
+            restored_history = self._history_from(data.get("chat_history", []))
             msg2 = ux("protocol_strings", "chronos_resume_success")
             print(f"{Prisma.GRN}{msg2}{Prisma.RST}")
             return True, restored_history
@@ -126,6 +121,22 @@ class ChronosKeeper:
             msg3 = ux("protocol_strings", "chronos_resume_failed")
             print(f"{Prisma.RED}{msg3.format(e=e)}{Prisma.RST}")
             return False, []
+
+    @staticmethod
+    def _history_from(saved: Any) -> list:
+        """The saved dialogue as a list; older saves hold it as the text of a deque, recovered here."""
+        if isinstance(saved, list):
+            return saved
+        if isinstance(saved, str) and saved.startswith("deque("):
+            import ast
+
+            try:
+                recovered = ast.literal_eval(saved[len("deque("):saved.rindex("]") + 1])
+                return [str(line) for line in recovered] if isinstance(recovered, list) else []
+            except (ValueError, SyntaxError) as e:
+                logger.warning("Could not recover the saved dialogue from an older quicksave: %s", e)
+                return []
+        return []
 
     def perform_shutdown(self):
         msg = ux("protocol_strings", "chronos_halt")

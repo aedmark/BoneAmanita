@@ -735,7 +735,7 @@
     "chronos_save_success": "Checkpoint Saved: {path}",
     "chronos_save_failed_log": "SAVE FAILED: {e}",
     "chronos_save_failed_msg": "Save Failed: {e}",
-    "chronos_resume_none": "[RESUME]: No quicksave found. Starting fresh.",
+    "chronos_resume_none": "[RESUME]: No checkpoint found. Starting fresh.",
     "chronos_resume_hydrating": "[RESUME]: Hydrating from {path}...",
     "chronos_resume_success": "[RESUME]: System State & Logs Restored.",
     "chronos_resume_failed": "[RESUME]: Failed to hydrate: {e}",

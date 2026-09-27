@@ -54,9 +54,11 @@ embedding failures use the fallback contract described in Honest limits below.
 `config.json` is generated on first run and is not in the repo.
 `saves/cortex_hive.json` holds every word the engine has taught itself;
 deleting it is the clean way to make it forget without touching your curated
-lists. `saves/quicksave.json` stores selected session state and dialogue;
-checkpoint writes use a flushed temporary file and atomic replacement so a
-failed save preserves the previous checkpoint.
+lists. `saves/iris.db` is the Halcyon store (SQLite): the gate's memory and
+world graphs, its full audit trail, and the resume checkpoint (session state
+and dialogue, one row replaced in a transaction, so a failed save preserves
+the previous checkpoint). An older `saves/quicksave.json` is imported on the
+next boot and renamed `quicksave.json.imported`.
 `reset.sh` deletes saved memories, saves, logs, and other files listed in the
 script; it leaves the setup configuration in place.
 

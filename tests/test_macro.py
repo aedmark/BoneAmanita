@@ -43,9 +43,8 @@ class MacroLifecycleTests(BoneTestCase):
         self.engine.village.bureau.stamp_count = 99
         self.engine.health = 42.0
         save_msg = self.engine.chronos.save_checkpoint([])
-        self.assertIn(
-            "quicksave.json", save_msg, "Chronos failed to write the save file."
-        )
+        self.assertIn("engine_checkpoint", save_msg, "Chronos failed to write the checkpoint.")
+        self.assertEqual(self.engine.store.checkpoint()["snapshot"]["health"], 42.0)
         self.engine.health = 100.0
         self.engine.village.bureau.stamp_count = 0
         success, _ = self.engine.chronos.resume_checkpoint()
