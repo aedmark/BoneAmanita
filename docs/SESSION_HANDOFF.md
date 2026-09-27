@@ -19,9 +19,9 @@ engine learns or needs to resume.
   denials shown only in TECHNICAL or on the DEEP HUD, and memory recall phase 1 (20.7.4.44). Step 3,
   moving every learned or session store into the store: 3a the resume checkpoint (20.7.4.45), 3b the
   ADVENTURE rooms plus `/export` for FractalOS (20.7.4.46), 3c learned words (20.7.4.47), 3d the Akashic
-  record (20.7.4.48), 3e the learned lore overlay (20.7.4.49).
-- **Next:** 3f the user profile (`user_profile.json`), 3g the Oroboros lineage (`legacy.json`); then
-  memory recall phases 2 to 6 (ROADMAP).
+  record (20.7.4.48), 3e the learned lore overlay (20.7.4.49), 3f the user profile, wired in for the
+  first time (20.7.4.50).
+- **Next:** 3g the Oroboros lineage (`legacy.json`); then memory recall phases 2 to 6 (ROADMAP).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -182,6 +182,23 @@ on top of the factory `lore/` files, written to `saves/lore/<category>.json`) no
   `LearnedLoreLivesInSaves` runs through a store and adds: the engine keeps learned lore in its store, an
   old overlay is imported once, attaching keeps what was injected before it. Each mutation checked. Full
   suite 809 passed, 5 skipped.
+
+**3f, the user profile (2026-09-27, 20.7.4.50).** Nothing to move: `drivers/userprofile.py` has
+existed since 19.6.0, but nothing ever constructed a `UserProfile` (its only caller was one test), so
+`user_profile.json` was never written and nothing read `get_preferences()`. Gordon's call: wire it in.
+- The engine builds one at boot (named from config) and attaches the store. The observation phase calls
+  `observe(counts, words, entropy)` on every user turn (never system events) with the gaze's lexical
+  counts, taken before somatic echo drops words. It learns, saves the `user.profile` record, and issues a
+  `user.profile` receipt: LEARNED with the categories that rose and the current likes, or SKIPPED under
+  `PROFILE_MIN_WORDS`. It is on `CORE_SUBSYSTEMS`. An old `user_profile.json` is imported once.
+- Construction no longer reads a file from the working directory (the old test picked up whatever
+  `user_profile.json` sat in the repo root). Its `except FileNotFoundError: pass` is gone, so the pass-only
+  allowlist lost that entry and the silent-handler budget ratchets to 29.
+- Open: nothing reads the preferences yet. The affinities only move between 0 and 1, so the dislikes list
+  (`PROFILE_HATE_THRESH` -0.2) can never have anything in it.
+- Tests (`tests/test_user_profile.py`, 4): a user turn moves and keeps the profile with a LEARNED receipt,
+  a short turn is SKIPPED and writes nothing, the next engine knows the person, the legacy import. Each
+  mutation checked (6). Full suite 813 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

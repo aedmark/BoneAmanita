@@ -20,6 +20,7 @@ from body import SomaticLoop
 from brain.composer import LLMInterface
 from brain.cortex import TheCortex, _room_slug
 from brain.mind import NoeticLoop
+from drivers.userprofile import UserProfile
 from engine.constants import Prisma, RealityLayer
 from engine.core import (
     CyberneticGovernor,
@@ -189,6 +190,8 @@ class BoneAmanita:
         self.lex.attach_store(self.store)
         if self.akashic:
             self.akashic.attach_store(self.store)
+        self.user_profile = UserProfile(self.user_name, config_ref=self.config)
+        self.user_profile.attach_store(self.store)
         self.halcyon_grammar = ""
         try:
             with open("engine/gate/boundary.yaml", "rb") as f:

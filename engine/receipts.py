@@ -21,6 +21,7 @@ CORE_SUBSYSTEMS = (
     "memory.retrieve_semantic",
     "physics.word_resolution",
     "stage.negotiate",
+    "user.profile",
 )
 # Issued only when their event happens (a draft sent back or cut), so their absence is not silence.
 EVENT_SUBSYSTEMS = ("cortex.redraft", "cortex.salvage")

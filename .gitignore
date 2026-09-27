@@ -25,6 +25,8 @@ output/
 tools/cache/
 /legacy.json
 /fractal_adventure.json
+/user_profile.json
+/user_profile.json.imported
 
 # Words the engine taught itself, and the lenses it derived. Both are
 # regenerated on demand and are deliberately kept out of the hand-written

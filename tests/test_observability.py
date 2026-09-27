@@ -93,7 +93,7 @@ class SilentExceptionHandlers(unittest.TestCase):
     # `handle_phase_crash`, an `err` string carried to a later raise), so the
     # number overstates the problem. The unambiguous measure is the
     # pass-only ban below, which is at zero tolerance.
-    BUDGET = 30
+    BUDGET = 29
 
     def test_silent_handler_count_does_not_grow(self):
         silent = []
@@ -130,17 +130,13 @@ class SilentExceptionHandlers(unittest.TestCase):
             f"`python tools/audit_handlers.py` to see them all.",
         )
 
-    # The three handlers whose entire body is `pass`, and why each one is right.
+    # The two handlers whose entire body is `pass`, and why each one is right.
     # This is an allowlist rather than a budget because every entry has to be
     # argued for in writing, and a reviewer can disagree with a line of it.
     PASS_ONLY_ALLOWED = {
         "engine/core.py": (
             "JSONEncoder.default walks __slots__, and a declared-but-unset slot "
             "raises AttributeError by design. Skipping it IS the algorithm."
-        ),
-        "drivers/userprofile.py": (
-            "No profile on first run is the normal state, not a fault. The "
-            "unreadable and corrupt cases were split out and do report."
         ),
         "spores/embeddings.py": (
             "SemanticEmbedder._log is the logger of last resort: if the EventBus "

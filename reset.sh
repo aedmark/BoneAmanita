@@ -13,6 +13,8 @@ rm -f ./lore/akashic_discovered_words.json.imported
 rm -f ./legacy.json
 rm -f ./fractal_adventure.json
 rm -f ./fractal_adventure.json.imported
+rm -f ./user_profile.json
+rm -f ./user_profile.json.imported
 rm -rf ./output
 rm -rf ./test_telemetry_logs
 rm -rf ./test_output_full.log

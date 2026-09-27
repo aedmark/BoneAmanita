@@ -238,6 +238,8 @@ class ObservationPhase(SimulationPhase):
         )
         input_phys = gaze_result["physics"]
         ctx.clean_words = gaze_result["clean_words"]
+        if not ctx.is_system_event and (profile := getattr(self.eng, "user_profile", None)):
+            profile.observe(input_phys.get("counts") or {}, len(ctx.clean_words), {"entropy": input_phys.get("entropy", 0.2)})
 
         echo = (
             getattr(self.eng.bio.somatic, "somatic_echo", 0.0)

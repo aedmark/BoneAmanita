@@ -1370,6 +1370,6 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
   - ~~3c. Learned lexicon~~ (Done 2026-09-27): the `learned_words` table, each word written as it is learned (it was saved only at shutdown); an old `cortex_hive.json` is imported once.
   - ~~3d. Akashic record~~ (Done 2026-09-27): its state and discovered words are `engine_records` in the store (`akashic.<category>`); the load now restores the scar map and the strata it used to drop; nothing is written into `lore/`. The legacy scar and boon files remain a one-time migration into the system prompts, which by design never persist.
   - ~~3e. Learned lore overlay~~ (Done 2026-09-27): `lore.<category>` records in the store; attaching merges the overlay onto what is already cached; old `saves/lore/*.json` are imported once.
-  - [ ] 3f. User profile (`user_profile.json`).
+  - ~~3f. User profile~~ (Done 2026-09-27): `UserProfile` had never been constructed, so there was nothing to move; Gordon's call was to wire it in. The engine builds one, feeds it each user turn from the observation phase's lexical counts, and keeps it as the `user.profile` record (with a `user.profile` receipt); an old `user_profile.json` is imported once. Nothing reads the preferences yet.
   - [ ] 3g. Oroboros lineage (`legacy.json`).
 - ~~4. Clean up `engine/invariants.py`~~ (Done 2026-09-26): The old JSON-based `Gatekeeper` is now largely redundant. Remove it or adapt it to run as a plugin for the Halcyon Gate.
