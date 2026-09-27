@@ -58,7 +58,10 @@ lists. `saves/iris.db` is the Halcyon store (SQLite): the gate's memory and
 world graphs, its full audit trail, and the resume checkpoint (session state
 and dialogue, one row replaced in a transaction, so a failed save preserves
 the previous checkpoint). An older `saves/quicksave.json` is imported on the
-next boot and renamed `quicksave.json.imported`.
+next boot and renamed `quicksave.json.imported`; the ADVENTURE rooms and items
+are part of that checkpoint too (an old `fractal_adventure.json` is imported
+the same way). `/export [path]` writes the adventure in FractalOS's format
+(default `saves/fractal_adventure.json`) for `adventure <path>` there.
 `reset.sh` deletes saved memories, saves, logs, and other files listed in the
 script; it leaves the setup configuration in place.
 

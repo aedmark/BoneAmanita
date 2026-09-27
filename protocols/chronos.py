@@ -17,6 +17,8 @@ class ChronosKeeper:
         self.eng = engine_ref
         self.SAVE_DIR = "saves"
         self.CRASH_DIR = "crashes"
+        # The adventure the last resume brought back, for the engine to restore after its boot.
+        self.resumed_adventure: Optional[Dict[str, Any]] = None
 
     def _build_continuity_packet(self) -> Dict[str, Any]:
         active_phys = getattr(self.eng, "active_physics", {})
@@ -54,6 +56,7 @@ class ChronosKeeper:
                 "timestamp": time.time(),
                 # A list: the buffer is a deque, which default=str saved as the text "deque([...])".
                 "chat_history": list(start_history),
+                "adventure": self._gather_adventure(),
             }
             # default=str turns what JSON cannot hold into text, as the old quicksave did.
             store.save_checkpoint(json.loads(json.dumps(state_data, default=str)))
@@ -92,6 +95,7 @@ class ChronosKeeper:
                 return False, []
             msg1 = ux("protocol_strings", "chronos_resume_hydrating")
             print(f"{Prisma.CYN}{msg1.format(path=getattr(self.eng.store, 'path', 'the store'))}{Prisma.RST}")
+            self.resumed_adventure = data.get("adventure")
             self.eng.health = data.get("health", 100.0)
             self.eng.stamina = data.get("stamina", 100.0)
             self.eng.trauma_accum = data.get("trauma_accum", {})
@@ -194,6 +198,17 @@ class ChronosKeeper:
                     print(
                         f"{Prisma.OCHRE}{msg5.format(name=name, e='The connection severed before it could be written.')}{Prisma.RST}"
                     )
+
+    def _gather_adventure(self) -> Optional[Dict[str, Any]]:
+        """Rooms and items, saved with the rest of the checkpoint (they were fractal_adventure.json)."""
+        gather = getattr(self.eng, "adventure_state", None)
+        if not callable(gather):
+            return None
+        try:
+            return gather()
+        except Exception as e:
+            self.eng.events.log(f"Could not gather the adventure for the checkpoint: {e}", "KERNEL", "WARN")
+            return None
 
     def _gather_village_state(self) -> Dict[str, Any]:
         return {

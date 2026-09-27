@@ -11,6 +11,7 @@ rm -f ./lore/lenses.json
 rm -f ./lore/akashic_discovered_words.json
 rm -f ./legacy.json
 rm -f ./fractal_adventure.json
+rm -f ./fractal_adventure.json.imported
 rm -rf ./output
 rm -rf ./test_telemetry_logs
 rm -rf ./test_output_full.log

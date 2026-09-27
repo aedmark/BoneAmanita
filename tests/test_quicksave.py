@@ -151,5 +151,62 @@ class AnEngineResumesFromItsStore(BoneTestCase):
         self.assertTrue(any("The kettle is on." in line for line in restored), restored)
 
 
+class TheAdventureLivesInTheCheckpoint(BoneTestCase):
+    """Roadmap step 3b: rooms and items were fractal_adventure.json, rewritten in the repo root every turn.
+    They are part of the checkpoint now; the FractalOS file is written only on /export (Gordon's call)."""
+
+    MILL = {"id": "the_mill", "name": "The Mill", "description": "Dust and a stopped wheel.", "exits": ["north"], "pois": []}
+
+    def setUp(self):
+        super().setUp()
+        self.chronos_patcher.stop()
+        self.engine.cortex.visited_rooms = {"the_mill": dict(self.MILL)}
+        self.engine.cortex.current_room_name = "The Mill"
+
+    def test_the_rooms_are_saved_with_the_checkpoint_and_no_file_is_written(self):
+        self.engine.save_checkpoint()
+        adventure = self.engine.store.checkpoint()["snapshot"]["adventure"]
+        self.assertEqual(adventure["startingRoomId"], "the_mill")
+        self.assertEqual(adventure["rooms"]["the_mill"]["description"], "Dust and a stopped wheel.")
+        for path in ("fractal_adventure.json", os.path.join("saves", "fractal_adventure.json")):
+            self.assertFalse(os.path.exists(path), path)
+
+    def test_a_resumed_engine_is_back_in_its_room(self):
+        from main import BoneAmanita
+
+        self.engine.save_checkpoint()
+        second = BoneAmanita(config=self.test_config)
+        self.addCleanup(self._shutdown_engine, second)
+        second.engage_cold_boot()
+        self.assertEqual(second.cortex.current_room_name, "The Mill")
+        self.assertEqual(second.cortex.visited_rooms["the_mill"]["exits"], ["north"])
+
+    def test_an_old_fractal_file_is_imported_once_and_kept(self):
+        with tempfile.TemporaryDirectory() as d:
+            legacy = os.path.join(d, "fractal_adventure.json")
+            with open(legacy, "w", encoding="utf-8") as f:
+                json.dump({"startingRoomId": "the_mill", "rooms": {"the_mill": self.MILL}}, f)
+            self.engine.cortex.visited_rooms = {}
+            self.engine.cortex.current_room_name = ""
+            self.engine.chronos.resumed_adventure = None
+            with patch.object(type(self.engine), "LEGACY_ADVENTURE_FILE", legacy):
+                self.engine._load_fractal_state()
+            self.assertEqual(self.engine.cortex.current_room_name, "The Mill")
+            self.assertFalse(os.path.exists(legacy))
+            self.assertTrue(os.path.exists(legacy + ".imported"))
+
+    def test_export_writes_a_fractalos_adventure_on_demand(self):
+        self.engine.cmd.interface.log = MagicMock()
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "mill.json")
+            self.engine.cmd.execute(f"/export {path}")
+            with open(path, encoding="utf-8") as f:
+                exported = json.load(f)
+        self.assertEqual(exported["startingRoomId"], "the_mill")
+        self.assertIn("the_mill", exported["rooms"])
+        self.assertIn("items", exported)
+        self.assertIn(path, str(self.engine.cmd.interface.log.call_args))
+
+
 if __name__ == "__main__":
     unittest.main()

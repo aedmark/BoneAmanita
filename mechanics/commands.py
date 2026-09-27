@@ -416,6 +416,20 @@ class CommandProcessor:
             self.interface.log(f"{self.P.GRN}{msg}{self.P.RST}")
         return True
 
+    def _cmd_export(self, parts):
+        path = parts[1] if len(parts) > 1 else "saves/fractal_adventure.json"
+        try:
+            written = self.interface.eng.export_adventure(path)
+        except Exception as e:
+            msg = ux_format("command_alerts", "export_failed", default="Export failed: {e}", e=e)
+            self.interface.log(f"{self.P.RED}{msg}{self.P.RST}")
+            return True
+        msg = ux_format("command_alerts", "export_success",
+                        default="Adventure written for FractalOS: {path} (open it there with `adventure {path}`).",
+                        path=written)
+        self.interface.log(f"{self.P.GRN}{msg}{self.P.RST}")
+        return True
+
     def _cmd_inventory(self, _parts):
         items = self.interface.get_inventory()
         P = self.interface.P

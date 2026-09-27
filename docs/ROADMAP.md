@@ -1366,7 +1366,7 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
   - Phase 6, show it: a `/memory` command (TECHNICAL and DEEP) listing what is kept and the recent audit (`Store.audit`).
 - [ ] 3. Backfill tests: Ensure all legacy memory mechanisms (like the Lexicon) are either updated to use the SQLite state or formally deprecated. (Partly done 2026-09-26: the gate's own behaviour is pinned in `tests/test_halcyon_gate.py`, the JSON-era tests are gone or converted to plain-prose drafts.) Gordon's call, 2026-09-26: move every learned or session store into the Halcyon store, one at a time with tests; keep `spores/` (subconscious recall), telemetry, the crash log, tool grants and config as they are.
   - ~~3a. Chronos quicksave~~ (Done 2026-09-26): `saves/quicksave.json` is now the `engine_checkpoint` row in `saves/iris.db`, tagged with the canonical sequence; an old quicksave is imported once and renamed.
-  - [ ] 3b. `fractal_adventure.json` (ADVENTURE rooms; also memory phase 4).
+  - ~~3b. `fractal_adventure.json`~~ (Done 2026-09-27): rooms and items are part of the checkpoint; an old file is imported once; the FractalOS file is written only by `/export` (Gordon's call). Memory phase 4 (the world graph as the story's truth) is still open.
   - [ ] 3c. Learned lexicon (`saves/cortex_hive.json`).
   - [ ] 3d. Akashic scars, boons and discovered words (`akashic_*.json`).
   - [ ] 3e. Learned lore overlay (`saves/lore/*.json`).

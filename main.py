@@ -873,38 +873,52 @@ class BoneAmanita:
             )
         return cold_result
 
+    LEGACY_ADVENTURE_FILE = "fractal_adventure.json"
+
     def _load_fractal_state(self) -> None:
-        if not os.path.exists("fractal_adventure.json"):
-            return
+        """Rooms come back from the checkpoint; a pre-store fractal_adventure.json is imported once and renamed."""
+        fractal = getattr(self.chronos, "resumed_adventure", None)
         try:
-            with open("fractal_adventure.json", encoding="utf-8") as f:
-                fractal = json.load(f)
-            rooms = fractal.get("rooms")
+            if fractal is None and os.path.exists(self.LEGACY_ADVENTURE_FILE):
+                with open(self.LEGACY_ADVENTURE_FILE, encoding="utf-8") as f:
+                    fractal = json.load(f)
+                os.replace(self.LEGACY_ADVENTURE_FILE, self.LEGACY_ADVENTURE_FILE + ".imported")
+            rooms = (fractal or {}).get("rooms")
             if not isinstance(rooms, dict):
                 return
             self.cortex.restore_room_state(rooms, fractal.get("startingRoomId", ""))
         except (OSError, json.JSONDecodeError) as e:
             self.events.log(
-                f"{Prisma.OCHRE}Could not restore fractal_adventure.json: {e}{Prisma.RST}",
+                f"{Prisma.OCHRE}Could not restore the adventure: {e}{Prisma.RST}",
                 "KERNEL",
                 "WARN",
             )
 
+    def adventure_state(self) -> Optional[Dict[str, Any]]:
+        """The adventure in FractalOS's format: the rooms visited, the current one first, and every item."""
+        gordon = getattr(self.village, "gordon", None)
+        if gordon is None:
+            return None
+        starting_room_id = (
+            _room_slug(self.cortex.current_room_name)
+            if self.cortex.current_room_name
+            else "GENESIS_POINT"
+        )
+        return json.loads(gordon.export_fractal_state(self.cortex.visited_rooms, starting_room_id))
+
+    def export_adventure(self, path: str = "saves/fractal_adventure.json") -> str:
+        """Write the adventure for FractalOS (`adventure <path>` there). On demand only; the store is the save."""
+        state = self.adventure_state()
+        if state is None:
+            raise RuntimeError("no adventure to export")
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        temp = f"{path}.tmp"
+        with open(temp, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+        os.replace(temp, path)
+        return path
+
     def save_checkpoint(self, history: Optional[list] = None) -> str:
-        if gordon := getattr(self.village, "gordon", None):
-            starting_room_id = (
-                _room_slug(self.cortex.current_room_name)
-                if self.cortex.current_room_name
-                else "GENESIS_POINT"
-            )
-            try:
-                fractal_json = gordon.export_fractal_state(
-                    self.cortex.visited_rooms, starting_room_id
-                )
-                with open("fractal_adventure.json", "w", encoding="utf-8") as f:
-                    f.write(fractal_json)
-            except Exception as e:
-                self.events.log(f"Failed to compile FractalOS state: {e}", "KERNEL", "WARN")
         return self.chronos.save_checkpoint(history)
 
     def resume_checkpoint(self) -> Tuple[bool, list]:

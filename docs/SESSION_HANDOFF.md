@@ -105,6 +105,21 @@ and config. **3a, the Chronos quicksave, is done (not yet committed):**
   resume, the sequence tag, the legacy import and rename, the deque-as-text recovery, and a real engine turn
   resumed by a second engine), each mutation checked; `test_macro`'s hydration test checks the store.
   README and the resume string updated. Full suite 795 passed, 5 skipped.
+  Committed as 20.7.4.45.
+
+**3b, the ADVENTURE rooms (2026-09-27, not yet committed).** `fractal_adventure.json` was rewritten in the
+repo root after every turn, in FractalOS's adventure format (FractalOS plays it with `adventure <file>`).
+Gordon's call: the store is the only save, and the FractalOS file is written on demand.
+- `BoneAmanita.adventure_state()` builds the FractalOS dict (rooms visited, the current one as
+  `startingRoomId`, every item); Chronos saves it as the checkpoint's `adventure` and keeps the resumed one
+  in `resumed_adventure`, which `_load_fractal_state` restores after boot. An old `fractal_adventure.json`
+  is imported once and renamed `.imported` (`reset.sh` clears both). Nothing is written per turn.
+- `/export [path]` writes the FractalOS file (default `saves/fractal_adventure.json`) and says how to open
+  it in FractalOS; strings in `command_alerts` and `command_descriptions`.
+- Tests (`TheAdventureLivesInTheCheckpoint` in `tests/test_quicksave.py`): rooms saved with the checkpoint
+  and no file written, a second engine resumes in the same room with its exits, the legacy import and
+  rename, `/export` writing a FractalOS adventure; each mutation checked. Full suite 799 passed, 5 skipped.
+- Still open: memory phase 4, the world graph (not the examine cache or these rooms) as the story's truth.
 - Correction to the 09-25 and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which
   is never empty. Counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies,
   nearly all a Warden JSON rejection on the last allowed draft (that path is gone with the JSON gate), and
