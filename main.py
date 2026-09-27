@@ -47,7 +47,7 @@ from engine.presets import BoneConfig, BonePresets
 from engine.receipts import CORE_SUBSYSTEMS, ReceiptLedger
 from machine.pacemaker import ThePacemaker
 from protocols import ChronosKeeper, GriefProtocol
-from engine.struts import dump_state, safe_get, safe_set, ux
+from engine.struts import dump_state, safe_get, safe_set, ux, ux_format
 
 @dataclass
 class HostStats:
@@ -190,6 +190,8 @@ class BoneAmanita:
         self.lex.attach_store(self.store)
         if self.akashic:
             self.akashic.attach_store(self.store)
+        if self.oroboros:
+            self.oroboros.attach_store(self.store)
         self.user_profile = UserProfile(self.user_name, config_ref=self.config)
         self.user_profile.attach_store(self.store)
         self.halcyon_grammar = ""
@@ -825,10 +827,25 @@ class BoneAmanita:
             return True
         return False
 
+    def _inherit_scars(self):
+        """After any resume, so the checkpoint's trauma is what the scars add to (20.5.0 dropped this call)."""
+        if not (self.oroboros and self.oroboros.scars):
+            return
+        # Before the first turn there is no packet yet (the turn would start from a void one), so seed it.
+        if not (physics := self.active_physics):
+            physics = self.observer.last_physics_packet = PhysicsPacket.void_state()
+        bio = {"trauma_vector": dict(self.trauma_accum)}
+        logs = self.oroboros.inherit(physics, bio)
+        self.trauma_accum = bio["trauma_vector"]
+        if logs:
+            msg = ux_format("genesis_strings", "legacy_scars", logs=", ".join(logs)) or f"LEGACY SCARS: {', '.join(logs)}"
+            self.events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "OROBOROS")
+
     def engage_cold_boot(self) -> Optional[Dict[str, Any]]:
         if self.tick_count > 0:
             return None
         success, history = self.resume_checkpoint()
+        self._inherit_scars()
         if success:
             msg_pod = ux("main_strings", "stasis_pod")
             self.events.log(f"{Prisma.GRY}{msg_pod}{Prisma.RST}", "SYS")

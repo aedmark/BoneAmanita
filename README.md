@@ -58,7 +58,8 @@ that table is the clean way to make it forget without touching your curated
 lists, and an older `saves/cortex_hive.json` is imported once), what the
 engine learns on top of the factory `lore/` files (an overlay per category;
 `lore/` itself is never written), the Akashic record, the user profile
-(which lexical registers you keep using, updated each turn), the gate's
+(which lexical registers you keep using, updated each turn), the lineage each
+death leaves the next generation (an older `legacy.json` is imported once), the gate's
 memory and world graphs, its full audit trail, and the resume checkpoint (session state
 and dialogue, one row replaced in a transaction, so a failed save preserves
 the previous checkpoint). An older `saves/quicksave.json` is imported on the

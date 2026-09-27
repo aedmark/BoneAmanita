@@ -11,6 +11,7 @@ rm -f ./lore/lenses.json
 rm -f ./lore/akashic_discovered_words.json
 rm -f ./lore/akashic_discovered_words.json.imported
 rm -f ./legacy.json
+rm -f ./legacy.json.imported
 rm -f ./fractal_adventure.json
 rm -f ./fractal_adventure.json.imported
 rm -f ./user_profile.json

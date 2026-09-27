@@ -1,7 +1,6 @@
 import json
 import os
 import random
-import tempfile
 from dataclasses import dataclass
 from typing import Any, List
 
@@ -27,14 +26,19 @@ class Myth:
 
 
 class TheOroboros:
+    """The lineage each death leaves the next generation, kept in the Halcyon store."""
+
     LEGACY_FILE = "legacy.json"
+    RECORD = "oroboros.lineage"
 
     def __init__(self, config_ref=None):
         self.cfg = config_ref or BoneConfig
         self.scars: List[Scar] = []
         self.myths: List[Myth] = []
         self.generation_count = 0
-        self._load()
+        # The last generation whose scars were added to the trauma the checkpoint carries.
+        self.inherited = 0
+        self.persistence = None
 
     def _cfg(self, key: str, default: Any) -> Any:
         val = safe_get(safe_get(self.cfg, "OROBOROS", {}), key, default)
@@ -46,23 +50,35 @@ class TheOroboros:
             else val
         )
 
-    def _load(self):
-        if not os.path.exists(self.LEGACY_FILE):
+    def attach_store(self, store):
+        """Loads the lineage from the store; an old legacy.json is imported once and renamed .imported."""
+        self.persistence = store
+        if store.record(self.RECORD) is None and (legacy := self._read_legacy()) is not None:
+            store.put_record(self.RECORD, legacy)
+            os.replace(self.LEGACY_FILE, self.LEGACY_FILE + ".imported")
+        if (data := store.record(self.RECORD)) is None:
             return
+        try:
+            self.generation_count = int(data.get("generation", 0))
+            self.inherited = int(data.get("inherited", 0))
+            self.scars = [Scar(**s) for s in data.get("scars", [])]
+            self.myths = [Myth(**m) for m in data.get("myths", [])]
+        except (TypeError, ValueError, AttributeError) as e:
+            print(f"{Prisma.RED}[OROBOROS]: Lineage record unreadable. Starting fresh. ({e}){Prisma.RST}")
+            return
+        if msg := ux_format("soul_strings", "oroboros_gen_loaded", gen=self.generation_count):
+            print(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
+
+    def _read_legacy(self):
+        if not os.path.exists(self.LEGACY_FILE):
+            return None
         try:
             with open(self.LEGACY_FILE) as f:
                 data = json.load(f)
-                self.generation_count = data.get("generation", 0)
-                self.scars = [Scar(**s) for s in data.get("scars", [])]
-                self.myths = [Myth(**m) for m in data.get("myths", [])]
-            if msg := ux_format(
-                "soul_strings", "oroboros_gen_loaded", gen=self.generation_count
-            ):
-                print(f"{Prisma.VIOLET}{msg}{Prisma.RST}")
-        except Exception as e:
-            print(
-                f"{Prisma.RED}[OROBOROS]: Legacy state corrupted or missing. Starting fresh. ({e}){Prisma.RST}"
-            )
+            return data if isinstance(data, dict) else None
+        except (IOError, json.JSONDecodeError) as e:
+            print(f"{Prisma.RED}[OROBOROS]: {self.LEGACY_FILE} unreadable, not imported. ({e}){Prisma.RST}")
+            return None
 
     def crystallize(self, cause_of_death: str, soul: NarrativeSelf):
         death_data = LoreManifest.get_instance().get("DEATH") or {}
@@ -133,24 +149,7 @@ class TheOroboros:
         self.scars = self.scars[-self._cfg("MAX_SCARS", 5) :]
         self.myths.extend(new_myths)
         self.myths = self.myths[-self._cfg("MAX_MYTHS", 10) :]
-        payload = {
-            "generation": self.generation_count + 1,
-            "scars": [vars(s) for s in self.scars],
-            "myths": [vars(m) for m in self.myths],
-        }
-        try:
-            fd, temp_path = tempfile.mkstemp(
-                dir=os.path.dirname(os.path.abspath(self.LEGACY_FILE)) or ".", text=True
-            )
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(temp_path, self.LEGACY_FILE)
-        except Exception as e:
-            print(
-                f"{Prisma.RED}[OROBOROS]: Failed to write legacy payload: {e}{Prisma.RST}"
-            )
+        self._save(self.generation_count + 1)
         return ux_format(
             "soul_strings",
             "generation_encoded",
@@ -158,6 +157,32 @@ class TheOroboros:
             scars=len(new_scars),
             myths=len(new_myths),
         )
+
+    def _save(self, generation: int):
+        payload = {
+            "generation": generation,
+            "inherited": self.inherited,
+            "scars": [vars(s) for s in self.scars],
+            "myths": [vars(m) for m in self.myths],
+        }
+        try:
+            if self.persistence is None:
+                raise RuntimeError("no store attached")
+            self.persistence.put_record(self.RECORD, payload)
+        except Exception as e:
+            print(
+                f"{Prisma.RED}[OROBOROS]: Failed to write legacy payload: {e}{Prisma.RST}"
+            )
+
+    def inherit(self, physics: Any, bio: Any):
+        """At boot: scars mark the starting physics every time, and add their trauma once per generation
+        (a bio of None drops the trauma half)."""
+        first = self.inherited < self.generation_count
+        logs = self.apply_legacy(physics, bio if first else None)
+        if first:
+            self.inherited = self.generation_count
+            self._save(self.generation_count)
+        return logs
 
     def apply_legacy(self, physics: Any, bio: Any):
         log = []

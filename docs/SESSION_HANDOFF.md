@@ -20,8 +20,9 @@ engine learns or needs to resume.
   moving every learned or session store into the store: 3a the resume checkpoint (20.7.4.45), 3b the
   ADVENTURE rooms plus `/export` for FractalOS (20.7.4.46), 3c learned words (20.7.4.47), 3d the Akashic
   record (20.7.4.48), 3e the learned lore overlay (20.7.4.49), 3f the user profile, wired in for the
-  first time (20.7.4.50).
-- **Next:** 3g the Oroboros lineage (`legacy.json`); then memory recall phases 2 to 6 (ROADMAP).
+  first time (20.7.4.50), 3g the Oroboros lineage, with inherited scars applied at boot again
+  (20.7.4.51). Step 3 is complete.
+- **Next:** memory recall phases 2 to 6 (ROADMAP).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -199,6 +200,29 @@ existed since 19.6.0, but nothing ever constructed a `UserProfile` (its only cal
 - Tests (`tests/test_user_profile.py`, 4): a user turn moves and keeps the profile with a LEARNED receipt,
   a short turn is SKIPPED and writes nothing, the next engine knows the person, the legacy import. Each
   mutation checked (6). Full suite 813 passed, 5 skipped.
+
+**3g, the Oroboros lineage (2026-09-27, 20.7.4.51).** The scars and myths each death leaves the
+next generation were `legacy.json` in the repo root; they are now the `oroboros.lineage` record.
+- `TheOroboros` is built in genesis before the store exists, so construction reads nothing; the engine
+  attaches the store after the Akashic record, which imports an old `legacy.json` once (renamed
+  `.imported`) and loads the record. `crystallize` writes the record; with no store attached it reports
+  and writes nothing (the suite used to leave a `legacy.json` in the repo root from `test_edge_branches`).
+- Found: myths still work (a trigger word in the turn gives voltage and stamina, `phases/cognitive.py`),
+  but scars had not been applied at boot since 20.5.0, whose genesis refactor dropped the
+  `apply_legacy` call. Even before that, genesis applied them to `embryo.physics`, the physics subsystem
+  bundle rather than the packet a turn reads, so only their trauma ever landed.
+- Gordon: restore them. `engage_cold_boot` calls `_inherit_scars` after the resume attempt. Before the
+  first turn there is no packet (the turn would start from a void one), so it seeds the observer with a
+  void packet and the scars mark that; this happens every boot, since physics is not checkpointed. The
+  trauma (`trauma_baseline` scars, as EXISTENTIAL) rides in the checkpoint, so `TheOroboros.inherit`
+  adds it once per generation, tracked as `inherited` in the lineage record. The trauma is written back
+  through the `trauma_accum` setter: `apply_legacy` swaps an empty trauma dict for a new one, so an
+  in-place update was lost on a fresh memory.
+- Tests (`tests/test_genesis_continuity.py`): the crystallize test pins the store record and no file;
+  new: the next engine inherits the scars and myths, a death with no store writes no file, the legacy
+  import; a new generation starts scarred (trauma, the boot turn's starting drag, the OROBOROS log line),
+  the trauma is added once per generation across a resume, an inherited generation adds none. Each
+  mutation checked (12; one survivor was a redundant guard, removed). Full suite 819 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 
