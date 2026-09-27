@@ -60,7 +60,8 @@ engine learns on top of the factory `lore/` files (an overlay per category;
 `lore/` itself is never written), the Akashic record, the user profile
 (which lexical registers you keep using, updated each turn), the lineage each
 death leaves the next generation (an older `legacy.json` is imported once), the gate's
-memories with their embeddings (so they come back by meaning),
+memories (what you tell it worth knowing later, kept after each reply) with
+their embeddings (so they come back by meaning),
 memory and world graphs, its full audit trail, and the resume checkpoint (session state
 and dialogue, one row replaced in a transaction, so a failed save preserves
 the previous checkpoint). An older `saves/quicksave.json` is imported on the

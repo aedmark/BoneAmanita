@@ -628,6 +628,8 @@ class GeodesicOrchestrator:
                     "DEBUG",
                 )
 
+    HELD_RATIONALE = "(No reply this turn: the Stage Manager held the floor. Kept from what the person said.)"
+
     def _shows_gate_denials(self) -> bool:
         """TECHNICAL mode and the DEEP HUD show the gate's denials; everywhere else they stay in the audit."""
         mode = str(getattr(getattr(self.eng, "cortex", None), "active_mode", "")).upper()
@@ -644,6 +646,9 @@ class GeodesicOrchestrator:
         try:
             ctx = CycleContext(input_text=user_message, is_system_event=is_system)
             ctx.trace_id = cycle_id
+            # A turn that never reaches the model (a Stage Manager hold) left the last turn's draft for the gate.
+            if cortex := getattr(self.eng, "cortex", None):
+                cortex.last_model_raw = ""
             raw_delta = self.eng.current_time_delta
             expected_reading_time = getattr(self.eng, "last_output_length", 0) / 4.0
             calculated_delta = raw_delta - expected_reading_time
@@ -793,7 +798,10 @@ class GeodesicOrchestrator:
             # --- Halcyon Gate Integration ---
             # The gate reads the accepted draft as the model wrote it (prose plus any NOMINATE line), not the rendered screen.
             model_raw = getattr(getattr(self.eng, "cortex", None), "last_model_raw", "")
-            if hasattr(self.eng, "store") and hasattr(self.eng, "boundary") and model_raw:
+            keeper = getattr(self.eng, "memory_keeper", None)
+            # A held turn has no draft, but what the person said can still be kept.
+            wants_keeper = bool(keeper and keeper.enabled and not is_system)
+            if hasattr(self.eng, "store") and hasattr(self.eng, "boundary") and (model_raw or wants_keeper):
                 from engine.gate.kernel import Gate
                 import copy
 
@@ -801,32 +809,38 @@ class GeodesicOrchestrator:
                     try:
                         seq, state = self.eng.store.state()
                         gate = Gate(self.eng.boundary, copy.deepcopy(state), self.eng.gate_tools, self.eng.gate_invariants)
-                        receipt = gate.adjudicate(model_raw)
+                        gate_text = model_raw
+                        # The keeper nominates what the person said only when the draft nominated nothing itself.
+                        if wants_keeper and not any(l.strip().startswith("NOMINATE") for l in model_raw.splitlines()):
+                            if line := keeper.propose(user_message, (state.get("self") or {}).get("memory", {})):
+                                gate_text = f"{model_raw or self.HELD_RATIONALE}\n{line}"
+                        if gate_text:
+                            receipt = gate.adjudicate(gate_text)
 
-                        self.eng.store.commit_cycle(
-                            trace_id=ctx.trace_id,
-                            new_state=gate.state,
-                            expected_sequence=seq,
-                            receipt=receipt,
-                            raw=model_raw,
-                            user_text="" if is_system else user_message,
-                            display=self.eng.cortex._strip_nominations(model_raw),
-                            boundary_hash=getattr(self.eng, "boundary_hash", ""),
-                        )
-                        applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
-                        ReceiptLedger.get_instance().issue(
-                            "halcyon.gate",
-                            receipt["decision"],
-                            result_count=1 if applied else 0,
-                            inputs={"claim": receipt.get("claim"), "result": receipt.get("result")},
-                            detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "",
-                        )
+                            self.eng.store.commit_cycle(
+                                trace_id=ctx.trace_id,
+                                new_state=gate.state,
+                                expected_sequence=seq,
+                                receipt=receipt,
+                                raw=gate_text,
+                                user_text="" if is_system else user_message,
+                                display=self.eng.cortex._strip_nominations(model_raw),
+                                boundary_hash=getattr(self.eng, "boundary_hash", ""),
+                            )
+                            applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
+                            ReceiptLedger.get_instance().issue(
+                                "halcyon.gate",
+                                receipt["decision"],
+                                result_count=1 if applied else 0,
+                                inputs={"claim": receipt.get("claim"), "result": receipt.get("result")},
+                                detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "",
+                            )
 
-                        denied = receipt["decision"] == "DENY" or any(c[1] == "ERROR" for c in receipt["decision_basis"])
-                        # Gordon: the player sees a denial only in TECHNICAL mode or on the DEEP HUD; it is always in the audit.
-                        if denied and self._shows_gate_denials():
-                            self.eng.events.log(f"Gate Denied Action: {receipt['decision_basis']}", "KERNEL")
-                            ctx.bureau_ui += "\n[SYSTEM_LOG: Action Denied by Gate]"
+                            denied = receipt["decision"] == "DENY" or any(c[1] == "ERROR" for c in receipt["decision_basis"])
+                            # Gordon: the player sees a denial only in TECHNICAL mode or on the DEEP HUD; it is always in the audit.
+                            if denied and self._shows_gate_denials():
+                                self.eng.events.log(f"Gate Denied Action: {receipt['decision_basis']}", "KERNEL")
+                                ctx.bureau_ui += "\n[SYSTEM_LOG: Action Denied by Gate]"
                     except Exception as e:
                         record_crash(self.eng, "Halcyon gate", e)
 

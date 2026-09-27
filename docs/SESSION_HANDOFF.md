@@ -21,8 +21,10 @@ engine learns or needs to resume.
   ADVENTURE rooms plus `/export` for FractalOS (20.7.4.46), 3c learned words (20.7.4.47), 3d the Akashic
   record (20.7.4.48), 3e the learned lore overlay (20.7.4.49), 3f the user profile, wired in for the
   first time (20.7.4.50), 3g the Oroboros lineage, with inherited scars applied at boot again
-  (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52).
-- **Next:** memory recall phases 3 to 6 (ROADMAP); phase 3 is the real-model probe.
+  (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52). Phase 3,
+  the probe and the memory keeper (20.7.4.53).
+- **Next:** memory recall phases 4 to 6 (ROADMAP). ADVENTURE answers "where did I hide the key?" with a room
+  description even with the memory in its prompt; worth a look before phase 4.
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -246,6 +248,44 @@ model's memories by shared words, so a question that paraphrased a memory never 
   when gone), a new model re-embeds, hash vectors never rank or get stored, and through a real turn: the
   prompt leads with the memory that matches by meaning, a degraded embedder and a failing store fall back
   to words with a degraded receipt. Each mutation checked (10). Full suite 826 passed, 5 skipped.
+
+**Memory recall phase 3, the probe and the keeper (2026-09-27, 20.7.4.53).**
+- `tools/memory_probe.py` (documented in TESTING.md): per mode, three facts told with ordinary talk
+  between, the dialogue purged, a new day, then a question per fact; per fact it records nominated, kept,
+  recalled (in the WHAT YOU REMEMBER block), elsewhere (elsewhere in the prompt), used, and held (a Stage
+  Manager hold, so no reply), plus the screen and redrafts.
+- First run, CONVERSATION: nothing nominated, nothing kept, and after the purge the model said it had no
+  memory of the person. The gate instruction sat after the reply cue and read as optional ("If you just
+  want to talk, do not output any NOMINATE lines"). Moving it before the person's input and giving the
+  reason (the conversation fades, what you keep comes back) changed nothing, and neither did a worked
+  example or a nudge next to the cue: 1 NOMINATE line in 36 samples with thinking off, as the engine runs.
+  (With thinking on, the model plans the line in its thinking; not an option at the engine's latency.)
+- Gordon's call: a memory keeper. `engine/gate/keeper.py` `MemoryKeeper.propose` makes one short call
+  (the chat model, temperature 0.2, 120 tokens) after the reply, only when the draft nominated nothing
+  itself: it sees what is already kept and the person's message, and answers `name = value` or NONE. The
+  engine builds the NOMINATE line (the model got the path and argument names wrong when asked for the
+  line) and appends it to the draft, so the gate still sees one nomination with the draft as its
+  rationale. Receipted as `halcyon.keeper` (PROPOSED, NONE, or FAILED and degraded; on CORE_SUBSYSTEMS).
+  It keeps the reply's token usage for the census. On by default; `CORTEX.HALCYON_KEEPER` turns it off,
+  as the test config does (many tests read the last generate call as the prompt).
+- The probe's second turn caught the keeper answering in the template's own words ("key = dog_name:
+  Brisket"), so every fact landed under "key", each over the last. The prompt now shows a concrete example
+  and lists kept memories in the answer's own form, and a placeholder key is re-split or refused.
+- The probe also caught an engine bug: a Stage Manager hold never reaches the model, so the previous
+  turn's draft stayed in `last_model_raw` and the gate adjudicated and audited it again as this turn's.
+  The cycle now clears it at turn start. A held turn still lets the keeper keep what the person said, with
+  an honest rationale ("No reply this turn: the Stage Manager held the floor...") and an empty display; a
+  held turn with nothing to keep records nothing.
+- Final run (gemma4:12b): kept 12/12 across the four modes; recalled 10/12 (the two misses were held
+  turns, where recall never runs); used in every answered question in CONVERSATION (one question got a
+  pause line when every draft was rejected), TECHNICAL and CREATIVE; ADVENTURE 0/3, its narrator
+  describing the room with the memory in the prompt. The keeper also kept what it should have from the
+  filler (the logging vendor, the tone the writer wants) and passed on small talk.
+- Tests (`tests/test_halcyon_gate.py`): the gate block comes before the person and gives the reason;
+  `TheMemoryKeeper` (8): kept through the gate, small talk keeps nothing, a self-nominating draft is left
+  alone, it sees what is kept, a failed call costs only the memory (the draft is still audited), usage is
+  kept, the line is always well formed (including the probe's placeholder answer), on unless configured
+  off; `AHeldTurnHasNoDraft` (3). Each mutation checked (14). Full suite 838 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

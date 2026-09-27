@@ -688,10 +688,11 @@ class PromptComposer:
             ("dialogue", dialogue_block),
             ("somatic_budget", somatic_budget_block),
             ("mode_trigger", mode_trigger),
+            # Before the input: after the reply cue, the model read it as part of its own turn.
+            ("warden_instruction", self._halcyon_instruction(state.get("meta", {}).get("halcyon_grammar", ""))),
             ("input", input_block),
             ("entity_prefix", entity_prefix),
             ("thermal_lock", cd_block),
-            ("warden_instruction", self._halcyon_instruction(state.get("meta", {}).get("halcyon_grammar", ""))),
         ]
         trimmed = self._fit_to_window(blocks, style_notes, valid_history)
         parts = [text for _, text in blocks if text]
@@ -735,14 +736,20 @@ class PromptComposer:
         """The Halcyon gate's grammar, or nothing when no boundary is loaded."""
         if not grammar or not isinstance(grammar, str):
             return ""
+        # The phase 3 probe: told only "when you want to", the model kept nothing it was told.
         return (
             "=== HALCYON GATE GOVERNANCE ===\n"
             "You write in plain language. That is what you say, and it is ALWAYS kept, word for word, as your rationale. Say what you actually think.\n\n"
-            "When you want to change your memory or the world, add ONE literal NOMINATE line on its own line; the person never sees it.\n"
+            "The conversation fades: it is not kept between sessions. What you remember through the gate is kept "
+            "and handed back to you later, so it is the only way you will know it next time.\n"
+            "When the person tells you something worth knowing later (a name, a preference, a fact about their life "
+            "or work, a decision, something established in the story), keep it: end your reply with ONE literal "
+            "NOMINATE line on its own line. The person never sees it.\n"
             "Syntax: NOMINATE what=<path> verb=<verb> args=<key>:<value>; <key>:<value>\n"
-            "Use exactly the args listed for the verb. At most one NOMINATE line per reply.\n\n"
+            "Use exactly the args listed for the verb, and a key that says what the memory is (e.g. sister_name). "
+            "At most one NOMINATE line per reply.\n\n"
             "Allowed grammar:\n" + grammar + "\n\n"
-            "If you just want to talk, do not output any NOMINATE lines."
+            "Small talk needs no NOMINATE line."
         )
 
     def _fit_to_window(self, blocks: list, style_notes: list, valid_history: list) -> list:

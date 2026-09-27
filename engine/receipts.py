@@ -16,6 +16,7 @@ CORE_SUBSYSTEMS = (
     "embeddings.embed_batch",
     "governor.bitmap_gate",
     "halcyon.gate",
+    "halcyon.keeper",
     "halcyon.recall",
     "lattice.infer_and_couple",
     "memory.retrieve_semantic",

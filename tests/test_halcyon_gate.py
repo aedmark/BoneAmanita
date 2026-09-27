@@ -49,6 +49,13 @@ class TestHalcyonGate(BoneTestCase):
         self.assertIn("verb=remember (writes self/memory/) args=key:<str>; value:<str>", prompt)
         self.assertNotIn("args=...", prompt)
 
+    def test_the_gate_block_comes_before_the_person_and_gives_the_reason(self):
+        # After the reply cue, the model read it as part of its own turn.
+        self.turn(PROSE)
+        prompt = self.engine.cortex.llm.generate.call_args[0][0]
+        self.assertLess(prompt.index("=== HALCYON GATE GOVERNANCE ==="), prompt.index("=== PARTNER INPUT ==="))
+        self.assertIn("The conversation fades", prompt)
+
     def test_the_limits_come_from_the_boundary(self):
         # build_invariants was handed the limits dict and looked for "limits" inside it: the caps fell to 10000.
         breach = self.engine.gate_invariants["self_within_budget"]
@@ -338,3 +345,145 @@ class MemoriesRankedByMeaning(BoneTestCase):
             _, receipt = self.remember_and_ask(ConceptEmbedder())
         self.assertEqual((receipt.inputs["ranked_by"], receipt.degraded), ("words", True))
         self.assertIn("disk gone", receipt.detail)
+
+
+class TheMemoryKeeper(BoneTestCase):
+    """Memory phase 3: the chat model almost never wrote its own NOMINATE line, so after the reply a
+    short keeper call says what the person told it worth keeping, and the engine nominates that."""
+
+    SISTER = "By the way, my sister's name is Odalys."
+
+    def setUp(self):
+        super().setUp()
+        self.engine.memory_keeper.enabled = True
+        self.engine.cortex.dspy_critic.enabled = False
+        self.keeper_prompts = []
+
+    def respond(self, reply="That's a lovely name.", keeps="sister_name = Odalys"):
+        def generate(prompt, *a, **k):
+            if prompt.startswith("You keep the memory"):
+                self.keeper_prompts.append(prompt)
+                if isinstance(keeps, Exception):
+                    raise keeps
+                return keeps
+            return reply
+
+        self.engine.cortex.llm.generate = MagicMock(side_effect=generate)
+
+    def receipt(self):
+        return ReceiptLedger.get_instance().for_subsystem("halcyon.keeper")[-1]
+
+    def test_what_the_person_says_is_kept_through_the_gate(self):
+        self.respond()
+        result = self.engine.process_turn(self.SISTER)
+        self.assertEqual(self.engine.store.state()[1]["self"]["memory"].get("sister_name"), "Odalys")
+        self.assertEqual(ReceiptLedger.get_instance().for_subsystem("halcyon.gate")[-1].effect, "ACCEPT")
+        self.assertEqual(self.receipt().effect, "PROPOSED")
+        self.assertNotIn("NOMINATE", result.get("ui", ""))
+        (proposal,) = self.engine.store.audit("proposals")
+        self.assertIn("self/memory/sister_name", proposal["raw_line"])
+
+    def test_small_talk_keeps_nothing(self):
+        self.respond(keeps="NONE")
+        self.engine.process_turn("Anyway, work has been a lot lately.")
+        self.assertEqual(self.engine.store.state()[0], 0)
+        self.assertEqual((self.receipt().effect, self.receipt().result_count), ("NONE", 0))
+
+    def test_a_draft_that_nominates_itself_is_left_alone(self):
+        self.respond(reply=f"{PROSE}\n{REMEMBER}")
+        self.engine.process_turn(self.SISTER)
+        self.assertEqual(self.keeper_prompts, [])
+        self.assertEqual(self.engine.store.state()[1]["self"]["memory"], {"river": "runs east past the mill"})
+
+    def test_it_sees_what_is_already_kept(self):
+        self.respond()
+        self.engine.process_turn(self.SISTER)
+        self.respond(keeps="NONE")
+        self.engine.process_turn("She's staying for a week.")
+        self.assertIn("\nsister_name = Odalys\n", self.keeper_prompts[-1])
+        self.assertIn('The person said: "She\'s staying for a week."', self.keeper_prompts[-1])
+
+    def test_a_failed_keeper_call_costs_only_the_memory(self):
+        self.respond(keeps=TimeoutError("ollama went away"))
+        result = self.engine.process_turn(self.SISTER)
+        self.assertIn("lovely name", result.get("ui", ""))
+        self.assertEqual((self.receipt().effect, self.receipt().degraded), ("FAILED", True))
+        self.assertEqual(self.engine.store.state()[0], 0)
+        # The draft is still adjudicated and audited.
+        self.assertEqual(ReceiptLedger.get_instance().for_subsystem("halcyon.gate")[-1].effect, "NOOP")
+
+    def test_the_usage_of_the_reply_is_kept(self):
+        from engine.gate.keeper import MemoryKeeper
+
+        # The census reads the reply's token usage after the turn; the keeper call must not replace it.
+        llm = MagicMock(last_usage={"prompt_tokens": 1234})
+        llm.generate = MagicMock(side_effect=lambda *a: setattr(llm, "last_usage", {"prompt_tokens": 90}) or "NONE")
+        keeper = MemoryKeeper(llm)
+        keeper.propose(self.SISTER, {})
+        self.assertEqual(keeper.llm.last_usage, {"prompt_tokens": 1234})
+
+    def test_the_line_is_always_well_formed(self):
+        from engine.gate.keeper import MemoryKeeper
+
+        line = MemoryKeeper(None).line_for
+        self.assertEqual(line("sister_name = Odalys"),
+                         "NOMINATE what=self/memory/sister_name verb=remember args=key:sister_name; value:Odalys")
+        self.assertEqual(line("- `Dog Name` = Brisket; hates the vacuum"),
+                         "NOMINATE what=self/memory/dog_name verb=remember args=key:dog_name; value:Brisket, hates the vacuum")
+        # The probe's second turn: with a memory shown, the model answered in the template's own words.
+        self.assertEqual(line("key = dog_name: Brisket (hates vacuum)"),
+                         "NOMINATE what=self/memory/dog_name verb=remember args=key:dog_name; value:Brisket (hates vacuum)")
+        for answer in ("NONE", "None.", "NONE of this = worth keeping", "I think the sister matters.", "", "= no key",
+                       "key = Brisket", "key = name: Brisket"):
+            self.assertIsNone(line(answer), answer)
+
+    def test_the_keeper_is_on_unless_configured_off(self):
+        from main import BoneAmanita
+
+        config = {k: v for k, v in self.test_config.items() if k != "CORTEX"}
+        engine = BoneAmanita(config=config)
+        self.addCleanup(self._shutdown_engine, engine)
+        self.assertTrue(engine.memory_keeper.enabled)
+        off = BoneAmanita(config=self.test_config)
+        self.addCleanup(self._shutdown_engine, off)
+        self.assertFalse(off.memory_keeper.enabled)
+
+
+class AHeldTurnHasNoDraft(BoneTestCase):
+    """The probe found a Stage Manager hold left the previous turn's draft in last_model_raw, so the gate
+    adjudicated and audited it again as this turn's reply."""
+
+    def hold(self, message):
+        from archetypes.stage import HOLD, StageManager, Tension, Verdict
+
+        verdict = Verdict(HOLD, "THE STAGE MANAGER", "held for the test", Tension(("MOIRA", "CASSANDRA")), gate="ATP_FLOOR")
+        with patch.object(StageManager, "negotiate", return_value=verdict):
+            return self.engine.process_turn(message)
+
+    def gate_receipts(self):
+        return ReceiptLedger.get_instance().for_subsystem("halcyon.gate")
+
+    def test_the_previous_draft_is_not_adjudicated_again(self):
+        TestHalcyonGate.turn(self, f"{PROSE}\n{REMEMBER}")
+        before = len(self.gate_receipts())
+        result = self.hold("say something about all this")
+        self.assertEqual(result.get("type"), "SILENCE")
+        self.assertEqual(len(self.gate_receipts()), before)
+        self.assertEqual(len(self.engine.store.audit("turns")), 1)
+
+    def test_what_the_person_said_is_still_kept(self):
+        self.engine.memory_keeper.enabled = True
+        self.engine.cortex.llm.generate = MagicMock(return_value="deploy_window = Thursdays at 2pm")
+        self.hold("Our deploy window is Thursdays at 2pm.")
+        self.assertEqual(self.engine.store.state()[1]["self"]["memory"].get("deploy_window"), "Thursdays at 2pm")
+        (receipt,) = self.engine.store.audit("receipts")
+        self.assertTrue(receipt["rationale"].startswith("(No reply this turn: the Stage Manager held the floor."))
+        assistant = next(m for m in self.engine.store.audit("messages") if m["role"] == "assistant")
+        self.assertEqual(assistant["display_content"], "")
+
+    def test_a_held_turn_with_nothing_to_keep_records_nothing(self):
+        self.engine.memory_keeper.enabled = True
+        self.engine.cortex.llm.generate = MagicMock(return_value="NONE")
+        self.hold("hm")
+        self.assertEqual(self.gate_receipts(), [])
+        self.assertEqual(self.engine.store.audit("turns"), [])

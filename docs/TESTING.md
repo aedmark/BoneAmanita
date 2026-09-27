@@ -437,6 +437,18 @@ digestion paid at what voltage, phase crashes and every log line. The
 which is never empty, so count silences with `blank`; `ui_tail` is the
 screen. `BONE_MODEL` and `PACE` override the model and the pause.
 
+### `memory_probe.py`: does the model keep what it is told?
+
+Memory phase 3. `python tools/memory_probe.py scratch/OUT.jsonl [MODE ...]`
+(CONVERSATION, TECHNICAL, CREATIVE, ADVENTURE; each in a fresh process after
+`reset.sh`) states three facts with ordinary talk between them, purges the
+dialogue so they can only come back through memory, then asks for each. Per
+fact: `nominated` (a NOMINATE line naming it reached the gate), `kept` (it is
+in the store's canonical state), `recalled` (it was in the question prompt's
+WHAT YOU REMEMBER block), `elsewhere` (it was elsewhere in that prompt, i.e.
+another memory system) and `used` (the reply contains it). `--report OUT.jsonl`
+prints the table again. `BONE_MODEL` and `PACE` as above.
+
 ### `audit_somatic.py` — a different axis, worth knowing about separately
 
 Older sibling (ROADMAP C5/D2), not part of this comparison chain. Answers a
