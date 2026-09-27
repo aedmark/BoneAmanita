@@ -110,6 +110,10 @@ class Store:
           singleton INTEGER PRIMARY KEY CHECK(singleton = 1), sequence INTEGER NOT NULL,
           world_json TEXT NOT NULL, self_json TEXT NOT NULL, updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS learned_words (
+          category TEXT NOT NULL, word TEXT NOT NULL, learned_tick INTEGER NOT NULL,
+          updated_at REAL NOT NULL, PRIMARY KEY(category, word)
+        );
         CREATE TABLE IF NOT EXISTS engine_checkpoint (
           singleton INTEGER PRIMARY KEY CHECK(singleton = 1), snapshot_json TEXT NOT NULL,
           state_sequence INTEGER NOT NULL, updated_at REAL NOT NULL
@@ -470,6 +474,40 @@ class Store:
                 (payload, sequence, now),
             )
         return sequence
+
+    def learned_vocabulary(self) -> dict[str, dict[str, int]]:
+        """Every word the lexicon taught itself, by category (was saves/cortex_hive.json)."""
+        db = self.connect()
+        try:
+            rows = db.execute("SELECT category, word, learned_tick FROM learned_words").fetchall()
+        finally:
+            db.close()
+        vocab: dict[str, dict[str, int]] = {}
+        for row in rows:
+            vocab.setdefault(row["category"], {})[row["word"]] = row["learned_tick"]
+        return vocab
+
+    def learn_word(self, category: str, word: str, tick: int, evicted: str | None = None) -> None:
+        """One learned word, durable at once; the word it evicted from a full category goes in the same transaction."""
+        now = time.time()
+        with self.transaction(immediate=True) as db:
+            if evicted:
+                db.execute("DELETE FROM learned_words WHERE category=? AND word=?", (category, evicted))
+            db.execute(
+                "INSERT INTO learned_words VALUES (?,?,?,?) ON CONFLICT(category, word) DO UPDATE SET "
+                "learned_tick=excluded.learned_tick, updated_at=excluded.updated_at",
+                (category, word, int(tick), now),
+            )
+
+    def save_learned_vocabulary(self, vocab: dict) -> None:
+        """Replace the whole learned vocabulary (the import of an old hive, and the shutdown sync)."""
+        now = time.time()
+        with self.transaction(immediate=True) as db:
+            db.execute("DELETE FROM learned_words")
+            db.executemany(
+                "INSERT INTO learned_words VALUES (?,?,?,?)",
+                [(cat, word, int(tick), now) for cat, words in vocab.items() for word, tick in words.items()],
+            )
 
     def checkpoint(self) -> dict | None:
         """The last saved resume point, or None if the engine has never saved one."""

@@ -52,10 +52,11 @@ embedding failures use the fallback contract described in Honest limits below.
 ### Files it writes
 
 `config.json` is generated on first run and is not in the repo.
-`saves/cortex_hive.json` holds every word the engine has taught itself;
-deleting it is the clean way to make it forget without touching your curated
-lists. `saves/iris.db` is the Halcyon store (SQLite): the gate's memory and
-world graphs, its full audit trail, and the resume checkpoint (session state
+`saves/iris.db` is the Halcyon store (SQLite): every word the engine has
+taught itself (the `learned_words` table, written as each is learned; clearing
+that table is the clean way to make it forget without touching your curated
+lists, and an older `saves/cortex_hive.json` is imported once), the gate's
+memory and world graphs, its full audit trail, and the resume checkpoint (session state
 and dialogue, one row replaced in a transaction, so a failed save preserves
 the previous checkpoint). An older `saves/quicksave.json` is imported on the
 next boot and renamed `quicksave.json.imported`; the ADVENTURE rooms and items

@@ -600,7 +600,7 @@
     "hive_corruption": "[HIVE]: Memory corruption detected. Starting fresh. ({e})",
     "sys_nominal": "[LEXICON]: Systems Nominal. {total_words} words loaded.",
     "sys_init_fail": "[LEXICON]: Initialization Failed: {e}",
-    "hive_saved": "[LEXICON]: Hive saved to disk.",
+    "hive_saved": "[LEXICON]: Learned words saved.",
     "default_random_word": "void"
   },
   "machine_strings": {

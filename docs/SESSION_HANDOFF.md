@@ -120,6 +120,19 @@ Gordon's call: the store is the only save, and the FractalOS file is written on 
   and no file written, a second engine resumes in the same room with its exits, the legacy import and
   rename, `/export` writing a FractalOS adventure; each mutation checked. Full suite 799 passed, 5 skipped.
 - Still open: memory phase 4, the world graph (not the examine cache or these rooms) as the story's truth.
+  Committed as 20.7.4.46.
+
+**3c, the learned lexicon (2026-09-27, not yet committed).** `saves/cortex_hive.json` was written only at
+shutdown (`LexiconService.save`, from Chronos), so a crash lost every word learned since boot.
+- The store has a `learned_words` table (category, word, learned tick): `learned_vocabulary()`,
+  `learn_word(category, word, tick, evicted)` and `save_learned_vocabulary(vocab)`.
+- The engine attaches its store to its lexicon at boot (`LexiconService.attach_store`); `teach` writes each
+  new word at once, and the word a full category (1000) evicts leaves the store in the same transaction.
+  0.1 ms a word. The shutdown `save` still syncs the whole vocabulary to the store; no file is written.
+  An old `cortex_hive.json` is imported once and renamed `.imported`.
+- Tests (`tests/test_learned_words.py`, 5): a word is in the store the moment it is learned, the next
+  engine knows it, eviction reaches the store, the shutdown sync writes the store and no file, the legacy
+  import; each mutation checked. README updated. Full suite 804 passed, 5 skipped.
 - Correction to the 09-25 and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which
   is never empty. Counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies,
   nearly all a Warden JSON rejection on the last allowed draft (that path is gone with the JSON gate), and

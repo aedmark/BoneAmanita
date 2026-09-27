@@ -34,6 +34,8 @@ class LexiconStore:
         self.SOLVENTS = set()
         self.REVERSE_INDEX = defaultdict(set)
         self.hive_loaded = False
+        # The Halcyon store, once the engine attaches it; learned words live there.
+        self.persistence = None
 
     def load_vocabulary(self):
         data = LoreManifest.get_instance().get("LEXICON") or {}
@@ -46,48 +48,46 @@ class LexiconStore:
                 self.VOCAB[cat] = word_set
                 for w in word_set:
                     self._index_word(w, cat)
-        self._load_hive()
 
     def _index_word(self, word: str, category: str):
         self.REVERSE_INDEX[word.lower()].add(category)
         self._morphological_lookup.cache_clear()
 
-    def _load_hive(self):
-        if not os.path.exists(self.HIVE_FILENAME):
-            return
+    def attach_persistence(self, store) -> None:
+        """Learned words live in the Halcyon store; an old cortex_hive.json is imported once and renamed."""
+        self.persistence = store
         try:
-            with open(self.HIVE_FILENAME, "r", encoding="utf-8") as f:
-                hive_data = json.load(f)
-            if not isinstance(hive_data, dict):
-                return
-            count = 0
-            for cat, entries in hive_data.items():
-                self.LEARNED_VOCAB.setdefault(cat, {}).update(entries)
-                for word in entries:
-                    self._index_word(word, cat)
-                    count += 1
-            self.hive_loaded = True
-            if msg := ux("lexicon_strings", "hive_restored"):
-                print(f"{Prisma.CYN}{msg.format(count=count)}{Prisma.RST}")
-        except (IOError, json.JSONDecodeError):
+            vocab = store.learned_vocabulary()
+            if not vocab and os.path.exists(self.HIVE_FILENAME):
+                with open(self.HIVE_FILENAME, "r", encoding="utf-8") as f:
+                    legacy = json.load(f)
+                if isinstance(legacy, dict):
+                    store.save_learned_vocabulary(legacy)
+                    vocab = store.learned_vocabulary()
+                os.replace(self.HIVE_FILENAME, self.HIVE_FILENAME + ".imported")
+        except (OSError, ValueError) as e:
             if msg := ux("lexicon_strings", "hive_corruption"):
-                print(
-                    f"{Prisma.OCHRE}{msg.format(e='Amnesia detected. Rebuilding pathways.')}{Prisma.RST}"
-                )
+                print(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}")
+            return
+        count = 0
+        for cat, entries in vocab.items():
+            self.LEARNED_VOCAB.setdefault(cat, {}).update(entries)
+            for word in entries:
+                self._index_word(word, cat)
+                count += 1
+        self.hive_loaded = bool(count)
+        if count and (msg := ux("lexicon_strings", "hive_restored")):
+            print(f"{Prisma.CYN}{msg.format(count=count)}{Prisma.RST}")
 
     def save_hive(self):
+        """Sync the whole learned vocabulary to the store (each word is already written as it is learned)."""
+        if self.persistence is None:
+            return
         try:
-            with open(self.HIVE_FILENAME, "w", encoding="utf-8") as f:
-                json.dump(self.LEARNED_VOCAB, f, indent=2)
-        except IOError as e:
+            self.persistence.save_learned_vocabulary(self.LEARNED_VOCAB)
+        except Exception as e:
             if msg := ux("lexicon_strings", "hive_corruption"):
-                print(
-                    f"{Prisma.RED}{msg.format(e=f'Failed to save Hive memory: {e}')}{Prisma.RST}"
-                )
-            else:
-                print(
-                    f"{Prisma.RED}CRITICAL: Failed to save Hive memory to disk: {e}{Prisma.RST}"
-                )
+                print(f"{Prisma.RED}{msg.format(e=f'Failed to save the learned vocabulary: {e}')}{Prisma.RST}")
 
     def get_raw(self, category: str) -> Set[str]:
         base = self.VOCAB.get(category, set())
@@ -126,6 +126,7 @@ class LexiconStore:
         cat_dict = self.LEARNED_VOCAB.setdefault(category, {})
         if w in cat_dict:
             return False
+        oldest_word = None
         if len(cat_dict) >= 1000:
             oldest_word = min(cat_dict, key=lambda k: int(cat_dict[k]))
             del cat_dict[oldest_word]
@@ -135,6 +136,11 @@ class LexiconStore:
                     del self.REVERSE_INDEX[oldest_word]
         cat_dict[w] = tick
         self._index_word(w, category)
+        if self.persistence is not None:
+            try:
+                self.persistence.learn_word(category, w, tick, evicted=oldest_word)
+            except Exception as e:
+                logger.warning("Could not save the learned word %r: %s", w, e)
         return True
 
     def harvest(self, text: Any) -> Dict[str, List[str]]:
@@ -400,6 +406,10 @@ class LexiconService:
 
     def initialize(self):
         self._INITIALIZED = True
+
+    def attach_store(self, store) -> None:
+        """Where learned words are kept: the engine's Halcyon store."""
+        self._STORE.attach_persistence(store)
 
     def get_store(self):
         return self._STORE
