@@ -21,8 +21,8 @@ engine learns or needs to resume.
   ADVENTURE rooms plus `/export` for FractalOS (20.7.4.46), 3c learned words (20.7.4.47), 3d the Akashic
   record (20.7.4.48), 3e the learned lore overlay (20.7.4.49), 3f the user profile, wired in for the
   first time (20.7.4.50), 3g the Oroboros lineage, with inherited scars applied at boot again
-  (20.7.4.51). Step 3 is complete.
-- **Next:** memory recall phases 2 to 6 (ROADMAP).
+  (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52).
+- **Next:** memory recall phases 3 to 6 (ROADMAP); phase 3 is the real-model probe.
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -223,6 +223,29 @@ next generation were `legacy.json` in the repo root; they are now the `oroboros.
   import; a new generation starts scarred (trauma, the boot turn's starting drag, the OROBOROS log line),
   the trauma is added once per generation across a resume, an inherited generation adds none. Each
   mutation checked (12; one survivor was a redundant guard, removed). Full suite 819 passed, 5 skipped.
+
+**Memory recall phase 2, ranking by meaning (2026-09-27, 20.7.4.52).** Phase 1 ranked the
+model's memories by shared words, so a question that paraphrased a memory never found it.
+- `engine/gate/recall.py` `meaning_scores` embeds each `self/memory` entry once per content and embedding
+  model (keyed by a hash of "key: value" and `backend:model`) into the store's new `memory_vectors` table,
+  embeds the turn, and scores each memory by cosine similarity; `recall(..., scores=)` ranks by them, with
+  recency breaking ties. Embedding happens at a memory's first recall rather than at the gate's write, which
+  also covers memories kept before this; a changed value or a new model re-embeds, and vectors of memories
+  no longer held are dropped.
+- Hash vectors carry no meaning, so when the embedder is on its hash fallback (or falls back mid-batch)
+  nothing is embedded or stored and memories rank by shared words, as before. A failure in the ranking
+  also falls back, with a WARN. The `halcyon.recall` receipt carries `ranked_by` and is degraded, with the
+  reason, whenever memories were ranked by words.
+- The cortex reaches the embedder through `_recall_embedder()`, so tests swap in a fake without touching
+  the other subsystems that share the singleton.
+- Live check with `nomic-embed-text` (768d): "Where can I find something to see by?" finds the lantern,
+  "What do I still have to pay back?" the ferryman debt, "Is there anywhere to buy food?" the baker; none
+  shares a word with its memory.
+- Tests (`tests/test_halcyon_gate.py`, `MemoriesRankedByMeaning`, 7, with a concept-vector embedder):
+  meaning finds what shares no words, each memory is embedded once (and re-embedded when changed, dropped
+  when gone), a new model re-embeds, hash vectors never rank or get stored, and through a real turn: the
+  prompt leads with the memory that matches by meaning, a degraded embedder and a failing store fall back
+  to words with a degraded receipt. Each mutation checked (10). Full suite 826 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

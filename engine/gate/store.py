@@ -117,6 +117,10 @@ class Store:
           category TEXT NOT NULL, word TEXT NOT NULL, learned_tick INTEGER NOT NULL,
           updated_at REAL NOT NULL, PRIMARY KEY(category, word)
         );
+        CREATE TABLE IF NOT EXISTS memory_vectors (
+          key TEXT PRIMARY KEY, text_hash TEXT NOT NULL, model TEXT NOT NULL,
+          vector_json TEXT NOT NULL, updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS engine_checkpoint (
           singleton INTEGER PRIMARY KEY CHECK(singleton = 1), snapshot_json TEXT NOT NULL,
           state_sequence INTEGER NOT NULL, updated_at REAL NOT NULL
@@ -530,6 +534,29 @@ class Store:
                 "INSERT INTO learned_words VALUES (?,?,?,?)",
                 [(cat, word, int(tick), now) for cat, words in vocab.items() for word, tick in words.items()],
             )
+
+    def memory_vectors(self) -> dict[str, tuple[str, str, list]]:
+        """Each self/memory entry's embedding, as {key: (text_hash, model, vector)}."""
+        db = self.connect()
+        try:
+            rows = db.execute("SELECT key, text_hash, model, vector_json FROM memory_vectors").fetchall()
+        finally:
+            db.close()
+        return {r["key"]: (r["text_hash"], r["model"], json.loads(r["vector_json"])) for r in rows}
+
+    def save_memory_vectors(self, rows: list, keep: set) -> None:
+        """Upsert (key, text_hash, model, vector) rows and drop vectors of memories no longer held."""
+        now = time.time()
+        with self.transaction(immediate=True) as db:
+            db.executemany(
+                "INSERT INTO memory_vectors VALUES (?,?,?,?,?) ON CONFLICT(key) DO UPDATE SET "
+                "text_hash=excluded.text_hash, model=excluded.model, vector_json=excluded.vector_json, "
+                "updated_at=excluded.updated_at",
+                [(k, h, m, json.dumps(v), now) for k, h, m, v in rows],
+            )
+            for (key,) in db.execute("SELECT key FROM memory_vectors").fetchall():
+                if key not in keep:
+                    db.execute("DELETE FROM memory_vectors WHERE key=?", (key,))
 
     def checkpoint(self) -> dict | None:
         """The last saved resume point, or None if the engine has never saved one."""

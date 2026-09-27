@@ -996,24 +996,44 @@ class TheCortex:
         state = getattr(ctx, "halcyon_state", None)
         if not state:
             return None
-        from engine.gate.recall import recall
+        from engine.gate.recall import meaning_scores, recall
         from engine.receipts import issue as issue_receipt
 
         c_cfg = safe_get(self.cfg, "CORTEX", {})
+        store = getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "store", None)
+        scores, why = None, "the embedder is on its hash fallback"
+        if store is not None:
+            try:
+                scores = meaning_scores(state, user_input, store, self._recall_embedder())
+            except Exception as e:
+                why = f"meaning ranking failed ({type(e).__name__}: {e})"
+                if self.events:
+                    self.events.log(f"Halcyon recall fell back to word overlap: {why}", "CORTEX", "WARN")
         found = recall(
             state,
             user_input,
             max_memories=int(safe_get(c_cfg, "HALCYON_RECALL_MEMORIES", 12)),
             max_facts=int(safe_get(c_cfg, "HALCYON_RECALL_FACTS", 12)),
+            scores=scores,
         )
+        held = found["held"]
+        by_words = bool(held["memories"]) and found["ranked_by"] == "words"
         issue_receipt(
             "halcyon.recall",
             "handed the model what it kept through the gate",
             result_count=len(found["memories"]) + len(found["facts"]),
-            inputs=dict(found["held"]),
-            detail="" if found["held"]["memories"] or found["held"]["facts"] else "nothing kept yet",
+            degraded=by_words,
+            inputs={**held, "ranked_by": found["ranked_by"]},
+            detail=f"memories ranked by shared words: {why}" if by_words
+            else "" if held["memories"] or held["facts"] else "nothing kept yet",
         )
         return found
+
+    @staticmethod
+    def _recall_embedder():
+        from spores.embeddings import SemanticEmbedder
+
+        return SemanticEmbedder.get_instance()
 
     @staticmethod
     def _strip_nominations(text: str) -> str:

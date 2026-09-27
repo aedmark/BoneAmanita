@@ -231,3 +231,110 @@ class TheModelGetsItsMemoriesBack(BoneTestCase):
 
         found = recall(gate.state, "Tell me about Riverhold.", max_facts=1)
         self.assertEqual(found["facts"], ["Riverhold sits on the Long River"])
+
+
+class ConceptEmbedder:
+    """A stand-in with a real notion of meaning: each dimension is a concept, scored by its words."""
+
+    CONCEPTS = (
+        {"lantern", "lamp", "light", "dark", "see"},
+        {"river", "water", "stream", "bridge"},
+        {"bread", "oven", "hungry", "eat"},
+    )
+
+    def __init__(self, backend="fake", model="concepts"):
+        self.backend, self.model, self.degraded, self.batches = backend, model, False, []
+
+    def embed_batch(self, texts):
+        self.batches.append(list(texts))
+        words = [set(str(t).lower().replace(":", " ").replace("?", " ").split()) for t in texts]
+        return [[float(len(w & c)) for c in self.CONCEPTS] + [0.01] for w in words]
+
+
+class MemoriesRankedByMeaning(BoneTestCase):
+    """Memory phase 2: memories come back by what they mean, embedded once each; word overlap stays the
+    fallback when the embedder is on its hash fallback."""
+
+    MEMORY = {
+        "lantern": "the brass lamp hangs by the north door",
+        **{f"note{i}": f"an ordinary detail number {i}" for i in range(6)},
+    }
+    ASK = "Where can I find something to see by?"
+
+    def state(self, memory=None):
+        return {"self": {"memory": dict(memory or self.MEMORY)}, "world": {"nodes": {}, "edges": [], "constraints": []}}
+
+    def test_meaning_finds_what_shares_no_words(self):
+        from engine.gate.recall import meaning_scores, recall
+
+        state = self.state()
+        by_words = recall(state, self.ASK, max_memories=1)
+        self.assertNotEqual(by_words["memories"][0][0], "lantern")
+        scores = meaning_scores(state, self.ASK, self.engine.store, ConceptEmbedder())
+        by_meaning = recall(state, self.ASK, max_memories=1, scores=scores)
+        self.assertEqual((by_meaning["memories"][0][0], by_meaning["ranked_by"]), ("lantern", "meaning"))
+
+    def test_each_memory_is_embedded_once(self):
+        from engine.gate.recall import meaning_scores
+
+        embedder, store = ConceptEmbedder(), self.engine.store
+        meaning_scores(self.state(), self.ASK, store, embedder)
+        self.assertEqual(len(embedder.batches[-1]), 1 + len(self.MEMORY))
+        meaning_scores(self.state(), "And the river?", store, embedder)
+        self.assertEqual(embedder.batches[-1], ["And the river?"])
+
+        changed = dict(self.MEMORY, lantern="the lamp went out")
+        changed.pop("note0")
+        meaning_scores(self.state(changed), self.ASK, store, embedder)
+        self.assertEqual(embedder.batches[-1], [self.ASK, "lantern: the lamp went out"])
+        self.assertNotIn("note0", store.memory_vectors())
+
+    def test_a_new_embedding_model_re_embeds(self):
+        from engine.gate.recall import meaning_scores
+
+        meaning_scores(self.state(), self.ASK, self.engine.store, ConceptEmbedder())
+        other = ConceptEmbedder(model="concepts-v2")
+        meaning_scores(self.state(), self.ASK, self.engine.store, other)
+        self.assertEqual(len(other.batches[-1]), 1 + len(self.MEMORY))
+
+    def test_hash_vectors_never_rank(self):
+        from engine.gate.recall import meaning_scores
+
+        degraded = ConceptEmbedder()
+        degraded.degraded = True
+        self.assertIsNone(meaning_scores(self.state(), self.ASK, self.engine.store, degraded))
+        self.assertEqual(degraded.batches, [])
+
+        failing = ConceptEmbedder()
+        failing.embed_batch = lambda texts: (setattr(failing, "degraded", True), [[0.0]] * len(texts))[1]
+        self.assertIsNone(meaning_scores(self.state(), self.ASK, self.engine.store, failing))
+        self.assertEqual(self.engine.store.memory_vectors(), {})
+
+    def remember_and_ask(self, embedder):
+        for key, value in self.MEMORY.items():
+            TestHalcyonGate.turn(self, f"Noted.\nNOMINATE what=self/memory/{key} verb=remember args=key:{key}; value:{value}", "Noted?")
+        with patch.object(type(self.engine.cortex), "_recall_embedder", return_value=embedder):
+            TestHalcyonGate.turn(self, "Let me think.", self.ASK)
+        prompt = self.engine.cortex.llm.generate.call_args[0][0]
+        return prompt, ReceiptLedger.get_instance().for_subsystem("halcyon.recall")[-1]
+
+    def test_a_turn_hands_back_memories_by_meaning(self):
+        prompt, receipt = self.remember_and_ask(ConceptEmbedder())
+        # The lantern is the oldest memory and shares no word with the question, so only meaning puts it first.
+        block = prompt.split("=== WHAT YOU REMEMBER ===", 1)[1]
+        first = next(line for line in block.splitlines() if line.startswith("- "))
+        self.assertEqual(first, "- lantern: the brass lamp hangs by the north door")
+        self.assertEqual((receipt.inputs["ranked_by"], receipt.degraded), ("meaning", False))
+
+    def test_a_degraded_embedder_falls_back_to_words_and_says_so(self):
+        degraded = ConceptEmbedder()
+        degraded.degraded = True
+        _, receipt = self.remember_and_ask(degraded)
+        self.assertEqual((receipt.inputs["ranked_by"], receipt.degraded), ("words", True))
+        self.assertIn("hash fallback", receipt.detail)
+
+    def test_a_failing_store_falls_back_to_words_and_says_so(self):
+        with patch.object(type(self.engine.store), "memory_vectors", side_effect=OSError("disk gone")):
+            _, receipt = self.remember_and_ask(ConceptEmbedder())
+        self.assertEqual((receipt.inputs["ranked_by"], receipt.degraded), ("words", True))
+        self.assertIn("disk gone", receipt.detail)
