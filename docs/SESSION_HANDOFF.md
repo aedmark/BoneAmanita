@@ -23,7 +23,7 @@ engine learns or needs to resume.
   first time (20.7.4.50), 3g the Oroboros lineage, with inherited scars applied at boot again
   (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52). Phase 3,
   the probe and the memory keeper (20.7.4.53). ADVENTURE answers questions before the room
-  (20.7.4.54).
+  (20.7.4.54). Room titles name the place, never the zone (20.7.4.55).
 - **Next:** memory recall phases 4 to 6 (ROADMAP).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
@@ -303,8 +303,27 @@ pushing the same way.
   the room ("The silver key is under the floorboard by the hearth."). The probe now keeps the whole screen.
 - Tests: the ADVENTURE prompt carries the rule; `test_nothing_kept_means_no_block` now looks for the
   block's header, since the rule names it. Full suite 839 passed, 5 skipped.
-- Noticed, not touched: ADVENTURE room titles are zone names (**PROTO_COSMOS**, **ORBITAL**) rather than
-  place names.
+- Noticed: ADVENTURE room titles were zone names (**PROTO_COSMOS**, **ORBITAL**); fixed next.
+
+**Room titles name the place, never the zone (2026-09-27, 20.7.4.55).** Gordon's law: an ADVENTURE
+room title describes the room; zone and orbit labels are for systems-level debugging (TECHNICAL, the DEEP
+HUD, the log panel).
+- Cause: SHARED REALITY's CURRENT LOCATION was the physics orbit (VOID_DRIFT, PROTO_COSMOS) and the
+  Infocom template's title slot was "**[Location Name]**", so the model copied the zone into the title.
+  Titles also name the room in the map, so rooms were being cached under zone names.
+- The prompt now gives the room: CURRENT LOCATION is the current room's name, or "Not named yet. Give this
+  place a name of its own." when there is none, never the orbit (a boot seed like "A quiet room" still
+  passes). The title slot reads "**[Name of this place]**" and a new rule 8, ROOM TITLES, says a title
+  names the place the way a person would, never a system label, zone or code word in capitals.
+- Guard: `mechanics/projector.py` `is_system_label` (the known orbit and zone labels in capitals, or
+  anything CAPS_WITH_UNDERSCORES; "Courtyard" or "Orbital Station Nine" pass). A reply titled with one has
+  the title dropped (`drop_title`) before it is shown or mapped, with a log line for the debug panel. It is
+  dropped rather than replaced with the last room's name, which would be wrong right after a move.
+- Measured on the captured prompt (gemma4:12b, 9 samples: a question, a look, a move): zone titles 6/9
+  before, 0/9 after ("The Gray Expanse", "The Great Hall").
+- Tests (`tests/test_room_titles.py`, 4): the labels and place names, drop_title, a zone title never
+  reaches the story or the map, the prompt gives the room and the rule. Each mutation checked (6). Full
+  suite 843 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

@@ -11,6 +11,7 @@ from engine.core import EventBus, JSONEncoder, Prisma
 from engine.presets import BoneConfig
 from mechanics.providers import CLOUD_ENDPOINTS, KEY_ENV, normalize_provider
 from engine.receipts import issue as issue_receipt
+from mechanics.projector import is_system_label
 from engine.struts import safe_get, ux, ux_format
 from body.somatic_metrics import STAGE_DIRECTION, trim_to_sentence_cap
 
@@ -542,6 +543,10 @@ class PromptComposer:
             str(orbit_raw[0])
             if isinstance(orbit_raw, list) and orbit_raw
             else str(orbit_raw) if orbit_raw else "Unknown"
+        )
+        # The orbit is a zone label (VOID_DRIFT); the model used it as the room's title. Give it the room instead.
+        loc = state.get("world", {}).get("room_name") or (
+            "Not named yet. Give this place a name of its own." if is_system_label(loc) or loc == "Unknown" else loc
         )
         loci_desc = state.get("world", {}).get("loci_description", "Unknown.")
         inv_str = self._format_inventory(state, modifiers)

@@ -52,6 +52,34 @@ def _extract_bulleted_block(lines: List[str], start_idx: int) -> List[str]:
     return [i for i in items if i]
 
 
+# Orbits and zones are for TECHNICAL and the DEEP HUD; Gordon: a room title names the place, never these.
+SYSTEM_LABELS = frozenset({
+    "VOID_DRIFT", "PROTO_COSMOS", "ORBITAL", "ORBIT", "LAGRANGE_POINT", "COURTYARD", "AERIE",
+    "THE_FORGE", "THE_MUD", "VOID", "NEBULA", "GRAVITY", "FLOW",
+})
+
+
+def is_system_label(name: Any) -> bool:
+    """A zone or orbit label, or anything written like one (CAPS_WITH_UNDERSCORES)."""
+    text = str(name or "").strip().strip("*").strip()
+    if not text:
+        return False
+    if text.isupper() and text.replace(" ", "_") in SYSTEM_LABELS:
+        return True
+    return bool(re.fullmatch(r"[A-Z0-9]+(?:_[A-Z0-9]+)+", text))
+
+
+def drop_title(raw_text: str) -> str:
+    """The reply without its first bold title (the room's name line)."""
+    lines = raw_text.split("\n")
+    for idx, line in enumerate(lines):
+        heading = _BOLD_HEADING_LINE.match(line.strip())
+        if heading and heading.group(1).strip().rstrip(":").strip().lower() not in ("points of interest", "exits"):
+            del lines[idx]
+            return "\n".join(lines)
+    return raw_text
+
+
 def parse_spatial_reality(raw_text: str) -> Dict[str, Any]:
     node_data = {
         "room_name": "Uncharted Zone",

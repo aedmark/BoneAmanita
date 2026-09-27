@@ -15,7 +15,7 @@ from engine.core import DecisionCrystal, EventBus, LoreManifest, TelemetryServic
 from engine.receipts import issue as issue_receipt
 from mechanics.dspycritic import DSPyCritic
 from mechanics.pragmatics import ThePragmatist
-from mechanics.projector import beautify_thoughts, parse_spatial_reality
+from mechanics.projector import beautify_thoughts, drop_title, is_system_label, parse_spatial_reality
 from mechanics.tools import LibraryGraph, RandomRetrievalNavigator
 from engine.presets import BoneConfig, BonePresets
 from engine.struts import dump_state, safe_get, safe_set, ux, ux_format
@@ -186,6 +186,15 @@ class TheCortex:
         if target_key:
             self.room_examine_cache[target_key] = final_output
 
+    def _place_title(self, text: str) -> str:
+        """Gordon: a room title names the place. A zone label is dropped (a guess could name the wrong room)."""
+        title = parse_spatial_reality(text)["room_name"]
+        if not is_system_label(title):
+            return text
+        if self.events:
+            self.events.log(f"Room title {title!r} was a system label; dropped from the reply.", "CORTEX")
+        return drop_title(text)
+
     def restore_room_state(
         self, visited_rooms: Dict[str, Dict[str, Any]], current_room_id: str
     ) -> None:
@@ -258,6 +267,8 @@ class TheCortex:
             sim_result["world"].setdefault(
                 "loci_description", self.current_room_description
             )
+        if self.active_mode == "ADVENTURE" and self.current_room_name and not is_system_label(self.current_room_name):
+            sim_result["world"]["room_name"] = self.current_room_name
         if halt := self._pre_flight_routing(
             user_input, is_system, is_boot_sequence, ctx, sim_result
         ):
@@ -393,6 +404,7 @@ class TheCortex:
                 )
                 self.svc.bio.mito.adjust_atp(-atp_burn, "LLM Token Generation")
             if val_res.get("valid") and self.active_mode == "ADVENTURE":
+                final_output = self._place_title(final_output)
                 self._record_examine_result(
                     "SYSTEM_INIT" if is_boot_sequence else user_input, final_output
                 )
