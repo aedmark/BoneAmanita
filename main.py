@@ -185,6 +185,7 @@ class BoneAmanita:
         # Halcyon Gate Integration
         db_path = os.environ.get("BONE_HALCYON_DB") or "saves/iris.db"
         self.store = Store(path=db_path, state_dir=os.path.dirname(db_path) or ".")
+        LoreManifest.get_instance().attach_store(self.store)
         self.lex.attach_store(self.store)
         if self.akashic:
             self.akashic.attach_store(self.store)

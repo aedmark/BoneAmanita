@@ -55,7 +55,9 @@ embedding failures use the fallback contract described in Honest limits below.
 `saves/iris.db` is the Halcyon store (SQLite): every word the engine has
 taught itself (the `learned_words` table, written as each is learned; clearing
 that table is the clean way to make it forget without touching your curated
-lists, and an older `saves/cortex_hive.json` is imported once), the gate's
+lists, and an older `saves/cortex_hive.json` is imported once), what the
+engine learns on top of the factory `lore/` files (an overlay per category;
+`lore/` itself is never written), the Akashic record, the gate's
 memory and world graphs, its full audit trail, and the resume checkpoint (session state
 and dialogue, one row replaced in a transaction, so a failed save preserves
 the previous checkpoint). An older `saves/quicksave.json` is imported on the

@@ -80,23 +80,27 @@ class LoreManifestTests(BoneTestCase):
             )
 
     def test_save_to_disk(self):
-        """Learned lore goes to the save directory as an overlay; the factory file is never written."""
+        """Learned lore goes to the Halcyon store as an overlay; the factory file is never written."""
         import json
         import tempfile
+
+        from engine.gate.store import Store
 
         self.lore_patcher.stop()
         try:
             factory, saves = tempfile.mkdtemp(), tempfile.mkdtemp()
             with open(os.path.join(factory, "save_cat.json"), "w", encoding="utf-8") as f:
                 json.dump({"base": 1}, f)
-            manifest = LoreManifest(data_dir=factory, save_dir=saves)
+            store = Store(path=os.path.join(saves, "iris.db"), state_dir=saves)
+            manifest = LoreManifest(data_dir=factory, save_dir=os.path.join(saves, "lore"))
+            manifest.attach_store(store)
             manifest.get("save_cat")
             manifest.inject("save_cat", {"vital_stat": 99.9})
             manifest.save("save_cat")
             with open(os.path.join(factory, "save_cat.json"), encoding="utf-8") as f:
                 self.assertEqual(json.load(f), {"base": 1})
-            with open(os.path.join(saves, "save_cat.json"), encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"vital_stat": 99.9})
+            self.assertEqual(store.record("lore.save_cat"), {"vital_stat": 99.9})
+            self.assertFalse(os.path.exists(os.path.join(saves, "lore")))
         finally:
             self.lore_patcher.start()
 

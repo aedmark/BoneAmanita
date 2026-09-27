@@ -131,6 +131,8 @@ class BoneTestCase(unittest.TestCase):
         self.oroboros_patcher.start()
         self.addCleanup(self.oroboros_patcher.stop)
         self.addCleanup(LoreManifest.get_instance().flush_cache)
+        # The manifest is process-wide; its store is this test's temp store, gone after cleanup.
+        self.addCleanup(setattr, LoreManifest.get_instance(), "persistence", None)
         try:
             self.engine = BoneAmanita(config=self.test_config)
             self.addCleanup(self._shutdown_engine, self.engine)

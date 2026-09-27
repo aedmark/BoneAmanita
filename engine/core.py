@@ -351,11 +351,13 @@ class LoreManifest:
         self.cfg = config_ref or BoneConfig
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.DATA_DIR: str = data_dir or os.path.join(base_dir, "lore")
-        # lore/ is factory data; what the engine learns is an overlay under saves/, cleared by reset.sh.
+        # lore/ is factory data; what the engine learns is an overlay in the Halcyon store ("lore.<category>").
+        # SAVE_DIR is where pre-store overlays were written; attach_store imports them once.
         self.SAVE_DIR: str = save_dir or os.path.join(
             str(safe_get(safe_get(self.cfg, "AKASHIC", {}), "SAVE_DIR", "saves")), "lore"
         )
         self._cache: Dict[str, Any] = {}
+        self.persistence = None
 
     @classmethod
     def get_instance(cls, config_ref=None):
@@ -403,10 +405,43 @@ class LoreManifest:
 
     def _load_from_disk(self, category: str) -> Optional[Dict]:
         factory = self._read_json(self.DATA_DIR, category)
-        learned = self._read_json(self.SAVE_DIR, category)
+        learned = self._learned(category)
         if learned is None:
             return factory
         return self._merge(factory if factory is not None else {}, learned)
+
+    def _learned(self, category: str) -> Any:
+        """The overlay the engine learned for a category; None before a store is attached."""
+        if self.persistence is None:
+            return None
+        try:
+            return self.persistence.record(f"lore.{category}")
+        except Exception as e:
+            logger.warning(f"{Prisma.YEL}Could not read learned lore for '{category}': {e}{Prisma.RST}")
+            return None
+
+    def attach_store(self, store) -> None:
+        """Learned lore lives in the engine's Halcyon store. Old saves/lore/*.json overlays are imported
+        once and renamed .imported; categories already cached get their overlay merged on, not reloaded,
+        so nothing injected at boot is lost."""
+        self.persistence = store
+        if os.path.isdir(self.SAVE_DIR):
+            for name in sorted(os.listdir(self.SAVE_DIR)):
+                if not name.endswith(".json"):
+                    continue
+                category, path = name[: -len(".json")], os.path.join(self.SAVE_DIR, name)
+                try:
+                    if store.record(f"lore.{category}") is None:
+                        with open(path, "r", encoding="utf-8") as f:
+                            store.put_record(f"lore.{category}", json.load(f))
+                    os.replace(path, path + ".imported")
+                except (OSError, ValueError) as e:
+                    logger.warning(f"{Prisma.YEL}Could not import learned lore {path}: {e}. Left in place.{Prisma.RST}")
+        with self._lock:
+            for cat_key in list(self._cache):
+                learned = self._learned(cat_key)
+                if learned is not None:
+                    self._cache[cat_key] = self._merge(self._cache[cat_key] or {}, learned)
 
     def _read_json(self, directory: str, category: str) -> Optional[Dict]:
         safe_category = os.path.basename(category)
@@ -459,14 +494,14 @@ class LoreManifest:
                 f"{Prisma.YEL}Refusing to save null cache for '{cat_key}'.{Prisma.RST}"
             )
             return
+        if self.persistence is None:
+            logger.warning(f"{Prisma.YEL}No store attached; what was learned in '{cat_key}' is not persisted.{Prisma.RST}")
+            return
         factory = self._read_json(self.DATA_DIR, cat_key)
         learned = self._overlay(factory if factory is not None else {}, self._cache[cat_key])
-        filepath = os.path.join(self.SAVE_DIR, f"{cat_key}.json")
         try:
-            os.makedirs(self.SAVE_DIR, exist_ok=True)
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(learned, f, indent=2, cls=JSONEncoder)
-            logger.info(f"{Prisma.GRY}Persisted what was learned in '{cat_key}' to {filepath}.{Prisma.RST}")
+            self.persistence.put_record(f"lore.{cat_key}", json.loads(json.dumps(learned, cls=JSONEncoder)))
+            logger.info(f"{Prisma.GRY}Persisted what was learned in '{cat_key}' to the store.{Prisma.RST}")
         except Exception as e:
             err_msg = f"Failed to save '{cat_key}': {e}"
             logger.critical(f"{Prisma.RED}{err_msg}{Prisma.RST}")

@@ -680,7 +680,10 @@ class LearnedLoreLivesInSaves(BoneTestCase):
         super().setUp()
         self.lore_patcher.stop()
         self.addCleanup(self.lore_patcher.start)
+        from engine.gate.store import Store
+
         self.factory, self.saves = tempfile.mkdtemp(), tempfile.mkdtemp()
+        self.store = Store(path=f"{self.saves}/iris.db", state_dir=self.saves)
         self.write(self.factory, {"ITEM_REGISTRY": {"LAMP": {"value": 1}}, "RECIPES": [{"ingredient": "A"}]})
 
     def write(self, directory, data):
@@ -694,7 +697,9 @@ class LearnedLoreLivesInSaves(BoneTestCase):
     def manifest(self):
         from engine.core import LoreManifest
 
-        return LoreManifest(data_dir=self.factory, save_dir=self.saves)
+        lore = LoreManifest(data_dir=self.factory, save_dir=f"{self.saves}/lore")
+        lore.attach_store(self.store)
+        return lore
 
     def learn(self):
         lore = self.manifest()
@@ -714,7 +719,7 @@ class LearnedLoreLivesInSaves(BoneTestCase):
         self.assertIn("ASCENDED_ARTIFACT", data["ITEM_REGISTRY"])
         self.assertIn("LAMP", data["ITEM_REGISTRY"])
         self.assertEqual(data["RECIPES"], [{"ingredient": "A"}, {"ingredient": "B"}])
-        self.assertNotIn("LAMP", self.read(self.saves)["ITEM_REGISTRY"], "the overlay copied factory data")
+        self.assertNotIn("LAMP", self.store.record("lore.gordon")["ITEM_REGISTRY"], "the overlay copied factory data")
 
     def test_a_later_factory_edit_is_not_masked(self):
         self.learn()
@@ -723,12 +728,34 @@ class LearnedLoreLivesInSaves(BoneTestCase):
         self.assertEqual(data["ITEM_REGISTRY"]["LAMP"], {"value": 2})
         self.assertEqual(data["RECIPES"], [{"ingredient": "A"}, {"ingredient": "C"}, {"ingredient": "B"}])
 
-    def test_the_engine_saves_under_the_akashic_save_dir(self):
+    def test_the_engine_keeps_learned_lore_in_its_store(self):
+        # Roadmap step 3e: the overlay was saves/lore/<category>.json.
         from engine.core import LoreManifest
 
-        default = LoreManifest()
-        self.assertEqual(default.SAVE_DIR, os.path.join(str(self.engine.config.AKASHIC.SAVE_DIR), "lore"))
-        self.assertNotEqual(os.path.abspath(default.SAVE_DIR), os.path.abspath(default.DATA_DIR))
+        self.assertIs(LoreManifest.get_instance().persistence, self.engine.store)
+
+    def test_an_old_saves_overlay_is_imported_once_and_kept(self):
+        os.makedirs(f"{self.saves}/lore")
+        self.write(f"{self.saves}/lore", {"ITEM_REGISTRY": {"OLD_KEY": {"value": 3}}})
+        data = self.manifest().get("GORDON")
+        self.assertIn("OLD_KEY", data["ITEM_REGISTRY"])
+        self.assertIn("LAMP", data["ITEM_REGISTRY"])
+        self.assertFalse(os.path.exists(f"{self.saves}/lore/gordon.json"))
+        self.assertTrue(os.path.exists(f"{self.saves}/lore/gordon.json.imported"))
+
+    def test_attaching_keeps_what_was_injected_before_it(self):
+        # The manifest loads at boot before the store exists; attaching merges the overlay on, not a reload.
+        from engine.core import LoreManifest
+
+        self.learn()
+        lore = LoreManifest(data_dir=self.factory, save_dir=f"{self.saves}/lore")
+        data = lore.get("GORDON")
+        data["ITEM_REGISTRY"]["BOOT_ONLY"] = {"value": 7}
+        lore.inject("GORDON", data)
+        lore.attach_store(self.store)
+        registry = lore.get("GORDON")["ITEM_REGISTRY"]
+        self.assertIn("BOOT_ONLY", registry)
+        self.assertIn("ASCENDED_ARTIFACT", registry)
 
 
 class TheCrucibleMeasuresFromHome(BoneTestCase):

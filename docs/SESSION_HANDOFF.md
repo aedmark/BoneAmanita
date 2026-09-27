@@ -9,16 +9,34 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
-## Where things stand, 2026-09-26 (Halcyon Integration Plan)
+## Where things stand, 2026-09-27 (Halcyon integration, roadmap step 3)
 
-**RESUME HERE (2026-09-26). Gordon aligned on a major architectural pivot: porting the best parts of Brad's Iris/Halcyon repo into BoneAmanita.**
-BoneAmanita owns the conversation loop, the Bio-Physics engine (ATP/Cortisol), and the Lexical Firewall. We will retain this as the core engine. However, we will rip out Brad's `iris/store.py` (SQLite atomic persistence) and `iris/kernel.py` (the strict `NOMINATE` gate) and wire them into the tail end of BoneAmanita's `cycle.py`.
-- **Why?** It replaces fragile JSON quicksaves with atomic SQLite commits (saving biological state + memory simultaneously).
-- **How?** BoneAmanita's filter handles style and biological enforcement. The Halcyon Gate handles memory constraints and action validity. The vector `spores/` stay for subconscious recall, but a structured Graph memory is introduced for factual persistence.
-**Next step:** Extract `store.py` and `kernel.py` from the Iris repo and begin the surgical graft into `cycle.py`.
-(Done by Gordon: 57eb7ff and 8d625af.)
+**RESUME HERE (2026-09-27).** Porting Brad's Iris/Halcyon SQLite store and `NOMINATE` gate into
+BoneAmanita (ROADMAP Track E). BoneAmanita keeps the conversation loop, the bio-physics and the lexical
+firewall; the gate owns memory and world mutations; `saves/iris.db` is the one store for everything the
+engine learns or needs to resume.
+- **Done:** the graft (Gordon, 57eb7ff and 8d625af), reviewed and fixed, with the gate's audit trail,
+  denials shown only in TECHNICAL or on the DEEP HUD, and memory recall phase 1 (20.7.4.44). Step 3,
+  moving every learned or session store into the store: 3a the resume checkpoint (20.7.4.45), 3b the
+  ADVENTURE rooms plus `/export` for FractalOS (20.7.4.46), 3c learned words (20.7.4.47), 3d the Akashic
+  record (20.7.4.48), 3e the learned lore overlay (20.7.4.49).
+- **Next:** 3f the user profile (`user_profile.json`), 3g the Oroboros lineage (`legacy.json`); then
+  memory recall phases 2 to 6 (ROADMAP).
+- **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
+  two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
+  and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
+  from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies, nearly all a Warden JSON
+  rejection on the last allowed draft (that path is gone with the JSON gate), and 14 of 0926b's after one
+  crash left cognition offline until a REM tick that a paced session never reaches (still how recovery
+  works). Full write-up: `docs/bonereport.html`.
+- Full suite 809 passed, 5 skipped, after `reset.sh`.
 
-**Review of the graft, fixed (2026-09-26, not yet committed; Gordon asked for 1 to 5, then the test backfill).**
+Why the pivot: atomic SQLite commits replace fragile JSON saves, and the gate (deny by default, every
+attempt receipted) replaces JSON parsing for memory. BoneAmanita's filter handles style and biological
+enforcement; the gate handles memory constraints and action validity; the vector `spores/` stay for
+subconscious recall.
+
+**Review of the graft, fixed (2026-09-26, 20.7.4.44; Gordon asked for 1 to 5, then the test backfill).**
 1. **The model never saw the grammar.** The composer read `meta.halcyon_grammar`, which nothing set, so the
    prompt showed `args=...` and never the real arg names; almost any nomination would fail the gate's args
    check. `engine.gate.tools.grammar_text(spec)` renders each permitted verb from `boundary.yaml` (its
@@ -87,7 +105,7 @@ suite unchanged at 792 passed.
 
 **Roadmap step 3, Gordon's call: move every learned or session store into the Halcyon store**, one at a
 time with tests (list in ROADMAP Track E, 3a to 3g); keep `spores/`, telemetry, the crash log, tool grants
-and config. **3a, the Chronos quicksave, is done (not yet committed):**
+and config. **3a, the Chronos quicksave (20.7.4.45):**
 - `Store.save_checkpoint(snapshot)` / `Store.checkpoint()`: one `engine_checkpoint` row, replaced in a
   transaction and tagged with the canonical sequence it was taken against. `ChronosKeeper.save_checkpoint`
   writes there (the JSON round trip with `default=str` stays, so values JSON cannot hold become text, as
@@ -105,9 +123,8 @@ and config. **3a, the Chronos quicksave, is done (not yet committed):**
   resume, the sequence tag, the legacy import and rename, the deque-as-text recovery, and a real engine turn
   resumed by a second engine), each mutation checked; `test_macro`'s hydration test checks the store.
   README and the resume string updated. Full suite 795 passed, 5 skipped.
-  Committed as 20.7.4.45.
 
-**3b, the ADVENTURE rooms (2026-09-27, not yet committed).** `fractal_adventure.json` was rewritten in the
+**3b, the ADVENTURE rooms (2026-09-27, 20.7.4.46).** `fractal_adventure.json` was rewritten in the
 repo root after every turn, in FractalOS's adventure format (FractalOS plays it with `adventure <file>`).
 Gordon's call: the store is the only save, and the FractalOS file is written on demand.
 - `BoneAmanita.adventure_state()` builds the FractalOS dict (rooms visited, the current one as
@@ -120,9 +137,8 @@ Gordon's call: the store is the only save, and the FractalOS file is written on 
   and no file written, a second engine resumes in the same room with its exits, the legacy import and
   rename, `/export` writing a FractalOS adventure; each mutation checked. Full suite 799 passed, 5 skipped.
 - Still open: memory phase 4, the world graph (not the examine cache or these rooms) as the story's truth.
-  Committed as 20.7.4.46.
 
-**3c, the learned lexicon (2026-09-27, not yet committed).** `saves/cortex_hive.json` was written only at
+**3c, the learned lexicon (2026-09-27, 20.7.4.47).** `saves/cortex_hive.json` was written only at
 shutdown (`LexiconService.save`, from Chronos), so a crash lost every word learned since boot.
 - The store has a `learned_words` table (category, word, learned tick): `learned_vocabulary()`,
   `learn_word(category, word, tick, evicted)` and `save_learned_vocabulary(vocab)`.
@@ -133,9 +149,8 @@ shutdown (`LexiconService.save`, from Chronos), so a crash lost every word learn
 - Tests (`tests/test_learned_words.py`, 5): a word is in the store the moment it is learned, the next
   engine knows it, eviction reaches the store, the shutdown sync writes the store and no file, the legacy
   import; each mutation checked. README updated. Full suite 804 passed, 5 skipped.
-  Committed as 20.7.4.47.
 
-**3d, the Akashic record (2026-09-27, not yet committed).** It kept `saves/akashic_state.json` (lens
+**3d, the Akashic record (2026-09-27, 20.7.4.48).** It kept `saves/akashic_state.json` (lens
 co-occurrence, recipe candidates, ingredient affinity, shadow stock, subconscious strata, scar map, dream
 archive) and wrote `akashic_discovered_words.json` into `lore/`, against the 09-25 rule that learned data
 lives in `saves/`. Two findings:
@@ -152,11 +167,21 @@ attached, and nothing is written into `lore/` (checked after a full suite run).
 Tests (`tests/test_akashic.py`, now 10): a category goes to the store not a file, the scar map and strata
 survive a restart, discovered words come back into the lexicon, the legacy import; the recipe-memory test
 reboots through the store. Each mutation checked. Full suite 807 passed, 5 skipped.
-- Correction to the 09-25 and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which
-  is never empty. Counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies,
-  nearly all a Warden JSON rejection on the last allowed draft (that path is gone with the JSON gate), and
-  14 of 0926b's after one crash left cognition offline until a REM tick that a paced session never reaches.
-  Full write-up: `docs/bonereport.html`.
+
+**3e, the learned lore overlay (2026-09-27, 20.7.4.49).** The 09-25 overlay (what the engine learns
+on top of the factory `lore/` files, written to `saves/lore/<category>.json`) now lives in the store as
+`lore.<category>` records.
+- `LoreManifest` is process-wide and loads at boot before the store exists, so `attach_store` merges each
+  cached category's overlay onto what is already cached instead of reloading (a reload would drop what was
+  injected at boot); categories loaded later read the overlay from the store. `save` writes the overlay
+  record (protected categories still refuse; with no store attached it warns and persists nothing). Old
+  `saves/lore/*.json` files are imported once and renamed `.imported`.
+- The engine attaches the manifest first, then the lexicon and the Akashic record. `BoneTestCase` detaches
+  the manifest after each test, since its store is that test's temporary one.
+- Tests: `test_lore.test_save_to_disk` pins the store record and no `saves/lore/` directory;
+  `LearnedLoreLivesInSaves` runs through a store and adds: the engine keeps learned lore in its store, an
+  old overlay is imported once, attaching keeps what was injected before it. Each mutation checked. Full
+  suite 809 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 
@@ -370,7 +395,7 @@ So there are three homes (the Crucible's 10, the manifold's 8 to 20, the
 bitmap's 30+) and none of them is where voltage goes: it goes where beta
 takes it.
 
-**Gordon chose A, one home (built, not yet committed):** voltage stays the
+**Gordon chose A, one home (20.7.4.41):** voltage stays the
 VSL measurement, and everything that asks "where does the engine live"
 reads the zone's entry in `PHYSICS.MANIFOLDS` through one helper,
 `engine.struts.zone_home(cfg, zone)` (DEFAULT when the zone has none):
@@ -472,7 +497,7 @@ Gatekeeper rejection. The ATP ledger now closes: `atp_unledgered` is within
   the PID's removal). Nothing broken; the style gate is what CREATIVE pays for.
 
 **Crash text stays off the player's screen; the ledger name is honest
-(built after 20.7.4.43, not yet committed; Gordon asked for both).**
+(built after 20.7.4.43, committed in Gordon's 0f8838b "SaveDump"; Gordon asked for both).**
 - Every event reaches the UI's log panel whatever its level, and the `bone`
   logger prints to the player's terminal, so crash detail had nine ways out:
   the phase crash header and trace, `SystemHealth.report_failure`'s raw
