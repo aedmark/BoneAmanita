@@ -9,6 +9,8 @@ is a noop, not an error — the gate still receipts it.
 """
 from __future__ import annotations
 
+import re
+
 from .graph import edge_id, normalize_world, slug
 
 
@@ -63,6 +65,58 @@ def _name(state, what, a):
     return _relate(state, what, {"subject": a["target"], "relation": "known as", "object": a["alias"]})
 
 
+def _node(w, label, type_):
+    node_id = f"entity:{slug(label)}"
+    node = w["nodes"].setdefault(node_id, {"id": node_id, "label": label, "type": type_, "visibility": "standard", "properties": {}, "sources": []})
+    if node["type"] == "reference":
+        node["type"] = type_
+    return node_id
+
+
+def _chart(state, what, a):
+    """A room as the narrator last described it: its description, exits (`Direction to Place`) and items,
+    `|`-separated. What the room no longer lists is retired, and an item seen here leaves wherever it was."""
+    w = state["world"] = normalize_world(state["world"])
+    room = _node(w, a["room"], "room")
+    props = w["nodes"][room].setdefault("properties", {})
+    changed = []
+    if a["description"] and props.get("description") != a["description"]:
+        props["description"] = a["description"]
+        changed.append("description")
+    wanted = []
+    for entry in (e.strip() for e in a["exits"].split("|")):
+        direction, sep, place = entry.rpartition(" to ")
+        direction = re.sub(r"\s*\([^)]*\)", "", direction).strip().lower()  # "North (via Iron Door)"
+        if sep and direction and place.strip():
+            wanted.append((room, f"exit {direction}", _node(w, place.strip(), "room")))
+    items = [i.strip() for i in a["items"].split("|") if i.strip()]
+    wanted += [(_node(w, item, "item"), "is in", room) for item in items]
+    wanted_ids = {edge_id(s, r, t) for s, r, t in wanted}
+    item_ids = {f"entity:{slug(i)}" for i in items}
+    for e in w["edges"]:
+        if e.get("status", "active") != "active" or e["id"] in wanted_ids:
+            continue
+        stale_exit = e["source"] == room and e["relation"].startswith("exit ")
+        stale_item = e["relation"] == "is in" and (e["target"] == room or e["source"] in item_ids)
+        if stale_exit or stale_item:
+            e["status"] = "retired"
+            changed.append(f"retired {e['relation']}")
+    by_id = {e["id"]: e for e in w["edges"]}
+    for s_, r, t in wanted:
+        eid = edge_id(s_, r, t)
+        if eid in by_id:
+            if by_id[eid].get("status") != "active":
+                by_id[eid]["status"] = "active"
+                changed.append(r)
+            continue
+        w["edges"].append({"id": eid, "source": s_, "relation": r, "target": t, "assertion": "engine_charted",
+                           "confidence": None, "visibility": "standard", "sources": [], "status": "active"})
+        changed.append(r)
+    if not changed:
+        return {"noop": f"room {a['room']!r} already charted as described"}
+    return {"charted": room, "changes": changed}
+
+
 # ── selfhood: writes self/* (the ONLY writer of the self graph) ────────────
 
 def _remember(state, what, a):
@@ -72,7 +126,7 @@ def _remember(state, what, a):
 
 TOOLS = {
     "create": _create, "relate": _relate, "constrain": _constrain,
-    "occur": _occur, "name": _name, "remember": _remember,
+    "occur": _occur, "name": _name, "remember": _remember, "chart": _chart,
 }
 
 
@@ -82,7 +136,8 @@ def grammar_text(spec: dict) -> str:
     """The permitted verbs with their exact arg names and an example, from the declaration."""
     lines = []
     for verb, d in spec.get("verbs", {}).items():
-        if not d.get("permitted"):
+        # Engine-built verbs (chart) are written by the engine, not offered to the model.
+        if not d.get("permitted") or d.get("engine_built"):
             continue
         args = "; ".join(f"{k}:<{r.get('type', 'str')}>" for k, r in d.get("args", {}).items())
         lines.append(f"  verb={verb} (writes {d['writes']}) args={args}")

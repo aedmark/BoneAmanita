@@ -57,16 +57,17 @@ def recall(state: dict, text: str, max_memories: int = 12, max_facts: int = 12, 
     def label(node_id):
         return (nodes.get(node_id) or {}).get("label") or str(node_id).split(":", 1)[-1]
 
+    # Charted rooms, exits and things reach the prompt as SHARED REALITY, not as facts here.
     facts = [
         (f"{label(e['source'])} {e['relation']} {label(e['target'])}", {e["source"], e["target"]})
         for e in world.get("edges", []) or []
-        if e.get("status", "active") == "active"
+        if e.get("status", "active") == "active" and e.get("assertion") != "engine_charted"
     ]
     facts += [(f"{label(c['target'])}: {c['rule']} {c['value']}", {c["target"]}) for c in world.get("constraints", []) or []]
     facts += [
         (f"{n.get('label', node_id)} ({n.get('type', 'thing')})", {node_id})
         for node_id, n in nodes.items()
-        if n.get("type") not in (None, "reference") and not any(node_id in ids for _, ids in facts)
+        if n.get("type") not in (None, "reference", "room", "item") and not any(node_id in ids for _, ids in facts)
     ]
     mentioned = {node_id for node_id, n in nodes.items() if _words(n.get("label")) and _words(n.get("label")) <= query}
     ranked_facts = sorted(

@@ -628,6 +628,27 @@ class GeodesicOrchestrator:
                     "DEBUG",
                 )
 
+    def _chart_room(self, ctx, room: dict) -> None:
+        from engine.gate.cartographer import chart_args, chart_line, needs_chart
+        from engine.gate.kernel import Gate
+
+        seq, state = self.eng.store.state()
+        if (args := chart_args(room)) is None or not needs_chart(state, args):
+            return
+        text = f"(Cartographer: {args['room']} as the narrator described it this turn.)\n{chart_line(args)}"
+        gate = Gate(self.eng.boundary, state, self.eng.gate_tools, self.eng.gate_invariants)
+        receipt = gate.adjudicate(text)
+        self.eng.store.commit_cycle(
+            trace_id=f"{ctx.trace_id}:chart", new_state=gate.state, expected_sequence=seq, receipt=receipt,
+            raw=text, boundary_hash=getattr(self.eng, "boundary_hash", ""),
+        )
+        applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
+        ReceiptLedger.get_instance().issue(
+            "halcyon.chart", receipt["decision"], result_count=1 if applied else 0,
+            inputs={"room": args["room"], "result": receipt.get("result")},
+            detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "",
+        )
+
     HELD_RATIONALE = "(No reply this turn: the Stage Manager held the floor. Kept from what the person said.)"
 
     def _shows_gate_denials(self) -> bool:
@@ -649,6 +670,7 @@ class GeodesicOrchestrator:
             # A turn that never reaches the model (a Stage Manager hold) left the last turn's draft for the gate.
             if cortex := getattr(self.eng, "cortex", None):
                 cortex.last_model_raw = ""
+                cortex.last_room = None
             raw_delta = self.eng.current_time_delta
             expected_reading_time = getattr(self.eng, "last_output_length", 0) / 4.0
             calculated_delta = raw_delta - expected_reading_time
@@ -843,6 +865,13 @@ class GeodesicOrchestrator:
                                 ctx.bureau_ui += "\n[SYSTEM_LOG: Action Denied by Gate]"
                     except Exception as e:
                         record_crash(self.eng, "Halcyon gate", e)
+
+            # The cartographer charts the room the narrator described, in its own gate cycle (Gordon's call).
+            if (room := getattr(getattr(self.eng, "cortex", None), "last_room", None)) and hasattr(self.eng, "boundary"):
+                try:
+                    self._chart_room(ctx, room)
+                except Exception as e:
+                    record_crash(self.eng, "Halcyon cartographer", e)
 
             post_logs = [e["text"] for e in self.eng.events.flush()]
             ctx.logs.extend(post_logs)

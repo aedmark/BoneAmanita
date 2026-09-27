@@ -62,6 +62,19 @@ verbs:
       alias:  { type: str, max_len: 120 }
     example: "NOMINATE what=world/alias verb=name args=target:Riverhold; alias:the River City"
 
+  # The cartographer: the engine charts each ADVENTURE room the narrator describes, in its own gate cycle.
+  # A chart is the room's current truth: exits and items it no longer lists are retired, never deleted.
+  chart:
+    permitted: true
+    engine_built: true
+    writes: "world/"
+    args:
+      room:        { type: str, max_len: 120 }
+      description: { type: str, max_len: 600 }
+      exits:       { type: str, max_len: 600 }
+      items:       { type: str, max_len: 600 }
+    example: "NOMINATE what=world/room/the-mill-loft verb=chart args=room:The Mill Loft; description:Dust over a stopped wheel.; exits:North to The Yard | Down to The Mill Floor; items:A sack of grain | A lamp"
+
   remember:
     permitted: true
     writes: "self/memory/"

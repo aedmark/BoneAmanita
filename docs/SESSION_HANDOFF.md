@@ -23,8 +23,9 @@ engine learns or needs to resume.
   first time (20.7.4.50), 3g the Oroboros lineage, with inherited scars applied at boot again
   (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52). Phase 3,
   the probe and the memory keeper (20.7.4.53). ADVENTURE answers questions before the room
-  (20.7.4.54). Room titles name the place, never the zone (20.7.4.55).
-- **Next:** memory recall phases 4 to 6 (ROADMAP).
+  (20.7.4.54). Room titles name the place, never the zone (20.7.4.55). Memory phase 4, the
+  cartographer (20.7.4.56).
+- **Next:** memory recall phases 5 (forgetting) and 6 (`/memory`) (ROADMAP).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -324,6 +325,36 @@ HUD, the log panel).
 - Tests (`tests/test_room_titles.py`, 4): the labels and place names, drop_title, a zone title never
   reaches the story or the map, the prompt gives the room and the rule. Each mutation checked (6). Full
   suite 843 passed, 5 skipped.
+
+**Memory phase 4, the cartographer (2026-09-27, 20.7.4.56).** The world graph becomes the story's
+truth in ADVENTURE. The narrator never nominated rooms (the same 1-in-36 problem), and a room is several
+facts while the kernel admits one nomination per cycle and the audit schema enforces it
+(`proposals.turn_id UNIQUE`). Gordon's call: a `chart` verb in its own gate cycle.
+- `engine/gate/boundary.yaml` declares `chart` (args room, description, exits, items; `engine_built`, so
+  `grammar_text` does not offer it to the model). `engine/gate/tools.py` `_chart` writes the room node
+  (description in its properties), an `exit <direction>` edge per exit ("North (via Iron Door) to The
+  Yard" becomes `exit north` to The Yard) and an `is in` edge per thing; what the room no longer lists is
+  retired (status, never deleted) and a thing seen in another room leaves its old one. Charting the same
+  room as described is a noop. Edges are marked `assertion: engine_charted`.
+- `engine/gate/cartographer.py`: `chart_args` from the parsed room (nothing under a zone label or
+  "Uncharted Zone"; `;` and `|` inside text are neutralised), `chart_line`, `needs_chart` (the tool run on a
+  copy), `room_view` (a room as the graph holds it).
+- The cortex keeps the room this turn's reply described (`last_room`, cleared at turn start with the draft);
+  after the turn's own gate cycle, `GeodesicOrchestrator._chart_room` charts it when it changes the graph,
+  as its own audited turn (`trace_id` `<turn>:chart`), receipted as `halcyon.chart` (an event subsystem).
+- The next prompt: the cortex hands the composer `room_view` of the current room from the turn's Halcyon
+  state; SHARED REALITY's ENVIRONMENT ANCHOR is its description, CURRENT EXITS its exits (the last reply's
+  exits only when the graph has none) and a new ON RECORD HERE line its things. Recall leaves charted edges
+  and room/item nodes out of the remembered facts, since SHARED REALITY carries them.
+- Live (gemma4:12b, six turns: look, look closer, go through an exit, look, go back, "What is in this
+  room?"): titles "The Observatory Dome" and "The Maintenance Tunnel", both charted with exits pointing at
+  each other, the return read from the graph, and the question answered before the room.
+- Unchanged: the examine cache and the checkpoint's rooms (`/export` for FractalOS).
+- Tests (`tests/test_cartographer.py`, 13): the verb (charted, repeat is a noop, retired not deleted, a
+  thing moves, nothing under a zone, separators cannot split an arg, not offered to the model) and in play
+  (own gate cycle and audit turn, not charted twice, the next prompt reads the graph, no room charts
+  nothing, charted rooms stay out of recall, a turn without a room does not re-chart a stale one). Each
+  mutation checked (16). Full suite 856 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

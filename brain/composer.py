@@ -632,7 +632,11 @@ class PromptComposer:
         dialogue_block = f"=== RECENT DIALOGUE ===\n{history_str}\n\n"
         input_block = f"=== PARTNER INPUT ===\n{state.get('user_profile', {}).get('name', 'User')}: {self._sanitize(user_query)}\n"
         last_exits = ""
-        if active_mode_name == "ADVENTURE":
+        charted = state.get("world", {}).get("room") or {}
+        if active_mode_name == "ADVENTURE" and charted.get("exits"):
+            # The world graph holds the room's exits; the last reply's text is only the fallback.
+            last_exits = "**Exits:**\n" + "\n".join(f"- {e}" for e in charted["exits"])
+        elif active_mode_name == "ADVENTURE":
             for entry in reversed(raw_history):
                 exits_match = re.search(
                     r"(\*\*Exits:\*\*.*)", entry, re.DOTALL | re.IGNORECASE
@@ -647,10 +651,15 @@ class PromptComposer:
                 if last_exits
                 else ""
             )
+            things = (
+                f"ON RECORD HERE: {', '.join(charted['items'])}. These stay where they are unless the story moves them.\n"
+                if charted.get("items") else ""
+            )
             shared_reality_block = (
                 f"=== SHARED REALITY ===\n"
                 f"CURRENT LOCATION: {loc}\n"
-                f"ENVIRONMENT ANCHOR: {loci_desc}\n"
+                f"ENVIRONMENT ANCHOR: {charted.get('description') or loci_desc}\n"
+                f"{things}"
                 f"{inventory_block}"
                 f"{exits_block}\n"
             )

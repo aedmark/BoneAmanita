@@ -85,6 +85,8 @@ class TheCortex:
         self.last_shadow_nodes = []
         self.room_examine_cache: Dict[str, str] = {}
         self.current_room_name: str = ""
+        # The room this turn's reply described, for the cartographer; None when it described none.
+        self.last_room: Optional[Dict[str, Any]] = None
         self.current_room_description: str = ""
         self.visited_rooms: Dict[str, Dict[str, Any]] = {}
         self.consultant = services.consultant
@@ -170,7 +172,7 @@ class TheCortex:
         if room_name != "Uncharted Zone":
             room_id = _room_slug(room_name)
             existing = self.visited_rooms.get(room_id, {})
-            self.visited_rooms[room_id] = {
+            self.last_room = self.visited_rooms[room_id] = {
                 "id": room_id,
                 "name": room_name,
                 "description": parsed["description"] or existing.get("description", ""),
@@ -269,6 +271,11 @@ class TheCortex:
             )
         if self.active_mode == "ADVENTURE" and self.current_room_name and not is_system_label(self.current_room_name):
             sim_result["world"]["room_name"] = self.current_room_name
+            # The graph's version of the room, charted from earlier replies, is what is true in the story.
+            from engine.gate.cartographer import room_view
+
+            if charted := room_view(getattr(ctx, "halcyon_state", None), self.current_room_name):
+                sim_result["world"]["room"] = charted
         if halt := self._pre_flight_routing(
             user_input, is_system, is_boot_sequence, ctx, sim_result
         ):
