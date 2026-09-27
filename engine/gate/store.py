@@ -110,6 +110,9 @@ class Store:
           singleton INTEGER PRIMARY KEY CHECK(singleton = 1), sequence INTEGER NOT NULL,
           world_json TEXT NOT NULL, self_json TEXT NOT NULL, updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS engine_records (
+          key TEXT PRIMARY KEY, value_json TEXT NOT NULL, updated_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS learned_words (
           category TEXT NOT NULL, word TEXT NOT NULL, learned_tick INTEGER NOT NULL,
           updated_at REAL NOT NULL, PRIMARY KEY(category, word)
@@ -474,6 +477,25 @@ class Store:
                 (payload, sequence, now),
             )
         return sequence
+
+    def put_record(self, key: str, value) -> None:
+        """One named piece of engine state (e.g. "akashic.state"), replaced atomically."""
+        payload = json.dumps(value)
+        with self.transaction(immediate=True) as db:
+            db.execute(
+                "INSERT INTO engine_records VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET "
+                "value_json=excluded.value_json, updated_at=excluded.updated_at",
+                (key, payload, time.time()),
+            )
+
+    def record(self, key: str):
+        """A named piece of engine state, or None if it was never saved."""
+        db = self.connect()
+        try:
+            row = db.execute("SELECT value_json FROM engine_records WHERE key=?", (key,)).fetchone()
+        finally:
+            db.close()
+        return None if row is None else json.loads(row["value_json"])
 
     def learned_vocabulary(self) -> dict[str, dict[str, int]]:
         """Every word the lexicon taught itself, by category (was saves/cortex_hive.json)."""

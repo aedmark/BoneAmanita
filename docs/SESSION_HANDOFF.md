@@ -133,6 +133,25 @@ shutdown (`LexiconService.save`, from Chronos), so a crash lost every word learn
 - Tests (`tests/test_learned_words.py`, 5): a word is in the store the moment it is learned, the next
   engine knows it, eviction reaches the store, the shutdown sync writes the store and no file, the legacy
   import; each mutation checked. README updated. Full suite 804 passed, 5 skipped.
+  Committed as 20.7.4.47.
+
+**3d, the Akashic record (2026-09-27, not yet committed).** It kept `saves/akashic_state.json` (lens
+co-occurrence, recipe candidates, ingredient affinity, shadow stock, subconscious strata, scar map, dream
+archive) and wrote `akashic_discovered_words.json` into `lore/`, against the 09-25 rule that learned data
+lives in `saves/`. Two findings:
+- **The load dropped two fields it saved:** `_load_mythos_state` never restored `scar_map` or
+  `subconscious_strata`, so both were lost on every restart. `_apply_state` restores everything
+  `_save_user_state` writes.
+- The legacy `akashic_scars.json`/`akashic_boons.json` are only a one-time migration into
+  `SYSTEM_PROMPTS`, which by design never persists (evolved axioms stay unsaved); left as is.
+Built: the store has a generic `engine_records` table (`put_record(key, value)`, `record(key)`) for 3d to
+3g. `save_to_disk(category, data)` writes `akashic.<category>` there; the engine attaches its store at boot
+(`TheAkashicRecord.attach_store`), which imports the old state and words files once (renamed `.imported`)
+and loads the record, putting discovered words back into the lexicon. Nothing persists before the store is
+attached, and nothing is written into `lore/` (checked after a full suite run).
+Tests (`tests/test_akashic.py`, now 10): a category goes to the store not a file, the scar map and strata
+survive a restart, discovered words come back into the lexicon, the legacy import; the recipe-memory test
+reboots through the store. Each mutation checked. Full suite 807 passed, 5 skipped.
 - Correction to the 09-25 and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which
   is never empty. Counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies,
   nearly all a Warden JSON rejection on the last allowed draft (that path is gone with the JSON gate), and

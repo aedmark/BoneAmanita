@@ -1368,7 +1368,7 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
   - ~~3a. Chronos quicksave~~ (Done 2026-09-26): `saves/quicksave.json` is now the `engine_checkpoint` row in `saves/iris.db`, tagged with the canonical sequence; an old quicksave is imported once and renamed.
   - ~~3b. `fractal_adventure.json`~~ (Done 2026-09-27): rooms and items are part of the checkpoint; an old file is imported once; the FractalOS file is written only by `/export` (Gordon's call). Memory phase 4 (the world graph as the story's truth) is still open.
   - ~~3c. Learned lexicon~~ (Done 2026-09-27): the `learned_words` table, each word written as it is learned (it was saved only at shutdown); an old `cortex_hive.json` is imported once.
-  - [ ] 3d. Akashic scars, boons and discovered words (`akashic_*.json`).
+  - ~~3d. Akashic record~~ (Done 2026-09-27): its state and discovered words are `engine_records` in the store (`akashic.<category>`); the load now restores the scar map and the strata it used to drop; nothing is written into `lore/`. The legacy scar and boon files remain a one-time migration into the system prompts, which by design never persist.
   - [ ] 3e. Learned lore overlay (`saves/lore/*.json`).
   - [ ] 3f. User profile (`user_profile.json`).
   - [ ] 3g. Oroboros lineage (`legacy.json`).

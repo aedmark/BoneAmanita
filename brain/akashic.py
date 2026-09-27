@@ -56,6 +56,8 @@ class TheAkashicRecord:
         self.subconscious_strata: List[Dict] = []
         self.scar_map: List[Dict] = []
         self.dream_archive: List[str] = []
+        # The Halcyon store, once the engine attaches it; the record lives there.
+        self.persistence = None
         self._load_mythos_state()
 
     def setup_listeners(self, event_bus):
@@ -383,28 +385,12 @@ class TheAkashicRecord:
         self.save_to_disk("state", state)
 
     def save_to_disk(self, category: str, data: Any):
-        base_dir = os.path.realpath(
-            self.data_dir
-            if category in ["discovered_words", "scars", "boons"]
-            else self.save_dir
-        )
-        filepath = os.path.realpath(os.path.join(base_dir, f"akashic_{category}.json"))
-        if os.path.commonpath([base_dir, filepath]) != base_dir:
-            if self.events:
-                self.events.log(
-                    f"{Prisma.RED}Geometric containment violation. Save aborted.{Prisma.RST}",
-                    "AKASHIC", "CRIT",
-                )
+        """One Akashic category into the Halcyon store as "akashic.<category>" (it was akashic_<category>.json,
+        some of it inside lore/). Nothing persists until the engine attaches its store."""
+        if self.persistence is None:
             return
         try:
-            os.makedirs(base_dir, exist_ok=True)
-            os.makedirs(os.path.realpath(self.save_dir), exist_ok=True)
-            temp_path = f"{filepath}.{uuid.uuid4().hex}.tmp"
-            with open(temp_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, cls=JSONEncoder)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(temp_path, filepath)
+            self.persistence.put_record(f"akashic.{category}", json.loads(json.dumps(data, cls=JSONEncoder)))
             if msg := ux("akashic_strings", "saved_category"):
                 if self.events:
                     self.events.log(
@@ -419,43 +405,66 @@ class TheAkashicRecord:
                     "AKASHIC",
                 )
 
-    def _load_mythos_state(self):
-        data = {}
-        if os.path.exists(self.state_path):
+    def attach_store(self, store) -> None:
+        """Load the record from the engine's Halcyon store; older akashic_state.json and
+        akashic_discovered_words.json files are imported once and renamed .imported."""
+        self.persistence = store
+        legacy = {"state": self.state_path, "discovered_words": os.path.join(self.data_dir, "akashic_discovered_words.json")}
+        for category, path in legacy.items():
+            key = f"akashic.{category}"
+            if store.record(key) is not None or not os.path.exists(path):
+                continue
             try:
-                with open(self.state_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception as e:
-                msg = ux("akashic_strings", "state_load_failed")
+                with open(path, "r", encoding="utf-8") as f:
+                    store.put_record(key, json.load(f))
+                os.replace(path, path + ".imported")
+            except (OSError, ValueError) as e:
                 if self.events:
-                    self.events.log(f"{Prisma.RED}{msg.format(error=e)}{Prisma.RST}")
-        if data:
-            self.lens_cooccurrence.clear()
-            data_lens = data.get("lens_cooccurrence") or {}
-            for k, v in data_lens.items():
-                if isinstance(k, str) and "|" in k:
-                    p1, p2 = k.split("|", 1)
-                    self.lens_cooccurrence[(p1, p2)] = int(v)
-            self.recipe_candidates.clear()
-            data_recipes = data.get("recipe_candidates") or {}
-            for k, v in data_recipes.items():
-                if isinstance(k, str) and "|" in k and isinstance(v, dict):
-                    p1, p2 = k.split("|", 1)
-                    self.recipe_candidates[(p1, p2)] = {
-                        str(vk): int(vv) for vk, vv in v.items()
-                    }
-            self.ingredient_affinity = data.get("ingredient_affinity", {})
-            self.shadow_stock = data.get("shadow_stock", [])
-            self.dream_archive = data.get("dream_archive", [])
-            self.known_recipes.clear()
-            gordon_data = self.lore.get("GORDON") or {}
-            if recipes := gordon_data.get("RECIPES", []):
-                self.known_recipes.update(
-                    (r.get("ingredient"), r.get("catalyst_category"))
-                    for r in recipes
-                    if r.get("ingredient") and r.get("catalyst_category")
-                )
+                    self.events.log(f"{Prisma.RED}Could not import {path}: {e}. Left in place.{Prisma.RST}", "AKASHIC")
+        self._apply_state(store.record("akashic.state") or {})
+        self._apply_discovered_words(store.record("akashic.discovered_words") or {})
 
+    def _apply_state(self, data: Dict) -> None:
+        """Everything _save_user_state writes comes back (the scar map and the strata used to be dropped)."""
+        if not data:
+            return
+        self.lens_cooccurrence.clear()
+        for k, v in (data.get("lens_cooccurrence") or {}).items():
+            if isinstance(k, str) and "|" in k:
+                p1, p2 = k.split("|", 1)
+                self.lens_cooccurrence[(p1, p2)] = int(v)
+        self.recipe_candidates.clear()
+        for k, v in (data.get("recipe_candidates") or {}).items():
+            if isinstance(k, str) and "|" in k and isinstance(v, dict):
+                p1, p2 = k.split("|", 1)
+                self.recipe_candidates[(p1, p2)] = {str(vk): int(vv) for vk, vv in v.items()}
+        self.ingredient_affinity = data.get("ingredient_affinity", {})
+        self.shadow_stock = data.get("shadow_stock", [])
+        self.subconscious_strata = data.get("subconscious_strata", [])
+        self.scar_map = data.get("scar_map", [])
+        self.dream_archive = data.get("dream_archive", [])
+        self.known_recipes.clear()
+        gordon_data = self.lore.get("GORDON") or {}
+        if recipes := gordon_data.get("RECIPES", []):
+            self.known_recipes.update(
+                (r.get("ingredient"), r.get("catalyst_category"))
+                for r in recipes
+                if r.get("ingredient") and r.get("catalyst_category")
+            )
+
+    def _apply_discovered_words(self, words: Dict[str, str]) -> None:
+        if not isinstance(words, dict) or not words:
+            return
+        self.discovered_words = dict(words)
+        lexicon_data = self.lore.get("LEXICON") or {}
+        for word, category in self.discovered_words.items():
+            target_list = lexicon_data.setdefault(category, [])
+            if word not in target_list:
+                target_list.append(word)
+        self.lore.inject("LEXICON", lexicon_data)
+
+    def _load_mythos_state(self):
+        """Only the one-time migration of legacy scar and boon files; the record itself loads in attach_store."""
         scars_path = os.path.join(self.data_dir, "akashic_scars.json")
         boons_path = os.path.join(self.data_dir, "akashic_boons.json")
         prompts = self.lore.get("SYSTEM_PROMPTS") or {}
@@ -489,22 +498,6 @@ class TheAkashicRecord:
                 if self.events:
                     self.events.log(
                         f"{Prisma.RED}Migration save failed: {e}. Legacy files kept intact.{Prisma.RST}"
-                    )
-        words_path = os.path.join(self.data_dir, "akashic_discovered_words.json")
-        if os.path.exists(words_path):
-            try:
-                with open(words_path, "r", encoding="utf-8") as f:
-                    self.discovered_words = json.load(f)
-                    lexicon_data = self.lore.get("LEXICON") or {}
-                    for word, category in self.discovered_words.items():
-                        target_list = lexicon_data.setdefault(category, [])
-                        if word not in target_list:
-                            target_list.append(word)
-                    self.lore.inject("LEXICON", lexicon_data)
-            except Exception as e:
-                if self.events:
-                    self.events.log(
-                        f"{Prisma.RED}Failed to load discovered words: {e}. Keeping current state.{Prisma.RST}"
                     )
 
     def archive_dream(self, dream_text: str):

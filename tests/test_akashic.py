@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 from brain.akashic import TheAkashicRecord
 from engine.core import LoreManifest
+from engine.gate.store import Store
 from tests.base import BoneTestCase
 
 
@@ -21,6 +22,15 @@ class AkashicContinuityTests(BoneTestCase):
         self.akashic.save_dir = self.save_dir
         self.akashic.data_dir = self.save_dir
         self.akashic.state_path = os.path.join(self.save_dir, "akashic_state.json")
+        self.store = Store(path=os.path.join(self.save_dir, "iris.db"), state_dir=self.save_dir)
+        self.akashic.attach_store(self.store)
+
+    def reboot(self):
+        rebooted = TheAkashicRecord(lore_manifest=self.mock_lore)
+        rebooted.save_dir = rebooted.data_dir = self.save_dir
+        rebooted.state_path = os.path.join(self.save_dir, "akashic_state.json")
+        rebooted.attach_store(self.store)
+        return rebooted
 
     def tearDown(self):
         self.temp_dir.cleanup()
@@ -50,10 +60,7 @@ class AkashicContinuityTests(BoneTestCase):
         test_recipe = ("Iron", "Fire")
         self.akashic.recipe_candidates[test_recipe] = {"Molten Iron": 2}
         self.akashic._save_user_state()
-        rebooted_akashic = TheAkashicRecord(lore_manifest=self.mock_lore)
-        rebooted_akashic.save_dir = self.save_dir
-        rebooted_akashic.state_path = os.path.join(self.save_dir, "akashic_state.json")
-        rebooted_akashic._load_mythos_state()
+        rebooted_akashic = self.reboot()
         self.assertIn(
             test_recipe,
             rebooted_akashic.recipe_candidates,
@@ -76,19 +83,45 @@ class AkashicContinuityTests(BoneTestCase):
         self.assertNotIn("{", crystallized_msg, "[FAIL] UX Sludge detected! Raw dictionary leaked into UI string.")
         self.assertIn("Ascended_Artifact", crystallized_msg, "[FAIL] Result name was not properly extracted for the UI.")
 
-    def test_atomic_write_integrity(self):
-        category = "test_atomic"
-        dummy_data = {"key": "value"}
-        self.akashic.save_to_disk(category, dummy_data)
-        final_path = os.path.join(self.save_dir, f"akashic_{category}.json")
-        tmp_path = f"{final_path}.tmp"
-        self.assertTrue(
-            os.path.exists(final_path), "[FAIL] Final file was not created."
-        )
-        self.assertFalse(
-            os.path.exists(tmp_path),
-            "[FAIL] Temporary .tmp file was left behind! Atomic swap failed.",
-        )
+    def test_a_category_is_saved_to_the_store_not_a_file(self):
+        # Roadmap step 3d: akashic_<category>.json files, some written inside lore/, are store records now.
+        self.akashic.save_to_disk("test_atomic", {"key": "value"})
+        self.assertEqual(self.store.record("akashic.test_atomic"), {"key": "value"})
+        self.assertEqual([f for f in os.listdir(self.save_dir) if f.startswith("akashic_")], [])
+
+    def test_the_scar_map_and_strata_survive_a_restart(self):
+        # _save_user_state wrote them, but the load never read them back.
+        self.akashic.scar_map = [{"concept": "Overload", "coordinates": {"E": 0.8}, "gilded": True}]
+        self.akashic.subconscious_strata = [{"layer": "old tide"}]
+        self.akashic._save_user_state()
+        rebooted = self.reboot()
+        self.assertEqual(rebooted.scar_map[0]["concept"], "Overload")
+        self.assertEqual(rebooted.subconscious_strata, [{"layer": "old tide"}])
+
+    def test_discovered_words_come_back_into_the_lexicon(self):
+        self.akashic.discovered_words = {"quernstone": "heavy"}
+        self.akashic.save_all()
+        self.mock_lore.data["LEXICON"] = {}
+        self.reboot()
+        self.assertIn("quernstone", self.mock_lore.get("LEXICON")["heavy"])
+
+    def test_older_files_are_imported_once_and_kept(self):
+        state_path = os.path.join(self.save_dir, "akashic_state.json")
+        words_path = os.path.join(self.save_dir, "akashic_discovered_words.json")
+        with open(state_path, "w") as f:
+            json.dump({"scar_map": [{"concept": "Old Burn", "coordinates": {}, "gilded": True}]}, f)
+        with open(words_path, "w") as f:
+            json.dump({"quernstone": "heavy"}, f)
+        fresh = Store(path=os.path.join(self.save_dir, "fresh.db"), state_dir=self.save_dir)
+        rebooted = TheAkashicRecord(lore_manifest=self.mock_lore)
+        rebooted.save_dir = rebooted.data_dir = self.save_dir
+        rebooted.state_path = state_path
+        rebooted.attach_store(fresh)
+        self.assertEqual(rebooted.scar_map[0]["concept"], "Old Burn")
+        self.assertEqual(rebooted.discovered_words, {"quernstone": "heavy"})
+        for path in (state_path, words_path):
+            self.assertFalse(os.path.exists(path))
+            self.assertTrue(os.path.exists(path + ".imported"))
 
     def test_targeted_viability_autophagy(self):
         self.akashic.active_memory_core = MagicMock()
