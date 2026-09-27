@@ -208,9 +208,17 @@ class TheModelGetsItsMemoriesBack(BoneTestCase):
         receipt = ReceiptLedger.get_instance().for_subsystem("halcyon.recall")[-1]
         self.assertEqual(receipt.result_count, 1)
 
+    def test_adventure_answers_a_question_before_the_room(self):
+        # The probe: ADVENTURE had the key's hiding place in its prompt and still only described the room.
+        self.assertEqual(self.engine.boot_mode, "ADVENTURE")
+        self.turn(f"{PROSE}\n{REMEMBER}")
+        self.turn("The mill is quiet.", "Where does the river run?")
+        self.assertIn("7. QUESTIONS: If the user asks a question", self.prompt())
+        self.assertIn("answer it plainly first", self.prompt())
+
     def test_nothing_kept_means_no_block(self):
         self.turn(PROSE)
-        self.assertNotIn("WHAT YOU REMEMBER", self.prompt())
+        self.assertNotIn("=== WHAT YOU REMEMBER ===", self.prompt())
         receipt = ReceiptLedger.get_instance().for_subsystem("halcyon.recall")[-1]
         self.assertEqual((receipt.result_count, receipt.detail), (0, "nothing kept yet"))
 

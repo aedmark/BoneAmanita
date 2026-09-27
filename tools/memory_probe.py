@@ -97,7 +97,7 @@ def run(mode, out):
             "nomination": [l for l in (getattr(eng.cortex, "last_model_raw", "") or "").splitlines() if l.strip().startswith("NOMINATE")],
             "reply": reply[-600:],
             # What the person saw: a pause line when every draft was rejected, the hold when the floor was held.
-            "screen": str(res.get("ui", ""))[-400:],
+            "screen": str(res.get("ui", ""))[-3000:],
             "redrafts": sum(1 for r in receipts if r.subsystem == "cortex.redraft"),
             "secs": round(time.time() - t0, 1),
         }

@@ -22,9 +22,9 @@ engine learns or needs to resume.
   record (20.7.4.48), 3e the learned lore overlay (20.7.4.49), 3f the user profile, wired in for the
   first time (20.7.4.50), 3g the Oroboros lineage, with inherited scars applied at boot again
   (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52). Phase 3,
-  the probe and the memory keeper (20.7.4.53).
-- **Next:** memory recall phases 4 to 6 (ROADMAP). ADVENTURE answers "where did I hide the key?" with a room
-  description even with the memory in its prompt; worth a look before phase 4.
+  the probe and the memory keeper (20.7.4.53). ADVENTURE answers questions before the room
+  (20.7.4.54).
+- **Next:** memory recall phases 4 to 6 (ROADMAP).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -286,6 +286,25 @@ model's memories by shared words, so a question that paraphrased a memory never 
   alone, it sees what is kept, a failed call costs only the memory (the draft is still audited), usage is
   kept, the line is always well formed (including the probe's placeholder answer), on unless configured
   off; `AHeldTurnHasNoDraft` (3). Each mutation checked (14). Full suite 838 passed, 5 skipped.
+
+**ADVENTURE answers a question before the room (2026-09-27, 20.7.4.54).** The phase 3 probe's
+ADVENTURE arm had every fact in its WHAT YOU REMEMBER block and still answered "Where did I hide the silver
+key?" with a room description (the floorboard showed up as scenery, never as an answer). The Infocom
+protocol (`lore/system_prompts.json`) had ACTION RESOLUTION for actions and nothing for questions, so a
+question fell through to the room template, with STRICT AGENCY and the recall block's "do not recite them"
+pushing the same way.
+- Measured on the captured prompt (gemma4:12b, thinking off, 9 samples over three questions): as it was,
+  4/9 answered before the room; with a new rule "7. QUESTIONS: If the user asks a question (what they did,
+  where something is, what they carry), answer it plainly first, in one or two sentences, from WHAT YOU
+  REMEMBER and the shared reality, then print the room description block", 9/9, room format kept 9/9.
+  Rewording the recall block ("when the person asks about one, answer from it") added nothing (3/9 alone),
+  so it was left as it was.
+- The ADVENTURE probe then: kept 3/3, recalled 3/3, used 3/3, each answer on the person's screen above
+  the room ("The silver key is under the floorboard by the hearth."). The probe now keeps the whole screen.
+- Tests: the ADVENTURE prompt carries the rule; `test_nothing_kept_means_no_block` now looks for the
+  block's header, since the rule names it. Full suite 839 passed, 5 skipped.
+- Noticed, not touched: ADVENTURE room titles are zone names (**PROTO_COSMOS**, **ORBITAL**) rather than
+  place names.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 
