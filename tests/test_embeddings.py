@@ -438,3 +438,92 @@ class LiveBackend(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Reprobe(unittest.TestCase):
+    """After three failed batches the embedder fell to the hash for the rest of the session; now it checks
+    whether the backend is back, every REPROBE_SECONDS, and restores it when the vector size matches."""
+
+    def setUp(self):
+        SemanticEmbedder.reset()
+        self._env = dict(os.environ)
+        os.environ["BONE_EMBED_BACKEND"] = "http"
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self._env)
+        SemanticEmbedder.reset()
+
+    def severed(self):
+        with patch("requests.post", return_value=_fake_response([[1.0, 0.0]])):
+            e = SemanticEmbedder.get_instance()
+        with patch("requests.post", side_effect=OSError("down")):
+            for token in ("a", "b", "c"):
+                e.embed(token)
+        self.assertEqual((e.backend, e.degraded), ("hash", True))
+        return e
+
+    def receipts(self, receipt):
+        return [c.args[1] for c in receipt.call_args_list if c.args[0] == "embeddings.reprobe"]
+
+    def test_a_backend_that_comes_back_is_restored(self):
+        e = self.severed()
+        e._last_reprobe -= 1000
+        with patch("spores.embeddings.issue_receipt") as receipt, \
+                patch("requests.post", return_value=_fake_response([[0.0, 1.0]])):
+            vec = e.embed("the mill")
+        self.assertEqual((e.backend, e.model, e.degraded), ("http", "nomic-embed-text", False))
+        self.assertEqual(vec, [0.0, 1.0])
+        self.assertEqual(self.receipts(receipt), ["RESTORED"])
+
+    def test_a_restore_outside_a_batch_clears_degraded(self):
+        # Recall skips embedding while degraded, so a REM-tick restore must clear it or nothing ever would.
+        e = self.severed()
+        with patch("requests.post", return_value=_fake_response([[0.0, 1.0]])):
+            self.assertEqual(e.reprobe(force=True), "RESTORED")
+        self.assertFalse(e.degraded)
+
+    def test_it_waits_the_interval_and_says_when_still_down(self):
+        e = self.severed()
+        with patch("requests.post", side_effect=OSError("down")) as post:
+            e.embed("right after the fall")
+        post.assert_not_called()
+        e._last_reprobe -= 1000
+        with patch("spores.embeddings.issue_receipt") as receipt, patch("requests.post", side_effect=OSError("down")) as post:
+            e.embed("later")
+            e.embed("a moment after that")
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(self.receipts(receipt), ["STILL_DOWN"])
+        self.assertEqual(e.backend, "hash")
+
+    def test_a_backend_that_was_down_at_boot_needs_a_restart(self):
+        with patch("requests.post", side_effect=OSError("down")):
+            e = SemanticEmbedder.get_instance()
+        self.assertEqual(e.dimension, LEGACY_HASH_DIM)
+        with patch("spores.embeddings.issue_receipt") as receipt, \
+                patch("requests.post", return_value=_fake_response([[0.1] * 768])):
+            outcome = e.reprobe(force=True)
+        self.assertEqual((outcome, e.backend, e.dimension), ("RESTART_NEEDED", "hash", LEGACY_HASH_DIM))
+        self.assertEqual(self.receipts(receipt), ["RESTART_NEEDED"])
+
+    def test_the_hash_asked_for_is_never_reprobed(self):
+        os.environ["BONE_EMBED_BACKEND"] = "hash"
+        SemanticEmbedder.reset()
+        e = SemanticEmbedder.get_instance()
+        with patch("requests.post") as post:
+            self.assertIsNone(e.reprobe(force=True))
+        post.assert_not_called()
+
+
+class TheRemTickReprobes(unittest.TestCase):
+    def test_the_rem_tick_checks_a_lost_backend(self):
+        from tests.base import BoneTestCase
+
+        class Case(BoneTestCase):
+            def runTest(self):
+                with patch.object(SemanticEmbedder, "reprobe") as reprobe:
+                    self.engine.orchestrator._process_rem_tick()
+                reprobe.assert_called_once_with()
+
+        result = unittest.TextTestRunner(stream=open(os.devnull, "w")).run(Case())
+        self.assertTrue(result.wasSuccessful(), result.failures + result.errors)

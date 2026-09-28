@@ -24,8 +24,8 @@ CORE_SUBSYSTEMS = (
     "stage.negotiate",
     "user.profile",
 )
-# Issued only when their event happens (a draft sent back or cut, a room charted, memories forgotten), so their absence is not silence.
-EVENT_SUBSYSTEMS = ("cortex.redraft", "cortex.salvage", "halcyon.chart", "halcyon.forget")
+# Issued only when their event happens (a draft sent back or cut, a room charted, memories forgotten, a lost embedder checked), so their absence is not silence.
+EVENT_SUBSYSTEMS = ("cortex.redraft", "cortex.salvage", "halcyon.chart", "halcyon.forget", "embeddings.reprobe")
 
 
 @dataclass(frozen=True)

@@ -26,8 +26,8 @@ engine learns or needs to resume.
   (20.7.4.54). Room titles name the place, never the zone (20.7.4.55). Memory phase 4, the
   cartographer (20.7.4.56). Memory phase 5, forgetting (20.7.4.57). Phase 6, `/memory` (20.7.4.58); the
   memory recall plan is complete.
-- **Next:** the embedder re-probe (ROADMAP, under the memory plan): after three failed batches the embedder
-  stays on the hash for the rest of the session.
+  The embedder re-probe (20.7.4.59).
+- **Next:** Gordon's call; the memory recall plan and its follow-up are done.
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -399,6 +399,29 @@ facts while the kernel admits one nomination per cycle and the audit schema enfo
   filter) and the command (hidden in CONVERSATION, TECHNICAL shows the memory, world and decisions with a
   denial's reason, the DEEP HUD in any mode, plain turns are not decisions, listed under MAINTENANCE). Each
   mutation checked (7). Full suite 874 passed, 5 skipped.
+
+**The embedder re-probe (2026-09-27, 20.7.4.59).** Gordon's friend asked how often the embedder
+falls back to the hash; the answer (never, in the one recorded real run) turned up that after three failed
+batches in a row it stayed on the hash for the rest of the session, so a short Ollama hiccup cost the whole
+session its meaning ranking and its merges.
+- `SemanticEmbedder.reprobe(force=False)`: on the hash (unless the hash was asked for), at most every
+  `REPROBE_SECONDS` (120, `BONE_EMBED_REPROBE_SECONDS`; the first check waits a full interval after the fall),
+  probes the lost backend with `REPROBE_TIMEOUT` (5s). Called at the start of every hash batch and from the
+  REM tick.
+- Restores only when the backend answers at the session's vector size: a backend lost mid-session keeps the
+  768d width (hash vectors are served at the current size), so it comes back; one that was down at boot left
+  the session at the 8d legacy hash, which the ANN index and stored vectors were built at, so it reports
+  RESTART_NEEDED (logged once) instead of switching in. A restore clears `degraded` itself: recall skips
+  embedding while degraded, so waiting for a batch to clear it would have left recall on words for good.
+- The lost backend and model are remembered at the fall (the fall rewrote `model` to shake_256).
+- Receipted as `embeddings.reprobe` (RESTORED, STILL_DOWN, RESTART_NEEDED; an event subsystem). A still-down
+  check logs at debug, since it repeats every interval while the backend is down.
+- Live: pointed at a dead port, three failures severed it to the hash (768d, DEGRADED), a re-probe while down
+  said STILL_DOWN, pointed back it said RESTORED, and the next vector was 768d from nomic-embed-text.
+- Tests (`tests/test_embeddings.py`, `Reprobe` 5 and the REM tick): restored when it comes back, a restore
+  outside a batch clears degraded, it waits the interval and says still down, down at boot needs a restart,
+  the hash asked for is never re-probed, the REM tick calls it. Each mutation checked (7). Full suite 880
+  passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

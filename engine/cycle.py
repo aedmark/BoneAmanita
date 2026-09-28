@@ -457,6 +457,12 @@ class GeodesicOrchestrator:
                             f"{Prisma.GRN}REM Restorative cycle successfully reconstructed the crashed {comp.upper()} manifold.{Prisma.RST}",
                             "SYS",
                         )
+        try:
+            from spores.embeddings import SemanticEmbedder
+
+            SemanticEmbedder.get_instance().reprobe()
+        except Exception as e:
+            record_crash(self.eng, "REM embedder re-probe", e)
         if hasattr(self.eng, "store") and hasattr(self.eng, "boundary"):
             try:
                 self.consolidate_memory(f"rem-{int(time.time())}", "REM consolidation")

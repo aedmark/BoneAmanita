@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import math
 import os
 import threading
@@ -23,6 +24,9 @@ _DEFAULTS: Dict[str, Any] = {
     "TIMEOUT": 20.0,
     "MAX_CHARS": 2048,
     "NORMALIZE": True,
+    # After a fall to the hash, how often to check whether the backend is back, and how long to wait for it.
+    "REPROBE_SECONDS": 120.0,
+    "REPROBE_TIMEOUT": 5.0,
 }
 
 _ENV_KEYS = {
@@ -32,6 +36,7 @@ _ENV_KEYS = {
     "API_KEY": "BONE_EMBED_API_KEY",
     "TIMEOUT": "BONE_EMBED_TIMEOUT",
     "MAX_CHARS": "BONE_EMBED_MAX_CHARS",
+    "REPROBE_SECONDS": "BONE_EMBED_REPROBE_SECONDS",
 }
 
 
@@ -63,6 +68,10 @@ class SemanticEmbedder:
         self._consecutive_failures = 0
         self._st_model = None
         self._warned = set()
+        # The backend the session lost to the hash (None when it never had one), and when it was last checked.
+        self._lost_backend: Optional[str] = None
+        self._lost_model = ""
+        self._last_reprobe = 0.0
         for fault in self._settings_faults:
             self._log(
                 f"{Prisma.YEL}Embedding config ignored: {fault}.{Prisma.RST}", "WARN"
@@ -80,7 +89,7 @@ class SemanticEmbedder:
             if raw not in (None, ""):
                 settings[key] = raw
         faults = [] if faults is None else faults
-        for numeric in ("TIMEOUT", "MAX_CHARS"):
+        for numeric in ("TIMEOUT", "MAX_CHARS", "REPROBE_SECONDS", "REPROBE_TIMEOUT"):
             raw_value = settings[numeric]
             try:
                 settings[numeric] = float(raw_value)
@@ -138,6 +147,7 @@ class SemanticEmbedder:
         self.model = "shake_256"
         self.dimension = LEGACY_HASH_DIM
         self.degraded = True
+        self._last_reprobe = time.monotonic()
         if requested == "hash":
             self.detail = "hash backend requested explicitly"
             return
@@ -182,7 +192,7 @@ class SemanticEmbedder:
         self.dimension = int(len(probe[0]))
         return True
 
-    def _http_embed(self, texts: List[str]) -> List[List[float]]:
+    def _http_embed(self, texts: List[str], timeout: Optional[float] = None) -> List[List[float]]:
         import requests
 
         headers = {"Content-Type": "application/json"}
@@ -194,7 +204,7 @@ class SemanticEmbedder:
             str(self._settings["URL"]),
             json=payload,
             headers=headers,
-            timeout=float(self._settings["TIMEOUT"]),
+            timeout=float(timeout or self._settings["TIMEOUT"]),
         )
         resp.raise_for_status()
         body = resp.json()
@@ -221,6 +231,8 @@ class SemanticEmbedder:
         if self._consecutive_failures < _MAX_CONSECUTIVE_FAILURES:
             return
         if self.backend != "hash":
+            self._lost_backend, self._lost_model = self.backend, self.model
+            self._last_reprobe = time.monotonic()
             self._log(
                 f"{Prisma.RED}Backend '{self.backend}' failed "
                 f"{self._consecutive_failures}x ({error}). Severing to hash fallback; "
@@ -230,6 +242,51 @@ class SemanticEmbedder:
         self.backend = "hash"
         self.model = "shake_256"
         self._cache.clear()
+
+    def reprobe(self, force: bool = False) -> Optional[str]:
+        """On the hash fallback, check whether the backend is back. Restores it when its vectors have the
+        size everything was built with; a backend that only came up after boot needs a restart. Returns the
+        outcome (RESTORED, STILL_DOWN, RESTART_NEEDED), or None when there was nothing to check."""
+        with self._lock:
+            if self.backend != "hash" or self._settings["BACKEND"] == "hash":
+                return None
+            now = time.monotonic()
+            if not force and now - self._last_reprobe < float(self._settings["REPROBE_SECONDS"]):
+                return None
+            self._last_reprobe = now
+            target = self._lost_backend or ("http" if self._settings["BACKEND"] in ("auto", "", "http") else self._settings["BACKEND"])
+            try:
+                if target == "http":
+                    vectors = self._http_embed([_PROBE_TEXT], timeout=float(self._settings["REPROBE_TIMEOUT"]))
+                    model, dim = str(self._settings["MODEL"]), len(vectors[0]) if vectors and vectors[0] else 0
+                elif target == "sentence_transformers" and self._st_model is not None:
+                    model, dim = self._lost_model, len(self._st_model.encode([_PROBE_TEXT])[0])
+                else:
+                    raise RuntimeError(f"{target} cannot be re-probed mid-session")
+                if not dim:
+                    raise ValueError("the probe returned no vector")
+            except Exception as e:
+                # Every REPROBE_SECONDS while down; the receipt is the signal, the log stays at debug.
+                logging.getLogger("bone").log(logging.DEBUG, f"Embedder re-probe: {target} still down ({e})")
+                issue_receipt("embeddings.reprobe", "STILL_DOWN", result_count=0, degraded=True,
+                              inputs={"backend": target}, detail=f"{type(e).__name__}: {e}")
+                return "STILL_DOWN"
+            if dim != self.dimension:
+                outcome, detail = "RESTART_NEEDED", (f"{target}:{model} answers at {dim}d, but this session's "
+                                                     f"vectors are {self.dimension}d; restart to use it")
+                if "reprobe_restart" not in self._warned:
+                    self._warned.add("reprobe_restart")
+                    self._log(f"{Prisma.YEL}Embedding backend is reachable again: {detail}.{Prisma.RST}", "WARN")
+            else:
+                self.backend, self.model = target, model
+                self.degraded, self._consecutive_failures, self._lost_backend = False, 0, None
+                self.detail = outcome = "RESTORED"
+                self._warned.discard("embed_failure")
+                detail = f"{target}:{self.model} restored at {dim}d"
+                self._log(f"{Prisma.GRN}Semantic cortex restored: {detail}.{Prisma.RST}", "INFO")
+            issue_receipt("embeddings.reprobe", outcome, result_count=1 if outcome == "RESTORED" else 0,
+                          degraded=outcome != "RESTORED", inputs={"backend": target, "dimension": dim}, detail=detail)
+            return outcome
 
     def _cache_key(self, text: str) -> str:
         return f"{self.backend}:{self.model}:{text}"
@@ -265,6 +322,8 @@ class SemanticEmbedder:
             return self._embed_batch_locked(texts)
 
     def _embed_batch_locked(self, texts: Sequence[Any]) -> List[List[float]]:
+        if self.backend == "hash":
+            self.reprobe()
         cleaned = [self._clean(t) for t in texts]
         results = [[0.0] * self.dimension for _ in cleaned]
         pending: List[str] = []
