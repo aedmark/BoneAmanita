@@ -203,11 +203,16 @@ class SecretsNeverReachTheOtherFiles(BoneTestCase):
         self.assertIn("here", words)
 
     def test_telemetry_withholds(self):
+        import os
+        import tempfile
+
         from engine.core import TelemetryService
 
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
         telemetry = TelemetryService()
         self.addCleanup(telemetry.shutdown)
-        telemetry.current_trace_file = "dummy_path.json"
+        telemetry.current_trace_file = os.path.join(directory.name, "trace.jsonl")
         telemetry.record_event({"text": f"Traveler: {KEY}"})
         self.assertIn("[withheld: an API key]", telemetry.write_buffer[-1])
         telemetry.start_cycle("t")
