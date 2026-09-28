@@ -365,6 +365,7 @@ class TheMemoryKeeper(BoneTestCase):
         super().setUp()
         self.engine.memory_keeper.enabled = True
         self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.active_mode = "CONVERSATION"  # a sister's name is the person's, not the story's
         self.keeper_prompts = []
 
     def respond(self, reply="That's a lovely name.", keeps="sister_name = Odalys"):
@@ -481,6 +482,7 @@ class AHeldTurnHasNoDraft(BoneTestCase):
 
     def test_what_the_person_said_is_still_kept(self):
         self.engine.memory_keeper.enabled = True
+        self.engine.cortex.active_mode = "TECHNICAL"
         self.engine.cortex.llm.generate = MagicMock(return_value="deploy_window = Thursdays at 2pm")
         self.hold("Our deploy window is Thursdays at 2pm.")
         self.assertEqual(self.engine.store.state()[1]["self"]["memory"].get("deploy_window"), "Thursdays at 2pm")

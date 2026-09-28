@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .recall import memory_hash
+from .recall import memory_hash, zone_of
 from .secrets import screen
 
 # SIMILAR, measured with nomic-embed-text: paraphrased duplicates 0.90 to 0.97, distinct memories at most
@@ -33,7 +33,9 @@ def plan(memory: dict, stats: dict, vectors: dict | None, model: str, cap: int,
         sims = m @ m.T
         kept = []
         for i, key in enumerate(keys):
-            twin = next((j for j in kept if sims[i, j] >= similar), None)
+            # A story's "Brisket the hound" is not a duplicate of the person's dog.
+            twin = next((j for j in kept if sims[i, j] >= similar
+                         and zone_of(keys[j], modes or {}) == zone_of(key, modes or {})), None)
             if twin is None:
                 kept.append(i)
             else:

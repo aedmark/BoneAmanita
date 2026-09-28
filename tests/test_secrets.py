@@ -154,7 +154,7 @@ class SecretsNeverReachTheStore(BoneTestCase):
         self.engine.cortex.active_mode = "ADVENTURE"
         self.respond("The door listens.", "door_password = moonlight")
         self.engine.process_turn("The old man said the door's password is moonlight.")
-        self.assertEqual(self.memory().get("door_password"), "moonlight")
+        self.assertEqual(self.memory().get("story.door_password"), "moonlight")
         # The story's audit trail keeps it too; a resumed adventure needs its riddle.
         self.assertIn("value:moonlight", self.engine.store.audit("proposals")[0]["raw_line"])
 

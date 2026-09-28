@@ -879,7 +879,11 @@ class GeodesicOrchestrator:
                         gate_text = model_raw
                         # The keeper nominates what the person said only when the draft nominated nothing itself.
                         if wants_keeper and not any(l.strip().startswith("NOMINATE") for l in model_raw.splitlines()):
-                            if line := keeper.propose(user_message, (state.get("self") or {}).get("memory", {})):
+                            from engine.gate.recall import STORY, zone, zoned
+
+                            mode = getattr(getattr(self.eng, "cortex", None), "active_mode", None)
+                            here = zoned(state, self.eng.store.memory_modes(), mode)["self"]["memory"]
+                            if line := keeper.propose(user_message, here, STORY if zone(mode) == "story" else ""):
                                 gate_text = f"{model_raw or self.HELD_RATIONALE}\n{line}"
                         if gate_text:
                             receipt = gate.adjudicate(gate_text)

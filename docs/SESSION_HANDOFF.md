@@ -31,9 +31,9 @@ engine learns or needs to resume.
   call); names left out on purpose (the reader behind the governor prediction, Halcyon's author).
   A second look at bone-iris gave five items (ROADMAP Track E); the first, secrets stay out of the store
   (20.7.4.61), then out of every other file, with named credentials forgotten by the memory's mode
-  (20.7.4.62).
-- **Next:** scoped recall, then refusals the model hears, provenance, and adopting or pruning the ported
-  store (ROADMAP Track E, "From a second look at bone-iris").
+  (20.7.4.62). Scoped recall, story vs. real (20.7.4.63).
+- **Next:** refusals the model hears, provenance, and adopting or pruning the ported store (ROADMAP Track
+  E, "From a second look at bone-iris").
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -479,6 +479,29 @@ turn and `remember` kept whatever it was given, so a pasted key went into `iris.
   ADVENTURE's, `memory_meta` follows; a memory from before modes is judged in full; the tokenizer, telemetry
   (event and crystal), the crash log and a spore withhold. Each mutation checked (11). Full suite 900
   passed, 5 skipped.
+
+**Scoped recall, story vs. real (2026-09-28, 20.7.4.63).** Gordon's call among three: two zones.
+ADVENTURE is the story; CONVERSATION, CREATIVE and TECHNICAL share what the person told them (a sister's
+name matters in all three). Neither sees the other's memories.
+- `engine/gate/recall.py`: `zone(mode)`, `zone_of(key, modes)` (the mode in `memory_meta`; with none, a
+  `story.` key is the story's and any other the person's), `zoned(state, modes, mode)`. The cortex
+  recalls from the zoned state; `meaning_scores` takes `held` (every key still kept), since its `keep`
+  pruned the other zone's vectors and a mode switch would have re-embedded them.
+- Memory is one flat dict, so zoning alone let a story clobber the person: "my name is Aragorn" in
+  ADVENTURE would have overwritten the real `user_name`. The keeper now keeps what ADVENTURE establishes
+  under `story.` (`recall.STORY`); it sees only its zone's memories, shown without the prefix so it reuses
+  its names, and the composer drops the prefix in WHAT YOU REMEMBER. The keeper's keys have no dots, so a
+  real key can never equal a story one.
+- Forgetting merges near-duplicates only within a zone (the story's hound named Brisket is not the
+  person's dog). Least-recalled eviction stays global.
+- Not zoned: world facts (world-graph edges carry no mode; they surface only when the turn names their
+  entity), and a model's own NOMINATE line in ADVENTURE is kept under the key it wrote (the narrator has
+  not been seen to write one).
+- Tests (`tests/test_scoped_recall.py`, 10): the zones, zoned state, the other zone's vectors kept (unit
+  and a four-turn run), story twins not merged; end to end, the person remembered in TECHNICAL and
+  CREATIVE and not ADVENTURE, the story only in ADVENTURE (shown as `vault`), Aragorn beside Gordon, the
+  keeper's view. Three keeper tests now set their mode (tests boot in ADVENTURE, where a sister's name
+  would be the story's). Mutations 12, one equivalent (a skipped write). Full suite 910 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

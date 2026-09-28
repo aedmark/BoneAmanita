@@ -7,6 +7,25 @@ import math
 import re
 
 _WORD = re.compile(r"[a-z0-9']+")
+# The keeper's prefix for what ADVENTURE keeps, so a story's "user_name" never overwrites the person's.
+STORY = "story."
+
+
+def zone(mode) -> str:
+    """ADVENTURE is the story; the other modes share what the person told them (Gordon, 2026-09-28)."""
+    return "story" if mode == "ADVENTURE" else "real"
+
+
+def zone_of(key: str, modes: dict) -> str:
+    """A memory's zone, by the mode it was kept in; one with no recorded mode goes by its key."""
+    return zone(modes[key]) if key in modes else ("story" if key.startswith(STORY) else "real")
+
+
+def zoned(state: dict, modes: dict, mode) -> dict:
+    """`state` with only the memories of `mode`'s zone."""
+    memory = ((state or {}).get("self") or {}).get("memory", {}) or {}
+    here = {k: v for k, v in memory.items() if zone_of(k, modes) == zone(mode)}
+    return {**state, "self": {**(state.get("self") or {}), "memory": here}}
 
 
 def _words(text) -> set:
@@ -23,9 +42,10 @@ def memory_hash(key, value) -> str:
     return hashlib.sha256(f"{key}: {value}".encode("utf-8")).hexdigest()[:16]
 
 
-def meaning_scores(state: dict, text: str, store, embedder):
+def meaning_scores(state: dict, text: str, store, embedder, held: set | None = None):
     """Each memory's similarity to `text`. A memory is embedded once per content and model, and kept in
-    the store. None when the embedder is on its hash fallback, whose vectors carry no meaning."""
+    the store. None when the embedder is on its hash fallback, whose vectors carry no meaning.
+    `held` is every key still kept (default: those in `state`); vectors of the rest are dropped."""
     memory = ((state or {}).get("self") or {}).get("memory", {}) or {}
     if not memory or embedder is None or embedder.degraded:
         return None
@@ -38,8 +58,9 @@ def meaning_scores(state: dict, text: str, store, embedder):
     if embedder.degraded:
         return None
     fresh = dict(zip(missing, vectors[1:]))
-    if fresh or set(kept) - set(memory):
-        store.save_memory_vectors([(k, hashes[k], model, v) for k, v in fresh.items()], keep=set(memory))
+    if fresh or set(kept) - (set(memory) if held is None else held):
+        store.save_memory_vectors([(k, hashes[k], model, v) for k, v in fresh.items()],
+                                  keep=set(memory) if held is None else held)
     return {k: _cosine(vectors[0], fresh[k] if k in fresh else kept[k][2]) for k in memory}
 
 

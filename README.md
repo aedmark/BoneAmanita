@@ -61,7 +61,8 @@ engine learns on top of the factory `lore/` files (an overlay per category;
 (which lexical registers you keep using, updated each turn), the lineage each
 death leaves the next generation (an older `legacy.json` is imported once), the gate's
 memories (what you tell it worth knowing later, kept after each reply) with
-their embeddings (so they come back by meaning), the ADVENTURE map (each room the
+their embeddings (so they come back by meaning; what you tell ADVENTURE stays in
+the story, and what you tell the other modes stays out of it), the ADVENTURE map (each room the
 narrator describes, with its exits and what is in it, charted through the gate),
 memory and world graphs, its full audit trail, and the resume checkpoint (session state
 and dialogue, one row replaced in a transaction, so a failed save preserves

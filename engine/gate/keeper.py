@@ -38,8 +38,9 @@ class MemoryKeeper:
     def __init__(self, llm, enabled: bool = True, shown: int = 30, max_value: int = 200):
         self.llm, self.enabled, self.shown, self.max_value = llm, enabled, shown, max_value
 
-    def line_for(self, answer: str):
-        """The NOMINATE line for the keeper's answer, or None when it kept nothing or answered off-format."""
+    def line_for(self, answer: str, prefix: str = ""):
+        """The NOMINATE line for the keeper's answer, or None when it kept nothing or answered off-format.
+        `prefix` marks the zone (recall.STORY in ADVENTURE)."""
         for raw in str(answer or "").splitlines():
             if raw.strip().upper().startswith("NONE"):
                 return None
@@ -51,14 +52,17 @@ class MemoryKeeper:
                     key, value = _key(inner.group(1)), inner.group(2)
                 value = re.sub(r"\s+", " ", value.replace(";", ",")).strip().strip("\"'")[: self.max_value]
                 if value:
+                    key = prefix + key
                     return f"NOMINATE what=self/memory/{key} verb=remember args=key:{key}; value:{value}"
         return None
 
-    def propose(self, message: str, memory: dict):
-        """One call; returns the NOMINATE line or None, and receipts what it decided."""
+    def propose(self, message: str, memory: dict, prefix: str = ""):
+        """One call; returns the NOMINATE line or None, and receipts what it decided. `memory` is this
+        zone's, shown without `prefix` so the keeper reuses its names."""
         if not self.enabled or not str(message or "").strip():
             return None
-        kept = "\n".join(f"{k} = {v}" for k, v in list((memory or {}).items())[-self.shown:]) or "(nothing yet)"
+        kept = "\n".join(f"{k.removeprefix(prefix) if prefix else k} = {v}"
+                         for k, v in list((memory or {}).items())[-self.shown:]) or "(nothing yet)"
         usage = getattr(self.llm, "last_usage", None)
         try:
             answer = self.llm.generate(PROMPT.format(kept=kept, message=message), {"temperature": 0.2, "max_tokens": 120})
@@ -69,7 +73,7 @@ class MemoryKeeper:
         finally:
             if usage is not None:
                 self.llm.last_usage = usage
-        line = self.line_for(answer)
+        line = self.line_for(answer, prefix)
         issue_receipt(
             "halcyon.keeper",
             "PROPOSED" if line else "NONE",

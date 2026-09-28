@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional, Tuple
 from engine.core import EventBus, JSONEncoder, Prisma
 from engine.presets import BoneConfig
 from mechanics.providers import CLOUD_ENDPOINTS, KEY_ENV, normalize_provider
+from engine.gate.recall import STORY
 from engine.receipts import issue as issue_receipt
 from mechanics.projector import is_system_label
 from engine.struts import safe_get, ux, ux_format
@@ -739,7 +740,7 @@ class PromptComposer:
             return ""
         lines = ["=== WHAT YOU REMEMBER ===",
                  "You chose to keep these. Use them where they bear on this turn; do not recite them."]
-        lines += [f"- {key}: {value}" for key, value in found.get("memories", [])]
+        lines += [f"- {key.removeprefix(STORY)}: {value}" for key, value in found.get("memories", [])]
         if found.get("facts"):
             lines.append("Established in the world:")
             lines += [f"- {fact}" for fact in found["facts"]]

@@ -1015,15 +1015,18 @@ class TheCortex:
         state = getattr(ctx, "halcyon_state", None)
         if not state:
             return None
-        from engine.gate.recall import meaning_scores, recall
+        from engine.gate.recall import meaning_scores, recall, zoned
         from engine.receipts import issue as issue_receipt
 
         c_cfg = safe_get(self.cfg, "CORTEX", {})
         store = getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "store", None)
+        held = set(((state.get("self") or {}).get("memory") or {}))
+        # The story's memories stay in ADVENTURE, the person's out of it.
+        state = zoned(state, store.memory_modes() if store is not None else {}, self.active_mode)
         scores, why = None, "the embedder is on its hash fallback"
         if store is not None:
             try:
-                scores = meaning_scores(state, user_input, store, self._recall_embedder())
+                scores = meaning_scores(state, user_input, store, self._recall_embedder(), held=held)
             except Exception as e:
                 why = f"meaning ranking failed ({type(e).__name__}: {e})"
                 if self.events:
