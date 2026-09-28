@@ -170,6 +170,7 @@
     "status": "Check vitals",
     "save": "Persist state",
     "export": "Write the adventure for FractalOS",
+    "memory": "What the model keeps and what the gate decided (TECHNICAL or DEEP; /memory <word> filters)",
     "inventory": "Check pockets",
     "map": "Navigation check",
     "mode": "Switch the experience mode; the conversation carries over",
@@ -228,6 +229,7 @@
       ],
       "MAINTENANCE": [
         "/debug",
+        "/memory",
         "/reload",
         "/hud",
         "/idle",
@@ -243,6 +245,7 @@
     "slots": "Slots"
   },
   "command_alerts": {
+    "memory_hidden": "/memory is for TECHNICAL mode or the DEEP HUD (/hud deep).",
     "reality_lock": "COMMAND REJECTED: Reality Depth {depth} prohibits administrative override.",
     "mode_usage": "Usage: /mode [ADVENTURE | CONVERSATION | CREATIVE | TECHNICAL]",
     "allow_usage": "Usage: /allow PATH [keep]. A folder ending in / with keep covers everything under it.",

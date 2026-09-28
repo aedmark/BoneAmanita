@@ -97,6 +97,7 @@ and only Adventure has an inventory and a world to move through.
 |---|---|
 | `/status` | Vitals: health, stamina, energy, the memory backend, and what it believes about you. |
 | `/diag` | This turn's receipts, plus anything silent or degraded. See below. |
+| `/memory [word]` | Technical mode or the deep HUD: what the model keeps (with how often it came back), the world it has charted, and the gate's latest decisions. A word filters the list. |
 | `/save` | Persist state to disk. |
 | `/mode <name>` | Switch the experience mode (Adventure, Conversation, Creative, Technical). |
 | `/preset <name>` | Load a tuning preset only (Zen Garden, Thunderdome, ...); the mode stays. |

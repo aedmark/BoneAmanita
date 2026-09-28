@@ -607,6 +607,19 @@ class Store:
             db.execute("UPDATE conversations SET updated_at=? WHERE id=?", (now, self._conversation_id))
         return self._conversation_id
 
+    def recent_decisions(self, limit: int = 10) -> list[dict]:
+        """The gate's latest decisions on actual nominations (plain turns left out), newest first."""
+        db = self.connect()
+        try:
+            rows = db.execute(
+                "SELECT r.created_at, r.decision, r.decision_basis_json, r.result_json, p.verb, p.what_path "
+                "FROM receipts r JOIN proposals p ON p.turn_id = r.turn_id ORDER BY r.created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        finally:
+            db.close()
+        return [dict(r) for r in rows]
+
     def audit(self, table: str, limit: int = 50) -> list[dict]:
         """Rows of one audit table, newest first."""
         if table not in {"turns", "messages", "proposals", "receipts", "gate_decisions", "mutations"}:

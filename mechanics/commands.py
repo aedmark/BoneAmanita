@@ -430,6 +430,30 @@ class CommandProcessor:
         self.interface.log(f"{self.P.GRN}{msg}{self.P.RST}")
         return True
 
+    def _cmd_memory(self, parts):
+        """What the model keeps and what the gate decided; TECHNICAL mode and the DEEP HUD only (memory phase 6)."""
+        from engine.gate.report import memory_report
+        from spores.embeddings import SemanticEmbedder
+
+        eng = self.interface.eng
+        orchestrator = getattr(eng, "orchestrator", None)
+        if not (orchestrator and orchestrator._shows_gate_denials()):
+            msg = ux("command_alerts", "memory_hidden") or "/memory is for TECHNICAL mode or the DEEP HUD (/hud deep)."
+            self.interface.log(f"{self.P.GRY}{msg}{self.P.RST}")
+            return True
+        store = getattr(eng, "store", None)
+        if store is None:
+            self.interface.log(f"{self.P.RED}No Halcyon store is attached.{self.P.RST}")
+            return True
+        _, state = store.state()
+        cap = int(((eng.boundary.spec.get("limits") or {}).get("self_max_memories")) or 500)
+        lines = memory_report(state, store.memory_stats(), store.recent_decisions(10), cap,
+                              SemanticEmbedder.get_instance().describe(), needle=" ".join(parts[1:]))
+        for line in lines:
+            colour = self.P.GRY if line.startswith(" ") or line.startswith("Matching") else self.P.CYN
+            self.interface.log(f"{colour}{line}{self.P.RST}")
+        return True
+
     def _cmd_inventory(self, _parts):
         items = self.interface.get_inventory()
         P = self.interface.P

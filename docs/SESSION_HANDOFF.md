@@ -24,8 +24,10 @@ engine learns or needs to resume.
   (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52). Phase 3,
   the probe and the memory keeper (20.7.4.53). ADVENTURE answers questions before the room
   (20.7.4.54). Room titles name the place, never the zone (20.7.4.55). Memory phase 4, the
-  cartographer (20.7.4.56). Memory phase 5, forgetting (20.7.4.57).
-- **Next:** memory recall phase 6, `/memory` (ROADMAP).
+  cartographer (20.7.4.56). Memory phase 5, forgetting (20.7.4.57). Phase 6, `/memory` (20.7.4.58); the
+  memory recall plan is complete.
+- **Next:** the embedder re-probe (ROADMAP, under the memory plan): after three failed batches the embedder
+  stays on the hash for the rest of the session.
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -380,6 +382,23 @@ facts while the kernel admits one nomination per cycle and the audit schema enfo
   held, not offered to the model), in the engine (recall counts, a turn at the mark forgets through the
   gate, below it nothing, REM merges, a turn below the mark leaves merging to REM). Each mutation checked
   (13). Full suite 867 passed, 5 skipped.
+
+**Memory phase 6, `/memory` (2026-09-27, 20.7.4.58).** The memory recall plan's last phase.
+- `/memory [word]`, gated like the gate's denials (TECHNICAL mode or the DEEP HUD; elsewhere it says so and
+  shows nothing). `engine/gate/report.py` `memory_report`: the count against the cap and where forgetting
+  starts, the embedder (`SemanticEmbedder.describe`, so a hash fallback shows as DEGRADED), each memory
+  newest first with how often recall handed it back and when (30 shown, then "...and N more"; a word
+  filters), the world graph's nodes, charted rooms, active links and constraints, and the gate's latest ten
+  decisions on actual nominations (`Store.recent_decisions`, receipts joined to proposals, so plain turns
+  are left out) with a denial's reason and "(no change)" for a noop.
+- Listed under MAINTENANCE in /help; README's command table has it.
+- Live (TECHNICAL, gemma4:12b, three turns): two memories, each with its recall count, and the two ACCEPTs.
+- Also added to ROADMAP: the embedder re-probe. The only recorded real run (2026-09-26 c) never fell back to
+  the hash (160 batches, 1,272 texts, all nomic-embed-text); the older mode runs predate per-turn receipts.
+- Tests (`tests/test_memory_command.py`, 7): the report (newest first, recall counts, the limit, the
+  filter) and the command (hidden in CONVERSATION, TECHNICAL shows the memory, world and decisions with a
+  denial's reason, the DEEP HUD in any mode, plain turns are not decisions, listed under MAINTENANCE). Each
+  mutation checked (7). Full suite 874 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 
