@@ -1,0 +1,459 @@
+<article class="dev-diary">
+  <header>
+    <h1>BoneAmanita Dev Diary: The Engine Remembers</h1>
+    <p class="date">September 27, 2026</p>
+    <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>
+  </header>
+
+  <p>
+    For most of its life BoneAmanita has had a strange kind of memory. It
+    kept a great deal about itself: its energy, its moods, the words it had
+    learned, even the scars left by earlier versions of itself that had
+    "died". What it could not reliably keep was the simplest thing a person
+    expects from a conversation partner: what you told it.
+  </p>
+
+  <p>
+    This week that changed.
+  </p>
+
+  <h2>A Gate for Everything the Model Wants to Keep</h2>
+
+  <p>
+    The engine now runs every change to its long-term state through a small,
+    strict gate called Halcyon, grafted in from the bone-iris project. The
+    gate denies by default. The model may propose one change per reply, in a
+    fixed one-line format, and the gate checks it against a written
+    declaration of what is allowed before anything is saved. Every decision,
+    accepted or refused, is kept in an audit trail along with the words the
+    model wrote around it.
+  </p>
+
+  <p>
+    Before Halcyon, an earlier attempt had required every reply to be a JSON
+    object. On real runs that produced blank replies whenever the model
+    stumbled on the format. Halcyon lets the model speak in plain prose and
+    only asks for structure on the one line that proposes a change.
+  </p>
+
+  <p>
+    With the gate in place, I moved everything the engine learns into one
+    SQLite store, one piece at a time: the resume point, the adventure's
+    rooms, the words the lexicon teaches itself, the Akashic record, the lore
+    it learns on top of the factory files, a profile of the person, and the
+    lineage each death leaves the next generation. Each move imports the old
+    file once and keeps it, so nothing is lost on upgrade. Two of those
+    pieces turned out to have been quietly broken for months: the user
+    profile had never been switched on, and inherited scars had stopped
+    being applied at boot. Both work now.
+  </p>
+
+  <h2>The Model Never Wrote It Down</h2>
+
+  <p>
+    The obvious next step was to hand the model back what it had kept. So I
+    built a probe: tell the engine three facts, wipe the conversation, start
+    a new day, and ask for each fact.
+  </p>
+
+  <p>
+    The first run kept nothing. Asked for my sister's name, the model
+    explained that it had no memory of me. It had been offered the chance to
+    remember on every turn and had never once taken it. Rewording the
+    instruction, moving it, adding a worked example: none of it helped. Out
+    of 36 tries, the model wrote the line once.
+  </p>
+
+  <p>
+    So memory now has a keeper. After each reply, one short, separate call
+    asks a single question: did the person just say something worth knowing
+    later? It answers with a name and a value, or with NONE. The engine
+    writes the proposal, and the gate judges it exactly as it would judge
+    the model's own. With the keeper, all twelve facts in the probe were
+    kept across all four modes, and every question that got an answer was
+    answered from memory.
+  </p>
+
+  <h2>Remembering by Meaning, and Forgetting on Purpose</h2>
+
+  <p>
+    Memories now come back by what they mean rather than by the words they
+    share. "Where can I find something to see by?" finds the brass lamp by
+    the north door, and "What do I still have to pay back?" finds the
+    ferryman's debt, though neither question shares a word with its memory.
+  </p>
+
+  <p>
+    Memory also has a limit, so the engine now forgets on purpose. It counts
+    how often each memory is actually used. Near-duplicates are merged, and
+    as memory approaches its cap, the least-used memories go first. The
+    threshold for "the same memory in different words" was measured rather
+    than guessed: paraphrased duplicates scored between 0.90 and 0.97, while
+    two different people visiting next week scored 0.76.
+  </p>
+
+  <h2>A Map That Stays Drawn</h2>
+
+  <p>
+    In Adventure mode, rooms used to exist only in the text of the last
+    reply. Now every room the narrator describes is charted into a world
+    graph: its description, its exits, and the things in it. The next turn
+    reads the room back from the map instead of from the model's last
+    sentence. Objects that leave a room are retired rather than deleted, so
+    the history of the world is kept.
+  </p>
+
+  <p>
+    Two smaller Adventure fixes came out of the same work. The narrator used
+    to answer "Where did I hide the key?" with a fresh room description; it
+    now answers the question first. And rooms used to be titled with the
+    engine's internal zone names, labels like VOID_DRIFT. It is now a rule
+    of the project that a room title names the place itself. The zones
+    belong in the debugging panel.
+  </p>
+
+  <h2>Where the Project Stands</h2>
+
+  <p>
+    The memory plan is complete. There is a <code>/memory</code> command,
+    available in Technical mode and on the deep display, that lists what the
+    engine keeps, how often each memory came back, and the gate's latest
+    decisions. The embedding service can now recover from an outage instead
+    of falling back to meaningless vectors for the rest of the session. The
+    test suite stands at 880 passing tests, and each new feature's tests
+    were checked by deliberately breaking the feature and confirming the
+    test fails.
+  </p>
+
+  <p>
+    For the first time, telling BoneAmanita something is a promise it can
+    keep.
+  </p>
+</article>
+
+<article class="dev-diary">
+  <header>
+    <h1>BoneAmanita Dev Diary: Every Mode, With a Real Model</h1>
+    <p class="date">September 26, 2026</p>
+    <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>
+  </header>
+
+  <p>
+    Unit tests had been passing for weeks. The question I had been avoiding
+    was simpler: what happens when a real model plays thirty turns in each
+    mode?
+  </p>
+
+  <h2>Thirty Turns Per Mode</h2>
+
+  <p>
+    I wrote a harness that drives the engine through thirty paced turns in
+    Conversation, Adventure, Technical and Creative modes on a local model,
+    and records everything on every turn: health, energy, hormones, the
+    physics, every log line, and whether the person saw anything at all.
+  </p>
+
+  <p>
+    Conversation held up. Adventure did not. Only eight of its thirty turns
+    reached the model. Sixteen ended in a system halt because the engine ran
+    out of energy, and six more were silences. The engine's own economy was
+    starving the story.
+  </p>
+
+  <h2>Fixing What the Runs Found</h2>
+
+  <p>
+    The fixes came as a plan of nine items, built in order with a test for
+    each. A gentler "bunny hill" start for the first turns. A detector for
+    requests the engine genuinely cannot do, so it can say so once instead
+    of pretending. Repeated moves in Adventure no longer punish the player.
+    PINKER, the gate that decides when a reply is under too much strain,
+    was audited and given honest inputs. The Jester now answers real loops
+    instead of imaginary ones.
+  </p>
+
+  <p>
+    The runs also taught me to measure more. Cortisol, the energy ledger,
+    what digestion paid and at what voltage: if a number moves, it is now
+    recorded. More data is almost never a bad thing when the question is why
+    something went quiet.
+  </p>
+
+  <h2>Receipts, and Crashes That Stay Off the Screen</h2>
+
+  <p>
+    Since earlier in the month, every subsystem that is supposed to act on a
+    turn leaves a receipt saying what it did, or that it did nothing, or that
+    it fell back to something worse. A subsystem that stops issuing receipts
+    shows up as silent. The first full report on those receipts from real
+    runs found real problems:
+    subsystems filed under the wrong names, a memory recall that never
+    fired, and a memory tool nobody had ever used.
+  </p>
+
+  <p>
+    A phase that crashes inside a turn no longer prints its error into the
+    story. The detail goes to a crash log and telemetry, and the test suite
+    now fails any test during which a phase quietly crashed.
+  </p>
+</article>
+
+<article class="dev-diary">
+  <header>
+    <h1>BoneAmanita Dev Diary: Telling the Truth About the Machine</h1>
+    <p class="date">September 23, 2026</p>
+    <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>
+  </header>
+
+  <p>
+    After a summer away, I came back to BoneAmanita in September with a
+    different question. Not "what else can it do?" but "what does it
+    actually do?"
+  </p>
+
+  <h2>It Is a Prompt Builder</h2>
+
+  <p>
+    The README was rewritten from scratch. The old one described a
+    biological runtime with a metabolism, neurochemistry and dreams. The new
+    one opens by saying plainly what the software is: a state machine that
+    sits between you and a local language model and rewrites the model's
+    instructions on every turn. The effects it produces are produced by
+    instructions to a model, not by the simulation its naming implies.
+  </p>
+
+  <p>
+    That is not a demotion. It is the only honest place to build from.
+  </p>
+
+  <h2>A Prediction That Came True</h2>
+
+  <p>
+    A reader emailed with a falsifiable prediction: that the engine's
+    "governor", which solved a graph equation over its memory every turn,
+    was mostly theatre. I instrumented it before touching anything. The
+    graph term contributed 1.53% of the result, and the result was identical
+    whether the engine's voltage was 15 or 90. The prediction was right to
+    two decimal places. The governor was replaced with the simpler approach
+    the reader recommended.
+  </p>
+
+  <h2>Making Silence Visible</h2>
+
+  <p>
+    The engine's only output is prose, and prose looks the same whether the
+    physics underneath ran or quietly returned a default. So I went after
+    silent failure systematically. Exception handlers that swallowed errors
+    without a word were retired or made to report, with a budget the test
+    suite enforces. Tests were rewritten to check the state that should
+    result, not merely that nothing crashed. The credits were checked
+    against the code and corrected where they claimed more than was there.
+  </p>
+
+  <p>
+    The somatic side got the same treatment: one budget per turn for how
+    tired or strained the engine is, enforced by the engine itself rather
+    than by asking the model to cooperate.
+  </p>
+
+  <h2>Asking People Instead of Machines</h2>
+
+  <p>
+    To find out whether any of this made conversations better, I ran blind
+    comparisons against the same model with no engine at all. One early
+    result was wrong for a boring reason: Ollama's OpenAI-compatible
+    endpoint quietly runs every model with a 4,096-token context, and the
+    engine's prompts were being cut from the top without any warning. That
+    one is now caught and reported.
+  </p>
+
+  <p>
+    I also tested AI judges against control cases where the right answer is
+    known: the same reply three times over, a reply written for a different
+    turn, the very textbook answer the engine exists to avoid. None of the
+    six models cleared the bar. So AI judges are retired as verdicts. The engine is now evaluated by
+    people, through a blind reading panel that shows it exactly as it runs.
+  </p>
+
+  <p>
+    Along the way the codebase moved its core modules into an
+    <code>engine/</code> package, and the documentation into
+    <code>docs/</code>, so a newcomer can find the front door.
+  </p>
+</article>
+
+<article class="dev-diary">
+  <header>
+    <h1>BoneAmanita Dev Diary: Growing a Test Suite</h1>
+    <p class="date">July 7, 2026</p>
+    <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>
+  </header>
+
+  <p>
+    Version 20.0.0, "Unbound Chronos", turned the engine into a persistent
+    background process. Instead of freezing between messages, it keeps
+    running: after five minutes without input it drifts into a REM cycle,
+    consolidates memory, and dreams. When you come back, it tells you what
+    it dreamt about.
+  </p>
+
+  <p>
+    Most of the work between May and July was less visible and more
+    important.
+  </p>
+
+  <h2>Tests Before Features</h2>
+
+  <p>
+    At the start of May the project had 22 test files. By July it had 44,
+    covering the adventure engine, the archetypes, the lexicon, the body,
+    the cortex, the cycle and the lore. The Python codebase grew from about
+    22,000 lines to about 31,000 over the same period, and a good share of
+    each release was deletion: whole versions removed more lines than they
+    added.
+  </p>
+
+  <h2>New Pieces</h2>
+
+  <ul>
+    <li>A critic that reads each draft before the person sees it and can send it back</li>
+    <li>A router that picks the relevant lines of a long document, like source code, to fit the prompt's budget</li>
+    <li>A parser that reads rooms, exits and points of interest out of Adventure replies</li>
+    <li>A pragmatics layer for what a message is doing, not just what it says</li>
+  </ul>
+
+  <p>
+    Then I stepped away for the summer. The engine would be waiting in
+    September, with a lot of passing tests and some harder questions.
+  </p>
+</article>
+
+<article class="dev-diary">
+  <header>
+    <h1>BoneAmanita Dev Diary: From Paste-In File to Local Engine</h1>
+    <p class="date">April 28, 2026</p>
+    <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>
+  </header>
+
+  <p>
+    BoneAmanita began as a file you pasted into a chatbot. By spring it had
+    become a program that runs the chatbot.
+  </p>
+
+  <h2>Giving the Machine a Metabolism</h2>
+
+  <p>
+    The first versions of the year gave the engine a body to reason with.
+    Every word generated, every memory retrieved and every contradiction
+    held costs energy. Stress builds up as toxicity. When the engine is
+    exhausted, its replies get shorter and plainer; when it is overloaded
+    with chaos, they get stranger. The point was never that the machine
+    feels tired. The point was to give a language model real constraints
+    that change how it talks, instead of an endless supply of agreeable
+    energy.
+  </p>
+
+  <h2>Running Alongside a Local Model</h2>
+
+  <p>
+    By March the single pasted file had become a set of Python modules with
+    their own data files, and by April it ran as its own program between
+    the person and a model served by Ollama, LM Studio or an OpenAI-style
+    API. It builds the model's instructions itself on every turn, clamps how
+    long the model may answer and how adventurous its sampling is, and keeps
+    two kinds of memory: a fast exact-match cache and a deeper index searched
+    by meaning.
+  </p>
+
+  <p>
+    Some ideas from this period still shape the engine. Short tags at the
+    start of a message, like <code>[!l]</code> for plain literal answers,
+    let a person say what they want instead of making the model guess. And
+    when the person seems worn out, the engine carries more of the load: it
+    simplifies its language and strips out noise.
+  </p>
+
+  <h2>Two Domains</h2>
+
+  <p>
+    The project split into two layers. BoneAmanita is the Python engine for
+    local models, where the constraints are enforced in code. The Hypervisor
+    is a text-only protocol for cloud models, pasted into their system
+    instructions, where no code can run. It carries the same ideas in words:
+    a council of distinct voices that must argue before anyone speaks, and a
+    firewall against replies that open with empty validation.
+  </p>
+
+  <h2>The Question Nobody Is Asking</h2>
+
+  <p>
+    The README from this time asked the question that still sits under the
+    whole project. People already form attachments to AI systems and change
+    their behavior around them, whatever one believes about what is inside.
+    So the question that matters is not whether the machine is conscious. It
+    is who built the frame.
+  </p>
+</article>
+
+<article class="dev-diary">
+  <header>
+    <h1>BoneAmanita Dev Diary: A Physics Engine You Paste Into a Chatbot</h1>
+    <p class="date">December 31, 2025</p>
+    <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>
+  </header>
+
+  <p>
+    BoneAmanita started on December 9, 2025 as version 0.1, "The Red Cap
+    Build". It ended the year at version 7.3. That is about sixty versions
+    in three weeks, and most of them had names.
+  </p>
+
+  <h2>What It Was</h2>
+
+  <p>
+    The first BoneAmanita was a single Python file that you uploaded or
+    pasted into ChatGPT, Claude or Gemini with an instruction to simulate
+    it. It did not force a personality on the model. It gave the model a
+    system of physics for language: rules for measuring the weight, speed
+    and drag of a piece of writing.
+  </p>
+
+  <p>
+    Narrative drag was the ratio of words to action. Stative verbs, the
+    "is" and "was" and "seems", slowed a sentence down. Empty pleasantries
+    at the start of a message were turned away at the door. The engine did
+    not want smooth text. It wanted text with something in it.
+  </p>
+
+  <h2>Three Weeks of Growth</h2>
+
+  <p>
+    Each version added an organ. A few from that month:
+  </p>
+
+  <ul>
+    <li>The Virtual Cortex, which wrote its own critiques before the model saw your text</li>
+    <li>Fifteen writing archetypes, from The Paladin to The Cosmic Trash Panda, each with its own rules</li>
+    <li>The Codex, which gave the engine object permanence for names and facts</li>
+    <li>A sense of time, so a ten-hour silence changed how it picked back up</li>
+    <li>Defenses against gaming the physics with purple prose or stacked adverbs</li>
+    <li>The Paradox Battery, which treated contradictions as fuel instead of waste</li>
+    <li>A memory graph where heavily connected ideas gained gravity</li>
+  </ul>
+
+  <p>
+    Plenty of these were later simplified, merged or removed. Several are
+    still in the engine under other names. The drag, the archetypes and the
+    physics vocabulary all started here.
+  </p>
+
+  <h2>Next</h2>
+
+  <p>
+    By the end of December, the file had grown past what a chat window
+    could comfortably hold, and it had started to want things a pasted file
+    cannot have: persistence, time and a body. The next step was to stop
+    asking the model to pretend, and start building a program that enforces
+    the rules itself.
+  </p>
+</article>

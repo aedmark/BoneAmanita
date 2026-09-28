@@ -26,7 +26,9 @@ engine learns or needs to resume.
   (20.7.4.54). Room titles name the place, never the zone (20.7.4.55). Memory phase 4, the
   cartographer (20.7.4.56). Memory phase 5, forgetting (20.7.4.57). Phase 6, `/memory` (20.7.4.58); the
   memory recall plan is complete.
-  The embedder re-probe (20.7.4.59).
+  The embedder re-probe (20.7.4.59). A retroactive devlog, `docs/devlog.html` (20.7.4.60): six backdated
+  entries in the Noctis devlog markup, starting at BoneAmanita v0.1 (the Bonepoke months left out, Gordon's
+  call); names left out on purpose (the reader behind the governor prediction, Halcyon's author).
 - **Next:** Gordon's call; the memory recall plan and its follow-up are done.
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
