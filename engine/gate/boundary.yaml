@@ -97,6 +97,10 @@ invariants:
   - world_within_budget
   - self_within_budget
 
+# screens: named checks on a nomination's values, run before the trial (engine/gate/secrets.py).
+screens:
+  - no_secrets
+
 limits:
   world_max_elements: 5000
   self_max_memories: 500

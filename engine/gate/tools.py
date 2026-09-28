@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 
 from .graph import edge_id, normalize_world, slug
+from .secrets import screen
 
 
 # ── imagination: writes world/* ────────────────────────────────────────────
@@ -157,7 +158,7 @@ def grammar_text(spec: dict) -> str:
 # ── invariants: pure checks over a candidate (trial) state ─────────────────
 # Built from the declaration so the numbers live in the boundary file, not here.
 
-def build_invariants(spec: dict) -> dict:
+def build_invariants(spec: dict, in_story=lambda: False) -> dict:
     limits = spec.get("limits", {})
     world_cap = limits.get("world_max_elements", 100_000)
     self_cap = limits.get("self_max_memories", 10_000)
@@ -176,4 +177,5 @@ def build_invariants(spec: dict) -> dict:
         return None
 
     return {"world_within_budget": world_within_budget,
-            "self_within_budget": self_within_budget}
+            "self_within_budget": self_within_budget,
+            "no_secrets": lambda verb, what, args: screen(verb, what, args, in_story())}

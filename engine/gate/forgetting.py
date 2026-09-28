@@ -6,6 +6,7 @@ from __future__ import annotations
 import numpy as np
 
 from .recall import memory_hash
+from .secrets import screen
 
 # SIMILAR, measured with nomic-embed-text: paraphrased duplicates 0.90 to 0.97, distinct memories at most
 # 0.76 ("sister visiting next week" against "Mum visiting next week").
@@ -14,13 +15,15 @@ HIGH, LOW, SIMILAR = 0.9, 0.8, 0.88
 
 def plan(memory: dict, stats: dict, vectors: dict | None, model: str, cap: int,
          high: float = HIGH, low: float = LOW, similar: float = SIMILAR) -> dict:
-    """{key: why} for the memories to forget. Weakest first: least recalled, then longest since recalled,
+    """{key: why} for the memories to forget: any secret, then weakest first: least recalled, then longest since recalled,
     then oldest written."""
     age = {k: i for i, k in enumerate(memory)}
     weakness = lambda k: (stats.get(k, (0, 0.0))[0], stats.get(k, (0, 0.0))[1], age[k])
-    reasons = {}
+    # Kept before the no_secrets screen existed. By shape only: a door's password kept in a story stays.
+    reasons = {k: "a secret" for k, v in memory.items()
+               if screen("remember", f"self/memory/{k}", {"key": k, "value": v}, in_story=True)}
     live = {k: v[2] for k, v in (vectors or {}).items()
-            if k in memory and v[1] == model and v[0] == memory_hash(k, memory[k])}
+            if k in memory and k not in reasons and v[1] == model and v[0] == memory_hash(k, memory[k])}
     if len(live) > 1:
         keys = sorted(live, key=weakness, reverse=True)
         m = np.array([live[k] for k in keys], dtype=np.float32)

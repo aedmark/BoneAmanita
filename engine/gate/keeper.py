@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import re
 
+from engine.gate.secrets import scrub
 from engine.receipts import issue as issue_receipt
 
 logger = logging.getLogger("bone")
@@ -16,7 +17,7 @@ logger = logging.getLogger("bone")
 PROMPT = """You keep the memory of a conversation partner. The conversation itself is forgotten between sessions; only what you keep comes back.
 Read the person's latest message. If it tells you something worth knowing later (a name, a preference, a fact about their life or work, a decision, something established in the story), answer with ONE line: a short name for what it is, " = ", and what to remember in a few words. For example:
 sister_name = Odalys, visiting next week
-If it changes something already kept, reuse that name. If there is nothing new worth keeping, answer with exactly: NONE
+If it changes something already kept, reuse that name. Never keep a real password, key, token, or card or ID number; a password in a story is fine. If there is nothing new worth keeping, answer with exactly: NONE
 
 Already kept:
 {kept}
@@ -74,6 +75,6 @@ class MemoryKeeper:
             "PROPOSED" if line else "NONE",
             result_count=1 if line else 0,
             inputs={"held": len(memory or {})},
-            detail=line or str(answer or "").strip()[:80],
+            detail=scrub(line or str(answer or "").strip()[:80]),
         )
         return line

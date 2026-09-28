@@ -29,7 +29,10 @@ engine learns or needs to resume.
   The embedder re-probe (20.7.4.59). A retroactive devlog, `docs/devlog.html` (20.7.4.60): six backdated
   entries in the Noctis devlog markup, starting at BoneAmanita v0.1 (the Bonepoke months left out, Gordon's
   call); names left out on purpose (the reader behind the governor prediction, Halcyon's author).
-- **Next:** Gordon's call; the memory recall plan and its follow-up are done.
+  A second look at bone-iris gave five items (ROADMAP Track E); the first, secrets stay out of the store
+  (20.7.4.61).
+- **Next:** scoped recall, then refusals the model hears, provenance, and adopting or pruning the ported
+  store (ROADMAP Track E, "From a second look at bone-iris").
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -424,6 +427,35 @@ session its meaning ranking and its merges.
   outside a batch clears degraded, it waits the interval and says still down, down at boot needs a restart,
   the hash asked for is never re-probed, the REM tick calls it. Each mutation checked (7). Full suite 880
   passed, 5 skipped.
+
+**Secrets stay out of the store (2026-09-27, 20.7.4.61).** A second look at bone-iris: the gate and store
+are fully ported; its roadmap's first open gap, "Secret/PII rejection", was ours too. The keeper runs every
+turn and `remember` kept whatever it was given, so a pasted key went into `iris.db` and back into prompts.
+- `engine/gate/secrets.py`: shapes (OpenAI, Anthropic, GitHub, GitLab, Hugging Face, Slack, AWS and Google
+  keys; private key headers; JWTs; 32+ hex; base64 of 24+ with about 40% capitals, which paths and
+  camelCase miss; card numbers that pass Luhn, starting 2 to 6; SSN shape), credential names
+  (`wifi_password`, `api_key`, not `password_hint`) and said values ("my password is hunter2", not "the
+  password is in the drawer"). Checked against lore, docs and the 0926c telemetry: no false positives
+  after two fixes (timestamps and float digits read as cards; `SNAKE_CASE_2026_09` read as base64).
+- The kernel gains screens, declared in `boundary.yaml` (`screens: [no_secrets]`) beside invariants: run on
+  the values before the trial; a refusal is `["screen", "DENY", ...]` naming the kind, and the args check
+  says "values withheld". Forgetting is exempt. The attestation lists screens.
+- On disk: `commit_cycle` scrubs the user text, the draft, the display, the receipt and the mutation's
+  before/after; a refused NOMINATE line keeps its path and verb, args `[withheld: a secret]`. The checkpoint
+  is scrubbed whole (the dialogue and `continuity.last_output` both carried the last exchange; an ordinary
+  snapshot is unchanged by it). The keeper's receipt detail too. The live dialogue buffer is untouched: the
+  session can still use what the person just gave it.
+- ADVENTURE (`engine.in_story()`): a password is a puzzle, so names and said values don't count there, only
+  shapes; the story's audit trail keeps its riddle. REM forgets secrets kept before the screen by shape
+  only, since a named one might be a story's until memories know their mode (scoped recall, next).
+- The keeper prompt: "Never keep a real password, key, token, or card or ID number; a password in a story
+  is fine." Live on gemma4:12b, 3 samples each: facts kept as before, the API key and the card answered
+  NONE, the story password kept; it still offers `wifi_password = hunter2`, which the gate refuses by name.
+- Tests (`tests/test_secrets.py`, 15): the shapes, 17 ordinary strings that pass, credential names, story
+  mode, withheld text; the screen (value, name, ordinary, story, world writes, forgetting, attestation);
+  end to end (a pasted key refused and absent from every table and the checkpoint, an adventure keeps its
+  door's password, REM forgets a legacy key). Each mutation checked (19). Full suite 895 passed, 5 skipped.
+- Not covered: telemetry traces and the crash log still record raw text as before.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

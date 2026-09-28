@@ -70,6 +70,11 @@ next boot and renamed `quicksave.json.imported`; the ADVENTURE rooms and items
 are part of that checkpoint too (an old `fractal_adventure.json` is imported
 the same way). `/export [path]` writes the adventure in FractalOS's format
 (default `saves/fractal_adventure.json`) for `adventure <path>` there.
+Secrets are not kept: the gate refuses a memory that holds an API key, a
+private key, a card or ID number, or a password (by name or "my password is
+..."), and the audit trail and checkpoint write `[withheld: ...]` in its
+place. In ADVENTURE a password is part of the story and is kept; key, card
+and ID shapes are refused there too.
 `reset.sh` deletes saved memories, saves, logs, and other files listed in the
 script; it leaves the setup configuration in place.
 

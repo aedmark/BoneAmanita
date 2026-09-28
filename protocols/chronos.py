@@ -6,6 +6,7 @@ import time
 from typing import Any, Dict, Optional, Tuple
 
 from engine.constants import Prisma
+from engine.gate.secrets import scrub_all
 from engine.presets import BoneConfig
 from engine.struts import safe_get, ux
 
@@ -59,7 +60,9 @@ class ChronosKeeper:
                 "adventure": self._gather_adventure(),
             }
             # default=str turns what JSON cannot hold into text, as the old quicksave did.
-            store.save_checkpoint(json.loads(json.dumps(state_data, default=str)))
+            # Secrets are withheld; the dialogue and continuity would otherwise carry them to disk.
+            story = getattr(self.eng, "in_story", lambda: False)()
+            store.save_checkpoint(scrub_all(json.loads(json.dumps(state_data, default=str)), story))
             msg_save = ux("protocol_strings", "chronos_save_success")
             return msg_save.format(path=f"{store.path} (engine_checkpoint)")
         except Exception as e:

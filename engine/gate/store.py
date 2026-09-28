@@ -28,6 +28,7 @@ class Store:
         self.state_dir = Path(state_dir)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
+        self.in_story = lambda: False  # the engine says when it is in ADVENTURE (secrets.py)
         self._init()
 
     def connect(self) -> sqlite3.Connection:
@@ -406,7 +407,12 @@ class Store:
     def commit_cycle(self, trace_id: str, new_state: dict, expected_sequence: int, receipt: dict, raw: str,
                      *, user_text: str = "", display: str = "", boundary_hash: str = "") -> dict:
         """One engine turn, atomically: canonical state plus its audit trail (turn, messages, proposal,
-        receipt, gate decision, mutation), in the shape Brad's `finalize` writes."""
+        receipt, gate decision, mutation), in the shape Brad's `finalize` writes. Secrets are withheld from it."""
+        from .secrets import scrub, scrub_all
+
+        story = self.in_story()
+        user_text, raw, display = (scrub(t, story) for t in (user_text, raw, display))
+        receipt = scrub_all(receipt, story)
         now = time.time()
         with self.transaction(immediate=True) as db:
             current_sequence, old_state = self.state(db)
@@ -466,7 +472,7 @@ class Store:
                     "INSERT INTO mutations VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (_id("mut"), turn_id, current_sequence, next_sequence, claim["verb"],
                      claim["what"], json.dumps(claim["args"]), json.dumps(receipt.get("result")),
-                     json.dumps({"before": old_state, "after": new_state}), now),
+                     json.dumps(scrub_all({"before": old_state, "after": new_state}, story)), now),
                 )
         return {"turn_id": turn_id, "outcome": outcome, "state_sequence": next_sequence,
                 "receipt_id": receipt_id, "proposal_id": proposal_id}

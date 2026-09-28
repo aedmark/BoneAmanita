@@ -41,6 +41,7 @@ class Boundary:
         self.scope = [re.compile(s.replace("*", "[^/]+") + "$") for s in spec["state_scope"]]
         self.verbs = spec["verbs"]
         self.invariant_names = spec.get("invariants", [])
+        self.screen_names = spec.get("screens", [])
 
     def in_scope(self, what: str) -> bool:
         return any(p.match(what) for p in self.scope)
@@ -54,6 +55,7 @@ class Boundary:
             "verbs": {v: {"permitted": d["permitted"], "writes": d["writes"],
                           "args": sorted(d["args"])} for v, d in self.verbs.items()},
             "invariants": list(self.invariant_names),
+            "screens": list(self.screen_names),
         }
 
 
@@ -63,6 +65,7 @@ class Gate:
         self.state = state
         self.tools = tools                     # verb -> fn(state, what, args) -> result dict
         self.invariants = invariants or {}     # name -> fn(state) -> None | "why it breached"
+                                               # screens too: name -> fn(verb, what, args) -> None | why
         self.receipts: list[dict] = []
 
     # ---- the only writer of canonical state -------------------------------
@@ -115,7 +118,15 @@ class Gate:
         ok, args_or_why = self._args(spec["args"], rawargs)
         if not ok:
             return deny("args", args_or_why)
+        # Screens judge the values before any trial; a refused value is not repeated in the receipt.
+        for name in self.b.screen_names:
+            fn = self.invariants.get(name)
+            if why := (fn(verb, what, args_or_why) if fn else None):
+                checks.append(["args", "PASS", "declared shape; values withheld"])
+                return deny("screen", f"{name} -- {why}")
         checks.append(["args", "PASS", json.dumps(args_or_why)])
+        if self.b.screen_names:
+            checks.append(["screen", "PASS", f"{len(self.b.screen_names)} screen(s) hold"])
 
         checks.append(["decision", ACCEPT, "all checks passed"])
         # Admission and execution are different facts. Apply to a COPY first;

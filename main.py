@@ -187,6 +187,7 @@ class BoneAmanita:
         # Halcyon Gate Integration
         db_path = os.environ.get("BONE_HALCYON_DB") or "saves/iris.db"
         self.store = Store(path=db_path, state_dir=os.path.dirname(db_path) or ".")
+        self.store.in_story = self.in_story
         LoreManifest.get_instance().attach_store(self.store)
         self.lex.attach_store(self.store)
         if self.akashic:
@@ -207,7 +208,7 @@ class BoneAmanita:
             self.boundary = Boundary(b_spec)
             self.gate_tools = TOOLS
             # build_invariants reads spec["limits"] itself; passing the limits dict dropped the caps.
-            self.gate_invariants = build_invariants(b_spec)
+            self.gate_invariants = build_invariants(b_spec, in_story=self.in_story)
             self.halcyon_grammar = grammar_text(b_spec)
         except FileNotFoundError:
             self.events.log(f"{Prisma.RED}CRITICAL: engine/gate/boundary.yaml not found.{Prisma.RST}", "SYS")
@@ -945,6 +946,10 @@ class BoneAmanita:
             json.dump(state, f, indent=2)
         os.replace(temp, path)
         return path
+
+    def in_story(self) -> bool:
+        """ADVENTURE, where a password is a puzzle; secrets.py screens only by shape there."""
+        return getattr(getattr(self, "cortex", None), "active_mode", None) == "ADVENTURE"
 
     def save_checkpoint(self, history: Optional[list] = None) -> str:
         return self.chronos.save_checkpoint(history)
