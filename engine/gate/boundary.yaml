@@ -75,6 +75,16 @@ verbs:
       items:       { type: str, max_len: 600 }
     example: "NOMINATE what=world/room/the-mill-loft verb=chart args=room:The Mill Loft; description:Dust over a stopped wheel.; exits:North to The Yard | Down to The Mill Floor; items:A sack of grain | A lamp"
 
+  # Forgetting (memory phase 5): consolidation drops near-duplicates and the least-recalled memories
+  # before the cap starts denying writes. Engine-built; keys are |-separated.
+  forget:
+    permitted: true
+    engine_built: true
+    writes: "self/memory/"
+    args:
+      keys: { type: str, max_len: 8000 }
+    example: "NOMINATE what=self/memory/consolidation verb=forget args=keys:note_3 | pet_name"
+
   remember:
     permitted: true
     writes: "self/memory/"

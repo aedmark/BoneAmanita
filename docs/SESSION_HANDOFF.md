@@ -24,8 +24,8 @@ engine learns or needs to resume.
   (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52). Phase 3,
   the probe and the memory keeper (20.7.4.53). ADVENTURE answers questions before the room
   (20.7.4.54). Room titles name the place, never the zone (20.7.4.55). Memory phase 4, the
-  cartographer (20.7.4.56).
-- **Next:** memory recall phases 5 (forgetting) and 6 (`/memory`) (ROADMAP).
+  cartographer (20.7.4.56). Memory phase 5, forgetting (20.7.4.57).
+- **Next:** memory recall phase 6, `/memory` (ROADMAP).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -355,6 +355,31 @@ facts while the kernel admits one nomination per cycle and the audit schema enfo
   (own gate cycle and audit turn, not charted twice, the next prompt reads the graph, no room charts
   nothing, charted rooms stay out of recall, a turn without a room does not re-chart a stale one). Each
   mutation checked (16). Full suite 856 passed, 5 skipped.
+
+**Memory phase 5, forgetting (2026-09-27, 20.7.4.57).** The self graph's cap (500) denies a
+`remember` once reached; consolidation keeps it from getting there.
+- `Store.note_recalled` counts each memory recall hands back (a new `memory_stats` table: times recalled,
+  when last); the cortex calls it after ranking. `drop_memory_stats` clears a forgotten memory's stats and
+  vector.
+- `engine/gate/forgetting.py` `plan(memory, stats, vectors, model, cap)`: near-duplicates by meaning (cosine
+  0.88 or more between current vectors, same model and same text hash; the weaker copy goes, weakest being
+  least recalled, then longest since recalled, then oldest written), and at 90% of the cap the weakest down
+  to 80%. Numpy for the pairwise pass. The 0.88 was measured with nomic-embed-text: paraphrased duplicates
+  0.90 to 0.97, distinct memories at most 0.76 ("sister visiting next week" against "Mum visiting next
+  week"); the first guess, 0.92, would have missed "dog_name: Brisket" against "pet_name: Brisket, a dog".
+- A `forget` verb in boundary.yaml (keys, `|`-separated; `engine_built`); `remember` and `forget` are now
+  the only writers of the self graph. `GeodesicOrchestrator.consolidate_memory` runs the plan as one
+  engine-built nomination in its own gate cycle (`<trace>:forget`), with each key's reason in the
+  rationale, receipted as `halcyon.forget` (an event subsystem).
+- Triggers: the REM tick (both passes), and a user turn once memory reaches the high-water mark, since
+  scripted runs call `process_turn` and never idle into REM. Below the mark a turn leaves merging to REM.
+- Live (nomic-embed-text, gemma4:12b): five memories seeded, one turn embedded them, a REM tick merged
+  `dog_name` into `pet_name` and kept both "sister visiting" and "Mum visiting".
+- Tests (`tests/test_forgetting.py`, 11): the plan (nothing below the mark, weakest first down to the low
+  mark, a near-duplicate goes and the stronger stays, stale vectors never merge), the verb (only what is
+  held, not offered to the model), in the engine (recall counts, a turn at the mark forgets through the
+  gate, below it nothing, REM merges, a turn below the mark leaves merging to REM). Each mutation checked
+  (13). Full suite 867 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

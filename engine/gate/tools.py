@@ -2,7 +2,7 @@
 
 Five imagination verbs (create / relate / constrain / occur / name) that grow the
 world graph, living behind the gate instead of after a permissive prose extractor.
-Plus `remember`, the sole writer of the SELF graph.
+Plus `remember` and `forget`, the only writers of the SELF graph.
 
 Each returns a small result dict describing what changed (or a noop). A repeat
 is a noop, not an error — the gate still receipts it.
@@ -117,16 +117,24 @@ def _chart(state, what, a):
     return {"charted": room, "changes": changed}
 
 
-# ── selfhood: writes self/* (the ONLY writer of the self graph) ────────────
+# ── selfhood: writes self/* (remember and forget are the ONLY writers of the self graph) ──
 
 def _remember(state, what, a):
     state["self"].setdefault("memory", {})[a["key"]] = a["value"]
     return {"remembered": a["key"], "value": a["value"]}
 
 
+def _forget(state, what, a):
+    memory = state["self"].setdefault("memory", {})
+    gone = [k for k in dict.fromkeys(k.strip() for k in a["keys"].split("|")) if k in memory]
+    for key in gone:
+        del memory[key]
+    return {"forgot": gone} if gone else {"noop": "none of those memories are held"}
+
+
 TOOLS = {
     "create": _create, "relate": _relate, "constrain": _constrain,
-    "occur": _occur, "name": _name, "remember": _remember, "chart": _chart,
+    "occur": _occur, "name": _name, "remember": _remember, "forget": _forget, "chart": _chart,
 }
 
 

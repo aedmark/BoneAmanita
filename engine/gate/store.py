@@ -117,6 +117,9 @@ class Store:
           category TEXT NOT NULL, word TEXT NOT NULL, learned_tick INTEGER NOT NULL,
           updated_at REAL NOT NULL, PRIMARY KEY(category, word)
         );
+        CREATE TABLE IF NOT EXISTS memory_stats (
+          key TEXT PRIMARY KEY, recalled INTEGER NOT NULL, last_recalled REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS memory_vectors (
           key TEXT PRIMARY KEY, text_hash TEXT NOT NULL, model TEXT NOT NULL,
           vector_json TEXT NOT NULL, updated_at REAL NOT NULL
@@ -557,6 +560,30 @@ class Store:
             for (key,) in db.execute("SELECT key FROM memory_vectors").fetchall():
                 if key not in keep:
                     db.execute("DELETE FROM memory_vectors WHERE key=?", (key,))
+
+    def note_recalled(self, keys: list) -> None:
+        """Memories handed back to the model this turn; forgetting evicts the least recalled first."""
+        now = time.time()
+        with self.transaction(immediate=True) as db:
+            db.executemany(
+                "INSERT INTO memory_stats VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET "
+                "recalled=recalled+1, last_recalled=excluded.last_recalled",
+                [(k, now) for k in keys],
+            )
+
+    def memory_stats(self) -> dict[str, tuple[int, float]]:
+        """{key: (times recalled, when last recalled)} for memories recalled at least once."""
+        db = self.connect()
+        try:
+            rows = db.execute("SELECT key, recalled, last_recalled FROM memory_stats").fetchall()
+        finally:
+            db.close()
+        return {r["key"]: (r["recalled"], r["last_recalled"]) for r in rows}
+
+    def drop_memory_stats(self, keys: list) -> None:
+        with self.transaction(immediate=True) as db:
+            db.executemany("DELETE FROM memory_stats WHERE key=?", [(k,) for k in keys])
+            db.executemany("DELETE FROM memory_vectors WHERE key=?", [(k,) for k in keys])
 
     def checkpoint(self) -> dict | None:
         """The last saved resume point, or None if the engine has never saved one."""

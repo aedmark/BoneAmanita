@@ -457,6 +457,11 @@ class GeodesicOrchestrator:
                             f"{Prisma.GRN}REM Restorative cycle successfully reconstructed the crashed {comp.upper()} manifold.{Prisma.RST}",
                             "SYS",
                         )
+        if hasattr(self.eng, "store") and hasattr(self.eng, "boundary"):
+            try:
+                self.consolidate_memory(f"rem-{int(time.time())}", "REM consolidation")
+            except Exception as e:
+                record_crash(self.eng, "REM forgetting", e)
         if self.eng.consolidator:
             try:
                 self.eng.consolidator.trigger_autophagy()
@@ -627,6 +632,39 @@ class GeodesicOrchestrator:
                     f"Async pool rejected topology check. Engine may be shutting down: {e}",
                     "DEBUG",
                 )
+
+    def consolidate_memory(self, trace_id: str, why: str, only_near_cap: bool = False) -> list:
+        """Memory phase 5: forget near-duplicates and the least recalled, in one gate cycle; returns what went."""
+        from engine.gate.forgetting import HIGH, forget_text, plan
+        from engine.gate.kernel import Gate
+        from spores.embeddings import SemanticEmbedder
+
+        store = self.eng.store
+        seq, state = store.state()
+        memory = (state.get("self") or {}).get("memory", {})
+        cap = int(((self.eng.boundary.spec.get("limits") or {}).get("self_max_memories")) or 500)
+        if not memory or (only_near_cap and len(memory) < HIGH * cap):
+            return []
+        embedder = SemanticEmbedder.get_instance()
+        vectors = None if embedder.degraded else store.memory_vectors()
+        reasons = plan(memory, store.memory_stats(), vectors, f"{embedder.backend}:{embedder.model}", cap)
+        if not reasons:
+            return []
+        text = forget_text(reasons, why)
+        gate = Gate(self.eng.boundary, state, self.eng.gate_tools, self.eng.gate_invariants)
+        receipt = gate.adjudicate(text)
+        store.commit_cycle(trace_id=f"{trace_id}:forget", new_state=gate.state, expected_sequence=seq,
+                           receipt=receipt, raw=text, boundary_hash=getattr(self.eng, "boundary_hash", ""))
+        gone = (receipt.get("result") or {}).get("forgot", []) if receipt["decision"] == "ACCEPT" else []
+        if gone:
+            store.drop_memory_stats(gone)
+        ReceiptLedger.get_instance().issue(
+            "halcyon.forget", receipt["decision"], result_count=len(gone),
+            inputs={"held": len(memory), "cap": cap, "why": why,
+                    "merged": sum(1 for r in reasons.values() if r.startswith("near-duplicate"))},
+            detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "",
+        )
+        return gone
 
     def _chart_room(self, ctx, room: dict) -> None:
         from engine.gate.cartographer import chart_args, chart_line, needs_chart
@@ -865,6 +903,13 @@ class GeodesicOrchestrator:
                                 ctx.bureau_ui += "\n[SYSTEM_LOG: Action Denied by Gate]"
                     except Exception as e:
                         record_crash(self.eng, "Halcyon gate", e)
+
+            # Forgetting runs in a turn only once memory reaches the high-water mark; otherwise in REM.
+            if hasattr(self.eng, "boundary") and not is_system:
+                try:
+                    self.consolidate_memory(ctx.trace_id, "memory near its cap", only_near_cap=True)
+                except Exception as e:
+                    record_crash(self.eng, "Halcyon forgetting", e)
 
             # The cartographer charts the room the narrator described, in its own gate cycle (Gordon's call).
             if (room := getattr(getattr(self.eng, "cortex", None), "last_room", None)) and hasattr(self.eng, "boundary"):

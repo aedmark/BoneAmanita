@@ -18,6 +18,11 @@ def _cosine(a, b) -> float:
     return sum(x * y for x, y in zip(a, b)) / norm if norm > 1e-12 else 0.0
 
 
+def memory_hash(key, value) -> str:
+    """Identifies a memory's content, so its embedding is redone only when the text changes."""
+    return hashlib.sha256(f"{key}: {value}".encode("utf-8")).hexdigest()[:16]
+
+
 def meaning_scores(state: dict, text: str, store, embedder):
     """Each memory's similarity to `text`. A memory is embedded once per content and model, and kept in
     the store. None when the embedder is on its hash fallback, whose vectors carry no meaning."""
@@ -27,7 +32,7 @@ def meaning_scores(state: dict, text: str, store, embedder):
     model = f"{embedder.backend}:{embedder.model}"
     kept = store.memory_vectors()
     texts = {k: f"{k}: {v}" for k, v in memory.items()}
-    hashes = {k: hashlib.sha256(t.encode("utf-8")).hexdigest()[:16] for k, t in texts.items()}
+    hashes = {k: memory_hash(k, v) for k, v in memory.items()}
     missing = [k for k in memory if kept.get(k, (None, None))[:2] != (hashes[k], model)]
     vectors = embedder.embed_batch([text] + [texts[k] for k in missing])
     if embedder.degraded:

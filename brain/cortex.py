@@ -1035,6 +1035,12 @@ class TheCortex:
             max_facts=int(safe_get(c_cfg, "HALCYON_RECALL_FACTS", 12)),
             scores=scores,
         )
+        if store is not None and found["memories"]:
+            try:
+                store.note_recalled([key for key, _ in found["memories"]])
+            except Exception as e:
+                if self.events:
+                    self.events.log(f"Recall counts not saved: {type(e).__name__}: {e}", "CORTEX", "WARN")
         held = found["held"]
         by_words = bool(held["memories"]) and found["ranked_by"] == "words"
         issue_receipt(
