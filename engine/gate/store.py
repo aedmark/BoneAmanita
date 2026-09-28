@@ -29,6 +29,7 @@ class Store:
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
         self.in_story = lambda: False  # the engine says when it is in ADVENTURE (secrets.py)
+        self.mode = lambda: None       # and which mode a memory is kept in (memory_meta)
         self._init()
 
     def connect(self) -> sqlite3.Connection:
@@ -120,6 +121,9 @@ class Store:
         );
         CREATE TABLE IF NOT EXISTS memory_stats (
           key TEXT PRIMARY KEY, recalled INTEGER NOT NULL, last_recalled REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS memory_meta (
+          key TEXT PRIMARY KEY, mode TEXT, turn_id TEXT NOT NULL, kept_at REAL NOT NULL
         );
         CREATE TABLE IF NOT EXISTS memory_vectors (
           key TEXT PRIMARY KEY, text_hash TEXT NOT NULL, model TEXT NOT NULL,
@@ -468,6 +472,12 @@ class Store:
             )
             if state_changed:
                 claim = receipt["claim"]
+                if claim["verb"] == "remember":
+                    db.execute("INSERT OR REPLACE INTO memory_meta VALUES (?,?,?,?)",
+                               (claim["args"]["key"], self.mode(), turn_id, now))
+                elif claim["verb"] == "forget":
+                    db.executemany("DELETE FROM memory_meta WHERE key=?",
+                                   [(k,) for k in (receipt.get("result") or {}).get("forgot", [])])
                 db.execute(
                     "INSERT INTO mutations VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (_id("mut"), turn_id, current_sequence, next_sequence, claim["verb"],
@@ -585,6 +595,15 @@ class Store:
         finally:
             db.close()
         return {r["key"]: (r["recalled"], r["last_recalled"]) for r in rows}
+
+    def memory_modes(self) -> dict[str, str | None]:
+        """{key: the mode it was kept in}; memories kept before 20.7.4.62 have no row."""
+        db = self.connect()
+        try:
+            rows = db.execute("SELECT key, mode FROM memory_meta").fetchall()
+        finally:
+            db.close()
+        return {r["key"]: r["mode"] for r in rows}
 
     def drop_memory_stats(self, keys: list) -> None:
         with self.transaction(immediate=True) as db:

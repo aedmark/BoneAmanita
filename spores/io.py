@@ -17,6 +17,10 @@ class LocalFileSporeLoader:
             os.makedirs(directory)
 
     def save_spore(self, filename: str, data: Any) -> Optional[str]:
+        from engine.gate.secrets import scrub_all
+
+        # A spore carries the last exchange (continuity) and the dialogue's words; secrets are withheld.
+        data = scrub_all(json.loads(json.dumps(data, cls=JSONEncoder)))
         temp_path: Optional[str] = None
         base_dir = os.path.realpath(self.directory)
         if os.path.isabs(filename):

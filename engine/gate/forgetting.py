@@ -14,14 +14,16 @@ HIGH, LOW, SIMILAR = 0.9, 0.8, 0.88
 
 
 def plan(memory: dict, stats: dict, vectors: dict | None, model: str, cap: int,
-         high: float = HIGH, low: float = LOW, similar: float = SIMILAR) -> dict:
+         high: float = HIGH, low: float = LOW, similar: float = SIMILAR, modes: dict | None = None) -> dict:
     """{key: why} for the memories to forget: any secret, then weakest first: least recalled, then longest since recalled,
     then oldest written."""
     age = {k: i for i, k in enumerate(memory)}
     weakness = lambda k: (stats.get(k, (0, 0.0))[0], stats.get(k, (0, 0.0))[1], age[k])
-    # Kept before the no_secrets screen existed. By shape only: a door's password kept in a story stays.
+    # Kept before the no_secrets screen existed. A door's password kept in ADVENTURE is the story's;
+    # a memory with no recorded mode predates modes and is judged in full.
     reasons = {k: "a secret" for k, v in memory.items()
-               if screen("remember", f"self/memory/{k}", {"key": k, "value": v}, in_story=True)}
+               if screen("remember", f"self/memory/{k}", {"key": k, "value": v},
+                         in_story=(modes or {}).get(k) == "ADVENTURE")}
     live = {k: v[2] for k, v in (vectors or {}).items()
             if k in memory and k not in reasons and v[1] == model and v[0] == memory_hash(k, memory[k])}
     if len(live) > 1:

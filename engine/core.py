@@ -615,7 +615,9 @@ def record_crash(eng: Any, label: str, error: BaseException) -> None:
     """A crash's traceback goes to <telemetry dir>/crashes.log and telemetry, never the player's screen."""
     import traceback
 
-    trace = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+    from engine.gate.secrets import redact
+
+    trace = redact("".join(traceback.format_exception(type(error), error, error.__traceback__)))
     telemetry = getattr(eng, "telemetry", None)
     log_dir = getattr(telemetry, "log_dir", None) or "logs/telemetry"
     try:
@@ -1118,8 +1120,10 @@ class TelemetryService:
         if self.disabled or not self.current_trace_file:
             return
         try:
+            from engine.gate.secrets import scrub_all
+
             payload = {**event_dict, "kernel_hash": self.kernel_hash}
-            self._buffer_line(json.dumps(payload, cls=JSONEncoder))
+            self._buffer_line(json.dumps(scrub_all(json.loads(json.dumps(payload, cls=JSONEncoder)))))
         except (TypeError, ValueError) as e:
             logger.warning(
                 f"{Prisma.YEL}Oops! We dropped an un-serializable event: {e}{Prisma.RST}"
@@ -1147,7 +1151,9 @@ class TelemetryService:
     def log_crystal(self, crystal: DecisionCrystal):
         if self.disabled:
             return
-        self._buffer_line(crystal.crystallize())
+        from engine.gate.secrets import scrub_all
+
+        self._buffer_line(json.dumps(scrub_all(json.loads(crystal.crystallize()))))
         self.crystals_logged += 1
 
     def finalize_cycle(self):

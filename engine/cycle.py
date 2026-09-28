@@ -653,7 +653,8 @@ class GeodesicOrchestrator:
             return []
         embedder = SemanticEmbedder.get_instance()
         vectors = None if embedder.degraded else store.memory_vectors()
-        reasons = plan(memory, store.memory_stats(), vectors, f"{embedder.backend}:{embedder.model}", cap)
+        reasons = plan(memory, store.memory_stats(), vectors, f"{embedder.backend}:{embedder.model}", cap,
+                       modes=store.memory_modes())
         if not reasons:
             return []
         text = forget_text(reasons, why)

@@ -264,7 +264,9 @@ class LinguisticAnalyzer:
     def sanitize(self, text: Any) -> List[str]:
         if not text:
             return []
-        text_str = str(text)
+        from engine.gate.secrets import strip
+
+        text_str = strip(text)
         normalized = (
             unicodedata.normalize("NFKD", text_str)
             .encode("ASCII", "ignore")

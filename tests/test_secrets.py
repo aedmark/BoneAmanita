@@ -158,19 +158,85 @@ class SecretsNeverReachTheStore(BoneTestCase):
         # The story's audit trail keeps it too; a resumed adventure needs its riddle.
         self.assertIn("value:moonlight", self.engine.store.audit("proposals")[0]["raw_line"])
 
-    def test_rem_forgets_a_key_kept_before_the_screen(self):
+    def keep_unscreened(self, key, value, mode):
+        """A memory as kept before the screen existed, in `mode`."""
         spec = copy.deepcopy(self.engine.boundary.spec)
         spec.pop("screens")
-        for key, value in (("wifi_password", "swordfish"), ("openai", KEY)):
-            seq, state = self.engine.store.state()
-            gate = Gate(Boundary(spec), state, TOOLS, build_invariants(spec))
-            text = f"Old.\nNOMINATE what=self/memory/{key} verb=remember args=key:{key}; value:{value}"
-            self.engine.store.commit_cycle("legacy", gate.state, seq, gate.adjudicate(text), text)
-        self.assertEqual(self.memory(), {"wifi_password": "swordfish", "openai": KEY})
+        self.engine.cortex.active_mode = mode
+        seq, state = self.engine.store.state()
+        gate = Gate(Boundary(spec), state, TOOLS, build_invariants(spec))
+        text = f"Old.\nNOMINATE what=self/memory/{key} verb=remember args=key:{key}; value:{value}"
+        self.engine.store.commit_cycle("legacy", gate.state, seq, gate.adjudicate(text), text)
+
+    def rem(self):
         embedder = SimpleNamespace(degraded=True, backend="hash", model="shake_256")
         with patch("spores.embeddings.SemanticEmbedder.get_instance", return_value=embedder):
             self.engine.orchestrator._process_rem_tick()
-        # By shape only: the named one could be a story's, until memories know their mode.
-        self.assertEqual(self.memory(), {"wifi_password": "swordfish"})
+
+    def test_rem_forgets_secrets_kept_before_the_screen_but_not_a_storys(self):
+        self.keep_unscreened("wifi_password", "swordfish", "CONVERSATION")
+        self.keep_unscreened("openai", KEY, "TECHNICAL")
+        self.keep_unscreened("door_password", "moonlight", "ADVENTURE")
+        self.assertEqual(self.engine.store.memory_modes(),
+                         {"wifi_password": "CONVERSATION", "openai": "TECHNICAL", "door_password": "ADVENTURE"})
+        self.rem()
+        self.assertEqual(self.memory(), {"door_password": "moonlight"})
+        self.assertEqual(self.engine.store.memory_modes(), {"door_password": "ADVENTURE"})
         self.assertNotIn(KEY, self.on_disk())
-        self.assertNotIn("swordfish", str(self.engine.store.audit("mutations")))
+
+    def test_a_memory_from_before_modes_is_judged_in_full(self):
+        self.keep_unscreened("vault_password", "moonlight", "ADVENTURE")
+        db = sqlite3.connect(self.engine.store.path)
+        db.execute("DELETE FROM memory_meta")
+        db.commit()
+        db.close()
+        self.rem()
+        self.assertEqual(self.memory(), {})
+
+
+class SecretsNeverReachTheOtherFiles(BoneTestCase):
+    """Beyond iris.db: the tokenizer's words, telemetry, the crash log and spores."""
+
+    def test_no_fragment_of_a_key_becomes_a_word(self):
+        words = self.engine.lex.sanitize(f"here is my key {KEY} and my password is hunter2")
+        self.assertFalse({"abcdefgh1234ijklmnop5678", "proj", "hunter2"} & set(words), words)
+        self.assertIn("here", words)
+
+    def test_telemetry_withholds(self):
+        from engine.core import TelemetryService
+
+        telemetry = TelemetryService()
+        self.addCleanup(telemetry.shutdown)
+        telemetry.current_trace_file = "dummy_path.json"
+        telemetry.record_event({"text": f"Traveler: {KEY}"})
+        self.assertIn("[withheld: an API key]", telemetry.write_buffer[-1])
+        telemetry.start_cycle("t")
+        telemetry.active_crystal.final_response = f"Noted, {KEY}."
+        telemetry.active_crystal.prompt_snapshot = "my wifi password is hunter2"
+        telemetry.log_crystal(telemetry.active_crystal)
+        self.assertNotIn(KEY, "".join(telemetry.write_buffer))
+        self.assertNotIn("hunter2", "".join(telemetry.write_buffer))
+
+    def test_the_crash_log_withholds(self):
+        import os
+        import tempfile
+
+        from engine.core import record_crash
+
+        with tempfile.TemporaryDirectory() as log_dir:
+            record_crash(SimpleNamespace(telemetry=SimpleNamespace(log_dir=log_dir)), "boom", ValueError(f"bad {KEY}"))
+            logged = open(os.path.join(log_dir, "crashes.log")).read()
+        self.assertIn("[withheld: an API key]", logged)
+        self.assertNotIn(KEY, logged)
+
+    def test_a_spore_withholds(self):
+        import tempfile
+
+        from spores.io import LocalFileSporeLoader
+
+        self.spore_patcher.stop()  # the test base patches saving out
+        with tempfile.TemporaryDirectory() as directory:
+            path = LocalFileSporeLoader(directory).save_spore("s.json", {"continuity": {"last_output": f"key {KEY}"}})
+            saved = open(path).read()
+        self.assertNotIn(KEY, saved)
+        self.assertIn("[withheld: an API key]", saved)

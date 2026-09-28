@@ -86,15 +86,19 @@ def credential_key(key) -> bool:
     return not parts & _KEY_ABOUT and bool(parts & _KEY_PARTS or _KEY_JOINED.search(k))
 
 
-def redact(text, in_story: bool = False) -> str:
+def redact(text, in_story: bool = False, marker: str = "[withheld: {kind}]") -> str:
     text = str(text or "")
-    spans = sorted(_finds(text, in_story))
     out, at = [], 0
-    for start, end, kind in spans:
+    for start, end, kind in sorted(_finds(text, in_story)):
         if start >= at:
-            out += [text[at:start], f"[withheld: {kind}]"]
+            out += [text[at:start], marker.format(kind=kind)]
             at = end
     return "".join(out) + text[at:]
+
+
+def strip(text) -> str:
+    """`text` with its secrets gone, for the tokenizer: no fragment of a key becomes a learned word."""
+    return redact(text, marker=" ")
 
 
 def screen(verb: str, what: str, args: dict, in_story: bool = False) -> str | None:

@@ -30,7 +30,8 @@ engine learns or needs to resume.
   entries in the Noctis devlog markup, starting at BoneAmanita v0.1 (the Bonepoke months left out, Gordon's
   call); names left out on purpose (the reader behind the governor prediction, Halcyon's author).
   A second look at bone-iris gave five items (ROADMAP Track E); the first, secrets stay out of the store
-  (20.7.4.61).
+  (20.7.4.61), then out of every other file, with named credentials forgotten by the memory's mode
+  (20.7.4.62).
 - **Next:** scoped recall, then refusals the model hears, provenance, and adopting or pruning the ported
   store (ROADMAP Track E, "From a second look at bone-iris").
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
@@ -455,7 +456,29 @@ turn and `remember` kept whatever it was given, so a pasted key went into `iris.
   mode, withheld text; the screen (value, name, ordinary, story, world writes, forgetting, attestation);
   end to end (a pasted key refused and absent from every table and the checkpoint, an adventure keeps its
   door's password, REM forgets a legacy key). Each mutation checked (19). Full suite 895 passed, 5 skipped.
-- Not covered: telemetry traces and the crash log still record raw text as before.
+- Not covered: telemetry traces and the crash log still record raw text as before (done in 20.7.4.62).
+
+**Secrets out of every file, named credentials by mode (2026-09-27, 20.7.4.62).** Gordon's follow-up.
+- Every writer of user or model text to disk, surveyed: `iris.db` and the checkpoint (20.7.4.61), plus
+  telemetry (`record_event` and `log_crystal` scrub the payload, the crystal's prompt snapshot and final
+  response included), `crashes.log` (the traceback, since an exception message can quote input), spores
+  (`LocalFileSporeLoader.save_spore`, which carries `continuity.last_output`) and the tokenizer:
+  `sanitize` strips secrets before splitting, since it lowercases, and a lowercased key body
+  (`abcdefgh1234ijklmnop5678`) no longer looks like a key but would be learned as a word, buried as a
+  fossil and written to `learned_words`. About 44 microseconds per 500 characters. Python logging has no
+  file handler; `/export` and tool writes are the person's own doing.
+- `memory_meta(key, mode, turn_id, kept_at)`: `commit_cycle` records the mode (`store.mode`, the cortex's
+  active mode) with each committed `remember` and drops it with a `forget`, in the same transaction. REM
+  judges each memory by its own mode: a name or said value counts unless ADVENTURE kept it; a memory with
+  no row (kept before this) is judged in full, since keeping a real credential costs more than losing a
+  story's password. This is the first half of scoped recall and of provenance.
+- Audit rows and telemetry written before 20.7.4.61 are not rewritten; no retrofit is needed, since no
+  session data predates it that is worth keeping (Gordon, 2026-09-27; `reset.sh` clears it). A story's
+  memory, once the mode changes, is withheld by name in later mutation patches (conservative).
+- Tests (`tests/test_secrets.py`, 20 now): REM forgets CONVERSATION and TECHNICAL secrets and keeps
+  ADVENTURE's, `memory_meta` follows; a memory from before modes is judged in full; the tokenizer, telemetry
+  (event and crystal), the crash log and a spore withhold. Each mutation checked (11). Full suite 900
+  passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 
