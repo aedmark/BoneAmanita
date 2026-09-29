@@ -22,6 +22,7 @@ from brain.cortex import TheCortex, _room_slug
 from brain.mind import NoeticLoop
 from drivers.userprofile import UserProfile
 from engine.gate.keeper import MemoryKeeper
+from engine.gate.reflector import MemoryReflector
 from engine.constants import Prisma, RealityLayer
 from engine.core import (
     CyberneticGovernor,
@@ -197,6 +198,9 @@ class BoneAmanita:
             self.oroboros.attach_store(self.store)
         self.memory_keeper = MemoryKeeper(
             self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "HALCYON_KEEPER", True))
+        )
+        self.memory_reflector = MemoryReflector(
+            self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "HALCYON_REFLECT", True))
         )
         self.user_profile = UserProfile(self.user_name, config_ref=self.config)
         self.user_profile.attach_store(self.store)

@@ -85,6 +85,16 @@ verbs:
       keys: { type: str, max_len: 8000 }
     example: "NOMINATE what=self/memory/consolidation verb=forget args=keys:note_3 | pet_name"
 
+  reflect:
+    permitted: true
+    engine_built: true
+    writes: "self/memory/"
+    args:
+      key:   { type: str, max_len: 80 }
+      value: { type: str, max_len: 400 }
+      from:  { type: str, max_len: 2000 }
+    example: "NOMINATE what=self/memory/reflection.busy_week verb=reflect args=key:reflection.busy_week; value:a crowded week; from:sister_name | deploy_window"
+
   remember:
     permitted: true
     writes: "self/memory/"

@@ -32,7 +32,8 @@ def _age(ts: float, now: float) -> str:
     return f"{secs}s ago"
 
 
-_WHO = {"keeper": "the memory keeper", "model": "the model", "cartographer": "the cartographer"}
+_WHO = {"keeper": "the memory keeper", "model": "the model", "cartographer": "the cartographer",
+        "reflection": "reflection in REM"}
 
 
 def _kept(meta: dict | None, now: float) -> str:
@@ -47,6 +48,9 @@ def _source(p: dict | None) -> list[str]:
         return ["    (its receipt is gone)"]
     said = " ".join(str(p.get("user_text") or "").split())
     lines = [f'    The person said: "{said[:160]}{"..." if len(said) > 160 else ""}"'] if said else []
+    claim = json.loads(p.get("claim_json") or "null") or {}
+    if sources := (claim.get("args") or {}).get("from"):
+        lines.append(f"    From: {', '.join(s.strip() for s in sources.split('|'))}.")
     if p.get("recalled_json") is not None:
         recalled, facts = json.loads(p["recalled_json"]), json.loads(p.get("facts_json") or "[]")
         count = lambda n, one, many: f"{n} {one if n == 1 else many}"

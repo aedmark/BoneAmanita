@@ -194,15 +194,17 @@ class Store:
 
     def commit_cycle(self, trace_id: str, new_state: dict, expected_sequence: int, receipt: dict, raw: str,
                      *, user_text: str = "", display: str = "", boundary_hash: str = "", by: str = "model",
-                     context: dict | None = None, feeling: dict | None = None) -> dict:
+                     context: dict | None = None, feeling: dict | None = None, mode: str | None = None) -> dict:
         """One engine turn, atomically: canonical state plus its audit trail (turn, messages, proposal,
         receipt, gate decision, mutation), in the shape Brad's `finalize` writes. Secrets are withheld from it.
         What the effect wrote carries the receipt as its source; `by` says who nominated it. `context` is what
         the model was handed for this turn's reply (turn_contexts) and its token usage (the turn's columns);
-        `feeling` is the endocrine state, kept with a remembered memory."""
+        `feeling` is the endocrine state, kept with a remembered memory; `mode` overrides the engine's (a REM
+        reflection is kept in its zone's mode, not whichever mode the engine slept in)."""
         from .secrets import scrub, scrub_all
 
         story = self.in_story()
+        mode = self.mode() if mode is None else mode
         user_text, raw, display = (scrub(t, story) for t in (user_text, raw, display))
         receipt = scrub_all(receipt, story)
         now = time.time()
@@ -218,7 +220,7 @@ class Store:
                 new_state = {**new_state, "world": stamp_sources(
                     old_state["world"], new_state["world"], receipt_id,
                     {"kind": "gate", "turn": turn_id, "verb": (receipt.get("claim") or {}).get("verb"),
-                     "mode": self.mode(), "by": by, "at": now})}
+                     "mode": mode, "by": by, "at": now})}
                 db.execute(
                     "UPDATE canonical_state SET sequence=?, world_json=?, self_json=?, updated_at=? WHERE singleton=1",
                     (next_sequence, json.dumps(new_state["world"]), json.dumps(new_state["self"]), now),
@@ -274,10 +276,10 @@ class Store:
             )
             if state_changed:
                 claim = receipt["claim"]
-                if claim["verb"] == "remember":
+                if claim["verb"] in ("remember", "reflect"):
                     db.execute("INSERT OR REPLACE INTO memory_meta (key, mode, turn_id, kept_at, receipt_id, kept_by, "
                                "feeling_json) VALUES (?,?,?,?,?,?,?)",
-                               (claim["args"]["key"], self.mode(), turn_id, now, receipt_id, by,
+                               (claim["args"]["key"], mode, turn_id, now, receipt_id, by,
                                 json.dumps(feeling) if feeling else None))
                 elif claim["verb"] == "forget":
                     db.executemany("DELETE FROM memory_meta WHERE key=?",

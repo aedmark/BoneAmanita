@@ -34,8 +34,9 @@ engine learns or needs to resume.
   (20.7.4.62). Scoped recall, story vs. real (20.7.4.63). Refusals the model hears (20.7.4.64).
   Personal vs. confidential, and the model no longer says it has no memory (20.7.4.65). Provenance
   (20.7.4.66). The ported store, adopted and pruned (20.7.4.67); the five bone-iris items are done.
-  REM reflection, Gordon's plan (ROADMAP Track E): R1, feeling at keep time (20.7.4.68).
-- **Next:** REM reflection R2 (reflect through the gate), R3 (dream from it), R4 (shown on waking).
+  REM reflection, Gordon's plan (ROADMAP Track E): R1, feeling at keep time (20.7.4.68); R2, reflect
+  through the gate (20.7.4.69).
+- **Next:** REM reflection R3 (dream from the reflections), R4 (shown on waking).
   Shelved for discussion: the affect vector, Self claims and profile seeds (dormant in the store).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
@@ -636,6 +637,35 @@ shown once on waking. Plan R1 to R4 in ROADMAP Track E.
   (including out of table order), `why` saying it, a kept memory carrying the six hormones, a stand-in
   body recording none. The migration test checks the new column. Mutations 8 on a clean baseline. Full
   suite 943 passed, 5 skipped (8 GB cap).
+
+**REM reflection R2, reflect through the gate (2026-09-29, 20.7.4.69).**
+- `reflect`, a new engine-built verb (not offered to the model): args `key`, `value`, `from` (the source
+  memories, `|`-separated); it writes beside the memories it names, a noop if none is held; screened like
+  any write. `tools.py` names `remember`, `reflect` and `forget` as the self graph's only writers.
+- `engine/gate/reflector.py` `MemoryReflector` (like the keeper): one call over a zone's new memories, each
+  with its feeling words ("sister_name = Odalys (felt close)"), answers `name = what they mean together` or
+  NONE; the line goes under `reflection.<name>` (`story.reflection.<name>` in the story). A NONE or a failed
+  call is receipted there (`halcyon.reflect`, an event subsystem); a failure re-raises so the mark holds.
+  `CORTEX.HALCYON_REFLECT` (on; off in the test config, like the keeper).
+- `orchestrator.reflect_memory`, first in the REM tick (before forgetting): per zone, memories kept since
+  that zone's mark (`rem.reflected_at`, a record), not reflections themselves; a zone waits for at least two
+  (a lone memory waits for company); the reflection commits in its own gate cycle, `by="reflection"`, with
+  the zone's mode (`commit_cycle(mode=)`: the latest source's mode for the person's zone, ADVENTURE for the
+  story's; the engine may be asleep in another mode) and the sources' averaged chemistry as its feeling. A
+  NONE moves the mark; a failure does not (the next sleep retries). `/memory why` shows "From: a, b." and
+  "by reflection in REM".
+- Live on gemma4:12b, 3 runs over four messages (sister visiting, a release, no sleep, hiking): each sleep
+  wrote one reflection, accurate but abstract ("balancing a significant professional milestone with a
+  meaningful personal connection"). The prompt now asks for names and specifics, the way a friend would sum
+  up the week, no "balancing", "milestone" or "connection"; 3 more runs: "you are preparing for a big
+  release while looking forward to hiking with Odalys." The keeper kept neither "rough sprint" nor "haven't
+  slept in a week" in any run (a gap in what it judges worth keeping, not this).
+- Tests (`tests/test_rem_reflection.py`, 15 now): the verb (writes beside its memories, noop without them,
+  not offered), the averaged feeling, NONE first; in REM: a reflection through the gate with its mode,
+  feeling and receipt while the engine sleeps in ADVENTURE, once per sleep and only what is new (a lone one
+  waits, reflections are not reflected on), a story's day in the story, NONE moves on and a failure
+  retries, `why` traces it. Mutations 16, one equivalent (the explicit re-raise; the failure propagates
+  either way). Full suite 953 passed, 5 skipped (8 GB cap).
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

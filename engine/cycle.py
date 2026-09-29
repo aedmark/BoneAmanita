@@ -465,6 +465,10 @@ class GeodesicOrchestrator:
             record_crash(self.eng, "REM embedder re-probe", e)
         if hasattr(self.eng, "store") and hasattr(self.eng, "boundary"):
             try:
+                self.reflect_memory(f"rem-{int(time.time())}")
+            except Exception as e:
+                record_crash(self.eng, "REM reflection", e)
+            try:
                 self.consolidate_memory(f"rem-{int(time.time())}", "REM consolidation")
             except Exception as e:
                 record_crash(self.eng, "REM forgetting", e)
@@ -672,6 +676,49 @@ class GeodesicOrchestrator:
             detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "",
         )
         return gone
+
+    def reflect_memory(self, trace_id: str) -> list:
+        """REM plan R2: per zone, what the memories kept since its last reflection mean together, through the
+        gate as an engine-built `reflect`. A zone waits until it has enough new memories; a NONE still moves
+        its mark, a failed call does not. Returns the keys written."""
+        from engine.gate.kernel import Gate
+        from engine.gate.recall import STORY, zone_of
+        from engine.gate.reflector import mean_feeling
+
+        reflector = getattr(self.eng, "memory_reflector", None)
+        if not (reflector and reflector.enabled):
+            return []
+        store = self.eng.store
+        marks = store.record("rem.reflected_at") or {}
+        meta = store.memory_meta()
+        modes = {k: m["mode"] for k, m in meta.items()}
+        memory = (store.state()[1].get("self") or {}).get("memory", {})
+        written = []
+        for zone, prefix in (("real", ""), ("story", STORY)):
+            here = {k: v for k, v in memory.items() if k in meta and meta[k]["kept_by"] != "reflection"
+                    and zone_of(k, modes) == zone and meta[k]["kept_at"] > float(marks.get(zone, 0.0))}
+            if len(here) < reflector.least:
+                continue
+            line = reflector.reflect(here, {k: meta[k]["feeling"] for k in here}, prefix)
+            if line:
+                seq, state = store.state()
+                gate = Gate(self.eng.boundary, state, self.eng.gate_tools, self.eng.gate_invariants)
+                text = f"(Reflecting in REM on {len(here)} memories.)\n{line}"
+                receipt = gate.adjudicate(text)
+                mode = "ADVENTURE" if zone == "story" else next((modes[k] for k in reversed(list(here)) if modes[k]), None)
+                store.commit_cycle(trace_id=f"{trace_id}:reflect", new_state=gate.state, expected_sequence=seq,
+                                   receipt=receipt, raw=text, boundary_hash=getattr(self.eng, "boundary_hash", ""),
+                                   by="reflection", feeling=mean_feeling([meta[k]["feeling"] for k in here]), mode=mode)
+                result = receipt.get("result") or {}
+                if receipt["decision"] == "ACCEPT" and "reflected" in result:
+                    written.append(result["reflected"])
+                ReceiptLedger.get_instance().issue(
+                    "halcyon.reflect", receipt["decision"], result_count=1 if "reflected" in result else 0,
+                    inputs={"memories": len(here), "zone": zone},
+                    detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "")
+            marks[zone] = max(meta[k]["kept_at"] for k in here)
+            store.put_record("rem.reflected_at", marks)
+        return written
 
     def _chart_room(self, ctx, room: dict) -> None:
         from engine.gate.cartographer import chart_args, chart_line, needs_chart
