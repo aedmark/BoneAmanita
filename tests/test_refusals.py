@@ -21,7 +21,7 @@ class TheNote(BoneTestCase):
         receipt = {"decision": "ACCEPT", "decision_basis": [["execute", "ERROR", "KeyError: 'x'"]]}
         text = f"{PROSE}\nNOMINATE what=world/node/x verb=create args=type:city; name:x"
         self.assertEqual(refusal(receipt, text, "model"),
-                         {"verb": "create", "what": "world/node/x", "why": "KeyError: 'x'", "by": "model"})
+                         {"verb": "create", "what": "world/node/x", "why": "KeyError: 'x'", "by": "model", "confidential": False})
 
 
 class TheModelHearsWhy(BoneTestCase):
@@ -49,7 +49,8 @@ class TheModelHearsWhy(BoneTestCase):
         self.turn(f"My key is {KEY}", keeps=f"openai_api_key = {KEY}")
         prompt = self.turn("Did you save it?")
         self.assertIn("Last turn the memory keeper asked the gate to keep self/memory/openai_api_key, and the gate "
-                      "refused: no_secrets -- the memory is named as a credential; secrets are not kept. Nothing was kept.", prompt)
+                      "refused: no_secrets -- the memory is named as a credential; confidential things are never kept. Nothing "
+                      "was kept. Only that was refused; what they tell you about themselves is still kept.", prompt)
         self.assertNotIn(KEY, prompt.split("=== HALCYON GATE GOVERNANCE ===", 1)[1])
         handed = ReceiptLedger.get_instance().for_subsystem("halcyon.refusal")
         self.assertEqual([(r.effect, r.inputs["by"]) for r in handed], [("HANDED_BACK", "keeper")])
@@ -58,6 +59,7 @@ class TheModelHearsWhy(BoneTestCase):
     def test_the_models_own_refusal_says_to_fix_it_only_if_it_matters(self):
         self.turn("Who are you?", reply=f"{PROSE}\nNOMINATE what=self/identity verb=remember args=key:name; value:Iris")
         prompt = self.turn("Go on.")
+        self.assertNotIn("Only that was refused", prompt)
         self.assertIn("Last turn your NOMINATE line (remember self/identity) was refused: 'self/identity' is outside "
                       "the declared state scope. Nothing was kept. Nominate it again, fixed, only if it still matters.", prompt)
 
@@ -81,3 +83,8 @@ class TheModelHearsWhy(BoneTestCase):
         with patch("engine.gate.kernel.Gate.adjudicate", side_effect=RuntimeError("down")):  # a turn the gate misses
             self.assertIn("Last turn the memory keeper", self.turn("Did you save it?"))
         self.assertNotIn("Last turn", self.turn("Anyway."))
+
+    def test_the_gate_block_says_what_is_personal_and_what_is_confidential(self):
+        prompt = self.turn("Hello.")
+        self.assertIn("Personal things (names, family, health, preferences, their life and work) are kept", prompt)
+        self.assertIn("Confidential things (passwords, keys, tokens, card, bank and ID numbers) are never kept", prompt)

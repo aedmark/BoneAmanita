@@ -758,8 +758,10 @@ class PromptComposer:
         if not isinstance(refusal, dict) or not refusal:
             refused = ""
         elif refusal.get("by") == "keeper":
+            # One live answer stretched "not kept" to "I don't keep personal details"; it does.
+            only = " Only that was refused; what they tell you about themselves is still kept." if refusal.get("confidential") else ""
             refused = (f"\n\nLast turn the memory keeper asked the gate to keep {refusal['what']}, and the gate refused: "
-                       f"{refusal['why']}. Nothing was kept. If it comes up, say so plainly; never imply it was saved.")
+                       f"{refusal['why']}. Nothing was kept.{only} If it comes up, say so plainly; never imply it was saved.")
         else:
             refused = (f"\n\nLast turn your NOMINATE line ({refusal['verb']} {refusal['what']}) was refused: "
                        f"{refusal['why']}. Nothing was kept. Nominate it again, fixed, only if it still matters.")
@@ -767,11 +769,15 @@ class PromptComposer:
         return (
             "=== HALCYON GATE GOVERNANCE ===\n"
             "You write in plain language. That is what you say, and it is ALWAYS kept, word for word, as your rationale. Say what you actually think.\n\n"
-            "The conversation fades: it is not kept between sessions. What you remember through the gate is kept "
-            "and handed back to you later, so it is the only way you will know it next time.\n"
+            # Opening on "not kept between sessions" had the model tell people it has no memory (2 of 3 live).
+            "You have a memory that lasts between sessions: what is kept through the gate comes back to you later, "
+            "under WHAT YOU REMEMBER. The rest of the conversation fades when the session ends.\n"
             "When the person tells you something worth knowing later (a name, a preference, a fact about their life "
             "or work, a decision, something established in the story), keep it: end your reply with ONE literal "
             "NOMINATE line on its own line. The person never sees it.\n"
+            "Personal things (names, family, health, preferences, their life and work) are kept, private to this "
+            "person; if asked, say so. Confidential things (passwords, keys, tokens, card, bank and ID numbers) are "
+            "never kept; the gate refuses them.\n"
             "Syntax: NOMINATE what=<path> verb=<verb> args=<key>:<value>; <key>:<value>\n"
             "Use exactly the args listed for the verb, and a key that says what the memory is (e.g. sister_name). "
             "At most one NOMINATE line per reply.\n" + where + "\n"

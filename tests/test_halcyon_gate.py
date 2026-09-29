@@ -54,7 +54,7 @@ class TestHalcyonGate(BoneTestCase):
         self.turn(PROSE)
         prompt = self.engine.cortex.llm.generate.call_args[0][0]
         self.assertLess(prompt.index("=== HALCYON GATE GOVERNANCE ==="), prompt.index("=== PARTNER INPUT ==="))
-        self.assertIn("The conversation fades", prompt)
+        self.assertIn("You have a memory that lasts between sessions", prompt)
 
     def test_the_limits_come_from_the_boundary(self):
         # build_invariants was handed the limits dict and looked for "limits" inside it: the caps fell to 10000.
@@ -208,6 +208,15 @@ class TheModelGetsItsMemoriesBack(BoneTestCase):
         self.assertIn("- river: runs east past the mill", self.prompt())
         receipt = ReceiptLedger.get_instance().for_subsystem("halcyon.recall")[-1]
         self.assertEqual(receipt.result_count, 1)
+
+    def test_every_mode_knows_it_remembers(self):
+        # A bare model has no memory; this one does, and two of three live answers denied it.
+        for mode in ("ADVENTURE", "CONVERSATION", "CREATIVE", "TECHNICAL"):
+            with self.subTest(mode=mode):
+                self.engine.cortex.active_mode = mode
+                self.turn(PROSE)
+                self.assertIn("MEMORY: You have a working memory.", self.prompt())
+                self.assertIn("Never say you have no memory", self.prompt())
 
     def test_adventure_answers_a_question_before_the_room(self):
         # The probe: ADVENTURE had the key's hiding place in its prompt and still only described the room.

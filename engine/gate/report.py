@@ -17,7 +17,7 @@ def refusal(receipt: dict, text: str, by: str) -> dict | None:
         return None
     nominated = proposal_from(text, receipt) or {}
     return {"verb": nominated.get("verb") or "?", "what": nominated.get("what_path") or "?",
-            "why": redact(basis[-1][2]), "by": by}
+            "why": redact(basis[-1][2]), "by": by, "confidential": basis[-1][0] == "screen"}
 
 
 def refusal_line(r: dict) -> str:

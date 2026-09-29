@@ -32,6 +32,7 @@ engine learns or needs to resume.
   A second look at bone-iris gave five items (ROADMAP Track E); the first, secrets stay out of the store
   (20.7.4.61), then out of every other file, with named credentials forgotten by the memory's mode
   (20.7.4.62). Scoped recall, story vs. real (20.7.4.63). Refusals the model hears (20.7.4.64).
+  Personal vs. confidential, and the model no longer says it has no memory (20.7.4.65).
 - **Next:** provenance, then adopting or pruning the ported store (ROADMAP Track E, "From a second look at
   bone-iris").
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
@@ -534,6 +535,37 @@ rejection back into the retry. Ours has no retry call: the next turn hears it.
   no note, the story wording, a quoted secret withheld, handed back once across a turn the gate misses. The
   denial display tests now check the reason. Mutations 10. Full suite 918 passed, 5 skipped, under an 8 GB
   cap.
+
+**Personal vs. confidential; the model stops denying its memory (2026-09-29, 20.7.4.65).** Gordon asked
+why one live answer said "I don't store credentials or personal details like that": the refusal note said
+only "secrets are not kept" and nothing in the prompt said what is kept, so the model filled the gap with
+the stock line. His rule: personal and private is not confidential and secure.
+- Confidential (never kept): what grants access, money or identity: credentials, keys, tokens, card, bank
+  and ID numbers (the `no_secrets` screen, its reasons now "confidential things are never kept"; REM's
+  reason "confidential"). Personal (kept, private to the person): everything else they say about
+  themselves, names and family to health and preferences. Written into `secrets.py`'s docstring.
+- The gate block says both: "Personal things (names, family, health, preferences, their life and work) are
+  kept, private to this person; if asked, say so. Confidential things (...) are never kept; the gate
+  refuses them." A confidential refusal note adds "Only that was refused; what they tell you about
+  themselves is still kept." (`refusal()` carries `confidential`, the screen stage.)
+- Found on the way, worse: asked "Do you remember personal things I tell you?", 2 of 3 said they have no
+  persistent memory, right after keeping the sister's name. The gate block opened "The conversation fades:
+  it is not kept between sessions", the phrase they echoed (phase 3 wording). It now opens "You have a
+  memory that lasts between sessions: what is kept through the gate comes back to you later, under WHAT YOU
+  REMEMBER. The rest of the conversation fades when the session ends."
+- Live on gemma4:12b, 5 runs after that: no run denied having memory, but 2 undersold it as "while we are
+  talking". Gordon: a bare LLM has no working memory, the engine's does, and it should know that and trust
+  the engine to hand it the context. So the global persona block (every mode, beside IDENTITY) now says:
+  "MEMORY: You have a working memory. This engine keeps what matters between sessions and hands you what
+  bears on each turn (WHAT YOU REMEMBER, the shared reality, the recent dialogue). Trust it: what it gives
+  you, you remember; what it does not, you were not told or did not keep. Never say you have no memory or
+  that you forget between sessions." (`lore/system_prompts.json`).
+- Live, 5 runs with it: 5 of 5 say plainly they remember (three name Odalys or "your sister"; one "so they
+  inform our future exchanges"); the password, 5 of 5 not saved, now scoped to credentials. One overshoots
+  ("I do not have a way to forget"), the better error.
+- Tests: the gate block states both categories; a confidential refusal note says the rest is still kept, a
+  scope refusal does not; every mode's prompt carries the MEMORY line. Full suite 920 passed, 5 skipped
+  (8 GB cap).
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

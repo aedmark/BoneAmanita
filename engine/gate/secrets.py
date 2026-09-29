@@ -1,6 +1,10 @@
 """Secrets stay out of the store: credentials, keys, card and ID numbers are never kept in memory or the
 world graph (the gate's `no_secrets` screen), and are withheld from the audit trail and the checkpoint.
 
+Confidential (never kept): what grants access, money or identity: credentials, keys, tokens, card, bank and
+ID numbers. Personal (kept, private to the person): everything else they tell us about themselves, from
+names and family to health and preferences (Gordon, 2026-09-29). Only the confidential is screened here.
+
 Detection is by shape and by name, and never echoes what it found: a reason names the kind only. In a story
 (ADVENTURE) a password is a puzzle, so only the shapes apply: no door's password looks like an API key."""
 from __future__ import annotations
@@ -106,10 +110,10 @@ def screen(verb: str, what: str, args: dict, in_story: bool = False) -> str | No
     if verb == "forget":
         return None
     if not in_story and (credential_key(args.get("key")) or credential_key(what.rsplit("/", 1)[-1])):
-        return "the memory is named as a credential; secrets are not kept"
+        return "the memory is named as a credential; confidential things are never kept"
     for name, value in args.items():
         if kind := kind_of(value, in_story):
-            return f"{name} looks like {kind}; secrets are not kept"
+            return f"{name} looks like {kind}; confidential things are never kept"
     return None
 
 

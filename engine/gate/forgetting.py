@@ -21,7 +21,7 @@ def plan(memory: dict, stats: dict, vectors: dict | None, model: str, cap: int,
     weakness = lambda k: (stats.get(k, (0, 0.0))[0], stats.get(k, (0, 0.0))[1], age[k])
     # Kept before the no_secrets screen existed. A door's password kept in ADVENTURE is the story's;
     # a memory with no recorded mode predates modes and is judged in full.
-    reasons = {k: "a secret" for k, v in memory.items()
+    reasons = {k: "confidential" for k, v in memory.items()
                if screen("remember", f"self/memory/{k}", {"key": k, "value": v},
                          in_story=(modes or {}).get(k) == "ADVENTURE")}
     live = {k: v[2] for k, v in (vectors or {}).items()
