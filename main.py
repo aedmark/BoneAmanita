@@ -201,6 +201,7 @@ class BoneAmanita:
         self.user_profile = UserProfile(self.user_name, config_ref=self.config)
         self.user_profile.attach_store(self.store)
         self.halcyon_grammar = ""
+        self.last_refusal = None  # what the gate refused last turn, for the next prompt
         try:
             with open("engine/gate/boundary.yaml", "rb") as f:
                 b_bytes = f.read()

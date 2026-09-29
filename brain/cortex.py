@@ -303,6 +303,7 @@ class TheCortex:
                     )
             self.last_shadow_nodes = []
         sim_result["halcyon_recall"] = self._halcyon_recall(ctx, user_input)
+        sim_result["halcyon_refusal"] = self._take_refusal()
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
         modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)
@@ -1057,6 +1058,21 @@ class TheCortex:
         )
         return found
 
+    def _take_refusal(self) -> Optional[Dict[str, Any]]:
+        """Last turn's refusal, handed to this prompt once."""
+        eng = getattr(getattr(self.svc, "orchestrator", None), "eng", None)
+        found = getattr(eng, "last_refusal", None)
+        # Only the gate's own note: a stand-in engine answers every attribute, and that one grew without end.
+        if not isinstance(found, dict):
+            return None
+        if found:
+            from engine.receipts import issue as issue_receipt
+
+            eng.last_refusal = None
+            issue_receipt("halcyon.refusal", "HANDED_BACK", result_count=1,
+                          inputs={"by": found["by"], "verb": found["verb"]}, detail=found["why"])
+        return found
+
     @staticmethod
     def _recall_embedder():
         from spores.embeddings import SemanticEmbedder
@@ -1331,6 +1347,7 @@ class TheCortex:
                 "mode_settings": mode_settings,
                 "active_mode": self.active_mode,
                 "halcyon_grammar": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "halcyon_grammar", ""),
+                "halcyon_refusal": sim_result.get("halcyon_refusal"),
             },
             "dialogue_history": self.dialogue_buffer,
             "recent_logs": sim_result.get("logs", []),

@@ -704,7 +704,9 @@ class PromptComposer:
             ("somatic_budget", somatic_budget_block),
             ("mode_trigger", mode_trigger),
             # Before the input: after the reply cue, the model read it as part of its own turn.
-            ("warden_instruction", self._halcyon_instruction(state.get("meta", {}).get("halcyon_grammar", ""))),
+            ("warden_instruction", self._halcyon_instruction(
+                state.get("meta", {}).get("halcyon_grammar", ""), state.get("meta", {}).get("halcyon_refusal"),
+                story=state.get("meta", {}).get("active_mode") == "ADVENTURE")),
             ("input", input_block),
             ("entity_prefix", entity_prefix),
             ("thermal_lock", cd_block),
@@ -747,10 +749,20 @@ class PromptComposer:
         return "\n".join(lines) + "\n"
 
     @staticmethod
-    def _halcyon_instruction(grammar: str) -> str:
-        """The Halcyon gate's grammar, or nothing when no boundary is loaded."""
+    def _halcyon_instruction(grammar: str, refusal: dict | None = None, story: bool = False) -> str:
+        """The Halcyon gate's grammar, or nothing when no boundary is loaded; with last turn's refusal."""
         if not grammar or not isinstance(grammar, str):
             return ""
+        where = ("In this story, keep what it establishes under self/memory/story.<name> (e.g. story.innkeeper_name), "
+                 "so it never overwrites what the person told you about themselves.\n" if story else "")
+        if not isinstance(refusal, dict) or not refusal:
+            refused = ""
+        elif refusal.get("by") == "keeper":
+            refused = (f"\n\nLast turn the memory keeper asked the gate to keep {refusal['what']}, and the gate refused: "
+                       f"{refusal['why']}. Nothing was kept. If it comes up, say so plainly; never imply it was saved.")
+        else:
+            refused = (f"\n\nLast turn your NOMINATE line ({refusal['verb']} {refusal['what']}) was refused: "
+                       f"{refusal['why']}. Nothing was kept. Nominate it again, fixed, only if it still matters.")
         # The phase 3 probe: told only "when you want to", the model kept nothing it was told.
         return (
             "=== HALCYON GATE GOVERNANCE ===\n"
@@ -762,9 +774,9 @@ class PromptComposer:
             "NOMINATE line on its own line. The person never sees it.\n"
             "Syntax: NOMINATE what=<path> verb=<verb> args=<key>:<value>; <key>:<value>\n"
             "Use exactly the args listed for the verb, and a key that says what the memory is (e.g. sister_name). "
-            "At most one NOMINATE line per reply.\n\n"
+            "At most one NOMINATE line per reply.\n" + where + "\n"
             "Allowed grammar:\n" + grammar + "\n\n"
-            "Small talk needs no NOMINATE line."
+            "Small talk needs no NOMINATE line." + refused
         )
 
     def _fit_to_window(self, blocks: list, style_notes: list, valid_history: list) -> list:

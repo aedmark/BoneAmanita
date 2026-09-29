@@ -181,7 +181,7 @@ class DenialsShowOnlyWhereAsked(BoneTestCase):
     def test_hidden_in_conversation(self):
         self.engine.cortex.active_mode = "CONVERSATION"
         self.engine.ui_mode = "WARM"
-        self.assertNotIn("Action Denied by Gate", self.turn(self.OUT_OF_SCOPE).get("ui", ""))
+        self.assertNotIn("the gate refused", self.turn(self.OUT_OF_SCOPE).get("ui", ""))
         self.assertEqual(self.engine.store.audit("receipts")[0]["decision"], "DENY")
 
     def test_shown_in_technical_and_on_the_deep_hud(self):
@@ -189,7 +189,8 @@ class DenialsShowOnlyWhereAsked(BoneTestCase):
             with self.subTest(mode=mode, depth=depth):
                 self.engine.cortex.active_mode = mode
                 self.engine.ui_mode = depth
-                self.assertIn("Action Denied by Gate", self.turn(self.OUT_OF_SCOPE).get("ui", ""))
+                self.assertIn("the gate refused remember self/identity: 'self/identity' is outside the declared state scope",
+                              self.turn(self.OUT_OF_SCOPE).get("ui", ""))
 
 
 class TheModelGetsItsMemoriesBack(BoneTestCase):

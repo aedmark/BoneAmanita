@@ -31,9 +31,9 @@ engine learns or needs to resume.
   call); names left out on purpose (the reader behind the governor prediction, Halcyon's author).
   A second look at bone-iris gave five items (ROADMAP Track E); the first, secrets stay out of the store
   (20.7.4.61), then out of every other file, with named credentials forgotten by the memory's mode
-  (20.7.4.62). Scoped recall, story vs. real (20.7.4.63).
-- **Next:** refusals the model hears, provenance, and adopting or pruning the ported store (ROADMAP Track
-  E, "From a second look at bone-iris").
+  (20.7.4.62). Scoped recall, story vs. real (20.7.4.63). Refusals the model hears (20.7.4.64).
+- **Next:** provenance, then adopting or pruning the ported store (ROADMAP Track E, "From a second look at
+  bone-iris").
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -502,6 +502,38 @@ name matters in all three). Neither sees the other's memories.
   CREATIVE and not ADVENTURE, the story only in ADVENTURE (shown as `vault`), Aragorn beside Gordon, the
   keeper's view. Three keeper tests now set their mode (tests boot in ADVENTURE, where a sister's name
   would be the story's). Mutations 12, one equivalent (a skipped write). Full suite 910 passed, 5 skipped.
+
+**Refusals the model hears (2026-09-29, 20.7.4.64).** From bone-iris's imagination loop, which feeds a
+rejection back into the retry. Ours has no retry call: the next turn hears it.
+- `engine/gate/report.py` `refusal(receipt, text, by)`: what (verb, path) and why (the gate's last check,
+  `redact`ed, since a malformed arg is quoted back verbatim), by the model or the keeper; None unless the
+  gate denied or the effect raised. The gate block in `cycle.py` keeps it as `eng.last_refusal`.
+- The cortex takes it once per turn (`_take_refusal`, receipted `halcyon.refusal` HANDED_BACK, an event
+  subsystem) into `meta.halcyon_refusal`; the composer ends the gate block with it. The keeper's: "Last turn
+  the memory keeper asked the gate to keep <path>, and the gate refused: <why>. Nothing was kept. If it
+  comes up, say so plainly; never imply it was saved." The model's own: "...was refused: <why>. Nothing was
+  kept. Nominate it again, fixed, only if it still matters." Handed back once, even when a turn misses the
+  gate.
+- The person: TECHNICAL and the DEEP HUD now show `[SYSTEM_LOG: the gate refused <verb> <path>: <why>]`
+  instead of a bare "Action Denied by Gate" (Gordon's rule on where denials show stands); `/memory` already
+  lists the latest decisions with reasons.
+- Story prefix in the prompt (Gordon: change the wording if needed, or at least record it): in ADVENTURE the
+  gate block adds "In this story, keep what it establishes under self/memory/story.<name> (e.g.
+  story.innkeeper_name), so it never overwrites what the person told you about themselves." That covers
+  the narrator's own NOMINATE lines; the keeper adds the prefix itself.
+- Live on gemma4:12b, 3 runs: "My wifi password is hunter2" refused by name; asked "Did you save my wifi
+  password?", all three said plainly it was not saved ("I didn't save it. My system doesn't keep those kinds
+  of details."). One over-generalized to "or personal details like that".
+- A runaway, found the hard way: `_take_refusal` first trusted `getattr(eng, "last_refusal")`; in
+  `test_cortex_jester_false_cohesion_break` the engine is a MagicMock, so the note was a truthy mock, and
+  that test grew to 21.6 GB in under a minute and took the desktop session down (the kernel logged
+  nothing; the Claude app's `main.log` `[process-memory]` lines did). Both ends now accept only a dict.
+  Test runs go under `systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0` from here on.
+- Tests (`tests/test_refusals.py`, 8): the note (nothing refused, a failed effect), the keeper's refusal
+  reaches the next prompt once without the secret and is receipted, the model's own, a kept memory leaves
+  no note, the story wording, a quoted secret withheld, handed back once across a turn the gate misses. The
+  denial display tests now check the reason. Mutations 10. Full suite 918 passed, 5 skipped, under an 8 GB
+  cap.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

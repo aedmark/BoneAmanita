@@ -6,6 +6,24 @@ import json
 import time
 
 
+def refusal(receipt: dict, text: str, by: str) -> dict | None:
+    """What the gate refused and why, for the next prompt and the screen; None when nothing was refused.
+    `by` is "keeper" or "model"; the reason never carries a secret."""
+    from .secrets import redact
+    from .store import proposal_from
+
+    basis = receipt.get("decision_basis") or []
+    if not basis or (receipt["decision"] != "DENY" and not any(c[1] == "ERROR" for c in basis)):
+        return None
+    nominated = proposal_from(text, receipt) or {}
+    return {"verb": nominated.get("verb") or "?", "what": nominated.get("what_path") or "?",
+            "why": redact(basis[-1][2]), "by": by}
+
+
+def refusal_line(r: dict) -> str:
+    return f"the gate refused {r['verb']} {r['what']}: {r['why']}"
+
+
 def _age(ts: float, now: float) -> str:
     secs = max(0, int(now - ts))
     for unit, size in (("d", 86400), ("h", 3600), ("m", 60)):

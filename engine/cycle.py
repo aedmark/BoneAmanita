@@ -876,7 +876,7 @@ class GeodesicOrchestrator:
                     try:
                         seq, state = self.eng.store.state()
                         gate = Gate(self.eng.boundary, copy.deepcopy(state), self.eng.gate_tools, self.eng.gate_invariants)
-                        gate_text = model_raw
+                        gate_text, by = model_raw, "model"
                         # The keeper nominates what the person said only when the draft nominated nothing itself.
                         if wants_keeper and not any(l.strip().startswith("NOMINATE") for l in model_raw.splitlines()):
                             from engine.gate.recall import STORY, zone, zoned
@@ -884,7 +884,7 @@ class GeodesicOrchestrator:
                             mode = getattr(getattr(self.eng, "cortex", None), "active_mode", None)
                             here = zoned(state, self.eng.store.memory_modes(), mode)["self"]["memory"]
                             if line := keeper.propose(user_message, here, STORY if zone(mode) == "story" else ""):
-                                gate_text = f"{model_raw or self.HELD_RATIONALE}\n{line}"
+                                gate_text, by = f"{model_raw or self.HELD_RATIONALE}\n{line}", "keeper"
                         if gate_text:
                             receipt = gate.adjudicate(gate_text)
 
@@ -907,11 +907,14 @@ class GeodesicOrchestrator:
                                 detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "",
                             )
 
-                            denied = receipt["decision"] == "DENY" or any(c[1] == "ERROR" for c in receipt["decision_basis"])
-                            # Gordon: the player sees a denial only in TECHNICAL mode or on the DEEP HUD; it is always in the audit.
-                            if denied and self._shows_gate_denials():
+                            from engine.gate.report import refusal, refusal_line
+
+                            # The next prompt tells the model why; the person sees it in TECHNICAL or on the DEEP
+                            # HUD (Gordon's rule), and /memory keeps it.
+                            self.eng.last_refusal = refusal(receipt, gate_text, by)
+                            if self.eng.last_refusal and self._shows_gate_denials():
                                 self.eng.events.log(f"Gate Denied Action: {receipt['decision_basis']}", "KERNEL")
-                                ctx.bureau_ui += "\n[SYSTEM_LOG: Action Denied by Gate]"
+                                ctx.bureau_ui += f"\n[SYSTEM_LOG: {refusal_line(self.eng.last_refusal)}]"
                     except Exception as e:
                         record_crash(self.eng, "Halcyon gate", e)
 
