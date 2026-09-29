@@ -685,7 +685,7 @@ class GeodesicOrchestrator:
         receipt = gate.adjudicate(text)
         self.eng.store.commit_cycle(
             trace_id=f"{ctx.trace_id}:chart", new_state=gate.state, expected_sequence=seq, receipt=receipt,
-            raw=text, boundary_hash=getattr(self.eng, "boundary_hash", ""),
+            raw=text, boundary_hash=getattr(self.eng, "boundary_hash", ""), by="cartographer",
         )
         applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
         ReceiptLedger.get_instance().issue(
@@ -897,6 +897,7 @@ class GeodesicOrchestrator:
                                 user_text="" if is_system else user_message,
                                 display=self.eng.cortex._strip_nominations(model_raw),
                                 boundary_hash=getattr(self.eng, "boundary_hash", ""),
+                                by=by,
                             )
                             applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
                             ReceiptLedger.get_instance().issue(

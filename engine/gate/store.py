@@ -5,6 +5,7 @@ after a successful state transaction.
 """
 from __future__ import annotations
 
+import copy
 import json
 import sqlite3
 import threading
@@ -123,7 +124,8 @@ class Store:
           key TEXT PRIMARY KEY, recalled INTEGER NOT NULL, last_recalled REAL NOT NULL
         );
         CREATE TABLE IF NOT EXISTS memory_meta (
-          key TEXT PRIMARY KEY, mode TEXT, turn_id TEXT NOT NULL, kept_at REAL NOT NULL
+          key TEXT PRIMARY KEY, mode TEXT, turn_id TEXT NOT NULL, kept_at REAL NOT NULL,
+          receipt_id TEXT, kept_by TEXT
         );
         CREATE TABLE IF NOT EXISTS memory_vectors (
           key TEXT PRIMARY KEY, text_hash TEXT NOT NULL, model TEXT NOT NULL,
@@ -199,6 +201,11 @@ class Store:
         """
         with self.connect() as db:
             db.executescript(schema)
+            # memory_meta gained who kept each memory and its receipt in 20.7.4.66.
+            have = {r[1] for r in db.execute("PRAGMA table_info(memory_meta)")}
+            for column in ("receipt_id", "kept_by"):
+                if column not in have:
+                    db.execute(f"ALTER TABLE memory_meta ADD COLUMN {column} TEXT")
             now = time.time()
             world = empty_world()
             self_state = {"name": "halcyon", "memory": {}}
@@ -409,9 +416,10 @@ class Store:
         return dict(row)
 
     def commit_cycle(self, trace_id: str, new_state: dict, expected_sequence: int, receipt: dict, raw: str,
-                     *, user_text: str = "", display: str = "", boundary_hash: str = "") -> dict:
+                     *, user_text: str = "", display: str = "", boundary_hash: str = "", by: str = "model") -> dict:
         """One engine turn, atomically: canonical state plus its audit trail (turn, messages, proposal,
-        receipt, gate decision, mutation), in the shape Brad's `finalize` writes. Secrets are withheld from it."""
+        receipt, gate decision, mutation), in the shape Brad's `finalize` writes. Secrets are withheld from it.
+        What the effect wrote carries the receipt as its source; `by` says who nominated it."""
         from .secrets import scrub, scrub_all
 
         story = self.in_story()
@@ -425,7 +433,12 @@ class Store:
             outcome = receipt_outcome(receipt)
             state_changed = new_state != old_state and receipt["decision"] == "ACCEPT"
             next_sequence = current_sequence + 1 if state_changed else current_sequence
+            turn_id, receipt_id = _id("turn"), _id("rcpt")
             if state_changed:
+                new_state = {**new_state, "world": stamp_sources(
+                    old_state["world"], new_state["world"], receipt_id,
+                    {"kind": "gate", "turn": turn_id, "verb": (receipt.get("claim") or {}).get("verb"),
+                     "mode": self.mode(), "by": by, "at": now})}
                 db.execute(
                     "UPDATE canonical_state SET sequence=?, world_json=?, self_json=?, updated_at=? WHERE singleton=1",
                     (next_sequence, json.dumps(new_state["world"]), json.dumps(new_state["self"]), now),
@@ -434,7 +447,6 @@ class Store:
             ordinal = db.execute(
                 "SELECT COALESCE(MAX(ordinal),0)+1 n FROM turns WHERE conversation_id=?", (conversation_id,)
             ).fetchone()["n"]
-            turn_id = _id("turn")
             db.execute(
                 "INSERT INTO turns (id,conversation_id,ordinal,status,outcome,context_state_sequence,created_at,completed_at) "
                 "VALUES (?,?,?,'complete',?,?,?,?)",
@@ -455,7 +467,6 @@ class Store:
                      json.dumps(proposal.get("normalized_args")) if proposal.get("normalized_args") else None,
                      proposal["parse_status"], now),
                 )
-            receipt_id = _id("rcpt")
             db.execute(
                 "INSERT INTO receipts VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (receipt_id, turn_id, receipt["decision"], outcome,
@@ -473,8 +484,8 @@ class Store:
             if state_changed:
                 claim = receipt["claim"]
                 if claim["verb"] == "remember":
-                    db.execute("INSERT OR REPLACE INTO memory_meta VALUES (?,?,?,?)",
-                               (claim["args"]["key"], self.mode(), turn_id, now))
+                    db.execute("INSERT OR REPLACE INTO memory_meta VALUES (?,?,?,?,?,?)",
+                               (claim["args"]["key"], self.mode(), turn_id, now, receipt_id, by))
                 elif claim["verb"] == "forget":
                     db.executemany("DELETE FROM memory_meta WHERE key=?",
                                    [(k,) for k in (receipt.get("result") or {}).get("forgot", [])])
@@ -598,12 +609,28 @@ class Store:
 
     def memory_modes(self) -> dict[str, str | None]:
         """{key: the mode it was kept in}; memories kept before 20.7.4.62 have no row."""
+        return {k: m["mode"] for k, m in self.memory_meta().items()}
+
+    def memory_meta(self) -> dict[str, dict]:
+        """{key: mode, turn_id, kept_at, receipt_id, kept_by}: where each memory came from."""
         db = self.connect()
         try:
-            rows = db.execute("SELECT key, mode FROM memory_meta").fetchall()
+            rows = db.execute("SELECT * FROM memory_meta").fetchall()
         finally:
             db.close()
-        return {r["key"]: r["mode"] for r in rows}
+        return {r["key"]: dict(r) for r in rows}
+
+    def provenance(self, receipt_id: str) -> dict | None:
+        """The commit behind a source: when, the gate's checks, and what the person said that turn."""
+        db = self.connect()
+        try:
+            row = db.execute(
+                "SELECT r.created_at, r.decision, r.decision_basis_json, r.claim_json, t.ordinal, "
+                "(SELECT raw_content FROM messages m WHERE m.turn_id=r.turn_id AND m.role='user') user_text "
+                "FROM receipts r JOIN turns t ON t.id=r.turn_id WHERE r.id=?", (receipt_id,)).fetchone()
+        finally:
+            db.close()
+        return dict(row) if row else None
 
     def drop_memory_stats(self, keys: list) -> None:
         with self.transaction(immediate=True) as db:
@@ -947,6 +974,22 @@ class Store:
 class ConversationBusy(Exception):
     def __init__(self, turn_id: str):
         self.turn_id = turn_id
+
+
+def stamp_sources(old: dict, new: dict, receipt_id: str, source: dict, keep: int = 8) -> dict:
+    """`new` world with `receipt_id` on each node, edge and constraint the commit created or changed (the
+    last `keep`), and in the sources registry; sources nothing cites any more are dropped."""
+    world = copy.deepcopy(new)
+    bare = lambda item: {k: v for k, v in (item or {}).items() if k != "sources"}
+    before = {**old.get("nodes", {}), **{e["id"]: e for e in old.get("edges", []) + old.get("constraints", [])}}
+    items = list(world.get("nodes", {}).items()) + [(e["id"], e) for e in world.get("edges", []) + world.get("constraints", [])]
+    for item_id, item in items:
+        if bare(item) != bare(before.get(item_id)):
+            item["sources"] = (list(item.get("sources") or []) + [receipt_id])[-keep:]
+    cited = {s for _, item in items for s in item.get("sources") or []}
+    registry = {**old.get("sources", {}), **world.get("sources", {}), receipt_id: source}
+    world["sources"] = {k: v for k, v in registry.items() if k in cited}
+    return world
 
 
 class StateConflict(Exception):

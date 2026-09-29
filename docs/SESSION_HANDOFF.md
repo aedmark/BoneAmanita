@@ -32,9 +32,10 @@ engine learns or needs to resume.
   A second look at bone-iris gave five items (ROADMAP Track E); the first, secrets stay out of the store
   (20.7.4.61), then out of every other file, with named credentials forgotten by the memory's mode
   (20.7.4.62). Scoped recall, story vs. real (20.7.4.63). Refusals the model hears (20.7.4.64).
-  Personal vs. confidential, and the model no longer says it has no memory (20.7.4.65).
-- **Next:** provenance, then adopting or pruning the ported store (ROADMAP Track E, "From a second look at
-  bone-iris").
+  Personal vs. confidential, and the model no longer says it has no memory (20.7.4.65). Provenance
+  (20.7.4.66).
+- **Next:** adopting or pruning the ported store (ROADMAP Track E, "From a second look at bone-iris"),
+  the last of the five.
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -566,6 +567,30 @@ the stock line. His rule: personal and private is not confidential and secure.
 - Tests: the gate block states both categories; a confidential refusal note says the rest is still kept, a
   scope refusal does not; every mode's prompt carries the MEMORY line. Full suite 920 passed, 5 skipped
   (8 GB cap).
+
+**Provenance (2026-09-29, 20.7.4.66).** bone-iris's roadmap item: receipt IDs on the facts, not just in the
+log. The graph's `sources` fields (per item, and the world's registry) were never written.
+- `store.stamp_sources(old, new, receipt_id, source)`, called inside `commit_cycle`'s transaction: every
+  node, edge and constraint the commit created or changed (compared without `sources`) gets the receipt,
+  the last 8 kept; the registry maps the receipt to `{kind, turn, verb, mode, by, at}` and drops what
+  nothing cites, so it stays bounded. A memory write adds no world source. The store stamps metadata
+  about the commit; the fact itself is still only what the gate admitted.
+- `commit_cycle(by=)`: the main gate cycle passes "model" or "keeper" (the one that nominated), the
+  cartographer "cartographer". Forgetting passes none: it writes no world fact and deletes its memory rows.
+  The turn and receipt IDs are made before the state write now.
+- `memory_meta` gains `receipt_id` and `kept_by` (added to an existing table at boot). `store.memory_meta()`,
+  `store.provenance(receipt_id)` (when, the gate's checks, the claim, the person's words that turn).
+- `/memory` lines: "sister_name: Odalys  (kept 2h ago in CONVERSATION by the memory keeper; recalled 3x,
+  last 1m ago)". `/memory why <name>` (a memory key, its plain name for a `story.` one, or a world node's
+  label): who kept it, when, in which mode, "The person said: ...", "The gate: schema PASS, ..., execute
+  OK.", and recall counts; for a node, each commit that wrote it and its active links.
+- Tests (`tests/test_provenance.py`, 12): the stamp (changed vs. unchanged, the caller's state untouched,
+  uncited sources dropped, the cap), the column migration, a node's receipt and registry entry, a memory's
+  keeper and receipt, the `/memory` line, `why` for a memory, a node and a story memory, nothing found, a
+  memory from before sources, the cartographer named. Two `/memory` tests updated for the new line.
+  Mutations 15 (one by hand). The first mutation run was void: two stale expectations failed the baseline,
+  and with `-x` every mutant then reads as killed; rerun on a clean baseline. Full suite 932 passed, 5
+  skipped (8 GB cap).
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

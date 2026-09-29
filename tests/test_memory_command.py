@@ -15,7 +15,7 @@ class TheReport(BoneTestCase):
         self.assertEqual(lines[0], "MEMORY: 5 kept of 500 (forgetting starts at 450). Embedder: http:nomic 768d [NOMINAL].")
         self.assertEqual(lines[1:4], ["  note4: detail 4  (recalled 3x, last 1m ago)",
                                       "  note3: detail 3  (never recalled)",
-                                      "  ...and 3 more (newest first; /memory <word> to filter)."])
+                                      "  ...and 3 more (newest first; /memory <word> to filter, /memory why <name> to trace)."])
 
     def test_a_filter_narrows_the_list(self):
         state = {"self": {"memory": {"sister_name": "Odalys", "pet_name": "Brisket"}}, "world": {}}
@@ -55,7 +55,7 @@ class TheCommand(BoneTestCase):
         self.engine.cmd.execute("/memory")
         out = self.shown()
         self.assertIn("MEMORY: 1 kept of 500", out)
-        self.assertIn("sister_name: Odalys  (recalled 1x", out)
+        self.assertIn("sister_name: Odalys  (kept 0s ago in TECHNICAL by the model; recalled 1x", out)
         self.assertIn("WORLD: 0 nodes", out)
         self.assertIn("ACCEPT remember self/memory/sister_name", out)
         self.assertIn("DENY   remember self/identity: 'self/identity' is outside the declared state scope", out)

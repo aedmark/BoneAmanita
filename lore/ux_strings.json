@@ -170,7 +170,7 @@
     "status": "Check vitals",
     "save": "Persist state",
     "export": "Write the adventure for FractalOS",
-    "memory": "What the model keeps and what the gate decided (TECHNICAL or DEEP; /memory <word> filters)",
+    "memory": "What the model keeps and what the gate decided (TECHNICAL or DEEP; /memory <word> filters, /memory why <name> traces one)",
     "inventory": "Check pockets",
     "map": "Navigation check",
     "mode": "Switch the experience mode; the conversation carries over",

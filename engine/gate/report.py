@@ -32,8 +32,62 @@ def _age(ts: float, now: float) -> str:
     return f"{secs}s ago"
 
 
+_WHO = {"keeper": "the memory keeper", "model": "the model", "cartographer": "the cartographer"}
+
+
+def _kept(meta: dict | None, now: float) -> str:
+    if not meta:
+        return ""
+    return f"kept {_age(meta['kept_at'], now)} in {meta.get('mode') or 'an unrecorded mode'} by {_WHO.get(meta.get('kept_by'), 'the model')}; "
+
+
+def _source(p: dict | None) -> list[str]:
+    """What a commit's receipt says: the person's words that turn, and the gate's checks."""
+    if not p:
+        return ["    (its receipt is gone)"]
+    said = " ".join(str(p.get("user_text") or "").split())
+    lines = [f'    The person said: "{said[:160]}{"..." if len(said) > 160 else ""}"'] if said else []
+    basis = json.loads(p.get("decision_basis_json") or "[]")
+    return lines + [f"    The gate: {', '.join(f'{stage} {verdict}' for stage, verdict, *_ in basis)}."]
+
+
+def why_report(name: str, state: dict, meta: dict, stats: dict, provenance, now: float | None = None) -> list[str]:
+    """`/memory why <name>`: where a memory or a world node came from. `provenance(receipt_id)` looks a commit up."""
+    from .recall import STORY
+
+    now = time.time() if now is None else now
+    memory = ((state or {}).get("self") or {}).get("memory", {}) or {}
+    key = next((k for k in (name, STORY + name) if k in memory), None)
+    if key:
+        lines = [f"{key}: {memory[key]}"]
+        m = meta.get(key)
+        if not m or not m.get("receipt_id"):
+            lines.append("  Kept before its source was recorded.")
+        else:
+            kept = _kept(m, now)[:-2]
+            lines.append(f"  {kept[0].upper()}{kept[1:]}.")
+            lines += _source(provenance(m["receipt_id"]))
+        count, last = stats.get(key, (0, 0.0))
+        lines.append(f"  Recalled {count}x, last {_age(last, now)}." if count else "  Never recalled yet.")
+        return lines
+    world = (state or {}).get("world") or {}
+    node_id, node = next(((i, n) for i, n in (world.get("nodes") or {}).items()
+                          if str(n.get("label", "")).lower() == name.lower()), (None, None))
+    if node is None:
+        return [f"Nothing kept under '{name}'."]
+    lines = [f"{node.get('label')} ({node.get('type', 'thing')}), written by {len(node.get('sources') or [])} commit(s):"]
+    for rid in reversed(node.get("sources") or []):
+        src = (world.get("sources") or {}).get(rid, {})
+        lines.append(f"  {src.get('verb') or '?'} {_age(src.get('at', now), now)} in {src.get('mode') or 'an unrecorded mode'} "
+                     f"by {_WHO.get(src.get('by'), 'the model')}")
+        lines += _source(provenance(rid))
+    links = sum(1 for e in world.get("edges", []) or [] if e.get("status", "active") == "active" and node_id in (e["source"], e["target"]))
+    lines.append(f"  {links} active link(s).")
+    return lines
+
+
 def memory_report(state: dict, stats: dict, decisions: list, cap: int, embedder: str,
-                  needle: str = "", limit: int = 30, now: float | None = None) -> list[str]:
+                  needle: str = "", limit: int = 30, now: float | None = None, meta: dict | None = None) -> list[str]:
     now = time.time() if now is None else now
     memory = ((state or {}).get("self") or {}).get("memory", {}) or {}
     world = (state or {}).get("world") or {}
@@ -48,9 +102,9 @@ def memory_report(state: dict, stats: dict, decisions: list, cap: int, embedder:
     for key, value in shown[:limit]:
         count, last = stats.get(key, (0, 0.0))
         heard = f"recalled {count}x, last {_age(last, now)}" if count else "never recalled"
-        lines.append(f"  {key}: {value}  ({heard})")
+        lines.append(f"  {key}: {value}  ({_kept((meta or {}).get(key), now)}{heard})")
     if len(shown) > limit:
-        lines.append(f"  ...and {len(shown) - limit} more (newest first; /memory <word> to filter).")
+        lines.append(f"  ...and {len(shown) - limit} more (newest first; /memory <word> to filter, /memory why <name> to trace).")
     if not memory:
         lines.append("  Nothing kept yet.")
 

@@ -432,7 +432,7 @@ class CommandProcessor:
 
     def _cmd_memory(self, parts):
         """What the model keeps and what the gate decided; TECHNICAL mode and the DEEP HUD only (memory phase 6)."""
-        from engine.gate.report import memory_report
+        from engine.gate.report import memory_report, why_report
         from spores.embeddings import SemanticEmbedder
 
         eng = self.interface.eng
@@ -446,9 +446,13 @@ class CommandProcessor:
             self.interface.log(f"{self.P.RED}No Halcyon store is attached.{self.P.RST}")
             return True
         _, state = store.state()
-        cap = int(((eng.boundary.spec.get("limits") or {}).get("self_max_memories")) or 500)
-        lines = memory_report(state, store.memory_stats(), store.recent_decisions(10), cap,
-                              SemanticEmbedder.get_instance().describe(), needle=" ".join(parts[1:]))
+        if len(parts) > 2 and parts[1].lower() == "why":
+            lines = why_report(" ".join(parts[2:]), state, store.memory_meta(), store.memory_stats(), store.provenance)
+        else:
+            cap = int(((eng.boundary.spec.get("limits") or {}).get("self_max_memories")) or 500)
+            lines = memory_report(state, store.memory_stats(), store.recent_decisions(10), cap,
+                                  SemanticEmbedder.get_instance().describe(), needle=" ".join(parts[1:]),
+                                  meta=store.memory_meta())
         for line in lines:
             colour = self.P.GRY if line.startswith(" ") or line.startswith("Matching") else self.P.CYN
             self.interface.log(f"{colour}{line}{self.P.RST}")
