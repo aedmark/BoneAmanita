@@ -87,6 +87,7 @@ class TheCortex:
         self.current_room_name: str = ""
         # The room this turn's reply described, for the cartographer; None when it described none.
         self.last_room: Optional[Dict[str, Any]] = None
+        self.last_context: Optional[Dict[str, Any]] = None  # what this turn's reply was handed (turn_contexts)
         self.current_room_description: str = ""
         self.visited_rooms: Dict[str, Dict[str, Any]] = {}
         self.consultant = services.consultant
@@ -304,6 +305,12 @@ class TheCortex:
             self.last_shadow_nodes = []
         sim_result["halcyon_recall"] = self._halcyon_recall(ctx, user_input)
         sim_result["halcyon_refusal"] = self._take_refusal()
+        from engine.gate.recall import zone
+
+        found = sim_result["halcyon_recall"] if isinstance(sim_result["halcyon_recall"], dict) else {}
+        self.last_context = {"mode": self.active_mode, "zone": zone(self.active_mode),
+                             "recalled": [k for k, _ in found.get("memories", [])], "facts": list(found.get("facts", [])),
+                             "refusal": sim_result["halcyon_refusal"]}
         full_state = self.gather_state(sim_result)
         phys_state = full_state.get("physics", {})
         modifiers = self.svc.symbiosis.get_prompt_modifiers(phys_state)

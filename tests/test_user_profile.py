@@ -58,7 +58,7 @@ class AnOldProfileIsImported(BoneTestCase):
             legacy = os.path.join(d, "user_profile.json")
             with open(legacy, "w", encoding="utf-8") as f:
                 json.dump({"name": "T", "affinities": {"heavy": 0.4}, "confidence": 12}, f)
-            store = Store(path=Path(d) / "iris.db", state_dir=d)
+            store = Store(path=Path(d) / "iris.db")
             profile = UserProfile(config_ref=self.engine.config)
             profile.file_path = legacy
             profile.attach_store(store)

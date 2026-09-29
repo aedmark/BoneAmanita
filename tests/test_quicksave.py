@@ -21,7 +21,7 @@ class QuicksaveInTheStoreTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.directory = Path(directory.name)
-        self.store = Store(path=self.directory / "iris.db", state_dir=self.directory)
+        self.store = Store(path=self.directory / "iris.db")
         self.engine = SimpleNamespace(
             health=100.0, stamina=90.0, trauma_accum={},
             soul=SimpleNamespace(to_dict=lambda: {"name": "test"}, load_from_dict=MagicMock()),
@@ -97,7 +97,7 @@ class LegacyQuicksaveImport(unittest.TestCase):
             engine = SimpleNamespace(
                 health=100.0, stamina=100.0, trauma_accum={}, events=MagicMock(),
                 embryo=SimpleNamespace(continuity=None),
-                store=Store(path=directory / "iris.db", state_dir=directory),
+                store=Store(path=directory / "iris.db"),
             )
             keeper = ChronosKeeper(engine)
             keeper.SAVE_DIR = str(directory)
@@ -120,7 +120,7 @@ class LegacyQuicksaveImport(unittest.TestCase):
             engine = SimpleNamespace(
                 health=100.0, stamina=100.0, trauma_accum={}, events=MagicMock(),
                 embryo=SimpleNamespace(continuity=None),
-                store=Store(path=directory / "iris.db", state_dir=directory),
+                store=Store(path=directory / "iris.db"),
             )
             keeper = ChronosKeeper(engine)
             keeper.SAVE_DIR = str(directory)

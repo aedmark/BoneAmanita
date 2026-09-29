@@ -47,7 +47,7 @@ class TheStamp(BoneTestCase):
             db.execute("CREATE TABLE memory_meta (key TEXT PRIMARY KEY, mode TEXT, turn_id TEXT NOT NULL, kept_at REAL NOT NULL)")
             db.commit()
             db.close()
-            Store(path, d)
+            Store(path)
             columns = {r[1] for r in sqlite3.connect(path).execute("PRAGMA table_info(memory_meta)")}
         self.assertTrue({"receipt_id", "kept_by"} <= columns)
 
@@ -128,3 +128,99 @@ class WhereThingsCameFrom(BoneTestCase):
         world = self.engine.store.state()[1]["world"]
         (rid,) = world["nodes"]["entity:the-mill-loft"]["sources"]
         self.assertEqual((world["sources"][rid]["verb"], world["sources"][rid]["by"]), ("chart", "cartographer"))
+
+
+class WhatTheModelWasHanded(BoneTestCase):
+    """turn_contexts, adopted on purpose (Gordon, 2026-09-29): what each reply was handed, and its tokens."""
+
+    def setUp(self):
+        super().setUp()
+        self.engine.memory_keeper.enabled = True
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.active_mode, self.engine.ui_mode = "TECHNICAL", "WARM"
+        self.keeps = "NONE"
+        self.engine.cortex.llm.generate = MagicMock(
+            side_effect=lambda prompt, *a, **k: self.keeps if prompt.startswith("You keep the memory") else "Noted.")
+        self.engine.cortex.llm.last_usage = {"prompt_tokens": 5412, "output_tokens": 80, "num_ctx": 16384}
+        self.log = self.engine.cmd.interface.log = MagicMock()
+
+    def turn(self, message, keeps="NONE"):
+        self.keeps = keeps
+        self.engine.process_turn(message)
+
+    def test_each_reply_records_what_it_was_handed_and_its_tokens(self):
+        self.turn("My sister is Odalys.", keeps="sister_name = Odalys")
+        self.turn("How is my sister?", keeps="pet_name = Brisket")
+        db = self.engine.store.connect()
+        try:
+            rows = db.execute("SELECT c.*, t.input_tokens, t.output_tokens, t.total_tokens, t.context_limit, "
+                              "t.token_count_source FROM turn_contexts c JOIN turns t ON t.id=c.turn_id "
+                              "ORDER BY c.created_at").fetchall()
+        finally:
+            db.close()
+        last = dict(rows[-1])
+        self.assertEqual((last["mode"], last["zone"], last["recalled_json"]), ("TECHNICAL", "real", '["sister_name"]'))
+        self.assertEqual((last["input_tokens"], last["output_tokens"], last["total_tokens"], last["context_limit"],
+                          last["token_count_source"]), (5412, 80, 5492, 16384, "provider"))
+
+    def test_why_says_what_the_model_had_been_handed(self):
+        self.turn("My sister is Odalys.", keeps="sister_name = Odalys")
+        self.turn("She has a dog, Brisket.", keeps="pet_name = Brisket")
+        self.engine.cmd.execute("/memory why pet_name")
+        out = Prisma.strip("\n".join(str(c.args[0]) for c in self.log.call_args_list))
+        self.assertIn("The model had been handed 1 memory (sister_name) and 0 facts; the prompt was 5,412 of 16,384 tokens.", out)
+
+
+    def test_a_held_turn_records_no_stale_context(self):
+        from unittest.mock import patch
+
+        from archetypes.stage import HOLD, StageManager, Tension, Verdict
+
+        self.turn("My sister is Odalys.", keeps="sister_name = Odalys")
+        verdict = Verdict(HOLD, "THE STAGE MANAGER", "held for the test", Tension(("MOIRA", "CASSANDRA")), gate="ATP_FLOOR")
+        with patch.object(StageManager, "negotiate", return_value=verdict):
+            self.turn("Our deploy window is Thursdays.", keeps="deploy_window = Thursdays")
+        db = self.engine.store.connect()
+        try:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM turn_contexts").fetchone()[0], 1)
+        finally:
+            db.close()
+
+    def test_only_a_real_context_is_recorded(self):
+        self.engine.cortex.last_context = "not a context"
+        self.assertIsNone(self.engine.orchestrator._turn_context())
+
+
+class ThePrunedStore(BoneTestCase):
+    """Iris's parts BoneAmanita had no use for are gone from new and old stores; the shelved trio stays."""
+
+    PRUNED = {"turn_braid_contexts", "turn_system_contexts", "memory_entries", "active_context", "capabilities",
+              "tool_receipts", "imagination_runs", "imagination_turns"}
+    DORMANT = {"affect_state", "affect_history", "self_claims", "seed_imports", "domain_versions"}
+
+    def tables(self, path):
+        db = sqlite3.connect(path)
+        try:
+            return {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        finally:
+            db.close()
+
+    def test_a_new_store_has_only_what_is_used_and_the_shelved_trio(self):
+        tables = self.tables(self.engine.store.path)
+        self.assertFalse(self.PRUNED & tables)
+        self.assertTrue(self.DORMANT <= tables)
+
+    def test_an_old_store_is_pruned_and_its_turn_contexts_reshaped(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "iris.db")
+            db = sqlite3.connect(path)
+            for table in self.PRUNED:
+                db.execute(f"CREATE TABLE {table} (x TEXT)")
+            db.execute("CREATE TABLE turn_contexts (turn_id TEXT PRIMARY KEY, instructions_text TEXT NOT NULL)")
+            db.commit()
+            db.close()
+            Store(path)
+            self.assertFalse(self.PRUNED & self.tables(path))
+            columns = {r[1] for r in sqlite3.connect(path).execute("PRAGMA table_info(turn_contexts)")}
+        self.assertIn("recalled_json", columns)
+        self.assertNotIn("instructions_text", columns)

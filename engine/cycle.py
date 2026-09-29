@@ -696,6 +696,17 @@ class GeodesicOrchestrator:
 
     HELD_RATIONALE = "(No reply this turn: the Stage Manager held the floor. Kept from what the person said.)"
 
+    def _turn_context(self) -> dict | None:
+        """What the model was handed for this turn's reply, and the tokens it cost (turn_contexts)."""
+        cortex = getattr(self.eng, "cortex", None)
+        context = getattr(cortex, "last_context", None)
+        if not isinstance(context, dict):
+            return None
+        llm = getattr(cortex, "llm", None)
+        usage, model = getattr(llm, "last_usage", None), getattr(llm, "model", None)
+        return {**context, "usage": usage if isinstance(usage, dict) else None,
+                "model": model if isinstance(model, str) else None}
+
     def _shows_gate_denials(self) -> bool:
         """TECHNICAL mode and the DEEP HUD show the gate's denials; everywhere else they stay in the audit."""
         mode = str(getattr(getattr(self.eng, "cortex", None), "active_mode", "")).upper()
@@ -716,6 +727,7 @@ class GeodesicOrchestrator:
             if cortex := getattr(self.eng, "cortex", None):
                 cortex.last_model_raw = ""
                 cortex.last_room = None
+                cortex.last_context = None
             raw_delta = self.eng.current_time_delta
             expected_reading_time = getattr(self.eng, "last_output_length", 0) / 4.0
             calculated_delta = raw_delta - expected_reading_time
@@ -898,6 +910,7 @@ class GeodesicOrchestrator:
                                 display=self.eng.cortex._strip_nominations(model_raw),
                                 boundary_hash=getattr(self.eng, "boundary_hash", ""),
                                 by=by,
+                                context=self._turn_context(),
                             )
                             applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
                             ReceiptLedger.get_instance().issue(

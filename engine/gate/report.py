@@ -47,6 +47,13 @@ def _source(p: dict | None) -> list[str]:
         return ["    (its receipt is gone)"]
     said = " ".join(str(p.get("user_text") or "").split())
     lines = [f'    The person said: "{said[:160]}{"..." if len(said) > 160 else ""}"'] if said else []
+    if p.get("recalled_json") is not None:
+        recalled, facts = json.loads(p["recalled_json"]), json.loads(p.get("facts_json") or "[]")
+        count = lambda n, one, many: f"{n} {one if n == 1 else many}"
+        handed = f"{count(len(recalled), 'memory', 'memories')} ({', '.join(recalled)})" if recalled else "no memories"
+        refusal = ", and a refusal note" if p.get("refusal_json") else ""
+        size = f"; the prompt was {p['input_tokens']:,} of {p['context_limit']:,} tokens" if p.get("input_tokens") and p.get("context_limit") else ""
+        lines.append(f"    The model had been handed {handed} and {count(len(facts), 'fact', 'facts')}{refusal}{size}.")
     basis = json.loads(p.get("decision_basis_json") or "[]")
     return lines + [f"    The gate: {', '.join(f'{stage} {verdict}' for stage, verdict, *_ in basis)}."]
 

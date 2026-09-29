@@ -117,7 +117,7 @@ class TheLineageLivesInTheStore(BoneTestCase):
             with open(legacy, "w", encoding="utf-8") as f:
                 json.dump({"generation": 3, "scars": [], "myths": [
                     {"title": "The Legend of Rust", "lesson": "Oil the hinge.", "trigger": "rust"}]}, f)
-            store = Store(path=Path(d) / "iris.db", state_dir=d)
+            store = Store(path=Path(d) / "iris.db")
             with patch.object(TheOroboros, "LEGACY_FILE", legacy):
                 oro = TheOroboros(config_ref=self.test_config)
                 oro.attach_store(store)

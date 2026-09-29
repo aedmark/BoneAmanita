@@ -91,7 +91,7 @@ class LoreManifestTests(BoneTestCase):
             factory, saves = tempfile.mkdtemp(), tempfile.mkdtemp()
             with open(os.path.join(factory, "save_cat.json"), "w", encoding="utf-8") as f:
                 json.dump({"base": 1}, f)
-            store = Store(path=os.path.join(saves, "iris.db"), state_dir=saves)
+            store = Store(path=os.path.join(saves, "iris.db"))
             manifest = LoreManifest(data_dir=factory, save_dir=os.path.join(saves, "lore"))
             manifest.attach_store(store)
             manifest.get("save_cat")

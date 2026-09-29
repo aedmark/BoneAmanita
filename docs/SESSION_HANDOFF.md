@@ -33,9 +33,9 @@ engine learns or needs to resume.
   (20.7.4.61), then out of every other file, with named credentials forgotten by the memory's mode
   (20.7.4.62). Scoped recall, story vs. real (20.7.4.63). Refusals the model hears (20.7.4.64).
   Personal vs. confidential, and the model no longer says it has no memory (20.7.4.65). Provenance
-  (20.7.4.66).
-- **Next:** adopting or pruning the ported store (ROADMAP Track E, "From a second look at bone-iris"),
-  the last of the five.
+  (20.7.4.66). The ported store, adopted and pruned (20.7.4.67); the five bone-iris items are done.
+- **Next:** Gordon's call. Shelved for discussion: the affect vector, Self claims and profile seeds
+  (dormant in the store); an idea noted: REM writing the meaning and feeling of memories.
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -591,6 +591,31 @@ log. The graph's `sources` fields (per item, and the world's registry) were neve
   Mutations 15 (one by hand). The first mutation run was void: two stale expectations failed the baseline,
   and with `-x` every mutant then reads as killed; rerun on a clean baseline. Full suite 932 passed, 5
   skipped (8 GB cap).
+
+**The ported store, adopted and pruned (2026-09-29, 20.7.4.67).** The last bone-iris item. We had ported
+Iris's whole store; about 40% of it had no caller. Gordon's calls: keep the shelved trio dormant, adopt
+turn_contexts, prune the three-channel memory and note the idea.
+- Adopted: `turn_contexts`, reshaped to what BoneAmanita has (mode, zone, the recalled memory keys and
+  facts, the refusal note handed back, the model), written by `commit_cycle(context=)` in the turn's
+  transaction; and the turns table's token columns (`input_tokens`, `output_tokens`, `total_tokens`,
+  `context_limit`, `token_count_source`) from the reply's `last_usage`. The cortex sets `last_context`
+  when it takes recall and the refusal; the cycle resets it at turn start (a held turn records none) and
+  `_turn_context()` accepts only a dict (the MagicMock lesson). `/memory why` adds "The model had been
+  handed 1 memory (sister_name) and 0 facts; the prompt was 5,412 of 16,384 tokens."
+- Pruned (1042 to 645 lines): imagination runs (8 methods, 2 tables); Iris's step-by-step turn lifecycle
+  (`begin_turn`, `mark_finalizing`, `fail_turn`, `ConversationBusy`), JSON projections
+  (`write_projections`, so `Store` no longer takes `state_dir`; callers updated), unused readers
+  (`conversations`, `conversation`, `context_messages`, `turn`, `turn_context`, `governance`,
+  `node_provenance`), active-context scopes (zones replaced them), the MCP capability registry and tool
+  receipts (and the three built-in "capabilities" seeded at every boot), the braid and system-projection
+  contexts, `memory_entries`, and the `_install_identity`/`recover_interrupted` stubs. Existing stores drop
+  those tables at boot, and an old-shape `turn_contexts` (never written) is replaced.
+- Dormant, marked in the store: `affect_state`/`affect_history`, `self_claims`, `seed_imports`,
+  `domain_versions` (trimmed to self and affect) and their methods, until the shelved discussion.
+- Tests (`tests/test_provenance.py`, 16 now): what each reply was handed and its tokens, `why` saying it, a
+  held turn records no stale context, only a dict is recorded, a new store has only what is used plus the
+  trio, an old store is pruned and reshaped. Mutations 9 on a clean baseline (a context scrub that could
+  never find anything was removed instead). Full suite 938 passed, 5 skipped (8 GB cap).
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

@@ -51,7 +51,7 @@ class LearnedWordsLiveInTheStore(BoneTestCase):
             hive = os.path.join(d, "cortex_hive.json")
             with open(hive, "w", encoding="utf-8") as f:
                 json.dump({"heavy": {"quernstone": 2}}, f)
-            store = Store(path=Path(d) / "iris.db", state_dir=d)
+            store = Store(path=Path(d) / "iris.db")
             lex = self.fresh_lexicon(store, hive)
             self.assertIn("heavy", lex._STORE.get_categories_for_word("quernstone"))
             self.assertEqual(store.learned_vocabulary(), {"heavy": {"quernstone": 2}})

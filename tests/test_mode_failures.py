@@ -683,7 +683,7 @@ class LearnedLoreLivesInSaves(BoneTestCase):
         from engine.gate.store import Store
 
         self.factory, self.saves = tempfile.mkdtemp(), tempfile.mkdtemp()
-        self.store = Store(path=f"{self.saves}/iris.db", state_dir=self.saves)
+        self.store = Store(path=f"{self.saves}/iris.db")
         self.write(self.factory, {"ITEM_REGISTRY": {"LAMP": {"value": 1}}, "RECIPES": [{"ingredient": "A"}]})
 
     def write(self, directory, data):

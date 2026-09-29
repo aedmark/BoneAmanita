@@ -22,7 +22,7 @@ class AkashicContinuityTests(BoneTestCase):
         self.akashic.save_dir = self.save_dir
         self.akashic.data_dir = self.save_dir
         self.akashic.state_path = os.path.join(self.save_dir, "akashic_state.json")
-        self.store = Store(path=os.path.join(self.save_dir, "iris.db"), state_dir=self.save_dir)
+        self.store = Store(path=os.path.join(self.save_dir, "iris.db"))
         self.akashic.attach_store(self.store)
 
     def reboot(self):
@@ -112,7 +112,7 @@ class AkashicContinuityTests(BoneTestCase):
             json.dump({"scar_map": [{"concept": "Old Burn", "coordinates": {}, "gilded": True}]}, f)
         with open(words_path, "w") as f:
             json.dump({"quernstone": "heavy"}, f)
-        fresh = Store(path=os.path.join(self.save_dir, "fresh.db"), state_dir=self.save_dir)
+        fresh = Store(path=os.path.join(self.save_dir, "fresh.db"))
         rebooted = TheAkashicRecord(lore_manifest=self.mock_lore)
         rebooted.save_dir = rebooted.data_dir = self.save_dir
         rebooted.state_path = state_path

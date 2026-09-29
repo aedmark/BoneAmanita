@@ -1,8 +1,6 @@
-"""Transactional persistence for the Halcyon server UI.
-
-SQLite is authoritative. JSON files are compatibility projections written only
-after a successful state transaction.
-"""
+"""The Halcyon store, ported from bone-iris: canonical state, its audit trail, and what the engine learns
+or needs to resume, in one SQLite file (saves/iris.db). What BoneAmanita had no use for was pruned
+(20.7.4.67); the affect vector, Self claims and profile seeds stay dormant until Gordon's discussion."""
 from __future__ import annotations
 
 import copy
@@ -13,7 +11,7 @@ import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Iterator
 
 from .graph import empty_world, normalize_world
 
@@ -23,11 +21,9 @@ def _id(prefix: str) -> str:
 
 
 class Store:
-    def __init__(self, path: str | Path, state_dir: str | Path):
+    def __init__(self, path: str | Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.state_dir = Path(state_dir)
-        self.state_dir.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
         self.in_story = lambda: False  # the engine says when it is in ADVENTURE (secrets.py)
         self.mode = lambda: None       # and which mode a memory is kept in (memory_meta)
@@ -78,13 +74,9 @@ class Store:
           created_at REAL NOT NULL
         );
         CREATE TABLE IF NOT EXISTS turn_contexts (
-          turn_id TEXT PRIMARY KEY REFERENCES turns(id), instructions_text TEXT NOT NULL,
-          knowledge_text TEXT NOT NULL, conversation_json TEXT NOT NULL,
-          state_sequence INTEGER NOT NULL, model_id TEXT NOT NULL, created_at REAL NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS turn_braid_contexts (
-          turn_id TEXT PRIMARY KEY REFERENCES turns(id), retrieved_memory_json TEXT NOT NULL,
-          affect_json TEXT NOT NULL, active_context_json TEXT NOT NULL
+          turn_id TEXT PRIMARY KEY REFERENCES turns(id), mode TEXT, zone TEXT,
+          recalled_json TEXT NOT NULL, facts_json TEXT NOT NULL, refusal_json TEXT,
+          model_id TEXT, created_at REAL NOT NULL
         );
         CREATE TABLE IF NOT EXISTS receipts (
           id TEXT PRIMARY KEY, turn_id TEXT UNIQUE NOT NULL REFERENCES turns(id),
@@ -140,14 +132,6 @@ class Store:
           source_path TEXT NOT NULL, state_sequence INTEGER NOT NULL, imported_at REAL NOT NULL,
           PRIMARY KEY(seed_id, seed_hash)
         );
-        CREATE TABLE IF NOT EXISTS memory_entries (
-          id TEXT PRIMARY KEY, scope_type TEXT NOT NULL, scope_id TEXT,
-          channel TEXT NOT NULL CHECK(channel IN ('experience','cognitive_semantic','emotional_semantic')),
-          content TEXT NOT NULL, origin TEXT NOT NULL DEFAULT 'experience',
-          source_event_id TEXT, derived_from_json TEXT NOT NULL DEFAULT '[]',
-          affect_before_json TEXT, affect_after_json TEXT, affect_delta_json TEXT,
-          visibility TEXT NOT NULL DEFAULT 'standard', created_at REAL NOT NULL
-        );
         CREATE TABLE IF NOT EXISTS affect_state (
           dimension TEXT PRIMARY KEY, current_value REAL NOT NULL, baseline REAL NOT NULL,
           homeostasis_rate REAL NOT NULL, max_delta REAL NOT NULL, updated_at REAL NOT NULL
@@ -157,10 +141,6 @@ class Store:
           before_json TEXT NOT NULL, delta_json TEXT NOT NULL, after_json TEXT NOT NULL,
           created_at REAL NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS active_context (
-          singleton INTEGER PRIMARY KEY CHECK(singleton=1), world_scope TEXT,
-          task_scope TEXT, skill_scopes_json TEXT NOT NULL, updated_at REAL NOT NULL
-        );
         CREATE TABLE IF NOT EXISTS domain_versions (
           domain TEXT PRIMARY KEY, version INTEGER NOT NULL, updated_at REAL NOT NULL
         );
@@ -169,37 +149,16 @@ class Store:
           predicate TEXT NOT NULL, value TEXT NOT NULL, status TEXT NOT NULL,
           source TEXT NOT NULL, created_at REAL NOT NULL, self_version INTEGER NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS capabilities (
-          id TEXT PRIMARY KEY, source TEXT NOT NULL, effect_class TEXT NOT NULL,
-          description TEXT NOT NULL, schema_json TEXT NOT NULL, scope_json TEXT NOT NULL,
-          limits_json TEXT NOT NULL, available INTEGER NOT NULL, boundary_version TEXT NOT NULL,
-          created_at REAL NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS tool_receipts (
-          id TEXT PRIMARY KEY, tool_id TEXT NOT NULL, source TEXT NOT NULL,
-          effect_class TEXT NOT NULL, raw_args_json TEXT NOT NULL, normalized_args_json TEXT,
-          context_json TEXT NOT NULL, capability_version INTEGER NOT NULL,
-          decision TEXT NOT NULL, checks_json TEXT NOT NULL, execution_status TEXT NOT NULL,
-          result_json TEXT, error TEXT, created_at REAL NOT NULL, completed_at REAL NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS turn_system_contexts (
-          turn_id TEXT PRIMARY KEY REFERENCES turns(id), projection_json TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS imagination_runs (
-          id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES conversations(id),
-          seed TEXT NOT NULL, max_steps INTEGER NOT NULL, completed_steps INTEGER NOT NULL,
-          status TEXT NOT NULL, active_turn_id TEXT REFERENCES turns(id),
-          created_at REAL NOT NULL, updated_at REAL NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS imagination_turns (
-          run_id TEXT NOT NULL REFERENCES imagination_runs(id),
-          turn_id TEXT PRIMARY KEY REFERENCES turns(id), kind TEXT NOT NULL,
-          step_number INTEGER, created_at REAL NOT NULL
-        );
         CREATE INDEX IF NOT EXISTS idx_turns_conversation ON turns(conversation_id, ordinal);
         CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, created_at);
         """
         with self.connect() as db:
+            # Pruned in 20.7.4.67; turn_contexts was Iris's whole-prompt shape, never written here.
+            for table in ("turn_braid_contexts", "turn_system_contexts", "memory_entries", "active_context",
+                          "capabilities", "tool_receipts", "imagination_turns", "imagination_runs"):
+                db.execute(f"DROP TABLE IF EXISTS {table}")
+            if "instructions_text" in {r[1] for r in db.execute("PRAGMA table_info(turn_contexts)")}:
+                db.execute("DROP TABLE turn_contexts")
             db.executescript(schema)
             # memory_meta gained who kept each memory and its receipt in 20.7.4.66.
             have = {r[1] for r in db.execute("PRAGMA table_info(memory_meta)")}
@@ -215,103 +174,10 @@ class Store:
             )
             for dimension in ('joy','sadness','fear','anger','trust','disgust','surprise','anticipation'):
                 db.execute("INSERT OR IGNORE INTO affect_state VALUES (?,50.0,50.0,0.015,10.0,?)", (dimension, now))
-            db.execute("INSERT OR IGNORE INTO active_context VALUES (1,'world:iris',NULL,'[]',?)", (now,))
-            db.execute("UPDATE active_context SET world_scope='world:halcyon',updated_at=? WHERE world_scope='world:iris'", (now,))
-            for domain in ("self", "memory", "affect", "context", "capabilities", "governance"):
+            for domain in ("self", "affect"):
                 db.execute("INSERT OR IGNORE INTO domain_versions VALUES (?,0,?)", (domain, now))
-            pass
-            defaults = (
-                ("system.inspect", "builtin", "observe", "Inspect the composed Halcyon System Identity projection", "{}"),
-                ("memory.search", "builtin", "observe", "Search currently reachable scoped Memory", '{"query":{"type":"string","required":true}}'),
-                ("affect.inspect", "builtin", "observe", "Inspect effective Affect and recent trajectory", "{}"),
-            )
-            for tool_id, source, effect, description, schema_json in defaults:
-                db.execute("INSERT OR IGNORE INTO capabilities VALUES (?,?,?,?,?,'{}','{}',1,'capability-v1',?)",
-                           (tool_id, source, effect, description, schema_json, now))
-            db.execute("UPDATE capabilities SET description=? WHERE id='system.inspect'",
-                       ("Inspect the composed Halcyon System Identity projection",))
-            db.execute("UPDATE domain_versions SET version=MAX(version,1),updated_at=? WHERE domain='capabilities'", (now,))
+            db.execute("DELETE FROM domain_versions WHERE domain NOT IN ('self','affect')")
             db.commit()
-            pass # self.recover_interrupted()
-
-    @staticmethod
-    def _install_identity(self, db, now: float) -> None:
-        db.execute("INSERT OR IGNORE INTO canonical_state VALUES (1, 0, '{}', '{}', ?)", (now,))
-    def recover_interrupted(self):
-        pass
-    def create_imagination_run(self, seed: str, max_steps: int, running: bool = True) -> dict:
-        now, run_id, conversation_id = time.time(), _id("imagine"), _id("conv")
-        title = f"Imagination · {' '.join(seed.split())[:42]}"
-        status = "running" if running else "paused"
-        with self.transaction(immediate=True) as db:
-            db.execute("INSERT INTO conversations VALUES (?,?,?,?,NULL)", (conversation_id, title, now, now))
-            db.execute("INSERT INTO imagination_runs VALUES (?,?,?,?,0,?,NULL,?,?)",
-                       (run_id, conversation_id, seed, max_steps, status, now, now))
-        return self.imagination_run(run_id)
-
-    def imagination_run(self, run_id: str) -> dict | None:
-        with self.connect() as db:
-            row = db.execute("SELECT * FROM imagination_runs WHERE id=?", (run_id,)).fetchone()
-        if not row:
-            return None
-        result = dict(row)
-        result["conversation"] = self.conversation(result["conversation_id"])
-        with self.connect() as db:
-            turns = db.execute("SELECT turn_id,kind,step_number FROM imagination_turns WHERE run_id=?", (run_id,)).fetchall()
-        result["turn_kinds"] = {item["turn_id"]: {"kind": item["kind"], "step": item["step_number"]} for item in turns}
-        return result
-
-    def imagination_runs(self) -> list[dict]:
-        with self.connect() as db:
-            rows = db.execute("SELECT * FROM imagination_runs ORDER BY created_at DESC LIMIT 50").fetchall()
-        return [dict(row) for row in rows]
-
-    def set_imagination_status(self, run_id: str, status: str) -> dict | None:
-        if status not in {"running", "paused", "cancelled", "complete", "failed"}:
-            raise ValueError("invalid imagination status")
-        with self.transaction(immediate=True) as db:
-            db.execute("UPDATE imagination_runs SET status=?,updated_at=? WHERE id=?", (status, time.time(), run_id))
-        return self.imagination_run(run_id)
-
-    def imagination_step_started(self, run_id: str, turn_id: str) -> None:
-        with self.transaction(immediate=True) as db:
-            db.execute("UPDATE imagination_runs SET active_turn_id=?,updated_at=? WHERE id=?",
-                       (turn_id, time.time(), run_id))
-
-    def link_imagination_turn(self, run_id: str, turn_id: str, kind: str,
-                              step_number: int | None = None) -> None:
-        if kind not in {"chat", "autonomous"}:
-            raise ValueError("invalid imagination turn kind")
-        with self.transaction(immediate=True) as db:
-            db.execute("INSERT INTO imagination_turns VALUES (?,?,?,?,?)",
-                       (run_id, turn_id, kind, step_number, time.time()))
-
-    def start_imagination_batch(self, run_id: str, steps: int) -> dict | None:
-        if not 1 <= steps <= 20:
-            raise ValueError("imagination batch must contain 1 to 20 turns")
-        with self.transaction(immediate=True) as db:
-            row = db.execute("SELECT completed_steps FROM imagination_runs WHERE id=?", (run_id,)).fetchone()
-            if not row:
-                return None
-            db.execute("UPDATE imagination_runs SET max_steps=?,status='running',updated_at=? WHERE id=?",
-                       (row["completed_steps"] + steps, time.time(), run_id))
-        return self.imagination_run(run_id)
-
-    def imagination_step_finished(self, run_id: str, failed: bool = False) -> dict:
-        with self.transaction(immediate=True) as db:
-            row = db.execute("SELECT * FROM imagination_runs WHERE id=?", (run_id,)).fetchone()
-            completed = row["completed_steps"] + (0 if failed else 1)
-            if failed:
-                status = "failed"
-            elif row["status"] in {"paused", "cancelled"}:
-                status = row["status"]
-            elif completed >= row["max_steps"]:
-                status = "complete"
-            else:
-                status = "running"
-            db.execute("UPDATE imagination_runs SET completed_steps=?,status=?,active_turn_id=NULL,updated_at=? WHERE id=?",
-                       (completed, status, time.time(), run_id))
-        return self.imagination_run(run_id)
 
     def state(self, db: sqlite3.Connection | None = None) -> tuple[int, dict]:
         owns = db is None
@@ -326,100 +192,13 @@ class Store:
             if owns:
                 db.close()
 
-    def conversations(self) -> list[dict]:
-        with self.connect() as db:
-            rows = db.execute(
-                "SELECT c.*, COUNT(t.id) turn_count FROM conversations c "
-                "LEFT JOIN turns t ON t.conversation_id=c.id "
-                "WHERE c.archived_at IS NULL AND NOT EXISTS "
-                "(SELECT 1 FROM imagination_runs i WHERE i.conversation_id=c.id) "
-                "GROUP BY c.id ORDER BY c.updated_at DESC"
-            ).fetchall()
-            return [dict(r) for r in rows]
-
-    def conversation(self, conversation_id: str) -> dict | None:
-        with self.connect() as db:
-            conv = db.execute("SELECT * FROM conversations WHERE id=?", (conversation_id,)).fetchone()
-            if not conv:
-                return None
-            messages = db.execute(
-                "SELECT m.*, t.status turn_status, t.outcome, t.input_tokens, "
-                "t.reasoning_tokens, t.output_tokens, t.total_tokens, t.token_count_source "
-                "FROM messages m JOIN turns t ON t.id=m.turn_id "
-                "WHERE m.conversation_id=? ORDER BY m.created_at, m.role DESC",
-                (conversation_id,),
-            ).fetchall()
-            active = db.execute(
-                "SELECT * FROM turns WHERE conversation_id=? AND status IN ('generating','finalizing')",
-                (conversation_id,),
-            ).fetchone()
-            return {**dict(conv), "messages": [dict(r) for r in messages],
-                    "active_turn": dict(active) if active else None}
-
-    def begin_turn(self, conversation_id: str | None, content: str, context: dict) -> dict:
-        now = time.time()
-        conversation_id = conversation_id or _id("conv")
-        turn_id, message_id = _id("turn"), _id("msg")
-        title = " ".join(content.strip().split())[:56] or "New conversation"
-        with self.transaction(immediate=True) as db:
-            existing = db.execute("SELECT id FROM conversations WHERE id=?", (conversation_id,)).fetchone()
-            if not existing:
-                db.execute("INSERT INTO conversations VALUES (?, ?, ?, ?, NULL)",
-                           (conversation_id, title, now, now))
-            active = db.execute(
-                "SELECT id FROM turns WHERE conversation_id=? AND status IN ('generating','finalizing')",
-                (conversation_id,),
-            ).fetchone()
-            if active:
-                raise ConversationBusy(active["id"])
-            ordinal = db.execute(
-                "SELECT COALESCE(MAX(ordinal),0)+1 n FROM turns WHERE conversation_id=?",
-                (conversation_id,),
-            ).fetchone()["n"]
-            db.execute(
-                "INSERT INTO turns (id,conversation_id,ordinal,status,outcome,context_state_sequence,created_at,context_limit) "
-                "VALUES (?,?,?,'generating',NULL,?,?,?)",
-                (turn_id, conversation_id, ordinal, context["state_sequence"], now, context["context_limit"]),
-            )
-            db.execute(
-                "INSERT INTO messages VALUES (?,?,?,?,?,?,NULL,NULL,'final',?)",
-                (message_id, turn_id, conversation_id, "user", content, content, now),
-            )
-            db.execute(
-                "INSERT INTO turn_contexts VALUES (?,?,?,?,?,?,?)",
-                (turn_id, context["instructions"], context["knowledge"],
-                 json.dumps(context["conversation"]), context["state_sequence"],
-                 context["model_id"], now),
-            )
-            db.execute("INSERT INTO turn_braid_contexts VALUES (?,?,?,?)",
-                       (turn_id, json.dumps(context.get("retrieved_memory", [])),
-                        json.dumps(context.get("affect", {})), json.dumps(context.get("active_context", {}))))
-            db.execute("INSERT INTO turn_system_contexts VALUES (?,?)",
-                       (turn_id, json.dumps(context.get("system_projection", {}))))
-            db.execute("UPDATE conversations SET updated_at=? WHERE id=?", (now, conversation_id))
-        return {"id": turn_id, "conversation_id": conversation_id, "ordinal": ordinal,
-                "status": "generating", "created_at": now, "user_message_id": message_id}
-
-    def mark_finalizing(self, turn_id: str) -> None:
-        with self.transaction(immediate=True) as db:
-            db.execute("UPDATE turns SET status='finalizing' WHERE id=? AND status='generating'", (turn_id,))
-
-    def fail_turn(self, turn_id: str, code: str, cancelled: bool = False) -> dict:
-        now = time.time()
-        status = "cancelled" if cancelled else "failed"
-        with self.transaction(immediate=True) as db:
-            db.execute(
-                "UPDATE turns SET status=?, outcome='none', error_code=?, completed_at=? WHERE id=?",
-                (status, code, now, turn_id),
-            )
-            row = db.execute("SELECT * FROM turns WHERE id=?", (turn_id,)).fetchone()
-        return dict(row)
-
     def commit_cycle(self, trace_id: str, new_state: dict, expected_sequence: int, receipt: dict, raw: str,
-                     *, user_text: str = "", display: str = "", boundary_hash: str = "", by: str = "model") -> dict:
+                     *, user_text: str = "", display: str = "", boundary_hash: str = "", by: str = "model",
+                     context: dict | None = None) -> dict:
         """One engine turn, atomically: canonical state plus its audit trail (turn, messages, proposal,
         receipt, gate decision, mutation), in the shape Brad's `finalize` writes. Secrets are withheld from it.
-        What the effect wrote carries the receipt as its source; `by` says who nominated it."""
+        What the effect wrote carries the receipt as its source; `by` says who nominated it. `context` is what
+        the model was handed for this turn's reply (turn_contexts) and its token usage (the turn's columns)."""
         from .secrets import scrub, scrub_all
 
         story = self.in_story()
@@ -452,6 +231,17 @@ class Store:
                 "VALUES (?,?,?,'complete',?,?,?,?)",
                 (turn_id, conversation_id, ordinal, outcome, current_sequence, now, now),
             )
+            if context:
+                usage = context.get("usage") or {}
+                db.execute("INSERT INTO turn_contexts VALUES (?,?,?,?,?,?,?,?)",
+                           (turn_id, context.get("mode"), context.get("zone"), json.dumps(context.get("recalled") or []),
+                            json.dumps(context.get("facts") or []),
+                            json.dumps(context["refusal"]) if context.get("refusal") else None, context.get("model"), now))
+                if usage.get("prompt_tokens") is not None:
+                    total = (usage.get("prompt_tokens") or 0) + (usage.get("output_tokens") or 0)
+                    db.execute("UPDATE turns SET input_tokens=?, output_tokens=?, total_tokens=?, token_count_source='provider', "
+                               "context_limit=? WHERE id=?",
+                               (usage.get("prompt_tokens"), usage.get("output_tokens"), total, usage.get("num_ctx"), turn_id))
             db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,NULL,NULL,'final',?)",
                        (_id("msg"), turn_id, conversation_id, "user", user_text, user_text, now))
             db.execute("INSERT INTO messages VALUES (?,?,?,?,?,?,NULL,NULL,'final',?)",
@@ -621,13 +411,16 @@ class Store:
         return {r["key"]: dict(r) for r in rows}
 
     def provenance(self, receipt_id: str) -> dict | None:
-        """The commit behind a source: when, the gate's checks, and what the person said that turn."""
+        """The commit behind a source: when, the gate's checks, what the person said that turn, and what the
+        model had been handed for its reply."""
         db = self.connect()
         try:
             row = db.execute(
                 "SELECT r.created_at, r.decision, r.decision_basis_json, r.claim_json, t.ordinal, "
+                "t.input_tokens, t.context_limit, c.mode, c.recalled_json, c.facts_json, c.refusal_json, "
                 "(SELECT raw_content FROM messages m WHERE m.turn_id=r.turn_id AND m.role='user') user_text "
-                "FROM receipts r JOIN turns t ON t.id=r.turn_id WHERE r.id=?", (receipt_id,)).fetchone()
+                "FROM receipts r JOIN turns t ON t.id=r.turn_id LEFT JOIN turn_contexts c ON c.turn_id=r.turn_id "
+                "WHERE r.id=?", (receipt_id,)).fetchone()
         finally:
             db.close()
         return dict(row) if row else None
@@ -683,6 +476,8 @@ class Store:
         finally:
             db.close()
 
+    # Dormant, as ported: the affect vector, Self claims and their domain versions wait on the discussion
+    # Gordon shelved (2026-09-27), with seed_imports. Nothing calls them.
     def _apply_affect_values(self, db: sqlite3.Connection, source_event_id: str,
                              values: dict[str, float], now: float) -> dict:
         if db.execute("SELECT 1 FROM affect_history WHERE source_event_id=?", (source_event_id,)).fetchone():
@@ -707,91 +502,6 @@ class Store:
         self._bump_domain(db, "affect")
         return {"id": history_id, "source_event_id": source_event_id, "before": before, "delta": delta, "after": after, "created_at": now}
 
-    def write_projections(self, sequence: int, state: dict) -> None:
-        for name in ("world", "self"):
-            target = self.state_dir / f"{name}.json"
-            temp = self.state_dir / f".{name}.json.tmp"
-            value = dict(state[name])
-            value["_state_sequence"] = sequence
-            temp.write_text(json.dumps(value, indent=1), encoding="utf-8")
-            temp.replace(target)
-
-    def context_messages(self, conversation_id: str, limit: int = 20) -> list[dict]:
-        with self.connect() as db:
-            rows = db.execute(
-                "SELECT role, raw_content FROM messages WHERE conversation_id=? AND status='final' "
-                "ORDER BY created_at DESC LIMIT ?", (conversation_id, limit),
-            ).fetchall()
-            return [{"role": r["role"], "content": r["raw_content"]} for r in reversed(rows)]
-
-    def turn(self, turn_id: str) -> dict | None:
-        with self.connect() as db:
-            row = db.execute("SELECT * FROM turns WHERE id=?", (turn_id,)).fetchone()
-            if not row:
-                return None
-            data = dict(row)
-            msg = db.execute("SELECT * FROM messages WHERE turn_id=? AND role='assistant'", (turn_id,)).fetchone()
-            data["assistant_message"] = dict(msg) if msg else None
-            rec = db.execute("SELECT * FROM receipts WHERE turn_id=?", (turn_id,)).fetchone()
-            data["receipt"] = dict(rec) if rec else None
-            return data
-
-    def turn_context(self, turn_id: str) -> dict | None:
-        with self.connect() as db:
-            row = db.execute("SELECT * FROM turn_contexts WHERE turn_id=?", (turn_id,)).fetchone()
-            if not row:
-                return None
-            data = dict(row)
-            data["conversation"] = json.loads(data.pop("conversation_json"))
-            braid = db.execute("SELECT * FROM turn_braid_contexts WHERE turn_id=?", (turn_id,)).fetchone()
-            if braid:
-                data["retrieved_memory"] = json.loads(braid["retrieved_memory_json"])
-                data["affect"] = json.loads(braid["affect_json"])
-                data["active_context"] = json.loads(braid["active_context_json"])
-            system = db.execute("SELECT projection_json FROM turn_system_contexts WHERE turn_id=?", (turn_id,)).fetchone()
-            data["system_projection"] = json.loads(system["projection_json"]) if system else {}
-            return data
-
-    def governance(self, table: str) -> list[dict]:
-        if table not in {"proposals", "gate_decisions", "receipts"}:
-            raise ValueError(table)
-        with self.connect() as db:
-            rows = db.execute(
-                f"SELECT x.*, t.conversation_id, t.ordinal FROM {table} x "
-                "JOIN turns t ON t.id=x.turn_id ORDER BY x.created_at DESC LIMIT 200"
-            ).fetchall()
-            return [dict(r) for r in rows]
-
-    def node_provenance(self, node_name: str) -> dict | None:
-        """Return the earliest committed mutation that explicitly created a node."""
-        with self.connect() as db:
-            rows = db.execute(
-                "SELECT m.*, t.conversation_id, t.ordinal, r.id receipt_id "
-                "FROM mutations m JOIN turns t ON t.id=m.turn_id "
-                "LEFT JOIN receipts r ON r.turn_id=m.turn_id ORDER BY m.state_sequence_after"
-            ).fetchall()
-            for row in rows:
-                args = json.loads(row["args_json"])
-                if (row["verb"] == "create" and args.get("name") == node_name) or (
-                    row["verb"] == "occur" and args.get("event") == node_name
-                ):
-                    return dict(row)
-        return None
-
-    def active_context(self) -> dict:
-        with self.connect() as db:
-            row = db.execute("SELECT * FROM active_context WHERE singleton=1").fetchone()
-        return {"global": True, "world": row["world_scope"], "task": row["task_scope"],
-                "skills": json.loads(row["skill_scopes_json"])}
-
-    def set_active_context(self, world: str | None, task: str | None, skills: list[str]) -> dict:
-        clean = sorted({s for s in skills if s.startswith("skill:")})
-        with self.transaction(immediate=True) as db:
-            db.execute("UPDATE active_context SET world_scope=?,task_scope=?,skill_scopes_json=?,updated_at=? WHERE singleton=1",
-                       (world, task, json.dumps(clean), time.time()))
-            self._bump_domain(db, "context")
-        return self.active_context()
-
     def effective_affect(self, at: float | None = None) -> dict:
         at = at or time.time()
         values, baselines, directions = {}, {}, {}
@@ -809,50 +519,6 @@ class Store:
         return {"values": values, "baselines": baselines, "directions": directions,
                 "history": [{**dict(r), "before": json.loads(r["before_json"]), "delta": json.loads(r["delta_json"]),
                              "after": json.loads(r["after_json"])} for r in history]}
-
-    def memory_entries(self, channels: list[str] | None = None) -> list[dict]:
-        context = self.active_context()
-        scopes = ["global"] + context["skills"] + [s for s in (context["world"], context["task"]) if s]
-        marks = ",".join("?" for _ in scopes)
-        params: list[Any] = scopes
-        where = f"(scope_type='global' OR (scope_type || ':' || scope_id) IN ({marks})) AND visibility='standard'"
-        if channels:
-            where += " AND channel IN (" + ",".join("?" for _ in channels) + ")"
-            params.extend(channels)
-        with self.connect() as db:
-            rows = db.execute(f"SELECT * FROM memory_entries WHERE {where} ORDER BY created_at DESC LIMIT 300", params).fetchall()
-        return [self._decode_memory_row(row) for row in rows]
-
-    @staticmethod
-    def _decode_memory_row(row: sqlite3.Row) -> dict:
-        item = dict(row)
-        item["scope"] = "global" if item["scope_type"] == "global" else f"{item['scope_type']}:{item['scope_id']}"
-        item["derived_from"] = json.loads(item.pop("derived_from_json"))
-        for key in ("affect_before", "affect_after", "affect_delta"):
-            raw = item.pop(f"{key}_json")
-            item[key] = json.loads(raw) if raw else None
-        return item
-
-    def add_memory_entry(self, *, scope: str, channel: str, content: str, origin: str = "experience",
-                         source_event_id: str | None = None, derived_from: list[str] | None = None,
-                         affect_before: dict | None = None, affect_after: dict | None = None,
-                         affect_delta: dict | None = None) -> dict:
-        scope_type, _, scope_id = scope.partition(":")
-        if scope_type not in {"global","skill","world","task"} or (scope_type != "global" and not scope_id):
-            raise ValueError("invalid memory scope")
-        if channel not in {"experience","cognitive_semantic","emotional_semantic"}:
-            raise ValueError("invalid memory channel")
-        entry_id, now = _id("mem"), time.time()
-        with self.transaction(immediate=True) as db:
-            db.execute("INSERT INTO memory_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                       (entry_id, scope_type, scope_id or None, channel, content, origin, source_event_id,
-                        json.dumps(derived_from or []), json.dumps(affect_before) if affect_before else None,
-                        json.dumps(affect_after) if affect_after else None, json.dumps(affect_delta) if affect_delta else None,
-                        "standard", now))
-            self._bump_domain(db, "memory")
-        with self.connect() as db:
-            row = db.execute("SELECT * FROM memory_entries WHERE id=?", (entry_id,)).fetchone()
-        return self._decode_memory_row(row)
 
     def apply_affect(self, source_event_id: str, deltas: dict[str, float]) -> dict:
         now = time.time()
@@ -911,69 +577,6 @@ class Store:
                        (claim_id, kind, subject.strip(), predicate.strip(), value.strip(), source, now, version))
             row = db.execute("SELECT * FROM self_claims WHERE id=?", (claim_id,)).fetchone()
         return dict(row)
-
-    def capabilities(self) -> list[dict]:
-        with self.connect() as db:
-            rows = db.execute("SELECT * FROM capabilities ORDER BY source,id").fetchall()
-        result = []
-        for row in rows:
-            item = dict(row)
-            for key in ("schema", "scope", "limits"):
-                item[key] = json.loads(item.pop(f"{key}_json"))
-            item["available"] = bool(item["available"])
-            result.append(item)
-        return result
-
-    def capability(self, tool_id: str) -> dict | None:
-        return next((item for item in self.capabilities() if item["id"] == tool_id), None)
-
-    def register_mcp_capability(self, tool_id: str, server: str, description: str,
-                                schema: dict, effect_class: str) -> dict:
-        if not tool_id.strip() or not server.strip():
-            raise ValueError("MCP tool and server are required")
-        if effect_class not in {"observe","modify","communicate","execute"}:
-            raise ValueError("invalid effect class")
-        capability_id = f"mcp.{server.strip()}.{tool_id.strip()}"
-        now = time.time()
-        with self.transaction(immediate=True) as db:
-            db.execute("INSERT INTO capabilities VALUES (?,?,?,?,?,'{}','{}',0,'capability-v1',?) "
-                       "ON CONFLICT(id) DO UPDATE SET description=excluded.description,schema_json=excluded.schema_json,effect_class=excluded.effect_class",
-                       (capability_id, f"mcp:{server.strip()}", effect_class, description.strip(), json.dumps(schema), now))
-            self._bump_domain(db, "capabilities")
-        return self.capability(capability_id)
-
-    def tool_receipts(self) -> list[dict]:
-        with self.connect() as db:
-            rows = db.execute("SELECT * FROM tool_receipts ORDER BY created_at DESC LIMIT 200").fetchall()
-        result = []
-        for row in rows:
-            item = dict(row)
-            for key in ("raw_args", "normalized_args", "context", "checks", "result"):
-                raw = item.pop(f"{key}_json")
-                item[key] = json.loads(raw) if raw else None
-            result.append(item)
-        return result
-
-    def record_tool_receipt(self, *, tool_id: str, source: str, effect_class: str,
-                            raw_args: dict, normalized_args: dict | None, context: dict,
-                            decision: str, checks: list, execution_status: str,
-                            result: Any = None, error: str | None = None) -> dict:
-        receipt_id, now = _id("tool"), time.time()
-        version = self.versions().get("capabilities", 0)
-        with self.transaction(immediate=True) as db:
-            db.execute("INSERT INTO tool_receipts VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                       (receipt_id, tool_id, source, effect_class, json.dumps(raw_args),
-                        json.dumps(normalized_args) if normalized_args is not None else None,
-                        json.dumps(context), version, decision, json.dumps(checks), execution_status,
-                        json.dumps(result) if result is not None else None, error, now, now))
-            row = db.execute("SELECT * FROM tool_receipts WHERE id=?", (receipt_id,)).fetchone()
-        item = dict(row)
-        return item
-
-
-class ConversationBusy(Exception):
-    def __init__(self, turn_id: str):
-        self.turn_id = turn_id
 
 
 def stamp_sources(old: dict, new: dict, receipt_id: str, source: dict, keep: int = 8) -> dict:
