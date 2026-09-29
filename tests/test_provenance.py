@@ -49,7 +49,7 @@ class TheStamp(BoneTestCase):
             db.close()
             Store(path)
             columns = {r[1] for r in sqlite3.connect(path).execute("PRAGMA table_info(memory_meta)")}
-        self.assertTrue({"receipt_id", "kept_by"} <= columns)
+        self.assertTrue({"receipt_id", "kept_by", "feeling_json"} <= columns)
 
 
 class WhereThingsCameFrom(BoneTestCase):

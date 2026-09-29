@@ -117,7 +117,7 @@ class Store:
         );
         CREATE TABLE IF NOT EXISTS memory_meta (
           key TEXT PRIMARY KEY, mode TEXT, turn_id TEXT NOT NULL, kept_at REAL NOT NULL,
-          receipt_id TEXT, kept_by TEXT
+          receipt_id TEXT, kept_by TEXT, feeling_json TEXT
         );
         CREATE TABLE IF NOT EXISTS memory_vectors (
           key TEXT PRIMARY KEY, text_hash TEXT NOT NULL, model TEXT NOT NULL,
@@ -160,9 +160,9 @@ class Store:
             if "instructions_text" in {r[1] for r in db.execute("PRAGMA table_info(turn_contexts)")}:
                 db.execute("DROP TABLE turn_contexts")
             db.executescript(schema)
-            # memory_meta gained who kept each memory and its receipt in 20.7.4.66.
+            # memory_meta gained who kept each memory and its receipt (20.7.4.66), and how it felt (20.7.4.68).
             have = {r[1] for r in db.execute("PRAGMA table_info(memory_meta)")}
-            for column in ("receipt_id", "kept_by"):
+            for column in ("receipt_id", "kept_by", "feeling_json"):
                 if column not in have:
                     db.execute(f"ALTER TABLE memory_meta ADD COLUMN {column} TEXT")
             now = time.time()
@@ -194,11 +194,12 @@ class Store:
 
     def commit_cycle(self, trace_id: str, new_state: dict, expected_sequence: int, receipt: dict, raw: str,
                      *, user_text: str = "", display: str = "", boundary_hash: str = "", by: str = "model",
-                     context: dict | None = None) -> dict:
+                     context: dict | None = None, feeling: dict | None = None) -> dict:
         """One engine turn, atomically: canonical state plus its audit trail (turn, messages, proposal,
         receipt, gate decision, mutation), in the shape Brad's `finalize` writes. Secrets are withheld from it.
         What the effect wrote carries the receipt as its source; `by` says who nominated it. `context` is what
-        the model was handed for this turn's reply (turn_contexts) and its token usage (the turn's columns)."""
+        the model was handed for this turn's reply (turn_contexts) and its token usage (the turn's columns);
+        `feeling` is the endocrine state, kept with a remembered memory."""
         from .secrets import scrub, scrub_all
 
         story = self.in_story()
@@ -274,8 +275,10 @@ class Store:
             if state_changed:
                 claim = receipt["claim"]
                 if claim["verb"] == "remember":
-                    db.execute("INSERT OR REPLACE INTO memory_meta VALUES (?,?,?,?,?,?)",
-                               (claim["args"]["key"], self.mode(), turn_id, now, receipt_id, by))
+                    db.execute("INSERT OR REPLACE INTO memory_meta (key, mode, turn_id, kept_at, receipt_id, kept_by, "
+                               "feeling_json) VALUES (?,?,?,?,?,?,?)",
+                               (claim["args"]["key"], self.mode(), turn_id, now, receipt_id, by,
+                                json.dumps(feeling) if feeling else None))
                 elif claim["verb"] == "forget":
                     db.executemany("DELETE FROM memory_meta WHERE key=?",
                                    [(k,) for k in (receipt.get("result") or {}).get("forgot", [])])
@@ -402,13 +405,15 @@ class Store:
         return {k: m["mode"] for k, m in self.memory_meta().items()}
 
     def memory_meta(self) -> dict[str, dict]:
-        """{key: mode, turn_id, kept_at, receipt_id, kept_by}: where each memory came from."""
+        """{key: mode, turn_id, kept_at, receipt_id, kept_by, feeling}: where each memory came from, and how
+        the engine felt when it was kept."""
         db = self.connect()
         try:
             rows = db.execute("SELECT * FROM memory_meta").fetchall()
         finally:
             db.close()
-        return {r["key"]: dict(r) for r in rows}
+        return {r["key"]: {**dict(r), "feeling": json.loads(r["feeling_json"]) if r["feeling_json"] else None}
+                for r in rows}
 
     def provenance(self, receipt_id: str) -> dict | None:
         """The commit behind a source: when, the gate's checks, what the person said that turn, and what the

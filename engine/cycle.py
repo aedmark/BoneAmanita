@@ -696,6 +696,12 @@ class GeodesicOrchestrator:
 
     HELD_RATIONALE = "(No reply this turn: the Stage Manager held the floor. Kept from what the person said.)"
 
+    def _feeling(self) -> dict | None:
+        """The endocrine state now, kept with a memory (REM plan R1)."""
+        endo = getattr(getattr(self.eng, "bio", None), "endo", None)
+        state = endo.get_state() if hasattr(endo, "get_state") else None
+        return state if isinstance(state, dict) else None
+
     def _turn_context(self) -> dict | None:
         """What the model was handed for this turn's reply, and the tokens it cost (turn_contexts)."""
         cortex = getattr(self.eng, "cortex", None)
@@ -911,6 +917,7 @@ class GeodesicOrchestrator:
                                 boundary_hash=getattr(self.eng, "boundary_hash", ""),
                                 by=by,
                                 context=self._turn_context(),
+                                feeling=self._feeling(),
                             )
                             applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
                             ReceiptLedger.get_instance().issue(

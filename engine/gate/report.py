@@ -60,6 +60,7 @@ def _source(p: dict | None) -> list[str]:
 
 def why_report(name: str, state: dict, meta: dict, stats: dict, provenance, now: float | None = None) -> list[str]:
     """`/memory why <name>`: where a memory or a world node came from. `provenance(receipt_id)` looks a commit up."""
+    from .feeling import describe
     from .recall import STORY
 
     now = time.time() if now is None else now
@@ -73,6 +74,8 @@ def why_report(name: str, state: dict, meta: dict, stats: dict, provenance, now:
         else:
             kept = _kept(m, now)[:-2]
             lines.append(f"  {kept[0].upper()}{kept[1:]}.")
+            if felt := describe(m.get("feeling")):
+                lines.append(f"  Felt: {felt}.")
             lines += _source(provenance(m["receipt_id"]))
         count, last = stats.get(key, (0, 0.0))
         lines.append(f"  Recalled {count}x, last {_age(last, now)}." if count else "  Never recalled yet.")

@@ -34,8 +34,9 @@ engine learns or needs to resume.
   (20.7.4.62). Scoped recall, story vs. real (20.7.4.63). Refusals the model hears (20.7.4.64).
   Personal vs. confidential, and the model no longer says it has no memory (20.7.4.65). Provenance
   (20.7.4.66). The ported store, adopted and pruned (20.7.4.67); the five bone-iris items are done.
-- **Next:** Gordon's call. Shelved for discussion: the affect vector, Self claims and profile seeds
-  (dormant in the store); an idea noted: REM writing the meaning and feeling of memories.
+  REM reflection, Gordon's plan (ROADMAP Track E): R1, feeling at keep time (20.7.4.68).
+- **Next:** REM reflection R2 (reflect through the gate), R3 (dream from it), R4 (shown on waking).
+  Shelved for discussion: the affect vector, Self claims and profile seeds (dormant in the store).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
   and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
@@ -616,6 +617,25 @@ turn_contexts, prune the three-channel memory and note the idea.
   held turn records no stale context, only a dict is recorded, a new store has only what is used plus the
   trio, an old store is pruned and reshaped. Mutations 9 on a clean baseline (a context scrub that could
   never find anything was removed instead). Full suite 938 passed, 5 skipped (8 GB cap).
+
+**REM reflection, the plan; R1, feeling at keep time (2026-09-29, 20.7.4.68).** Gordon revisited the
+three-channel idea. REM today drains ATP, clears ROS, reboots, re-probes, forgets, and writes a dream from
+lore templates that never touch a memory; the Hypervisor asks for a dream "built from whatever in the
+recent context deserves to stay". His calls, all four as recommended: REM writes meaning, feeling and a
+dream; feeling comes from the engine's chemistry; reflections are memories through the gate; the dream is
+shown once on waking. Plan R1 to R4 in ROADMAP Track E.
+- R1: `commit_cycle(feeling=)`, from the cycle's `_feeling()` (the endocrine `get_state()`, a dict only),
+  is kept with each remembered memory in `memory_meta.feeling_json` (added to an existing table at boot).
+  Held turns keep it too (the keeper still commits there).
+- `engine/gate/feeling.py`: `reading(chem)` names what stood out against EndocrineSystem's rest point
+  (DOP 0.5, OXY 0.1, SER 0.5, COR/ADR/MEL 0) past a margin, strongest first (tense, alert, close, eager or
+  flat, settled or low, drowsy), "calm" when nothing did; `describe` adds the levels that moved. The
+  margins are a first guess, to calibrate on real runs.
+- `/memory why` adds "Felt: close (OXY 0.50)."
+- Tests (`tests/test_rem_reflection.py`, 5): the reading at rest and with no record, strongest first
+  (including out of table order), `why` saying it, a kept memory carrying the six hormones, a stand-in
+  body recording none. The migration test checks the new column. Mutations 8 on a clean baseline. Full
+  suite 943 passed, 5 skipped (8 GB cap).
 
 ## Where things stand, 2026-09-25 evening (read this first)
 
