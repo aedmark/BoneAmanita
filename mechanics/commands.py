@@ -310,6 +310,12 @@ class CommandProcessor:
         if line := self._department_line("Diagnostics"):
             self.interface.log(line)
         self._report_receipts()
+        # A transcript made on a tuned engine must say so (ROADMAP A7).
+        tuned = getattr(self.interface.eng, "tuned", None)
+        if isinstance(tuned, dict) and tuned:
+            self.interface.log(f"{self.P.YEL}=== TUNED THIS SESSION ==={self.P.RST}")
+            for key, t in tuned.items():
+                self.interface.log(f"  {key}: {t['stock']} -> {t['value']}" + ("" if t["live"] else " (at next start)"))
         try:
             telemetry = getattr(self.interface.eng, "telemetry", None)
             if not telemetry:
@@ -397,6 +403,40 @@ class CommandProcessor:
                 self.interface.log(f"{self.P.CYN}{msg}{self.P.RST}")
             msg = ux_format("command_alerts", "preset_loaded", default="Loaded preset {preset}", preset=mode_name)
             self.interface.log(msg)
+        return True
+
+    def _cmd_tune(self, parts):
+        """Change one setting now: /tune lists sectors, /tune SECTOR its settings, /tune SECTOR KEY VALUE [--save]."""
+        from engine import tuning
+        from mechanics.setup import ConfigWizard
+
+        eng, P = self.interface.eng, self.P
+        keep = "--save" in parts
+        args = [p for p in parts[1:] if p != "--save"]
+        if not args:
+            self.interface.log(f"{P.CYN}Sectors:{P.RST} " + ", ".join(tuning.sector_names(eng.config)))
+            self.interface.log(f"{P.GRY}/tune SECTOR lists its settings; * marks one that takes effect now.{P.RST}")
+            return True
+        sector = args[0].upper()
+        if len(args) == 1:
+            found = tuning.settings(eng.config, sector)
+            if not found:
+                self.interface.log(f"{P.RED}No sector {sector} with settings /tune can change.{P.RST}")
+                return True
+            for key, value in found.items():
+                star = "*" if f"{sector}.{key}" in tuning.LIVE else " "
+                self.interface.log(f"  {star} {key} = {value!r}")
+            return True
+        if len(args) < 3:
+            self.interface.log(f"{P.RED}Usage: /tune {sector} KEY VALUE [--save]{P.RST}")
+            return True
+        name, raw = args[1], " ".join(args[2:])
+        ok, line = tuning.apply(eng, sector, name, raw)
+        self.interface.log(f"{P.GRN if ok else P.RED}{line}{P.RST}")
+        if ok and keep:
+            value = eng.tuned[f"{sector}.{name.upper()}"]["value"]
+            path = tuning.save(ConfigWizard.CONFIG_FILE, sector, name, value)
+            self.interface.log(f"{P.GRY}Saved to {path}; applied at every start until you remove it.{P.RST}")
         return True
 
     def _cmd_save(self, _parts):

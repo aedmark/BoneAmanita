@@ -437,6 +437,20 @@ class Store:
             db.executemany("DELETE FROM memory_stats WHERE key=?", [(k,) for k in keys])
             db.executemany("DELETE FROM memory_vectors WHERE key=?", [(k,) for k in keys])
 
+    def dialogue_since(self, since: float) -> list:
+        """(what the person said, what the model answered) for each turn committed after `since`, oldest first."""
+        db = self.connect()
+        try:
+            rows = db.execute(
+                "SELECT u.raw_content said, a.display_content answered FROM turns t "
+                "JOIN messages u ON u.turn_id=t.id AND u.role='user' "
+                "JOIN messages a ON a.turn_id=t.id AND a.role='assistant' "
+                "WHERE t.created_at > ? AND u.raw_content != '' ORDER BY t.created_at", (since,)
+            ).fetchall()
+        finally:
+            db.close()
+        return [(r["said"], r["answered"]) for r in rows]
+
     def checkpoint(self) -> dict | None:
         """The last saved resume point, or None if the engine has never saved one."""
         db = self.connect()

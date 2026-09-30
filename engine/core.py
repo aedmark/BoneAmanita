@@ -645,6 +645,11 @@ class SystemHealth:
     hints: List[str] = field(default_factory=list)
     observer: Optional["TheObserver"] = None
     events: Optional["EventBus"] = None
+    # A crashed component is retried after this many turns, doubling per repeat crash up to RETRY_CAP; it used
+    # to wait for REM (minutes idle), so a busy session ran without it for good (2026-09-30).
+    retry_in: Dict[str, int] = field(default_factory=dict)
+    strikes: Dict[str, int] = field(default_factory=dict)
+    RETRY_CAP = 8
 
     def __getattr__(self, item: str):
         if item.endswith("_online"):
@@ -660,7 +665,10 @@ class SystemHealth:
         if self.observer:
             self.observer.log_error(component)
         if severity in ("CRITICAL", "ERROR"):
-            self.components_online[component.lower()] = False
+            key = component.lower()
+            self.components_online[key] = False
+            self.strikes[key] = self.strikes.get(key, 0) + 1
+            self.retry_in[key] = min(self.RETRY_CAP, 2 ** (self.strikes[key] - 1))
         return ux_format("core_strings", "health_offline", component=component, msg=msg)
 
     def report_warning(self, message: str):
@@ -669,8 +677,21 @@ class SystemHealth:
     def report_hint(self, message: str):
         self.hints.append(message)
 
+    def tick(self) -> List[str]:
+        """A turn passes: the components whose wait is over come back online (they may crash again)."""
+        back = []
+        for key in list(self.retry_in):
+            self.retry_in[key] -= 1
+            if self.retry_in[key] <= 0 and self.reboot_component(key):
+                back.append(key)
+        return back
+
+    def ran_cleanly(self, component: str) -> None:
+        self.strikes.pop(component.lower(), None)
+
     def reboot_component(self, component: str) -> bool:
         comp_key = component.lower()
+        self.retry_in.pop(comp_key, None)
         if not self.components_online.get(comp_key, True):
             self.components_online[comp_key] = True
             self.report_hint(

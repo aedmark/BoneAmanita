@@ -463,7 +463,21 @@ options, and the second is better:
 Do this before A3, because receipts are worth much less if their
 warnings land in the same silent channel.
 
-## A7. A `/tune` command (plan, not started; drafted 2026-09-23; staged to fix soon, Gordon 2026-09-29)
+## A7. A `/tune` command (done 2026-09-30, 20.7.4.76; drafted 2026-09-23; plan kept below)
+
+**Built** (`engine/tuning.py`, `/tune` in `mechanics/commands.py`, `tests/test_tune.py` 13): `/tune` lists the
+sectors (ROOT is the top-level scalars), `/tune SECTOR` its settings (credentials hidden, `*` on a live one),
+`/tune SECTOR KEY VALUE [--save]` sets one. The value is read as the setting's own type; a bad one changes
+nothing. Both objects are set, the engine's config and the `BoneConfig` class, and reverted together if
+`validate_integrity()` refuses. The live allowlist, each tuned through the command in a test that sees the
+behaviour change: `WHIMSY.LUDICROUS_SPEED` (reaches `typewriter()`, a class reader), `BIO.DECAY_RATE`
+(homeostasis), `CORTEX.VALIDATOR_STUTTER_LENGTH`, `SOMATIC_BUDGET.ATP_DEPLETED`, `ROOT.GATE_TOLERANCE`
+(the crucible's meltdown line; the reply says the next `/mode` resets it, and a test sees it reset).
+Everything else says it takes effect at the next start. Each change is a `config.tune` receipt, and `/diag`
+lists what was tuned this session, stock value to new. `--save` writes a `TUNED` block into the person's
+gitignored `config.json` (a test checks `lore/` is untouched), applied at boot through the same path.
+Follow-ups: move the six class readers onto the engine's config; grow the allowlist a tested key at a time.
+
 
 `BoneConfig.tune(sector, parameter, value)` already exists
 (`engine/presets.py`): it checks the sector and key exist, refuses a type
@@ -1406,7 +1420,7 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
 - ~~**Code in replies**~~ (Done 2026-09-30, 20.7.4.73; from the end-to-end run): the validator refused every code block (demanding `<write_file>`, which no prompt mentions), and prose rules read code: a `#` comment as a Title Case header (the patterns were compiled case-blind), `*` in a regex as a stage direction, `===` as a scaffold leak. "How do I fix the regex?" shipped a pause line. Code blocks are allowed, style rules read prose only (`engine/prose.py`), and a repair keeps the rest of the reply. Live: 7 of 7 TECHNICAL asks answered with their code, no redrafts. Then (Gordon, 2026-09-30): a validator objection on the last draft (the only one below 20 ATP) cuts its sentence instead of showing a pause line, and a named file gets a turn directive (8 of 8 saved, was 2 of 3). Two rules narrowed: a stage direction is a body action, not any aside or emphasis; a stutter holds no word. D2b's first-draft rejections, re-validated: 230 to 193 of 960.
 - ~~**The point of no return, requests not words**~~ (Done 2026-09-30, 20.7.4.74; from the end-to-end run): the gate held any message with "deploy" until a literal CONSENT, "our deploy window is Thursdays at 2pm" included. It now holds a request to do something hard to undo (an imperative, or "let's", "can you", "I'm about to" before deploying, pushing to prod, dropping a table, a wipe, migrations on prod); mentions and questions pass. The hold reads plainly (no Stage Manager line, "Are you sure you want to go ahead?"), and the next turn is handed what was held.
 - ~~**A command's reply is its own**~~ (Done 2026-09-30, 20.7.4.75; from the end-to-end run): `/mode`'s reply opened with a pacemaker line queued after the previous turn. A command now shows only what it logged; what was already waiting is put back for the next turn.
-- **Crash recovery** (staged to fix soon, Gordon 2026-09-29): a crashed subsystem is rebooted only in the REM tick, which needs five idle minutes, so a scripted or busy session never recovers; and the checkpoint and the gate's commit are two transactions in one file (a crash between them loses one turn's checkpoint).
+- ~~**Crash recovery**~~ (Done 2026-09-30, 20.7.4.76: a crashed component is retried on the next turn, the wait doubling per repeat crash up to 8 turns; resume fills in the dialogue the store committed after the checkpoint. Staged by Gordon 2026-09-29): a crashed subsystem is rebooted only in the REM tick, which needs five idle minutes, so a scripted or busy session never recovers; and the checkpoint and the gate's commit are two transactions in one file (a crash between them loses one turn's checkpoint).
 - **REM reflection** (Gordon's calls, 2026-09-29). Today REM drains ATP, clears ROS, reboots, re-probes, forgets, and writes a dream from lore templates that never touch a memory; the Hypervisor asks for "a short, poetic dream built from whatever in the recent context deserves to stay". Once per sleep, only when something was kept since the last one:
   - ~~R1. Feeling at keep time~~ (Done 2026-09-29, 20.7.4.68): the endocrine state is recorded with each memory as it is kept (`memory_meta.feeling_json`), and read into words by `engine/gate/feeling.py` (measured, not the model's guess); `/memory why` says "Felt: close (OXY 0.50)."
   - ~~R2. Reflect~~ (Done 2026-09-29, 20.7.4.69): once per sleep and per zone (with at least two new memories), one call reads what was kept since that zone's last reflection, with how each felt, and writes what it means together, as an engine-built `reflect` nomination through the gate (`reflection.<name>`, `story.reflection.<name>`; receipted `halcyon.reflect`, zoned, forgettable, traceable to its memories; it feels like the average of what it came from).

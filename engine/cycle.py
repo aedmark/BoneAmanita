@@ -208,6 +208,10 @@ class PhaseExecutor:
             if ctx.is_system_event
             else simulator.full_pipeline
         )
+        health = getattr(simulator.eng, "system_health", None)
+        if not ctx.is_system_event and health is not None:
+            for comp in health.tick():
+                simulator.eng.events.log(f"{comp.upper()} back online after a crash; trying it again.", "SYS")
         for phase in active_pipeline:
             if ctx.refusal_triggered:
                 break
@@ -218,6 +222,8 @@ class PhaseExecutor:
             except Exception as e:
                 simulator.handle_phase_crash(ctx, phase.name, e)
                 break
+            if health is not None and (comp := _CRASH_COMPONENT_MAP.get(phase.name)):
+                health.ran_cleanly(comp)
         return ctx
 
 

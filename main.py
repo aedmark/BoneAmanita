@@ -218,6 +218,10 @@ class BoneAmanita:
             self.halcyon_grammar = grammar_text(b_spec)
         except FileNotFoundError:
             self.events.log(f"{Prisma.RED}CRITICAL: engine/gate/boundary.yaml not found.{Prisma.RST}", "SYS")
+        from engine.tuning import apply_saved
+
+        for line in apply_saved(self, self.sys_config):
+            self.events.log(f"Tuned from config.json: {line}", "SYS")
 
     def _validate_state(self):
         tuning_key = self.mode_settings.get("tuning", "STANDARD")

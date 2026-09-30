@@ -54,9 +54,13 @@ everything the engine learns or needs to resume (ROADMAP Track E).
   event into the command's reply. It now flushes what was waiting first, runs the command, shows only what
   the command logged, and puts the rest back (`EventBus.requeue`) for the next turn that shows events.
   `tests/test_command_routing.py` `CommandRepliesAreTheirOwn` (fails without the fix). Suite 1001 passed.
-- **Next, in order:**
-  1. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
-     only in the REM tick; the checkpoint and the gate's commit are two transactions).
+- **Done, 20.7.4.76: crash recovery** (write-up below). A crashed component is retried on the next turn,
+  not after minutes idle; resume fills in the turns the store committed after the checkpoint.
+- **Done, 20.7.4.76: `/tune` (ROADMAP A7)** (write-up in ROADMAP A7). Both config objects set; five
+  keys proven live by behaviour tests, the rest reported as taking effect at the next start; receipted,
+  listed in `/diag`; `--save` into `config.json`, never `lore/`.
+- **Next:** the run's list and the staged items are done. Open for a call: re-run the end-to-end run on
+  this engine (the fixes since 20.7.4.71 all came from it), and the "To discuss" items below.
 - **To discuss:**
   - Noticed, not investigated: the TECHNICAL prompt carries "ALIGNMENT: You are the Conversationalist"
     under its "SYSTEM KERNEL" header.
@@ -69,7 +73,7 @@ everything the engine learns or needs to resume (ROADMAP Track E).
   polish.
 - **Test runs** go under `systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0` (a MagicMock
   runaway once took the session down), after `reset.sh`, and never while a background engine run is using
-  `saves/`. Full suite 1001 passed, 5 skipped.
+  `saves/`. Full suite 1019 passed, 5 skipped.
 - **Historical note:** the 09-25 and 09-26 run tables below counted the dialogue entry, which is never
   empty; counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies (write-up:
   `docs/bonereport.html`).
@@ -898,6 +902,23 @@ mentions, the deploy window in TECHNICAL); the old word match fails 2.
   `eng.held_request`, handed once as HELD LAST TURN: answer it if confirmed, "you cannot run it for them, so
   give them what they need to do it"). `TheHoldAndTheYes` (each of the four changes reverted fails it).
   Suite 1000 passed, 5 skipped.
+
+**Crash recovery (2026-09-30, 20.7.4.76).** Staged by Gordon on 09-29, the two halves from the roadmap.
+- A crashed phase marked its component (PHYSICS, BIO, MIND) offline, and only the REM tick brought it back,
+  after `REM_IDLE_THRESHOLD` of idle: a busy or scripted session ran the rest of its life without it (the
+  circuit breaker skips the phase). `SystemHealth` now schedules a retry when it records the failure: the
+  next turn, then 2, 4, up to `RETRY_CAP` 8 turns for repeat crashes; a clean run clears the strikes.
+  `PhaseExecutor` counts the turn down (`SystemHealth.tick`) and logs "BIO back online after a crash;
+  trying it again." REM still reboots whatever is down.
+- The gate commits mid-turn and the checkpoint is saved at the turn's end, two transactions: a crash
+  between them left the store a turn ahead of the resume point. The store already holds each committed
+  turn's messages, so resume now appends the dialogue of turns committed after the checkpoint
+  (`Store.dialogue_since`, turns with something said; a REM reflection has no person in it) and says
+  "Recovered N turn(s) saved after the last checkpoint." The body and soul state resume from the checkpoint,
+  at most a turn behind; memory was never at risk (it is the store).
+- `tests/test_crash_recovery.py` (5): one crash retried next turn; repeat crashes wait 1, 2, 4; the cap;
+  a turn committed after the checkpoint resumed; nothing added when current. The old cycle and the old
+  resume each fail. Suite 1006 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

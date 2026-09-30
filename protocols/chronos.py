@@ -121,6 +121,12 @@ class ChronosKeeper:
                         f"{Prisma.GRY}Timeline absolute. Kernel Hash [{current_hash}] locked.{Prisma.RST}"
                     )
             restored_history = self._history_from(data.get("chat_history", []))
+            # The gate commits mid-turn and the checkpoint at its end; a crash between them left the store a
+            # turn ahead. Its messages fill the dialogue back in (2026-09-30).
+            saved = self.eng.store.checkpoint() or {}
+            if saved.get("updated_at") and (missed := self.eng.store.dialogue_since(saved["updated_at"])):
+                restored_history += [f"Traveler: {said}\nSystem: {answered}" for said, answered in missed]
+                print(f"{Prisma.GRY}Recovered {len(missed)} turn(s) saved after the last checkpoint.{Prisma.RST}")
             msg2 = ux("protocol_strings", "chronos_resume_success")
             print(f"{Prisma.GRN}{msg2}{Prisma.RST}")
             return True, restored_history
