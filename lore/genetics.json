@@ -107,7 +107,7 @@
     "ENTROPY": {
       "trait": "ROT",
       "mod": {
-        "BIO.DECAY_RATE": 0.05,
+        "BIO.DECAY_RATE": 0.9,
         "METABOLISM.ROS_GENERATION_FACTOR": 0.08
       },
       "lexicon": [

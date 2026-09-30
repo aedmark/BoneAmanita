@@ -193,7 +193,7 @@ def somatic_block_text(budget: SomaticBudget) -> str:
     if not budget.closing_question_allowed:
         lines.append("Do not ask a closing question.")
     if budget.offer_to_carry_load:
-        lines.append("Your partner is carrying a heavy load. Offer to carry part of the burden.")
+        lines.append("Your partner has little left to give. Do the next step yourself: give one concrete answer or suggestion, and ask nothing of them this turn.")
     return "\n".join(lines)
 
 
@@ -206,7 +206,8 @@ EXPECTED_DIFF = re.compile(
     r"|Your partner is running low\. Answer in at most \d+ sentences\."
     r"|Sentence cap: \d+ sentences\."
     r"|Do not ask a closing question\."
-    r"|Your partner is carrying a heavy load\. Offer to carry part of the burden\.)$"
+    r"|Your partner has little left to give\. Do the next step yourself: give one concrete answer or "
+    r"suggestion, and ask nothing of them this turn\.)$"
 )
 
 LAMBDA_TAG = re.compile(r"\n?<cd_lambda_1>[-\d.]+</cd_lambda_1>")
@@ -351,7 +352,7 @@ def load_cache(path: Path) -> list:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def generate(model: str, reasoning: str, repeats: int, cache: Path) -> None:
+def generate(model: str, reasoning: str, repeats: int, cache: Path, arms: list | None = None) -> None:
     from brain.composer import PromptComposer
 
     # The model belongs in the key: every model is sent identical prompts, so
@@ -365,7 +366,8 @@ def generate(model: str, reasoning: str, repeats: int, cache: Path) -> None:
     try:
         composer = PromptComposer({"system_prompts": eng.prompt_library, "lenses": {}})
         llm, validator = eng.cortex.llm, eng.cortex.validator
-        total = len(MESSAGES) * repeats * len(ARMS)
+        chosen = arms or list(ARMS)
+        total = len(MESSAGES) * repeats * len(chosen)
         count = 0
         with cache.open("a", encoding="utf-8") as out:
             for message in MESSAGES:
@@ -373,6 +375,8 @@ def generate(model: str, reasoning: str, repeats: int, cache: Path) -> None:
                 for repeat in range(repeats):
                     seed = seed_for(model, message, repeat)
                     for arm, (prompt, state, llm_params, _budget) in prompts.items():
+                        if arm not in chosen:
+                            continue
                         count += 1
                         sha = hashlib.sha256(prompt.encode()).hexdigest()[:16]
                         if (model, reasoning, message, repeat, arm, sha) in done:
@@ -564,6 +568,8 @@ def main() -> int:
     parser.add_argument("--model", default=None, help="chat model (default: BoneConfig.MODEL)")
     parser.add_argument("--repeats", type=int, default=8)
     parser.add_argument("--analyze-only", action="store_true")
+    parser.add_argument("--arms", default=None,
+                        help="comma-separated arms to generate (D2b: CONTROL,EXHAUSTED,DISENGAGED); default all")
     parser.add_argument(
         "--compare", action="store_true", help="one row per cached model; generates nothing"
     )
@@ -586,7 +592,10 @@ def main() -> int:
     model = args.model or BoneConfig.MODEL
     reasoning = "none" if args.no_reasoning else "default"
     if not args.analyze_only:
-        generate(model, reasoning, args.repeats, args.cache)
+        arms = [a.strip().upper() for a in args.arms.split(",")] if args.arms else None
+        if arms and (unknown := set(arms) - set(ARMS)):
+            parser.error(f"unknown arms: {sorted(unknown)}")
+        generate(model, reasoning, args.repeats, args.cache, arms)
     return analyse(load_cache(args.cache), model, reasoning)
 
 

@@ -9,43 +9,53 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
-## Where things stand, 2026-09-27 (Halcyon integration, roadmap step 3)
+## Where things stand, 2026-09-29 (Halcyon integration, REM reflection, validation)
 
-**RESUME HERE (2026-09-27).** Porting Brad's Iris/Halcyon SQLite store and `NOMINATE` gate into
-BoneAmanita (ROADMAP Track E). BoneAmanita keeps the conversation loop, the bio-physics and the lexical
-firewall; the gate owns memory and world mutations; `saves/iris.db` is the one store for everything the
-engine learns or needs to resume.
-- **Done:** the graft (Gordon, 57eb7ff and 8d625af), reviewed and fixed, with the gate's audit trail,
-  denials shown only in TECHNICAL or on the DEEP HUD, and memory recall phase 1 (20.7.4.44). Step 3,
-  moving every learned or session store into the store: 3a the resume checkpoint (20.7.4.45), 3b the
-  ADVENTURE rooms plus `/export` for FractalOS (20.7.4.46), 3c learned words (20.7.4.47), 3d the Akashic
-  record (20.7.4.48), 3e the learned lore overlay (20.7.4.49), 3f the user profile, wired in for the
-  first time (20.7.4.50), 3g the Oroboros lineage, with inherited scars applied at boot again
-  (20.7.4.51). Step 3 is complete. Memory recall phase 2, ranking by meaning (20.7.4.52). Phase 3,
-  the probe and the memory keeper (20.7.4.53). ADVENTURE answers questions before the room
-  (20.7.4.54). Room titles name the place, never the zone (20.7.4.55). Memory phase 4, the
-  cartographer (20.7.4.56). Memory phase 5, forgetting (20.7.4.57). Phase 6, `/memory` (20.7.4.58); the
-  memory recall plan is complete.
-  The embedder re-probe (20.7.4.59). A retroactive devlog, `docs/devlog.html` (20.7.4.60): six backdated
-  entries in the Noctis devlog markup, starting at BoneAmanita v0.1 (the Bonepoke months left out, Gordon's
-  call); names left out on purpose (the reader behind the governor prediction, Halcyon's author).
-  A second look at bone-iris gave five items (ROADMAP Track E); the first, secrets stay out of the store
-  (20.7.4.61), then out of every other file, with named credentials forgotten by the memory's mode
-  (20.7.4.62). Scoped recall, story vs. real (20.7.4.63). Refusals the model hears (20.7.4.64).
-  Personal vs. confidential, and the model no longer says it has no memory (20.7.4.65). Provenance
-  (20.7.4.66). The ported store, adopted and pruned (20.7.4.67); the five bone-iris items are done.
-  REM reflection, Gordon's plan (ROADMAP Track E): R1, feeling at keep time (20.7.4.68); R2, reflect
-  through the gate (20.7.4.69); R3, the dream from them (20.7.4.70).
-- **Next:** R4 (shown on waking) turned out to exist already on the idle path; Gordon's call on any polish.
-  Shelved for discussion: the affect vector, Self claims and profile seeds (dormant in the store).
-- **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
-  two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
-  and 09-26 run tables below: their "150 of 150" counted the dialogue entry, which is never empty. Counted
-  from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies, nearly all a Warden JSON
-  rejection on the last allowed draft (that path is gone with the JSON gate), and 14 of 0926b's after one
-  crash left cognition offline until a REM tick that a paced session never reaches (still how recovery
-  works). Full write-up: `docs/bonereport.html`.
-- Full suite 809 passed, 5 skipped, after `reset.sh`.
+**RESUME HERE (2026-09-29).** BoneAmanita keeps the conversation loop, the bio-physics and the lexical
+firewall; Brad's Iris/Halcyon gate owns memory and world mutations; `saves/iris.db` is the one store for
+everything the engine learns or needs to resume (ROADMAP Track E).
+- **Done, 2026-09-26 to 09-27:** the graft, reviewed and fixed (20.7.4.44); every learned or session store
+  moved into the store, steps 3a to 3g (20.7.4.45 to .51); the memory recall plan, phases 2 to 6 (meaning,
+  the keeper, ADVENTURE questions, room titles, the cartographer, forgetting, `/memory`; 20.7.4.52 to .58);
+  the embedder re-probe (.59); a retroactive devlog, `docs/devlog.html` (.60).
+- **Done, 2026-09-27 to 09-29, a second look at bone-iris:** secrets stay out of the store and every file,
+  named credentials forgotten by the memory's mode (.61, .62); scoped recall, story vs. real (.63);
+  refusals the model hears (.64); personal vs. confidential, and the model knows it remembers (.65);
+  provenance, receipts on the facts (.66); the ported store adopted and pruned (.67).
+- **Done, REM reflection (Gordon's plan):** R1 a memory keeps how it felt (.68); R2 a sleep reflects
+  through the gate (.69); R3 the dream is built from the day (.70); R4 (shown on waking) already existed.
+- **Done, 20.7.4.71:** B3's stale note fixed; D2b's statistical pass run (a tired partner gets 51% fewer
+  words on gemma4:12b) and its disengaged line reworded ("Do the next step yourself... ask nothing of them
+  this turn"); the keeper keeps how the person is doing (states 12 of 12, was 0), and old memories say when
+  they were kept; slash commands route before the prose checks (`/mode` was refused by the chaos lock);
+  homeostasis (the chemistry pinned within five turns in every run; now it settles back toward rest).
+- **In progress:** the end-to-end run, second attempt (`scratch/mode_runs/e2e_0929b.jsonl`, arms MIXED,
+  CONVERSATION, ADVENTURE, TECHNICAL, CREATIVE, each ending in `/sleep` and a summary row). The first was
+  cancelled when MIXED exposed the `/mode` bug. Partial results (3 of 5 arms, 87 turns): no blank replies,
+  no phase crashes, chemistry moving (dopamine 0.65 to 0.85, oxytocin 0.34 to 0.70), and MIXED shows modes
+  switching, zones holding in memory (a story's name, password and heist under `story.`, the person's
+  sister kept out of ADVENTURE), one reflection per zone, the dream from the person's zone.
+- **Next, in order:**
+  1. Finish the end-to-end analysis (TECHNICAL and CREATIVE arms, the summaries) and write it up.
+  2. The ops keyword gate (`phases/cognitive.py`, POINT_OF_NO_RETURN) holds any mention of "deploy" until
+     a literal CONSENT; it held "our deploy window is Thursdays at 2pm" in TECHNICAL, where deploy talk is
+     normal. It should react to a request to do something irreversible, not to the word.
+  3. A command's reply includes unrelated queued event logs (a pacemaker line in `/mode`'s output):
+     `process_turn` flushes every event into the command UI.
+  4. The response validator would reject 20% to 33% of plain replies on both models (D2b's side finding).
+  5. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
+     only in the REM tick; the checkpoint and the gate's commit are two transactions).
+- **Worth knowing:** zones scope recall, not the live conversation, which carries across modes by design:
+  back in CONVERSATION, "What's the vault password?" was answered from the dialogue ("Brannoc told you it
+  is moonlight"). If that should change, it is a separate decision.
+- **Shelved for discussion:** the affect vector, Self claims and profile seeds (dormant in the store); R4
+  polish.
+- **Test runs** go under `systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0` (a MagicMock
+  runaway once took the session down), after `reset.sh`, and never while a background engine run is using
+  `saves/`. Full suite 970 passed, 5 skipped.
+- **Historical note:** the 09-25 and 09-26 run tables below counted the dialogue entry, which is never
+  empty; counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies (write-up:
+  `docs/bonereport.html`).
 
 Why the pivot: atomic SQLite commits replace fragile JSON saves, and the gate (deny by default, every
 attempt receipted) replaces JSON parsing for memory. BoneAmanita's filter handles style and biological
@@ -695,6 +705,58 @@ and `/sleep`/`/idle` showed `enter_rem_cycle`'s text (fossil blends, or its biol
   reflection and its feelings (not the raw memories, not the template), nothing new means no dream, heavy
   trauma makes a Fever Dream, the em dash goes, a story is dreamt only in the story, a failed dream
   retries, `/sleep` and `/idle` show it. Mutations 13. Full suite 960 passed, 5 skipped (8 GB cap).
+
+**B3, D2b, and the keeper keeps how the person is doing (2026-09-29, 20.7.4.71).** Gordon's order: fix
+B3's stale note, run D2b's pass if needed or strike it, fix the keeper's states, then an end-to-end run.
+A7 (`/tune`) and crash recovery are staged in the roadmap to fix soon.
+- B3: the September 18 note (seven failures) replaced with today's state (the suite passes; a passing test
+  still does not validate a turn; the end-to-end run is the next validation).
+- D2b was needed: it is the only measure of the engine's core claim, the prompts had changed since it was
+  built, and it never ran. `tools/audit_somatic.py --arms` (new) runs only its three personas (the full
+  11-arm grid would have been ~1,760 generations per model). Results in ROADMAP D2b: on gemma4:12b a tired
+  partner gets 51% fewer words and 99% within three sentences (36% fresh), disengaged 42% fewer; e4b's
+  fresh replies are already short (a floor effect). Carry-the-load is weak on both (5-6%); e4b's
+  disengaged arm asks slightly more closing questions; the validator would reject 20-33% of plain replies
+  (a follow-up). Mistake on the way: I ran `reset.sh` twice while the audit's engine was using `saves/`
+  and `logs/`; its measurements come from the model directly, so they stand, and I held further test runs
+  until it finished.
+- The keeper kept facts, never states: six live REM runs never kept "rough sprint" or "haven't slept in a
+  week", so reflections and dreams saw only logistics. Probe (gemma4:12b, 3 samples each): states kept 0 of
+  12, facts 6 of 6, small talk NONE 12 of 12. The prompt now lists "how they are doing lately" with the
+  example "sleep = barely sleeping this week": states 12 of 12, facts 6 of 6, small talk 12 of 12.
+- A kept state goes stale, and the memory block had no dates: past a day, each recalled memory now says
+  when it was kept ("- sleep: barely sleeping this week (kept 3 weeks ago)"), from `memory_meta.kept_at`
+  (`found["kept_at"]` in the cortex, `PromptComposer._kept_ago`).
+- Tests (`tests/test_halcyon_gate.py`): an old memory says when it was kept, ages read plainly, the keeper
+  is asked how they are doing. Mutations 6. Full suite 963 passed, 5 skipped (8 GB cap).
+- The end-to-end harness: `tools/mode_runs.py` ends every arm with `/sleep` and a summary row (what is
+  kept, each memory's mode, keeper and feeling, the reflections, the dream, the `/memory` report); a MIXED
+  arm runs one session across modes (personal facts, a wifi password, a story name and a door password,
+  then questions across the zones). Rows carry the active mode, the memory and the screen.
+- The end-to-end run, first attempt, cancelled (Gordon: the fixes color the run): MIXED showed `/mode`
+  refused by the chaos lock (the capitals of `/mode ADVENTURE` score 0.9; commands were routed after the
+  pre-flight checks), so the whole session stayed in CONVERSATION: the story's facts landed in the
+  person's zone ("What's my name again?" "You told me your name is Aragorn."), the reflection mixed them,
+  zones were never exercised. What did work: the wifi password refused and reported as not kept, the week
+  (sleep, Odalys) recalled, the sister recalled in TECHNICAL, `/sleep` reflected and dreamt. And every
+  feeling read "eager", which led to the endocrine finding below.
+- Slash commands now route before the prose checks (after death). `tests/test_command_routing.py` (2):
+  `/mode ADVENTURE` switches; shouted prose is still locked. Fails without the fix.
+- The disengaged line reworded (Gordon approved the wording): see ROADMAP D2b for the rerun (gemma4:12b
+  49% lighter, no questions, no offers; e4b's closing-question reversal gone) and sample replies. Critically
+  low effort forbids a closing question, rested or not (a test covers the rested case).
+- Homeostasis (Gordon: "the original intent"; option A of three): the endocrine state pinned within five
+  turns in all 389 recorded turns. `_maintain_homeostasis` never pulled toward rest (it added +0.1
+  oxytocin every social turn); the only decays were fixed decrements of 0.005 to 0.05. `EndocrineSystem._settle`
+  now gives a rise only the headroom left and moves each hormone `BIO.DECAY_RATE` of the way back to rest
+  (`REST`, the dataclass defaults; `feeling.py` reads the same). `DECAY_RATE` is redefined as that share,
+  one knob not two: default 0.2 (`lore/tuning_presets.json`), ZEN_GARDEN 0.02, LABORATORY 0 (frozen), the
+  ENTROPY "ROT" trait 0.9 (`lore/genetics.json`), each keeping its old ratio (ENTROPY capped). Simulated: a
+  warm stretch levels off (OXY 0.68, SER 0.83), quiet turns halve it in ~3, stress reads cortisol 0.78,
+  dopamine 0.12. The feeling margins now read those as "close, settled" and "tense, flat, low".
+  `test_circadian_drift_fractional_pull` now compares against a no-bias twin (from 0.5, homeostasis pulls
+  melatonin down either way; the bias is still a fractional lift). `tests/test_homeostasis.py` (5).
+  Mutations 7 across these three fixes. Full suite 970 passed, 5 skipped (8 GB cap).
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

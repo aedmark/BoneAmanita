@@ -463,7 +463,7 @@ options, and the second is better:
 Do this before A3, because receipts are worth much less if their
 warnings land in the same silent channel.
 
-## A7. A `/tune` command (plan, not started; drafted 2026-09-23)
+## A7. A `/tune` command (plan, not started; drafted 2026-09-23; staged to fix soon, Gordon 2026-09-29)
 
 `BoneConfig.tune(sector, parameter, value)` already exists
 (`engine/presets.py`): it checks the sector and key exist, refuses a type
@@ -645,12 +645,14 @@ heuristics; they do not establish that an utterance is coherent or creative.
 
 ## B3. Tuning and Validation
 
-The earlier blanket claim that all tests pass is withdrawn. The September 18
-review confirmed seven failures across cortex, gate-tolerance, Moog, preflight,
-and scar tests, including `MagicMock` fixture/type errors. It also reproduced
-embedding fallback defects outside those tests. A new complete suite run and
-live validation are still needed; passing a governor-specific test does not
-validate the whole turn or the model's response.
+**Status 2026-09-29:** the September 18 note (seven failures across cortex,
+gate-tolerance, Moog, preflight and scar tests, and embedding fallback defects)
+is stale. The whole suite passes (960 passed, 5 skipped, run under an 8 GB
+memory cap), and the embedder's fallback and re-probe are tested and were
+checked live (20.7.4.59). What still holds: a passing test does not validate a
+whole turn or the model's reply. Features are checked live one at a time on
+gemma4:12b (see the handoff for each); an end-to-end run across the modes is
+the next validation (Track E).
 
 # Track C: The Biological Harness
 
@@ -1218,7 +1220,33 @@ adopted, and this entry records which one failed. **Not yet run**: the
 2026-09-19 audit rebuilt the tool this needs (it could not previously have
 produced this measurement at all); the actual pass is next.
 
-## D2b. Measure accommodation, not obedience (measures built, pass not run)
+## D2b. Measure accommodation, not obedience (done 2026-09-29, 20.7.4.71)
+
+**2026-09-29 result.** The pass ran on gemma4:12b and gemma4:e4b, 20 messages x 8 repeats x the three
+personas (`tools/audit_somatic.py --arms CONTROL,EXHAUSTED,DISENGAGED`, cache
+`tools/cache/audit_somatic_d2b.jsonl`), 95% bootstrap intervals over messages:
+
+- gemma4:12b, the deployed model: a tired partner gets 51% fewer words (66 to 32) and 99% of replies
+  within three sentences against 36%; a disengaged partner 42% fewer words. Clearly lighter. Offers to
+  carry the load rise only from 0% to 5% (the instruction is mostly ignored); closing questions sit near
+  0% in every arm, so "should fall" has nothing to fall from; body narration and affect mirroring are zero.
+- gemma4:e4b: its fresh replies are already short (37 words, 83% within three sentences), so the cap has
+  little to cut: within three sentences rises to 97%, words show no detectable change (a floor effect).
+  Carry-the-load 0% to 6%. One reversal: a disengaged partner gets more closing questions (1% to 6%).
+- Seen on the way, outside D2b: the response validator would reject 20% to 33% of plain replies on both
+  models.
+
+Done: the lighter reply is measured, on the deployed model plainly. The validator's reject rate still
+deserves a look.
+
+**The disengaged line, reworded (Gordon, 2026-09-29).** "Offer to carry part of the burden" contradicted the
+persona's "Do not offer to 'help'", and an offer came back as "Would you like me to...?", work handed back.
+Now: "Your partner has little left to give. Do the next step yourself: give one concrete answer or
+suggestion, and ask nothing of them this turn.", and critically low effort also forbids a closing question.
+Rerun of that arm (cache `tools/cache/audit_somatic_d2b_take.jsonl`): gemma4:12b 49% lighter (was 42%),
+questions and closing questions 0% (were 4%), no offers; e4b's reversal gone (closing questions 2%, no
+difference from fresh), questions asked 36% below fresh. The replies give the one concrete step ("A fried
+rice with the cabbage and eggs... sauté the cabbage first"). The offer regex now reads 0%, as intended.
 
 **2026-09-19 status:** implemented. `body/somatic_metrics.py` gained
 `reply_to_message_ratio`, `ends_with_question`, `offers_to_carry_load`,
@@ -1372,6 +1400,9 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
   - ~~Provenance~~ (Done 2026-09-29, 20.7.4.66; bone-iris's "receipt IDs on the facts, not just in the log"): each world node, edge and constraint a commit creates or changes carries its receipt in `sources` (the last 8), and the world's `sources` registry says the turn, verb, mode and who nominated it (the model, the keeper, the cartographer); each memory's `memory_meta` row adds its receipt and who kept it. `/memory` says who kept each memory and when; `/memory why <name>` traces a memory or a world node to the person's words that turn and the gate's checks.
   - ~~The ported store~~ (Done 2026-09-29, 20.7.4.67, Gordon's calls): adopted `turn_contexts` (what each reply was handed: mode, zone, the memories and facts recalled, a refusal note, the model) and the turns table's token columns; pruned imagination runs, Iris's step-by-step turn lifecycle, JSON projections, the MCP capability registry and tool receipts, active-context scopes (our zones replaced them), the braid and system-projection contexts, `memory_entries`, unused readers (`node_provenance` gave way to `provenance`) and two stubs; the store no longer takes a `state_dir`. The affect vector, Self claims and profile seeds stay dormant until the shelved discussion.
   - Idea, from `memory_entries` (pruned): Iris keeps three channels per memory, the experience, what it means, and what it felt like, the last two written later by reflection. Taken up as the REM plan below.
+- ~~**Homeostasis**~~ (Done 2026-09-29, 20.7.4.71; Gordon: "the original intent"): the chemistry pinned within five turns in every recorded run (389 turns: dopamine 1.00 from the 10th percentile, oxytocin and serotonin from the 25th, cortisol 0.00 to the 90th), so every state, and every REM feeling, read the same. `EndocrineSystem._settle`: a rise uses only the headroom left, then each hormone moves `BIO.DECAY_RATE` of the way back to rest (redefined from a fixed decrement to that share: default 0.2, ZEN 0.02, LABORATORY 0 frozen, the ENTROPY trait 0.9). A warm stretch levels off (oxytocin ~0.68), quiet turns halve it in ~3 turns, stress is its own state (cortisol ~0.78).
+- ~~**Slash commands before prose checks**~~ (Done 2026-09-29, 20.7.4.71): the chaos lock scored `/mode ADVENTURE` 0.9 on its capitals and refused it, so the end-to-end run never changed mode; the interactive loop sends every line the same way. Commands now route before the pre-flight checks (after death; their own reality-layer lock stays).
+- **Crash recovery** (staged to fix soon, Gordon 2026-09-29): a crashed subsystem is rebooted only in the REM tick, which needs five idle minutes, so a scripted or busy session never recovers; and the checkpoint and the gate's commit are two transactions in one file (a crash between them loses one turn's checkpoint).
 - **REM reflection** (Gordon's calls, 2026-09-29). Today REM drains ATP, clears ROS, reboots, re-probes, forgets, and writes a dream from lore templates that never touch a memory; the Hypervisor asks for "a short, poetic dream built from whatever in the recent context deserves to stay". Once per sleep, only when something was kept since the last one:
   - ~~R1. Feeling at keep time~~ (Done 2026-09-29, 20.7.4.68): the endocrine state is recorded with each memory as it is kept (`memory_meta.feeling_json`), and read into words by `engine/gate/feeling.py` (measured, not the model's guess); `/memory why` says "Felt: close (OXY 0.50)."
   - ~~R2. Reflect~~ (Done 2026-09-29, 20.7.4.69): once per sleep and per zone (with at least two new memories), one call reads what was kept since that zone's last reflection, with how each felt, and writes what it means together, as an engine-built `reflect` nomination through the gate (`reflection.<name>`, `story.reflection.<name>`; receipted `halcyon.reflect`, zoned, forgettable, traceable to its memories; it feels like the average of what it came from).

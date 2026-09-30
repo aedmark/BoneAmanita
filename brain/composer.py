@@ -680,7 +680,11 @@ class PromptComposer:
                     "feelings or situation back to them, and do not offer advice or a plan unless they ask."
                 )
             if somatic_budget.offer_to_carry_load:
-                budget_lines.append("Your partner is carrying a heavy load. Offer to carry part of the burden.")
+                # An offer read as "Would you like me to...?", work handed back (D2b, 2026-09-29).
+                budget_lines.append(
+                    "Your partner has little left to give. Do the next step yourself: give one concrete "
+                    "answer or suggestion, and ask nothing of them this turn."
+                )
             somatic_budget_block = "\n".join(budget_lines) + "\n"
         if out_of_reach := state.get("out_of_reach"):
             somatic_budget_block += (
@@ -736,13 +740,30 @@ class PromptComposer:
         return prompt
 
     @staticmethod
+    def _kept_ago(kept_at, now: float) -> str:
+        """" (kept 3 weeks ago)" once a memory is more than a day old; "" before that, or with no record."""
+        if not isinstance(kept_at, (int, float)):
+            return ""
+        days = (now - kept_at) / 86400
+        if days < 1:
+            return ""
+        if days < 2:
+            return " (kept yesterday)"
+        size, unit = next((s, u) for s, u in ((365, "year"), (30, "month"), (7, "week"), (1, "day")) if days >= s)
+        n = int(days // size)
+        return f" (kept {'a' if n == 1 else n} {unit}{'' if n == 1 else 's'} ago)"
+
+    @staticmethod
     def _recall_block(found: Optional[dict]) -> str:
         """What the model kept through the Halcyon gate, handed back; empty when it kept nothing."""
         if not isinstance(found, dict) or not (found.get("memories") or found.get("facts")):
             return ""
         lines = ["=== WHAT YOU REMEMBER ===",
                  "You chose to keep these. Use them where they bear on this turn; do not recite them."]
-        lines += [f"- {key.removeprefix(STORY)}: {value}" for key, value in found.get("memories", [])]
+        # A kept state ("barely sleeping this week") read a month on as current: past a day, say when.
+        kept_at, now = found.get("kept_at") or {}, time.time()
+        lines += [f"- {key.removeprefix(STORY)}: {value}{PromptComposer._kept_ago(kept_at.get(key), now)}"
+                  for key, value in found.get("memories", [])]
         if found.get("facts"):
             lines.append("Established in the world:")
             lines += [f"- {fact}" for fact in found["facts"]]

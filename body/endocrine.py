@@ -9,6 +9,10 @@ from engine.core import LoreManifest
 from engine.presets import BoneConfig
 from engine.struts import safe_get
 
+# Where each hormone settles with nothing acting on it: the dataclass defaults below.
+REST = {"dopamine": 0.5, "oxytocin": 0.1, "cortisol": 0.0, "serotonin": 0.5, "adrenaline": 0.0, "melatonin": 0.0}
+
+
 @dataclass
 class EndocrineSystem:
     dopamine: float = 0.5
@@ -86,17 +90,11 @@ class EndocrineSystem:
         bio_cfg = safe_get(self.cfg, "BIO", {})
         reward_large = safe_get(bio_cfg, "REWARD_LARGE", 0.2)
         reward_med = safe_get(bio_cfg, "REWARD_MEDIUM", 0.1)
-        decay = safe_get(bio_cfg, "DECAY_RATE", 0.01)
-        self.cortisol = max(0.0, float(self.cortisol) - (decay * 0.5))
-        self.oxytocin = max(0.0, float(self.oxytocin) - (decay * 0.5))
-        self.serotonin = float(self.serotonin) + ((0.5 - float(self.serotonin)) * decay)
-        self.melatonin = max(0.0, float(self.melatonin) - (decay * 0.2))
+        # The fading is homeostasis in metabolize() now; these were fixed decrements too small to matter.
         if feedback.get("STATIC", 0) > 0.6:
             self.cortisol = float(self.cortisol) + (reward_large * stress_mod)
         if feedback.get("INTEGRITY", 0) > 0.8:
             self.dopamine = float(self.dopamine) + reward_med
-        else:
-            self.dopamine = max(0.0, float(self.dopamine) - decay)
         if stamina < 20.0:
             self.cortisol = float(self.cortisol) + (reward_med * stress_mod)
             self.dopamine = max(0.0, float(self.dopamine) - reward_med)
@@ -104,8 +102,6 @@ class EndocrineSystem:
             self.cortisol = float(self.cortisol) + (reward_large * stress_mod)
         if health < 30.0 or feedback.get("STATIC", 0) > 0.8:
             self.adrenaline = float(self.adrenaline) + (reward_large * stress_mod)
-        else:
-            self.adrenaline = max(0.0, float(self.adrenaline) - (decay * 5.0))
         psi = feedback.get("PSI", 0.0)
         chi = feedback.get("CHI", feedback.get("ENTROPY", 0.0))
         valence = feedback.get("VALENCE", 0.0)
@@ -205,6 +201,7 @@ class EndocrineSystem:
         circadian_bias=None,
         semantic_signal=None,
     ) -> Dict[str, Any]:
+        before = {chem: float(getattr(self, chem)) for chem in REST}
         if isinstance(circadian_bias, dict):
             for k, v in circadian_bias.items():
                 attr_name = self._KEY_MAP.get(k) or str(k).lower()
@@ -224,19 +221,22 @@ class EndocrineSystem:
             self._apply_semantic_pressure(semantic_signal)
         self._maintain_homeostasis(social_context)
         glimmer_msg = self.check_for_glimmer(feedback, harvest_hits)
-        for chem in (
-            "dopamine",
-            "oxytocin",
-            "cortisol",
-            "serotonin",
-            "adrenaline",
-            "melatonin",
-        ):
-            setattr(self, chem, self._clamp(getattr(self, chem)))
+        self._settle(before)
         state = self.get_state()
         if glimmer_msg:
             state["glimmer_msg"] = glimmer_msg
         return state
+
+    def _settle(self, before: Dict[str, float]) -> None:
+        """Homeostasis (the original intent; Gordon, 2026-09-29). A rise uses only the headroom left, so
+        sustained warmth levels off below the ceiling; then each hormone moves BIO.DECAY_RATE of the way back
+        to rest. Without it the chemistry pinned within five turns: dopamine and oxytocin at 1.0, cortisol at 0,
+        in every recorded run."""
+        rate = min(0.9, max(0.0, float(safe_get(safe_get(self.cfg, "BIO", {}), "DECAY_RATE", 0.2))))
+        for chem, rest in REST.items():
+            rise = float(getattr(self, chem)) - before[chem]
+            level = before[chem] + (rise * (1.0 - before[chem]) if rise > 0 else rise)
+            setattr(self, chem, self._clamp(level + (rest - level) * rate))
 
     def get_state(self) -> Dict[str, Any]:
         return {

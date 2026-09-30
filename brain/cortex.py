@@ -1048,6 +1048,8 @@ class TheCortex:
         )
         if store is not None and found["memories"]:
             try:
+                meta = store.memory_meta()
+                found["kept_at"] = {k: meta[k]["kept_at"] for k, _ in found["memories"] if k in meta}
                 store.note_recalled([key for key, _ in found["memories"]])
             except Exception as e:
                 if self.events:

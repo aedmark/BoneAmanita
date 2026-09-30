@@ -67,6 +67,7 @@ class SomaticBudget:
         p_u_critical = float(safe_get(cfg, "P_U_CRITICAL", 30.0))
         if p_u < p_u_critical:
             offer_to_carry_load = True
+            closing_question_allowed = False
             reason_parts.append("User effort is critically low")
 
         atp_depleted = float(safe_get(cfg, "ATP_DEPLETED", 20.0))

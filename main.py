@@ -625,11 +625,9 @@ class BoneAmanita:
             if not is_system:
                 if clean_in in ("/flush", "/zen", "[zen]"):
                     return self._execute_zen_flush()
-            if pre_flight_halt := self._pre_flight_checks(
-                user_message, clean_in, is_system
-            ):
-                return pre_flight_halt
-            if not is_system and self.cmd.execute(user_message):
+            # A command is not prose to regulate: the chaos lock refused /mode mid-session (end-to-end run,
+            # 2026-09-29). Death still comes first; commands keep their own reality-layer lock.
+            if not is_system and self.health > 0.0 and self.cmd.execute(user_message):
                 cmd_logs = [e["text"] for e in self.events.flush()]
                 ui_output = (
                     "\n".join(cmd_logs)
@@ -642,6 +640,10 @@ class BoneAmanita:
                     "logs": cmd_logs,
                     "metrics": self.get_metrics(),
                 }
+            if pre_flight_halt := self._pre_flight_checks(
+                user_message, clean_in, is_system
+            ):
+                return pre_flight_halt
             if (
                 not is_system
                 and (gordon := getattr(self.village, "gordon", None))

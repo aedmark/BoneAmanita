@@ -76,6 +76,11 @@ class TestSomaticMeasures(unittest.TestCase):
         respiration, exhaustion, effort = audit_somatic.ARMS["DISENGAGED"]
         budget = audit_somatic.budget_for(respiration, exhaustion, effort)
         self.assertTrue(budget.offer_to_carry_load)
+        # An offer came back as "Would you like me to...?"; a disengaged partner is asked nothing (2026-09-29),
+        # rested or not (flagging exhaustion alone already forbade it).
+        self.assertFalse(budget.closing_question_allowed)
+        rested = audit_somatic.budget_for("RESPIRING", audit_somatic._E_U_RESTED, audit_somatic._P_U_DISENGAGED)
+        self.assertFalse(rested.closing_question_allowed)
 
         ctrl_resp, ctrl_exh, ctrl_effort = audit_somatic.ARMS["CONTROL"]
         control_budget = audit_somatic.budget_for(ctrl_resp, ctrl_exh, ctrl_effort)

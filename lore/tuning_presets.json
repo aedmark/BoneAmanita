@@ -349,7 +349,7 @@
     "REWARD_SMALL": 0.05,
     "REWARD_MEDIUM": 0.1,
     "REWARD_LARGE": 0.15,
-    "DECAY_RATE": 0.01,
+    "DECAY_RATE": 0.2,
     "CORTEX_SENSITIVITY": 0.1,
     "FOCUS_TRIGGERS": [
       "analyze",

@@ -387,7 +387,7 @@ class TestSomaticBudgetReachesThePrompt(PhysicsToPromptCase):
             {}, somatic_budget=self._budget(offer_to_carry_load=True)
         )
         self.assertIn(
-            "Your partner is carrying a heavy load. Offer to carry part of the burden.",
+            "Your partner has little left to give. Do the next step yourself: give one concrete answer or suggestion, and ask nothing of them this turn.",
             prompt,
         )
 

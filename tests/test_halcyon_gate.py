@@ -209,6 +209,36 @@ class TheModelGetsItsMemoriesBack(BoneTestCase):
         receipt = ReceiptLedger.get_instance().for_subsystem("halcyon.recall")[-1]
         self.assertEqual(receipt.result_count, 1)
 
+    def test_an_old_memory_says_when_it_was_kept(self):
+        # A kept state ("barely sleeping this week") read a month on as current.
+        self.turn(f"{PROSE}\n{REMEMBER}")
+        self.turn("The mill is quiet.", "Which way does the river run?")
+        self.assertIn("- river: runs east past the mill\n", self.prompt())
+        db = self.engine.store.connect()
+        try:
+            db.execute("UPDATE memory_meta SET kept_at = kept_at - 21 * 86400 WHERE key='river'")
+        finally:
+            db.close()
+        self.turn("The mill is quiet.", "Which way does the river run?")
+        self.assertIn("- river: runs east past the mill (kept 3 weeks ago)", self.prompt())
+
+    def test_ages_read_plainly(self):
+        from brain.composer import PromptComposer
+
+        now = 1_000_000_000
+        ago = lambda days: PromptComposer._kept_ago(now - days * 86400, now)
+        self.assertEqual([ago(0.5), ago(1.5), ago(3), ago(7), ago(15), ago(40), ago(800)],
+                         ["", " (kept yesterday)", " (kept 3 days ago)", " (kept a week ago)", " (kept 2 weeks ago)",
+                          " (kept a month ago)", " (kept 2 years ago)"])
+        self.assertEqual(PromptComposer._kept_ago(None, now), "")
+
+    def test_the_keeper_is_asked_how_they_are_doing(self):
+        from engine.gate.keeper import PROMPT
+
+        # Six live runs never kept "haven't slept in a week"; asked, it kept 12 of 12 states.
+        self.assertIn("how they are doing lately", PROMPT)
+        self.assertIn("sleep = barely sleeping this week", PROMPT)
+
     def test_every_mode_knows_it_remembers(self):
         # A bare model has no memory; this one does, and two of three live answers denied it.
         for mode in ("ADVENTURE", "CONVERSATION", "CREATIVE", "TECHNICAL"):

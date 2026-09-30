@@ -1,10 +1,14 @@
 """What a memory felt like (REM plan R1): the endocrine state when it was kept, read into words. Measured by
 the engine, not guessed by the model (Gordon, 2026-09-29).
 
-The rest point is EndocrineSystem's defaults; the margins are a first guess, to calibrate on real runs."""
+The rest point is the endocrine system's own. The margins held once homeostasis stopped the chemistry
+pinning (20.7.4.71): a warm stretch reads "close, settled", a stressful one "tense, flat, low"."""
 from __future__ import annotations
 
-REST = {"DOP": 0.5, "OXY": 0.1, "COR": 0.0, "SER": 0.5, "ADR": 0.0, "MEL": 0.0}
+from body.endocrine import REST as _REST
+
+REST = {"DOP": _REST["dopamine"], "OXY": _REST["oxytocin"], "COR": _REST["cortisol"], "SER": _REST["serotonin"],
+        "ADR": _REST["adrenaline"], "MEL": _REST["melatonin"]}
 # (hormone, above or below rest, margin, word)
 READINGS = (
     ("COR", 1, 0.3, "tense"),

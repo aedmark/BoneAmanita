@@ -200,20 +200,18 @@ class BiologyArchitectureTests(BoneTestCase):
         )
 
     def test_circadian_drift_fractional_pull(self):
-        self.endo.melatonin = 0.5
+        # Against the same system without the bias: homeostasis pulls melatonin toward rest either way.
+        import copy
+
+        plain = copy.deepcopy(self.endo)
+        self.endo.melatonin = plain.melatonin = 0.5
         self.endo.metabolize(
             feedback={}, health=100.0, stamina=100.0, circadian_bias={"MEL": 0.3}
         )
-        self.assertLess(
-            self.endo.melatonin,
-            0.7,
-            "[FAIL] Circadian bias administered a flat overdose!",
-        )
-        self.assertGreater(
-            self.endo.melatonin,
-            0.5,
-            "[FAIL] Circadian bias failed to apply fractional pull.",
-        )
+        plain.metabolize(feedback={}, health=100.0, stamina=100.0)
+        lift = self.endo.melatonin - plain.melatonin
+        self.assertLess(lift, 0.3, "[FAIL] Circadian bias administered a flat overdose!")
+        self.assertGreater(lift, 0.0, "[FAIL] Circadian bias failed to apply fractional pull.")
 
 
 if __name__ == "__main__":
