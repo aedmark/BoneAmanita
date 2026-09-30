@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoneAmanita - Biological AI Engine</title>
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --text-color: #d4d4d4;
+            --accent-color: #ff5e5e;
+            --terminal-bg: #1a1a1a;
+            --font-main: 'Courier New', Courier, monospace;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            border-bottom: 1px solid var(--accent-color);
+            padding: 40px 20px;
+            text-align: center;
+        }
+        header h1 {
+            color: var(--accent-color);
+            font-size: 3rem;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+        header p {
+            font-size: 1.2rem;
+            color: #888;
+        }
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        h2 {
+            color: var(--accent-color);
+            border-bottom: 1px dashed var(--accent-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        h3 {
+            color: #fff;
+            margin-top: 30px;
+        }
+        pre {
+            background-color: var(--terminal-bg);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 3px solid var(--accent-color);
+        }
+        code {
+            font-family: var(--font-main);
+            color: #ff9d9d;
+        }
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .mode-card {
+            background-color: var(--terminal-bg);
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+        .mode-card h4 {
+            margin-top: 0;
+            color: var(--accent-color);
+        }
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            color: #555;
+            border-top: 1px solid #333;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>BoneAmanita</h1>
+    <p>A biologically-inspired, mode-shifting AI engine and text adventure.</p>
+    <p><a href="https://github.com/aedmark/BoneAmanita" target="_blank" style="display: inline-block; margin-top: 15px; padding: 10px 20px; border: 1px solid var(--accent-color); border-radius: 5px;">View on GitHub</a></p>
+</header>
+
+<main>
+    <section id="about">
+        <h2>What is BoneAmanita?</h2>
+        <p>BoneAmanita is not a digital assistant. It is a localized, biological intelligence. It doesn't use sycophantic AI boilerplate, and it doesn't just process text—it simulates a metabolic economy.</p>
+        <p>Driven by internal physical metrics like <strong>Voltage</strong>, <strong>Exhaustion</strong>, and <strong>ATP</strong>, the engine dynamically shifts its behavior and rhythm based on its simulated state. It maintains a permanent, evolving memory via an SQLite database and semantic vector embeddings (the Halcyon integration), allowing it to remember what matters across sessions without you having to remind it.</p>
+    </section>
+
+    <section id="modes">
+        <h2>The Four Modes</h2>
+        <p>The engine's worldview shifts drastically depending on the active mode. You can swap between them at any time to serve different needs.</p>
+        <div class="mode-grid">
+            <div class="mode-card">
+                <h4>CONVERSATION</h4>
+                <p>A candid friend. Authentic, direct, and grounded. It answers what you said without offering unsolicited advice or acting like a servile narrator. It speaks as "I".</p>
+            </div>
+            <div class="mode-card">
+                <h4>ADVENTURE</h4>
+                <p>The curator of a reactive environment. A strict, Infocom-style text adventure parser. It describes the physical world, points of interest, and exits with objective, clinical distance.</p>
+            </div>
+            <div class="mode-card">
+                <h4>CREATIVE</h4>
+                <p>A manic ideation engine. High-energy, abstract, and fast-paced. It runs "HOT" by design to help you brainstorm, break logic blocks, and explore lateral thinking without constraints.</p>
+            </div>
+            <div class="mode-card">
+                <h4>TECHNICAL</h4>
+                <p>The VSL Hypervisor. Clinical, precise, and highly analytical. This is the only mode that will explicitly discuss its own internal metrics, provide code review, and talk architecture.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="primer">
+        <h2>Getting Started: A Primer Guide</h2>
+        <p>BoneAmanita is designed to run locally, harnessing open-weights models through Ollama.</p>
+
+        <h3>1. Prerequisites</h3>
+        <ul>
+            <li><strong>Python 3.14.7</strong> (The required system interpreter)</li>
+            <li><strong>Ollama</strong> running locally on <code>127.0.0.1:11434</code></li>
+            <li>Models pulled in Ollama: <code>gemma4:12b</code> (default chat) and <code>nomic-embed-text:latest</code> (for semantic memory)</li>
+        </ul>
+
+        <h3>2. Installation</h3>
+        <p>Set up your isolated environment and install the required dependencies:</p>
+        <pre><code>python3.14 -m venv .venv
+source .venv/bin/activate
+pip install pytest numpy faiss-cpu requests markdown
+pip install 'ordvec>=0.5.0'</code></pre>
+
+        <h3>3. Booting the Engine</h3>
+        <p>To start your session, run the main entry point:</p>
+        <pre><code>python main.py</code></pre>
+        <p>On your very first run, a configuration wizard will launch to set up your <code>config.json</code>.</p>
+    </section>
+
+    <section id="commands">
+        <h2>Essential Commands</h2>
+        <p>While interacting with the engine, you can issue direct commands prefixed with a slash:</p>
+        <ul>
+            <li><code>/mode [NAME]</code> - Switch the engine's current mode (e.g., <code>/mode CREATIVE</code>).</li>
+            <li><code>/memory [word]</code> - View the memories currently held in the Halcyon store (visible only in TECHNICAL mode).</li>
+            <li><code>/tune [key] [value]</code> - Adjust engine configuration variables live.</li>
+            <li><code>/export [path]</code> - Export the current adventure state to a FractalOS compatible file.</li>
+            <li><code>/diag</code> - View a receipt of the systems and decisions made in the previous turn.</li>
+        </ul>
+        <p>The engine learns through interaction. If a session crashes, the atomic database ensures nothing is lost. If an interaction goes poorly, remember: BoneAmanita learns from trauma, leaving epigenetic scars that influence future generations via the Oroboros lineage.</p>
+    </section>
+</main>
+
+<footer>
+    <p>&copy; 2026 BoneAmanita Project. S.L.A.S.H. Council.</p>
+</footer>
+
+</body>
+</html>

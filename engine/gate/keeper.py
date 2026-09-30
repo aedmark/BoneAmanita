@@ -15,10 +15,10 @@ from engine.receipts import issue as issue_receipt
 logger = logging.getLogger("bone")
 
 PROMPT = """You keep the memory of a conversation partner. The conversation itself is forgotten between sessions; only what you keep comes back.
-Read the person's latest message. If it tells you something worth knowing later (a name, a preference, a fact about their life or work, how they are doing lately, a decision, something established in the story), answer with ONE line: a short name for what it is, " = ", and what to remember in a few words. For example:
+Read the person's latest message. If it tells you something worth knowing later (a name, a preference, a fact about their life or work, how they are doing lately, a decision, something established in the story, or a creative idea), answer with ONE line: a short name for what it is, " = ", and what to remember in a few words. For example:
 sister_name = Odalys, visiting next week
 sleep = barely sleeping this week
-If it changes or corrects something already kept, reuse that name. A new fact of the same kind is not a change: give it its own name that says what it is (captain_backstory, not plot_point again), so the old one is not lost. Never keep a real password, key, token, or card or ID number; a password in a story is fine. If there is nothing new worth keeping, answer with exactly: NONE
+If it changes or corrects something already kept, reuse that name. A new fact of the same kind is not a change: give it its own highly specific name (e.g., 'captain_backstory', 'city_infrastructure_ideas'). NEVER use generic names like 'plot_point', 'idea', 'detail', or 'fact', because generic names overwrite each other. ALWAYS make the key specific to the actual content. Never keep a real password, key, token, or card or ID number; a password in a story is fine. If there is nothing new worth keeping, answer with exactly: NONE
 
 Already kept:
 {kept}
