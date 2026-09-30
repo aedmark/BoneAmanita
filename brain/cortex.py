@@ -755,7 +755,7 @@ class TheCortex:
             if attempt > 0:
                 phys_state["is_steering_retry"] = True
             val_res = {"valid": False}
-            rejected_by, reject_detail = "validator", ""
+            rejected_by, reject_detail, gate_txt = "validator", "", ""
             raw_resp = self.llm.generate(final_prompt, llm_params)
             from engine.receipts import issue as issue_receipt
 
@@ -889,20 +889,24 @@ class TheCortex:
                     else 2.0
                 )
                 self.svc.bio.mito.adjust_atp(-penalty, lbl)
-            if attempt == cognitive_retries - 1 and rejected_by == "gatekeeper":
-                # A style crime on the last draft costs its sentence, not the whole reply.
-                salvaged = gk.salvage() if hasattr(gk, "salvage") else None
-                val_res = self.validator.validate(salvaged[0], full_state) if salvaged else {"valid": False}
-                if val_res.get("valid"):
+            if attempt == cognitive_retries - 1 and rejected_by in ("gatekeeper", "validator"):
+                # A style crime on the last draft (the only one below 20 ATP) costs its sentence, not the reply.
+                text, cut = (gate_txt, []) if rejected_by == "validator" else (None, [])
+                if rejected_by == "gatekeeper" and (salvaged := gk.salvage() if hasattr(gk, "salvage") else None):
+                    text, cut = salvaged
+                kept = self.validator.salvage(text, full_state) if text else None
+                if kept:
+                    val_res, more = kept
+                    cut += more
                     final_output = val_res["content"]
                     extracted_logs = val_res.get("meta_logs", [])
                     self.last_model_raw = model_raw
                     issue_receipt(
                         "cortex.salvage",
                         "cut",
-                        result_count=len(salvaged[1]),
-                        inputs={"attempt": attempt + 1},
-                        detail=" | ".join(salvaged[1])[:300],
+                        result_count=len(cut),
+                        inputs={"attempt": attempt + 1, "by": rejected_by},
+                        detail=" | ".join(cut)[:300],
                     )
                     break
             if attempt == cognitive_retries - 1:
@@ -1095,6 +1099,10 @@ class TheCortex:
     def _strip_nominations(text: str) -> str:
         """Any NOMINATE line, well formed or not, is for the gate; a malformed one must not reach the person either."""
         return "\n".join(l for l in str(text or "").splitlines() if not l.strip().startswith("NOMINATE")).strip()
+
+    @staticmethod
+    def _str_or_none(value):
+        return value if isinstance(value, str) else None
 
     def _pause_line(self) -> str:
         """What the person sees when every draft was rejected: a short shared pause, never the engine's state.
@@ -1350,6 +1358,7 @@ class TheCortex:
             "somatic_budget": somatic_budget,
             "out_of_reach": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "out_of_reach", None),
             "running_on_empty": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "running_on_empty", False) is True,
+            "file_asked": self._str_or_none(getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "file_asked", None)),
             "village": village_data,
             "user_profile": {"name": "Traveler"},
             "vsl": self.consultant.state.__dict__

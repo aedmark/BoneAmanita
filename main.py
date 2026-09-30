@@ -380,6 +380,7 @@ class BoneAmanita:
 
     out_of_reach = None
     running_on_empty = False
+    file_asked = None
     _capability_check = None
 
     def _capabilities(self):
@@ -522,7 +523,7 @@ class BoneAmanita:
         self, user_message: str, clean_in: str, is_system: bool
     ) -> Optional[Dict[str, Any]]:
         active_phys = self.active_physics
-        self.running_on_empty = False
+        self.running_on_empty, self.file_asked = False, None
         if self.health <= 0.0:
             return self.trigger_death(active_phys)
         grammar_rules = RealityLayer.get_rules(
@@ -536,6 +537,11 @@ class BoneAmanita:
         if is_system:
             return self._halt_if_ethically_audited()
         self.out_of_reach = self._capabilities().detect(user_message, getattr(self.cortex, "active_mode", ""))
+        # The persona's file rule sits mid-prompt; live, a named file was saved 2 times in 3.
+        if getattr(self.cortex, "active_mode", "") == "TECHNICAL":
+            from mechanics.tools import SubstrateLedger
+
+            self.file_asked = SubstrateLedger.asked_to_save(user_message)
         if self.out_of_reach:
             self.events.log(f"Out of reach ({self.out_of_reach.name}): '{self.out_of_reach.phrase}'", "SYS")
         if any(prion in clean_in for prion in self._SEMANTIC_PRIONS):

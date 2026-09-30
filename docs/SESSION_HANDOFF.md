@@ -32,39 +32,32 @@ everything the engine learns or needs to resume (ROADMAP Track E).
 - **Done, the end-to-end run** (write-up below, "The end-to-end run, 20.7.4.71"): 140 turns across five
   arms, 0 blank replies, 0 crashes, modes switch, zones hold, the keeper keeps states, every arm reflects
   and dreams. It found TECHNICAL starving and refusing the person, and the validator cutting code answers.
+- **Done, 20.7.4.72:** the engine's energy (write-up below). A written file was charged twice at 0.02 ATP
+  a character and the parity gate then refused the person. Gordon's calls: a spent engine (ATP under 5)
+  answers briefly and asks gently for rest or something simpler; a file is one fixed action (1.0 ATP), its
+  text already paid for as generated tokens.
+- **Done, 20.7.4.73: code in replies** (write-up below, "Code in replies"). Code is the answer, not prose
+  to police: code blocks allowed, style rules read prose only, the Title Case rule case-sensitive again,
+  a repair keeps the rest of the reply. Live, TECHNICAL: 7 of 7 asks answered with their code, no redrafts
+  (the regex question included); at 0 ATP, 4 of 4 a short answer, a few lines of code, and a gentle ask.
+  Then Gordon's two calls (2026-09-30): the validator's objection on the last draft (the only one below 20
+  ATP) cuts its sentence, as the gatekeeper's does; a named file gets a turn directive (live 8 of 8 saved,
+  was 2 of 3). And two rules narrowed: a stage direction is a body action ("*sighs*", "(leaning back)"),
+  not any aside or *emphasis*; a stutter holds no word, so "Hey." to "hey" is a reply. D2b's first drafts,
+  re-validated: 230 to 193 of 960 rejected (205 to 162 on the retake); the rest are the style rules proper.
 - **Next, in order:**
-  1. **Done (uncommitted):** the engine's energy, from the run's TECHNICAL collapse. File forging was
-     charged twice (the `SUBSTRATE_FORGED` event and the cortex) at 0.02 ATP a character, and at 0 ATP the
-     parity gate refused four of the person's questions ("Simplify your architecture"). Gordon's calls:
-     - A spent engine answers briefly and asks gently for rest or something simpler. `main.py`
-       `running_on_empty` (ATP under `EMPTY_ATP` 5, the mitochondria's NECROSIS line; the old test was the
-       message's length at 0.02 a character, just as arbitrary) replaces the halt; the composer adds
-       `RUNNING_ON_EMPTY` and the cortex caps the reply at `EMPTY_MAX_TOKENS` (160).
-     - No per-character cost: a file is one fixed action, `ATP_COST_PER_FILE` 1.0 (like Metabolic Burn),
-       charged once by the per-file event (which also covers `/allow`). Its text is already paid for as
-       generated tokens (`LLM Token Generation`, 0.025 a token of the whole reply). `MAX_ATP_PER_FILE`, a
-       size cap that only existed through the per-character price, is gone.
-     - Tests: `tests/test_energy_budget.py` (4; each of the four source changes, reverted alone, fails at
-       least one); `test_gate_1_parity_starvation` removed; `test_the_parity_gate_lets_go_at_atp_zero`
-       became `test_atp_zero_answers_and_recovers`. Suite 973 passed, 5 skipped.
-     - Live probe (gemma4:12b, TECHNICAL, ATP 0 before each ask): "Use `sys.argv`... start with
-       `sys.argv[1]`. Can we take a break or move to something simpler for now?" Two other asks showed a
-       pause line ("One thing at a time.") though the model answered well: item 2's fence rule rejected
-       the draft, and at low energy the somatic budget allows no retry.
-  2. The validator on code: it refuses markdown fences for any snippet (demands `<write_file>`), and the
-     gatekeeper reads a `#` comment inside code as a TITLE_CASE header; together they turned a regex
-     question into "Let's take a moment with that." This is D2b's 20-33% reject rate, made concrete, and it
-     now hides the running-on-empty reply too.
-  3. The ops keyword gate (`phases/cognitive.py`, POINT_OF_NO_RETURN) holds any mention of "deploy" until
+  1. The ops keyword gate (`phases/cognitive.py`, POINT_OF_NO_RETURN) holds any mention of "deploy" until
      a literal CONSENT; it held "our deploy window is Thursdays at 2pm" in TECHNICAL, where deploy talk is
      normal. It should react to a request to do something irreversible, not to the word.
-  4. A command's reply includes unrelated queued event logs (a pacemaker line in `/mode`'s output):
+  2. A command's reply includes unrelated queued event logs (a pacemaker line in `/mode`'s output):
      `process_turn` flushes every event into the command UI.
-  5. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
+  3. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
      only in the REM tick; the checkpoint and the gate's commit are two transactions).
-- **To discuss (from the run):** written code lands in `output/` and leaves blank gaps in the reply; the
-  keeper reuses one key (`plot_point` overwritten four times in CREATIVE); CREATIVE's length, a bulleted
-  list, and pronoun drift; the crucible HOT through all of CREATIVE.
+- **To discuss:**
+  - Noticed, not investigated: the TECHNICAL prompt carries "ALIGNMENT: You are the Conversationalist"
+    under its "SYSTEM KERNEL" header.
+  - From the run: the keeper reuses one key (`plot_point` overwritten four times in CREATIVE); CREATIVE's
+    length, a bulleted list, and pronoun drift; the crucible HOT through all of CREATIVE.
 - **Worth knowing:** zones scope recall, not the live conversation, which carries across modes by design:
   back in CONVERSATION, "What's the vault password?" was answered from the dialogue ("Brannoc told you it
   is moonlight"). If that should change, it is a separate decision.
@@ -72,7 +65,7 @@ everything the engine learns or needs to resume (ROADMAP Track E).
   polish.
 - **Test runs** go under `systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0` (a MagicMock
   runaway once took the session down), after `reset.sh`, and never while a background engine run is using
-  `saves/`. Full suite 970 passed, 5 skipped.
+  `saves/`. Full suite 996 passed, 5 skipped.
 - **Historical note:** the 09-25 and 09-26 run tables below counted the dialogue entry, which is never
   empty; counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies (write-up:
   `docs/bonereport.html`).
@@ -814,6 +807,72 @@ in `/sleep` and a summary row. Exit 0 under a 10 GB cap.
   last survived. The crucible read HOT all 30 turns (voltage 11 to 14); not investigated.
 - **Seen again:** the deploy hold (MIXED turn 17, "Quick one: our deploy window is Thursdays at 2pm." got
   the Stage Manager's silence and a consent check) and the pacemaker line in `/mode CONVERSATION`'s reply.
+
+**The engine's energy (2026-09-29, 20.7.4.72).** From the run's TECHNICAL collapse. A written file was
+charged twice (the `SUBSTRATE_FORGED` event and the cortex) at 0.02 ATP a character, and at 0 ATP the parity
+gate refused four of the person's questions ("Simplify your architecture"). Gordon's calls:
+- A spent engine answers briefly and asks gently for rest or something simpler. `main.py`
+  `running_on_empty` (ATP under `EMPTY_ATP` 5, the mitochondria's NECROSIS line; the old test was the
+  message's length at 0.02 a character, just as arbitrary) replaces the halt; the composer adds
+  `RUNNING_ON_EMPTY` and the cortex caps the reply at `EMPTY_MAX_TOKENS` (160).
+- No per-character cost: a file is one fixed action, `ATP_COST_PER_FILE` 1.0 (like Metabolic Burn), charged
+  once by the per-file event (which also covers `/allow`). Its text is already paid for as generated tokens
+  (`LLM Token Generation`, 0.025 a token of the whole reply). `MAX_ATP_PER_FILE`, a size cap that only
+  existed through the per-character price, is gone.
+- Tests: `tests/test_energy_budget.py` (4; each source change reverted alone fails one);
+  `test_gate_1_parity_starvation` removed; the halt-at-zero test now expects an answer and recovery.
+
+**Code in replies (2026-09-29 to 09-30, 20.7.4.73).** Gordon: fix the validator. Code is the answer, not prose to
+police (`engine/prose.py`: `mask_code` blanks fenced and inline code, same length and lines, so offsets hold).
+- The validator refused any code block ("You used markdown (```) instead of the <write_file> protocol"),
+  though the TECHNICAL persona asks for "Markdown code blocks when necessary" and no prompt mentions
+  `<write_file>`: every file in the run was written by a second draft, which is why the person saw gaps
+  where the code had been. The rule is gone; TECHNICAL's style guide now says to use `<write_file>` only
+  when asked to create or save a file.
+- Style rules read prose only: banned phrases and patterns (validator and gatekeeper), the stage-direction
+  check (`*` in `[^"]*"|[^ ]+` read as *sighs*, found by the live probe after the first fix), the
+  closing-question check, and the per-line scrubs (`===` in JavaScript is a scaffold leak, `MAX = 10` an
+  internals line). The sentence cap never cuts inside a code block.
+- Both compiled the style patterns case-blind, so TITLE_CASE_HEADERS matched any `#` line, a Python
+  comment included. Every letter pattern carries `(?i)` itself; the flag is gone.
+- A repair (KEEP_TAIL, STRIP_PREFIX) replaced the whole reply with the rest of its first line: "While that
+  works, a Counter is simpler.\n\nIt counts in one pass." lost its second paragraph. It now rewrites only
+  the matched line. Blank runs where a file block was lifted close to one line (code keeps its own).
+- Running on empty, reworded after the probe (full code blocks hit the 160-token cap mid-line and lost the
+  ask): "one or two sentences, and at most a line or two of code. End by asking...".
+- Tests: `tests/test_code_in_replies.py` (10); each source change reverted alone fails one (the case-blind
+  flag needed a sharper case). Suite 991 passed, 5 skipped with the two fixes below.
+- Live (gemma4:12b, TECHNICAL, fresh session): the module, the dataclass, the regex fix, the top ten, all
+  with their code, no redrafts. At 0 ATP: "`top_paths = Counter(e.path for e in self.entries).most_common(10)`
+  ... Do you want to take a break or try something simpler for now?"
+- Gordon's questions after the probe (2026-09-30), answered with data:
+  - Hard or soft rejections? Soft (Gordon: soft is as intended, hard would be far too strict). A rejected
+    draft goes back with its reasons; a style crime on the last draft costs its sentence; a pause line only
+    if that fails. In the run, outside TECHNICAL: 33 of 107 turns had a first draft rejected, 9 salvaged,
+    1 pause line shown. D2b's 20-33% counts first drafts. The hard edge: below 20 ATP the budget allows one
+    draft, and a validator objection went straight to a pause line. Now `ResponseValidator.salvage` cuts the
+    sentence `_offense_at` finds (banned phrase, pattern, stage direction, closing question), at most half
+    of them, as `TheGatekeeper.salvage` does, and the cortex runs it after the gatekeeper's
+    (`tests/test_last_draft_salvage.py`, 4).
+  - The file that was not saved: not the interface (the tag is extracted, queued, written, charged 1) and
+    the line reaches the prompt; the model followed it 2 times in 3. A named file (`SubstrateLedger
+    .asked_to_save`: a file name and a save or edit verb, no negation) now adds SAVE A FILE to the turn in
+    TECHNICAL (`tests/test_save_file_directive.py`, 4). Live, two fresh sessions: 8 of 8 saved, each with a
+    sentence on what is in it; no pause lines.
+  - Cap the energy per turn? No: a code-heavy TECHNICAL session (8 turns) ran 60 to 33.7 (STARTING_ATP is
+    60 by design), -3.3 a turn: generated tokens -45, Metabolic Burn -31 (already capped per turn,
+    `MAX_SAFE_BURN`), tax -12, two files -2; Symbiotic Yield +33, homeostasis +21, silence +8. About 12
+    turns of steady code to reach 20, where Emergency Vagus Support adds 15; the conversational arms of the
+    run held 92 to 99. The cost tracks the work.
+- Two rules narrowed (Gordon, 2026-09-30). `STAGE_DIRECTION` counted any parenthetical of three or more
+  characters and any `*emphasis*` in every mode but ADVENTURE; it now counts a body action: a gesture verb
+  bare or inflected ("*sigh*", "(laughs)"), a motion verb only inflected ("*leans back*", "(staring)", so
+  "(look at line 3)" is prose), "a beat", "a long pause", with "looks like", "stands for" and "turns out"
+  excluded. The stutter check failed any reply under 5 characters ("Hey." to "hey"); a stutter now holds no
+  word ("...", "-"), `VALIDATOR_STUTTER_LENGTH` 1. `tests/test_stage_and_stutter.py` (5; each change
+  reverted alone fails one). D2b's saved first drafts re-validated: 230 to 193 of 960 (gemma4:12b 123 to
+  115, e4b 107 to 78), the retake 205 to 162. What is left: negative comparisons, "it sounds like you", a
+  closing question to a flagging partner, narrating their state, "the weight of".
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

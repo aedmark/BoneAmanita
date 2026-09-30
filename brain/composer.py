@@ -14,7 +14,8 @@ from engine.gate.recall import STORY
 from engine.receipts import issue as issue_receipt
 from mechanics.projector import is_system_label
 from engine.struts import safe_get, ux, ux_format
-from body.somatic_metrics import STAGE_DIRECTION, trim_to_sentence_cap
+from body.somatic_metrics import STAGE_DIRECTION, WORD, trim_to_sentence_cap
+from engine.prose import close_gaps, in_code, mask_code
 
 
 class SynapseError(Exception):
@@ -467,8 +468,9 @@ class PromptComposer:
         "AUTOPHAGY",
     )
     RUNNING_ON_EMPTY = (
-        "=== RUNNING ON EMPTY ===\nYou are nearly out of energy. Answer in one or two sentences. Then ask, gently "
-        "and plainly, for a rest or for something simpler for now. Do not describe your body or your systems.\n"
+        "=== RUNNING ON EMPTY ===\nYou are nearly out of energy. Give a brief answer: one or two sentences, and at "
+        "most a line or two of code. End by asking, gently and plainly, for a rest or for something simpler for now. "
+        "Do not describe your body or your systems.\n"
     )
 
     def __init__(self, lore_ref, config_ref=None):
@@ -692,6 +694,11 @@ class PromptComposer:
             somatic_budget_block = "\n".join(budget_lines) + "\n"
         if state.get("running_on_empty"):
             somatic_budget_block += self.RUNNING_ON_EMPTY
+        if file_asked := state.get("file_asked"):
+            somatic_budget_block += (
+                f"=== SAVE A FILE ===\nThey asked for {file_asked}. Write the whole file inside "
+                f'<write_file path="{file_asked}">...</write_file>; it is saved for them. Say in a sentence what is in it.\n'
+            )
         if out_of_reach := state.get("out_of_reach"):
             somatic_budget_block += (
                 f"=== OUT OF REACH ===\nThey asked for something you cannot do. {out_of_reach.limit} "
@@ -1144,7 +1151,7 @@ class ResponseValidator:
         self.compiled_patterns = []
         for p in self.regex_patterns:
             if regex_str := p.get("regex", ""):
-                self.compiled_patterns.append((re.compile(regex_str, re.IGNORECASE), p))
+                self.compiled_patterns.append((re.compile(regex_str), p))
         self.rejection_pool = crimes.get("REJECTIONS", ["[System format rejected.]"])
         json_patterns = crimes.get("SCRUB_PATTERNS", [])
         self.scrub_patterns = [
@@ -1178,6 +1185,49 @@ class ResponseValidator:
             r'<write_file\s+path=["\'](.*?)["\']\s*>(.*?)</write_file>',
             re.DOTALL | re.IGNORECASE,
         )
+
+    @staticmethod
+    def _applies(pattern: Dict, mode: str) -> bool:
+        if str(mode).upper() in pattern.get("skip_modes", []):
+            return False
+        return not (mode == "TECHNICAL" and pattern.get("name") in ("META_AI_TALK", "CUSTOMER_SERVICE_GREETING", "LAZY_TRIPLET"))
+
+    def _offense_at(self, text: str, state: Dict) -> Optional[int]:
+        """Where the first thing validate() rejects starts in text, or None if it is not in one sentence."""
+        mode = state.get("meta", {}).get("active_mode", "ADVENTURE")
+        prose, low = mask_code(text), text.lower()
+        hits = []
+        if self._banned_regex:
+            hits += [m.start() for m in self._banned_regex.finditer(prose)
+                     if not (mode == "TECHNICAL" and any(m.group(0).lower() in a and a in low for a in self._TECH_ALLOWED))]
+        hits += [m.start() for reg, p in self.compiled_patterns
+                 if not p.get("action") and self._applies(p, mode) and (m := reg.search(prose))]
+        budget = state.get("somatic_budget")
+        if budget and budget.forbid_body_narration and (m := STAGE_DIRECTION.search(prose)):
+            hits.append(m.start())
+        if budget and not budget.closing_question_allowed and "?" in prose.rstrip()[-15:]:
+            hits.append(prose.rstrip().rfind("?"))
+        return min(hits) if hits else None
+
+    def salvage(self, text: str, state: Dict, max_cut_share: float = 0.5):
+        """(verdict, cut sentences) for text with each sentence validate() rejects cut, or None if that guts it.
+
+        The last draft's fallback, as the gatekeeper's: a style crime costs its sentence, not the reply.
+        """
+        from physics.filters import _SENTENCE_END, _sentence_around, _tidy
+
+        total = sum(1 for part in _SENTENCE_END.split(mask_code(text)) if part.strip())
+        cut = []
+        while not (verdict := self.validate(text, state)).get("valid"):
+            start = self._offense_at(text, state)
+            if start is None or len(cut) + 1 > max_cut_share * total:
+                return None
+            a, b = _sentence_around(text, start)
+            cut.append(text[a:b].strip())
+            text = _tidy(text[:a] + text[b:])
+            if not text:
+                return None
+        return verdict, cut
 
     def _generate_dynamic_rejection(self, trigger: str) -> str:
         template = random.choice(self.rejection_pool)
@@ -1217,9 +1267,10 @@ class ResponseValidator:
         clean_lines = []
         bracket_pat = re.compile(r"^\[[A-Z0-9_ -]+\]$")
         assign_pat = re.compile(r"^[A-Z_]+\s*=\s*[0-9./]+$")
-        for line in clean_text.splitlines():
+        lines = clean_text.splitlines()
+        for line, code in zip(lines, in_code(lines)):
             sl = line.strip()
-            if not sl:
+            if not sl or code:
                 clean_lines.append(line)
                 continue
             if self._meta_regex and self._meta_regex.search(sl):
@@ -1229,11 +1280,11 @@ class ResponseValidator:
             if sl == "[]" or bracket_pat.match(sl) or assign_pat.match(sl):
                 continue
             clean_lines.append(line)
-        sanitized_response = "\n".join(clean_lines).strip()
+        sanitized_response = close_gaps("\n".join(clean_lines)).strip()
         low_resp, errors_found = sanitized_response.lower(), []
         primary_replacement = None
         if self._banned_regex:
-            for match in self._banned_regex.finditer(sanitized_response):
+            for match in self._banned_regex.finditer(mask_code(sanitized_response)):
                 phrase = match.group(0).lower()
                 if active_mode == "TECHNICAL" and any(
                     phrase in a and a in low_resp for a in self._TECH_ALLOWED
@@ -1242,51 +1293,36 @@ class ResponseValidator:
                 if not primary_replacement:
                     primary_replacement = self._generate_dynamic_rejection(phrase)
                 errors_found.append(f"BANNED PHRASE: '{phrase.upper()}'")
-
-            if "```" in sanitized_response:
-                errors_found.append(
-                    'CRITICAL: You used markdown (```) instead of the <write_file> protocol. Rewrite using <write_file path="...">.'
-                )
-                if not primary_replacement:
-                    primary_replacement = self._generate_dynamic_rejection(
-                        "MARKDOWN_DETECTED"
-                    )
         budget = _state.get("somatic_budget")
-        if budget and not budget.closing_question_allowed and "?" in sanitized_response[-15:]:
+        prose = mask_code(sanitized_response)
+        if budget and not budget.closing_question_allowed and "?" in prose.rstrip()[-15:]:
             if not primary_replacement:
                 primary_replacement = f"{self._generate_dynamic_rejection('QUESTION_ASKED')}{ux('brain_strings', 'val_gordon_question', '')}"
             errors_found.append(
                 "DO NOT END YOUR TURN WITH A QUESTION. The user is flagging."
             )
             
-        if budget and budget.forbid_body_narration and STAGE_DIRECTION.search(sanitized_response):
+        if budget and budget.forbid_body_narration and STAGE_DIRECTION.search(prose):
             if not primary_replacement:
                 primary_replacement = self._generate_dynamic_rejection('BODY_NARRATION')
             errors_found.append(
                 "DO NOT NARRATE ACTIONS OR USE STAGE DIRECTIONS (e.g. *sighs*, *looks away*). Speak only the words."
             )
         for compiled_reg, p in self.compiled_patterns:
-            if str(active_mode).upper() in p.get("skip_modes", []):
+            if not self._applies(p, active_mode):
                 continue
-            if active_mode == "TECHNICAL" and p.get("name") in [
-                "META_AI_TALK",
-                "CUSTOMER_SERVICE_GREETING",
-                "LAZY_TRIPLET",
-            ]:
-                continue
-            if match := compiled_reg.search(sanitized_response):
+            if match := compiled_reg.search(mask_code(sanitized_response)):
                 action = p.get("action")
+                # A repair rewrites the matched line; the rest of the reply stays (it used to be dropped).
+                s = sanitized_response
                 if action == "KEEP_TAIL" and (idx := match.lastindex) is not None:
-                    val = match.group(idx).strip()
-                    sanitized_response = (val[0].upper() + val[1:]) if val else ""
+                    val = s[match.start(idx):match.end(idx)].strip()
+                    sanitized_response = s[:match.start()] + (val[:1].upper() + val[1:]) + s[match.end():]
                     continue
                 if action == "STRIP_PREFIX" and len(match.groups()) >= 3:
-                    combined = (
-                        f"{match.group(1).strip()} {match.group(3).strip()}".strip()
-                    )
-                    sanitized_response = (
-                        (combined[0].upper() + combined[1:]) if combined else ""
-                    )
+                    head, tail = s[match.start(1):match.end(1)].strip(), s[match.start(3):match.end(3)].strip()
+                    combined = f"{head} {tail}".strip()
+                    sanitized_response = s[:match.start()] + (combined[:1].upper() + combined[1:]) + s[match.end():]
                     continue
                 error_msg = p.get("error_msg", "Cursed syntax detected.")
                 if not primary_replacement:
@@ -1314,8 +1350,10 @@ class ResponseValidator:
                 "meta_logs": extracted_meta_logs,
             }
         c_cfg = safe_get(self.cfg, "CORTEX", {})
-        stutter_len = int(safe_get(c_cfg, "VALIDATOR_STUTTER_LENGTH", 5))
-        if len(sanitized_response.strip()) < stutter_len and not extracted_meta_logs:
+        stutter_len = int(safe_get(c_cfg, "VALIDATOR_STUTTER_LENGTH", 1))
+        # A stutter holds no word ("...", "-"); "Hey." to "hey" is a whole reply (D2b, 2026-09-30).
+        stutter = not WORD.search(sanitized_response) or len(sanitized_response.strip()) < stutter_len
+        if stutter and not extracted_meta_logs:
             self.last_failed_attempt = response
             self.last_feedback = "RESPONSE TOO SHORT. STUTTER."
             return {

@@ -1,13 +1,26 @@
 import re
 
+from engine.prose import mask_code
+
 WORD = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
 SENTENCE_END = re.compile(r"(?<=[.!?])[\"')\]]*\s+(?![a-z])|\n+")
 ADJ_SUFFIX = re.compile(
     r"(?:ous|ful|ive|al|ic|less|able|ible|ish|y)$", re.IGNORECASE
 )
 
+# A stage direction is a body action, not any aside: "(like this)" and *emphasis* are prose (2026-09-30).
+# Verbs that are only ever gestures count bare ("*sigh*"); the rest need a gesture's form ("*leans back*"),
+# so "(look at line 3)", "(stands for ...)" and "(turns out ...)" stay prose.
+_GESTURE = r"sigh|shrug|nod|laugh|grin|smil|wink|yawn|gasp|chuckl|groan|sob|cough|smirk|winc|frown|exhal|inhal|whisper|murmur"
+_MOTION = (r"look|glanc|lean|wait|turn|tilt|rub|tap|fold|cross|shift|rais|lower|clear|star(?=e|ing)|gaz|stretch|swallow|paus"
+           r"|hesitat|blink|breath|sit|stand|drum|scratch|settl|nudg|step")
+_INFLECTED = r"(?:[bdgnpt]?(?:ed|ing)|e?s|e[sd])"
+_ACTION = (rf"(?:\w+ly\s+)?(?:(?:i|he|she|they|we|it)\s+)?"
+           rf"(?:(?:{_GESTURE})(?:{_INFLECTED}|e)?|(?:{_MOTION}){_INFLECTED}(?!\s+(?:like|for|to be)\b)"
+           rf"(?!(?<=turns)\s+out\b)(?!(?<=turned)\s+out\b)"
+           rf"|a\s+(?:long\s+|short\s+)?(?:beat|pause|sigh|silence)|silence)\b")
 STAGE_DIRECTION = re.compile(
-    r"\([^)]{3,}\)|(?<!\*)\*(?!\*)[^*\n]{3,}\*(?!\*)|<(?:pause|sigh|exhale|inhale)[^>]*>",
+    rf"\(\s*{_ACTION}[^)]*\)|(?<!\*)\*(?!\*)\s*{_ACTION}[^*\n]*\*(?!\*)|<(?:pause|sigh|exhale|inhale)[^>]*>",
     re.IGNORECASE,
 )
 BREATH_WORDS = frozenset(
@@ -121,7 +134,8 @@ def trim_to_sentence_cap(text: str, cap: int) -> str:
     if cap <= 0:
         return ""
 
-    matches = list(SENTENCE_END.finditer(text))
+    prose = mask_code(text)  # a line of code is not a sentence; never cut inside a block
+    matches = list(SENTENCE_END.finditer(prose))
 
     pieces = []
     last_idx = 0
@@ -129,7 +143,7 @@ def trim_to_sentence_cap(text: str, cap: int) -> str:
     
     for match in matches:
         start, end = match.span()
-        segment = text[last_idx:start]
+        segment = prose[last_idx:start]
         if WORD.search(segment):
             valid_count += 1
         

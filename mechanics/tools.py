@@ -329,6 +329,18 @@ class SubstrateLedger:
                 return True
         return False
 
+    _FILE_NAME = re.compile(r"(?<![\w/.-])([\w-]+(?:/[\w-]+)*\.(?:py|md|txt|json|toml|yaml|yml|cfg|ini|csv|sh|js|ts|html|css|sql))\b")
+    _SAVE_VERBS = re.compile(r"\b(save|create|make|put|store|write)\b")
+
+    @classmethod
+    def asked_to_save(cls, request_text: str) -> Optional[str]:
+        """The file the person asked to have saved or created, if they named one."""
+        text = (request_text or "").lower()
+        if not (name := cls._FILE_NAME.search(text)):
+            return None
+        verbs = cls._SAVE_VERBS.search(text) or cls._EDIT_VERBS.search(text)
+        return name.group(1) if verbs and not cls._NEGATION.search(text) else None
+
     @classmethod
     def requested(cls, rel: str, request_text: str) -> bool:
         """The person's own message asked to edit this file: that request is the permission."""

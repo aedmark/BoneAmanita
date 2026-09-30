@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 if TYPE_CHECKING:
     from engine.core import CycleContext
 from engine.constants import Prisma
+from engine.prose import mask_code
 from physics.observer import apply_metabolic_tax
 from engine.presets import BoneConfig
 from engine.struts import safe_get, ux
@@ -319,14 +320,15 @@ class TheGatekeeper:
         return True, gen_txt
 
     def _find_crime(self, text: str, mode: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """The first banned phrase or pattern in text, with where it starts; no taxes, no state."""
+        """The first banned phrase or pattern in text, with where it starts; no taxes, no state. Code is not prose."""
+        text = mask_code(text)
         if self._banned_regex and (hit := self._banned_regex.search(text)):
             hard = hit.group(0).lower() in self._hard_phrases
             return {"kind": "phrase", "name": hit.group(0), "text": hit.group(0), "start": hit.start(), "hard": hard}
         for pat in self._rejection_patterns:
             if mode and mode.upper() in pat.get("skip_modes", []):
                 continue
-            if (regex_pattern := pat.get("regex")) and (hit := re.search(regex_pattern, text, re.IGNORECASE)):
+            if (regex_pattern := pat.get("regex")) and (hit := re.search(regex_pattern, text)):
                 name = pat.get("name", "BANNED_PATTERN")
                 return {"kind": "pattern", "name": name, "text": hit.group(0), "start": hit.start(),
                         "hard": name in self._hard_patterns}
