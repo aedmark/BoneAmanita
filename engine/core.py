@@ -342,6 +342,11 @@ class EventBus:
             self.buffer.clear()
         return current_logs
 
+    def requeue(self, events: List[Dict]) -> None:
+        """Put flushed events back ahead of anything logged since, for the next turn that shows them."""
+        with self._lock:
+            self.buffer.extendleft(reversed(events))
+
 
 class LoreManifest:
     _instance = None

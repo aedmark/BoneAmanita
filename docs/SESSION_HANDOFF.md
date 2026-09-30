@@ -49,10 +49,13 @@ everything the engine learns or needs to resume (ROADMAP Track E).
   hold reads "That sounds hard to undo once it's done. Are you sure you want to go ahead?" alone, and the
   next turn is handed what was held. Live: the deploy window answered; "let's deploy the log parser to
   production" held; "Yes, go ahead." got the deploy steps, to run themselves.
+- **Done, 20.7.4.75: a command's reply is its own.** `/mode CONVERSATION` opened with "Pacemaker detected
+  terminal stagnation...", a line queued after the previous turn: `process_turn` flushed every waiting
+  event into the command's reply. It now flushes what was waiting first, runs the command, shows only what
+  the command logged, and puts the rest back (`EventBus.requeue`) for the next turn that shows events.
+  `tests/test_command_routing.py` `CommandRepliesAreTheirOwn` (fails without the fix). Suite 1001 passed.
 - **Next, in order:**
-  1. A command's reply includes unrelated queued event logs (a pacemaker line in `/mode`'s output):
-     `process_turn` flushes every event into the command UI.
-  2. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
+  1. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
      only in the REM tick; the checkpoint and the gate's commit are two transactions).
 - **To discuss:**
   - Noticed, not investigated: the TECHNICAL prompt carries "ALIGNMENT: You are the Conversationalist"
@@ -66,7 +69,7 @@ everything the engine learns or needs to resume (ROADMAP Track E).
   polish.
 - **Test runs** go under `systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0` (a MagicMock
   runaway once took the session down), after `reset.sh`, and never while a background engine run is using
-  `saves/`. Full suite 1000 passed, 5 skipped.
+  `saves/`. Full suite 1001 passed, 5 skipped.
 - **Historical note:** the 09-25 and 09-26 run tables below counted the dialogue entry, which is never
   empty; counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies (write-up:
   `docs/bonereport.html`).

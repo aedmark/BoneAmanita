@@ -635,8 +635,13 @@ class BoneAmanita:
                     return self._execute_zen_flush()
             # A command is not prose to regulate: the chaos lock refused /mode mid-session (end-to-end run,
             # 2026-09-29). Death still comes first; commands keep their own reality-layer lock.
-            if not is_system and self.health > 0.0 and self.cmd.execute(user_message):
-                cmd_logs = [e["text"] for e in self.events.flush()]
+            # A command's reply is what the command logged; what was already queued (a pacemaker line in /mode's
+            # reply, 2026-09-29) waits for the next turn that shows it.
+            waiting = self.events.flush()
+            ran = not is_system and self.health > 0.0 and self.cmd.execute(user_message)
+            cmd_logs = [e["text"] for e in self.events.flush()] if ran else []
+            self.events.requeue(waiting)
+            if ran:
                 ui_output = (
                     "\n".join(cmd_logs)
                     if cmd_logs
