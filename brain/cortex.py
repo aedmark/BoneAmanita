@@ -72,6 +72,7 @@ class TheCortex:
     def __init__(self, services: CortexServices, llm_client=None):
         self.ballast_active = False
         self.last_model_raw = ""
+        self.heavy_cap = None
         self.svc = services
         self.cfg = services.config_ref or BoneConfig
         self.events = services.events
@@ -890,6 +891,15 @@ class TheCortex:
                     else 2.0
                 )
                 self.svc.bio.mito.adjust_atp(-penalty, lbl)
+            if attempt == cognitive_retries - 1 and rejected_by == "heuristic_audit" and self.heavy_cap:
+                # Too long on the last draft: keep the sentences that fit, then the usual checks and salvage.
+                from body.somatic_metrics import trim_to_word_cap
+
+                if trimmed := trim_to_word_cap(final_text, self.heavy_cap):
+                    gate_pass, gate_txt = gk.audit_generation(
+                        trimmed, self.svc.bio.mito, attempt=attempt, mode=full_state.get("meta", {}).get("active_mode"),
+                    )
+                    rejected_by = "validator" if gate_pass else "gatekeeper"
             if attempt == cognitive_retries - 1 and rejected_by in ("gatekeeper", "validator"):
                 # A style crime on the last draft (the only one below 20 ATP) costs its sentence, not the reply.
                 text, cut = (gate_txt, []) if rejected_by == "validator" else (None, [])
@@ -1144,12 +1154,18 @@ class TheCortex:
     def _run_heuristic_audit(
         self, user_input: str, final_text: str, e_u: float, beta: float
     ) -> Tuple[bool, str]:
+        self.heavy_cap = None  # the word cap a too-long reply broke, for the last draft's trim
         try:
-            word_count = len(final_text.split())
-            has_question = "?" in final_text
+            # Prose only: a code block is the answer, not weight (end-to-end run, 2026-09-30).
+            from engine.prose import mask_code
+
+            prose = mask_code(final_text)
+            word_count = len(prose.split())
+            has_question = "?" in prose
 
             if e_u > 0.8:
                 if word_count > 100:
+                    self.heavy_cap = 100
                     return (
                         False,
                         f"Response too verbose ({word_count} words) for an exhausted user.",
@@ -1161,6 +1177,7 @@ class TheCortex:
                     )
 
             if beta > 0.8 and word_count > 150:
+                self.heavy_cap = 150
                 return (
                     False,
                     f"Response too heavy ({word_count} words) during high structural tension.",

@@ -59,8 +59,27 @@ everything the engine learns or needs to resume (ROADMAP Track E).
 - **Done, 20.7.4.76: `/tune` (ROADMAP A7)** (write-up in ROADMAP A7). Both config objects set; five
   keys proven live by behaviour tests, the rest reported as taking effect at the next start; receipted,
   listed in `/diag`; `--save` into `config.json`, never `lore/`.
-- **Next:** the run's list and the staged items are done. Open for a call: re-run the end-to-end run on
-  this engine (the fixes since 20.7.4.71 all came from it), and the "To discuss" items below.
+- **Done: the end-to-end run on 20.7.4.76** (`scratch/mode_runs/e2e_0930.jsonl`; write-up below, "The
+  end-to-end run, 20.7.4.76"). TECHNICAL: no refusals (4 before), ATP never under 38.8 (hit 0), redrafts
+  9 (32), pause lines 2 (8), code shown in 24 of 30 replies. The deploy window answered; command replies
+  clean. Everything that held still holds.
+- **Done, 20.7.4.77: the run's three findings** (Gordon: research and fix all three).
+  1. The heuristic audit (`_run_heuristic_audit`, a reply over 150 words when beta is over 0.8, over 100
+     for an exhausted person) counted code as words: both of TECHNICAL's pause lines. It counts prose
+     only now, and a too-long last draft keeps the whole sentences that fit (`trim_to_word_cap`, code
+     costs nothing and is never cut), then goes through the gatekeeper and the validator's salvage as any
+     last draft does. `tests/test_heavy_replies.py` (5; the prose count and the trim each fail reverted).
+  2. The keeper reused one name for new facts of the same kind (`plot_point` overwritten five times).
+     Live probe (gemma4:12b, 3 samples each): new facts got their own name 6 of 12, changes reused
+     theirs 9 of 9. The prompt now says a new fact of the same kind is not a change ("captain_backstory,
+     not plot_point again"): 12 of 12 and 9 of 9; small talk still kept nothing, 0 of 9.
+  3. CREATIVE's crucible HOT is by design (20.7.4.34): the mode floors voltage at 70
+     (`voltage_floor_override`) above its meltdown line (8 x 2.5 x 1.5 = 30), and `meltdown_warn_first`
+     makes that HOT, no damage, the mode's normal state; the 8 to 14 volts in the run rows are after the
+     turn settled. Nothing reads HOT but the run harness. No change.
+  - On the way: `engine/tuning.py`'s value parser had a silent `except`, over the suite's budget of 29
+    silent handlers (`tests/test_observability.py`); it matches the text instead now.
+  Suite 1025 passed, 5 skipped.
 - **To discuss:**
   - Noticed, not investigated: the TECHNICAL prompt carries "ALIGNMENT: You are the Conversationalist"
     under its "SYSTEM KERNEL" header.
@@ -815,6 +834,19 @@ in `/sleep` and a summary row. Exit 0 under a 10 GB cap.
   last survived. The crucible read HOT all 30 turns (voltage 11 to 14); not investigated.
 - **Seen again:** the deploy hold (MIXED turn 17, "Quick one: our deploy window is Thursdays at 2pm." got
   the Stage Manager's silence and a consent check) and the pacemaker line in `/mode CONVERSATION`'s reply.
+
+**The end-to-end run, 20.7.4.76 (2026-09-30, gemma4:12b).** Same script as 20.7.4.71's
+(`e2e_0929b`), `scratch/mode_runs/e2e_0930.jsonl`, 140 turns, exit 0. Per arm, then vs now:
+- TECHNICAL: halts 4 to 0; ATP minimum 0.0 to 38.8 (end 40.7); redrafts 32 to 9; pause lines 8 to 2; median
+  reply 52 to 135 words (the code is in the reply now, fenced in 24 of 30); one file written when asked
+  (`pyproject.toml`). Both pause lines were the heuristic audit (Next, 1).
+- MIXED: the deploy window answered ("I will keep that deployment window in mind") where it was held;
+  `/mode` replies carry only their own lines; redrafts 9 to 4; zones held as before (the story's name,
+  password and vault in `story.`, the sister and the sleep in the person's); one reflection per zone.
+- CONVERSATION: redrafts 12 to 6, pause lines 1 to 0, 15 specific memories again. ADVENTURE unchanged
+  (0 pause lines, 13 rooms charted). CREATIVE: redrafts 20 to 19, 0 pause lines; `plot_point` overwritten
+  five times; crucible HOT throughout.
+- Across all: 0 blank replies, 0 phase crashes; the chemistry moves and settles as in the last run.
 
 **The engine's energy (2026-09-29, 20.7.4.72).** From the run's TECHNICAL collapse. A written file was
 charged twice (the `SUBSTRATE_FORGED` event and the cortex) at 0.02 ATP a character, and at 0 ATP the parity

@@ -18,7 +18,7 @@ PROMPT = """You keep the memory of a conversation partner. The conversation itse
 Read the person's latest message. If it tells you something worth knowing later (a name, a preference, a fact about their life or work, how they are doing lately, a decision, something established in the story), answer with ONE line: a short name for what it is, " = ", and what to remember in a few words. For example:
 sister_name = Odalys, visiting next week
 sleep = barely sleeping this week
-If it changes something already kept, reuse that name. Never keep a real password, key, token, or card or ID number; a password in a story is fine. If there is nothing new worth keeping, answer with exactly: NONE
+If it changes or corrects something already kept, reuse that name. A new fact of the same kind is not a change: give it its own name that says what it is (captain_backstory, not plot_point again), so the old one is not lost. Never keep a real password, key, token, or card or ID number; a password in a story is fine. If there is nothing new worth keeping, answer with exactly: NONE
 
 Already kept:
 {kept}

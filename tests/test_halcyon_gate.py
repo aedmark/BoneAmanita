@@ -239,6 +239,13 @@ class TheModelGetsItsMemoriesBack(BoneTestCase):
         self.assertIn("how they are doing lately", PROMPT)
         self.assertIn("sleep = barely sleeping this week", PROMPT)
 
+    def test_a_new_fact_of_the_same_kind_gets_its_own_name(self):
+        from engine.gate.keeper import PROMPT
+
+        # CREATIVE's plot_point was overwritten five times; live, new facts got their own name 6 of 12 times,
+        # 12 of 12 with this rule, and changes still reused theirs 9 of 9.
+        self.assertIn("A new fact of the same kind is not a change", PROMPT)
+
     def test_every_mode_knows_it_remembers(self):
         # A bare model has no memory; this one does, and two of three live answers denied it.
         for mode in ("ADVENTURE", "CONVERSATION", "CREATIVE", "TECHNICAL"):

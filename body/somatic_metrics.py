@@ -1,6 +1,6 @@
 import re
 
-from engine.prose import mask_code
+from engine.prose import FENCE, mask_code
 
 WORD = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
 SENTENCE_END = re.compile(r"(?<=[.!?])[\"')\]]*\s+(?![a-z])|\n+")
@@ -128,6 +128,32 @@ def measure(reply: str, validator_valid: bool, user_message: str = "") -> dict:
         "mirrors_affect": float(mirrors_affect(text, user_message)) if user_message else float("nan"),
         "reply_to_message_ratio": n_w / len(message_words) if message_words else float("nan"),
     }
+
+
+def _sentences(text: str) -> list:
+    """text in sentence-sized pieces, each with the space after it, so joining them gives text back."""
+    pieces, last = [], 0
+    for m in SENTENCE_END.finditer(text):
+        pieces.append(text[last:m.end()])
+        last = m.end()
+    return pieces + ([text[last:]] if text[last:] else [])
+
+
+def trim_to_word_cap(text: str, cap: int) -> str:
+    """The whole sentences that keep text's prose within cap words; a code block costs none and is never cut."""
+    units, last = [], 0
+    for m in FENCE.finditer(text):
+        units += _sentences(text[last:m.start()]) + [m.group(0)]
+        last = m.end()
+    units += _sentences(text[last:])
+    kept, words = [], 0
+    for unit in units:
+        n = len(WORD.findall(mask_code(unit)))
+        if words + n > cap:
+            break
+        kept.append(unit)
+        words += n
+    return "".join(kept).strip()
 
 
 def trim_to_sentence_cap(text: str, cap: int) -> str:

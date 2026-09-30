@@ -4,6 +4,7 @@ the engine reads its instance, many subsystems copy a value at boot, and /mode r
 
 import json
 import os
+import re
 from typing import Any, Dict, Optional, Tuple
 
 from engine.gate.secrets import credential_key
@@ -19,6 +20,8 @@ LIVE = frozenset({
 })
 RESET_BY_MODE = frozenset({"ROOT.GATE_TOLERANCE"})
 SAVED = "TUNED"  # config.json's block for saved tunings, applied at boot
+_INT = re.compile(r"[-+]?\d+")
+_FLOAT = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
 _BOOLS = {"true": True, "on": True, "yes": True, "false": False, "off": False, "no": False}
 
 
@@ -26,13 +29,12 @@ def parse(raw: str, current: Any) -> Optional[Any]:
     """raw read as current's type (bools take true/false/on/off/yes/no); None if it does not fit."""
     if isinstance(current, bool):
         return _BOOLS.get(str(raw).lower())
-    for kind in (int, float):
-        if isinstance(current, kind):
-            try:
-                return kind(raw)
-            except (TypeError, ValueError):
-                return None
-    return str(raw) if isinstance(current, str) else None
+    text = str(raw).strip()
+    if isinstance(current, int):
+        return int(text) if _INT.fullmatch(text) else None
+    if isinstance(current, float):
+        return float(text) if _FLOAT.fullmatch(text) else None
+    return text if isinstance(current, str) else None
 
 
 def sector_names(config) -> list:
