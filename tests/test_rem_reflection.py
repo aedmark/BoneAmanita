@@ -101,7 +101,9 @@ class TheReflectVerb(BoneTestCase):
         self.assertNotIn("verb=reflect", grammar_text(yaml.safe_load(open("engine/gate/boundary.yaml"))))
 
 
-class ReflectingInREM(BoneTestCase):
+class _Sleeper(BoneTestCase):
+    """A test engine whose keeper, reflector and dreamer answer on cue."""
+
     MEANING = "busy_week = your sister visits while a release is due, and you care about both"
 
     def setUp(self):
@@ -110,10 +112,16 @@ class ReflectingInREM(BoneTestCase):
         self.engine.memory_reflector.enabled = True
         self.engine.cortex.dspy_critic.enabled = False
         self.keeps, self.reflects, self.reflections = "NONE", self.MEANING, []
+        self.dreams, self.dream_prompts = "A plane lands on a mountain trail. Odalys hands you the release notes.", []
 
         def generate(prompt, *a, **k):
             if prompt.startswith("You keep the memory"):
                 return self.keeps
+            if prompt.startswith("You are dreaming"):
+                self.dream_prompts.append(prompt)
+                if isinstance(self.dreams, Exception):
+                    raise self.dreams
+                return self.dreams
             if prompt.startswith("You are reflecting"):
                 self.reflections.append(prompt)
                 if isinstance(self.reflects, Exception):
@@ -135,6 +143,8 @@ class ReflectingInREM(BoneTestCase):
 
         return ReceiptLedger.get_instance().for_subsystem("halcyon.reflect")
 
+
+class ReflectingInREM(_Sleeper):
     def test_a_sleep_reflects_on_what_was_kept_through_the_gate(self):
         self.keep("CONVERSATION", "My sister Odalys visits next week.", "sister_name = Odalys, visiting next week")
         self.keep("TECHNICAL", "The release is due Thursday.", "release_due = Thursday")
@@ -198,3 +208,82 @@ class ReflectingInREM(BoneTestCase):
         out = Prisma.strip("\n".join(str(c.args[0]) for c in log.call_args_list))
         self.assertIn("by reflection in REM", out)
         self.assertIn("    From: sister_name, release_due.", out)
+
+
+class DreamingFromIt(_Sleeper):
+    """R3: the dream is built from what the sleep reflected on, not from lore templates."""
+
+    def setUp(self):
+        super().setUp()
+        self.engine.mind.dreamer.hallucinate = MagicMock(return_value=("a template dream", 0.2))
+        self.engine.orchestrator.dream_log.clear()
+
+    def two(self, mode="CONVERSATION"):
+        self.keep(mode, "My sister Odalys visits next week.", "sister_name = Odalys, visiting next week")
+        self.keep(mode, "The release is due Thursday.", "release_due = Thursday")
+
+    def dream_receipts(self):
+        from engine.receipts import ReceiptLedger
+
+        return ReceiptLedger.get_instance().for_subsystem("halcyon.dream")
+
+    def test_a_sleep_dreams_from_what_it_reflected_on(self):
+        self.two()
+        self.engine.orchestrator._process_rem_tick()
+        self.assertEqual(list(self.engine.orchestrator.dream_log), [f"  • {self.dreams}"])
+        self.assertIn("- your sister visits while a release is due, and you care about both (felt ", self.dream_prompts[0])
+        self.assertNotIn("heavy trauma", self.dream_prompts[0])
+        self.assertNotIn("Odalys, visiting next week", self.dream_prompts[0])  # the meaning, not the raw memories
+        self.assertEqual(self.engine.store.record("rem.last_dream")["text"], self.dreams)
+        self.assertEqual(self.dream_receipts()[-1].effect, "DREAMT")
+        self.engine.mind.dreamer.hallucinate.assert_not_called()
+
+    def test_nothing_new_means_no_dream(self):
+        self.two()
+        self.engine.orchestrator._process_rem_tick()
+        self.engine.orchestrator._process_rem_tick()
+        self.assertEqual((len(self.dream_prompts), len(self.engine.orchestrator.dream_log)), (1, 1))
+
+    def test_heavy_trauma_turns_it_into_a_fever_dream(self):
+        self.two()
+        self.engine.trauma_accum = {"SEPTIC": 0.8}
+        self.engine.orchestrator._process_rem_tick()
+        self.assertIn("let the dream turn strange and unsettled", self.dream_prompts[0])
+        self.assertEqual(list(self.engine.orchestrator.dream_log), [f"  • Fever Dream: {self.dreams}"])
+        self.assertEqual(self.dream_receipts()[-1].effect, "FEVER")
+
+    def test_its_voice_keeps_the_firewall(self):
+        self.dreams = "The trail climbs \u2014 the notes blow away."
+        self.two()
+        self.engine.orchestrator._process_rem_tick()
+        self.assertEqual(self.engine.store.record("rem.last_dream")["text"], "The trail climbs, the notes blow away.")
+
+    def test_the_story_is_dreamt_only_in_the_story(self):
+        self.two("ADVENTURE")
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self.engine.orchestrator._process_rem_tick()
+        self.assertEqual(self.dream_prompts, [])
+        self.engine.cortex.active_mode = "ADVENTURE"
+        self.engine.orchestrator._process_rem_tick()
+        self.assertEqual(len(self.dream_prompts), 1)
+
+    def test_a_failed_dream_tries_again(self):
+        self.two()
+        self.dreams = RuntimeError("down")
+        self.engine.orchestrator._process_rem_tick()
+        self.assertEqual(self.dream_receipts()[-1].effect, "FAILED")
+        self.dreams = "The trail again."
+        self.engine.orchestrator._process_rem_tick()
+        self.assertEqual(list(self.engine.orchestrator.dream_log), ["  • The trail again."])
+
+    def test_sleep_and_idle_show_the_dream_now(self):
+        self.two()
+        out = self.engine.orchestrator.run_turn("/sleep")["ui"]
+        self.assertIn(self.dreams, out)
+        self.keep("CONVERSATION", "I'm allergic to cashews.", "allergy = cashews")
+        self.keep("CONVERSATION", "My dog is Brisket.", "pet_name = Brisket")
+        self.reflects = "care_list = cashews to avoid, and Brisket to walk"
+        self.dreams = "The mountain folds into a calendar."
+        self.engine.cmd.interface.log = log = MagicMock()
+        self.engine.cmd.execute("/idle")
+        self.assertIn("The mountain folds into a calendar.", "\n".join(str(c.args[0]) for c in log.call_args_list))

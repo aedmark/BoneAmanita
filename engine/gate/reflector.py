@@ -23,6 +23,11 @@ busy_week = your sister visits while a release is due, and you care about both
 Say it plainly, with the names and specifics, the way a friend would sum up the week; no abstractions like "balancing", "milestone" or "connection". Say only what these memories support. If they do not add up to anything beyond themselves, answer with exactly: NONE
 """
 REFLECTION = "reflection."
+DREAM_PROMPT = """You are dreaming, between conversations. This is what the last stretch meant, and how it felt:
+{meant}
+
+Dream it: two or three sentences of images built from these, the way a real dream bends a day. Keep the names and the things; let them move and change. Do not explain it, name it as a dream, or speak to anyone.{fever}"""
+FEVER = " The system is carrying heavy trauma: let the dream turn strange and unsettled."
 
 
 def mean_feeling(feelings: list) -> dict | None:
@@ -49,6 +54,32 @@ class MemoryReflector:
                     return (f"NOMINATE what=self/memory/{key} verb=reflect "
                             f"args=key:{key}; value:{value}; from:{' | '.join(sources)}")
         return None
+
+    def dream(self, meant: dict, feelings: dict, fever: bool = False) -> str | None:
+        """REM plan R3: a short dream built from the reflections (name: what it meant) and how they felt; a
+        Fever Dream under heavy trauma, labelled so, as the Hypervisor says."""
+        if not self.enabled or not meant:
+            return None
+        lines = "\n".join(f"- {v}" + (f" (felt {', '.join(reading(feelings.get(k)))})" if reading(feelings.get(k)) else "")
+                          for k, v in meant.items())
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            raw = self.llm.generate(DREAM_PROMPT.format(meant=lines, fever=FEVER if fever else ""),
+                                    {"temperature": 0.9, "max_tokens": 150})
+        except Exception as e:
+            logger.warning(f"REM dream failed, no dream this sleep: {type(e).__name__}: {e}")
+            issue_receipt("halcyon.dream", "FAILED", result_count=0, degraded=True, detail=f"{type(e).__name__}: {e}")
+            raise
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        text = re.sub(r"\s+", " ", re.sub(r"\s*\u2014\s*", ", ", str(raw or ""))).strip().strip("\"'")
+        if not text:
+            issue_receipt("halcyon.dream", "NONE", result_count=0, inputs={"reflections": len(meant)})
+            return None
+        issue_receipt("halcyon.dream", "FEVER" if fever else "DREAMT", result_count=1,
+                      inputs={"reflections": len(meant)}, detail=scrub(text[:80]))
+        return f"Fever Dream: {text}" if fever else text
 
     def reflect(self, memory: dict, feelings: dict, prefix: str = ""):
         """One call over `memory` (this zone's new memories); returns the line, or None (receipted)."""

@@ -610,6 +610,9 @@ class CommandProcessor:
                     getattr(self.interface.eng, "cortex", None), "active_mode", ""
                 ),
             )
+            orchestrator = getattr(self.interface.eng, "orchestrator", None)
+            remembered = orchestrator.sleep_dream() if orchestrator else None
+            dream_text = remembered if isinstance(remembered, str) else dream_text
             if dream_text:
                 dream_log = f"\n\n{self.P.VIOLET}☁️ {dream_text}{self.P.RST}"
                 if effects and effects.get("glimmers"):

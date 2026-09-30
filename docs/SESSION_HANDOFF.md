@@ -35,8 +35,8 @@ engine learns or needs to resume.
   Personal vs. confidential, and the model no longer says it has no memory (20.7.4.65). Provenance
   (20.7.4.66). The ported store, adopted and pruned (20.7.4.67); the five bone-iris items are done.
   REM reflection, Gordon's plan (ROADMAP Track E): R1, feeling at keep time (20.7.4.68); R2, reflect
-  through the gate (20.7.4.69).
-- **Next:** REM reflection R3 (dream from the reflections), R4 (shown on waking).
+  through the gate (20.7.4.69); R3, the dream from them (20.7.4.70).
+- **Next:** R4 (shown on waking) turned out to exist already on the idle path; Gordon's call on any polish.
   Shelved for discussion: the affect vector, Self claims and profile seeds (dormant in the store).
 - **Open:** memory phase 4 (the world graph as the story's truth); the checkpoint and the gate's commit are
   two transactions in one file (a crash between them loses one turn's checkpoint). Correction to the 09-25
@@ -666,6 +666,35 @@ shown once on waking. Plan R1 to R4 in ROADMAP Track E.
   waits, reflections are not reflected on), a story's day in the story, NONE moves on and a failure
   retries, `why` traces it. Mutations 16, one equivalent (the explicit re-raise; the failure propagates
   either way). Full suite 953 passed, 5 skipped (8 GB cap).
+
+**REM reflection R3, the dream from what it reflected on (2026-09-29, 20.7.4.70).** Two dream paths
+existed, neither touching memory: the idle REM tick appended a lore-template hallucination to `dream_log`
+every 60 seconds of sleep (shown on waking, up to five, "While you were gone, the system dreamt of:"),
+and `/sleep`/`/idle` showed `enter_rem_cycle`'s text (fossil blends, or its biological events).
+- `MemoryReflector.dream(meant, feelings, fever)`: one call over the reflections, each with its feeling
+  words: "two or three sentences of images built from these, the way a real dream bends a day. Keep the
+  names and the things; let them move and change." Under heavy trauma the prompt adds "let the dream turn
+  strange and unsettled" and the text is labelled "Fever Dream: ". Em dashes become commas. Receipted
+  `halcyon.dream` (DREAMT, FEVER, NONE, FAILED).
+- `orchestrator.dream_memory()`: reflections written since the last dream (`rem.dreamed_at`, per zone) in
+  the zone of the mode the engine sleeps in (a story is dreamt only in the story); fever when the summed
+  `trauma_accum` passes 0.5 (the old template's nightmare threshold); kept as `rem.last_dream` (text, at,
+  fever, zone, from). No new reflection, no dream: the minute-by-minute template dreams are gone from the
+  REM tick (the `hallucinate` template path stays for `enter_rem_cycle`'s starved-REM fever).
+- `sleep_dream()`: `/sleep` (run_turn) and `/idle` (the command) reflect and dream at once and show the
+  memory dream, falling back to `enter_rem_cycle`'s text when there is nothing new; the biology in
+  `enter_rem_cycle` still runs. The command path accepts only a string (the MagicMock lesson).
+- R4 (on waking) already works on the idle path: `dream_log` is shown once on the next turn and cleared;
+  it now holds only memory dreams. Left as Gordon's call whether it needs polish.
+- Live on gemma4:12b, 3 runs plus one fever: each dream is built from that sleep's reflection, with the
+  day's things in it ("The gear for the hike dissolves into the code of the 3.0 release... until the launch
+  and the summit are the same point of light."); the fever one heavier ("The release is a physical weight,
+  a heavy crate of iron and silk leaking white light onto the grass where the trail begins."). Purple in
+  places ("a single, pulsing pulse"), short, and a dream.
+- Tests (`tests/test_rem_reflection.py`, 22 now; the shared setup is a base with no tests): dreams from the
+  reflection and its feelings (not the raw memories, not the template), nothing new means no dream, heavy
+  trauma makes a Fever Dream, the em dash goes, a story is dreamt only in the story, a failed dream
+  retries, `/sleep` and `/idle` show it. Mutations 13. Full suite 960 passed, 5 skipped (8 GB cap).
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

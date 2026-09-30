@@ -483,26 +483,13 @@ class GeodesicOrchestrator:
                 self._bg_process_moog_ledger, list(cortex.worry_ledger)
             )
             cortex.worry_ledger.clear()
-        trauma_level = (
-            sum(self.eng.trauma_accum.values()) if self.eng.trauma_accum else 0.0
-        )
-        gordon = getattr(self.eng.village, "gordon", None)
-        objects = getattr(gordon, "inventory", ["static"]) if gordon else ["static"]
-
-        def _bg_hallucinate(trauma, objs):
+        # REM plan R3: the dream is built from what this sleep reflected on, not from lore templates.
+        if hasattr(self.eng, "store") and hasattr(self.eng, "boundary"):
             try:
-                if hasattr(self.eng.mind, "dreamer") and self.eng.mind.dreamer:
-                    dream_txt, _ = self.eng.mind.dreamer.hallucinate(
-                        {"chi": 0.85}, trauma_level=trauma
-                    )
-                    safe_obj = random.choice(objs) if objs else "the void"
-                    self.dream_log.append(
-                        f"  • {Prisma.strip(dream_txt)} (Shadow cast involving: {safe_obj})"
-                    )
+                if dream := self.dream_memory():
+                    self.dream_log.append(f"  • {dream}")
             except Exception as e:
-                self.eng.events.log(f"Dream generation failed in REM: {e}", "DEBUG")
-
-        self._submit_background(_bg_hallucinate, trauma_level, objects)
+                record_crash(self.eng, "REM dream", e)
 
     def _submit_background(self, fn, *args):
         def _report(future):
@@ -719,6 +706,47 @@ class GeodesicOrchestrator:
             marks[zone] = max(meta[k]["kept_at"] for k in here)
             store.put_record("rem.reflected_at", marks)
         return written
+
+    FEVER_TRAUMA = 0.5  # the old template dream's nightmare threshold
+
+    def dream_memory(self) -> str | None:
+        """REM plan R3: a dream from the reflections written since the last dream in this mode's zone, with
+        how they felt; a Fever Dream under heavy trauma. Kept as the record rem.last_dream."""
+        from engine.gate.recall import STORY, zone, zone_of
+
+        reflector = getattr(self.eng, "memory_reflector", None)
+        if not (reflector and reflector.enabled):
+            return None
+        store = self.eng.store
+        here = zone(getattr(getattr(self.eng, "cortex", None), "active_mode", None))
+        marks = store.record("rem.dreamed_at") or {}
+        meta = store.memory_meta()
+        modes = {k: m["mode"] for k, m in meta.items()}
+        memory = (store.state()[1].get("self") or {}).get("memory", {})
+        fresh = {k: v for k, v in memory.items() if k in meta and meta[k]["kept_by"] == "reflection"
+                 and zone_of(k, modes) == here and meta[k]["kept_at"] > float(marks.get(here, 0.0))}
+        if not fresh:
+            return None
+        trauma = sum((getattr(self.eng, "trauma_accum", None) or {}).values())
+        fever = trauma > self.FEVER_TRAUMA
+        text = reflector.dream(fresh, {k: meta[k]["feeling"] for k in fresh}, fever)
+        marks[here] = max(meta[k]["kept_at"] for k in fresh)
+        store.put_record("rem.dreamed_at", marks)
+        if text:
+            store.put_record("rem.last_dream", {"text": text, "at": time.time(), "fever": fever, "zone": here,
+                                                "from": list(fresh)})
+        return text
+
+    def sleep_dream(self) -> str | None:
+        """/sleep and /idle: reflect and dream now, rather than waiting for the idle REM tick."""
+        if not (hasattr(self.eng, "store") and hasattr(self.eng, "boundary")):
+            return None
+        try:
+            self.reflect_memory(f"sleep-{int(time.time())}")
+            return self.dream_memory()
+        except Exception as e:
+            record_crash(self.eng, "sleep reflection", e)
+            return None
 
     def _chart_room(self, ctx, room: dict) -> None:
         from engine.gate.cartographer import chart_args, chart_line, needs_chart
@@ -1219,6 +1247,7 @@ class GeodesicOrchestrator:
                     bio_state=bio_packet,
                     active_mode=getattr(self.eng.cortex, "active_mode", ""),
                 )
+                dream_text = self.sleep_dream() or dream_text
                 if dream_text:
                     dream_log = f"\n{Prisma.MAG}☁️ {dream_text}{Prisma.RST}"
             return {
