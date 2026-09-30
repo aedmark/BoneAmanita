@@ -9,6 +9,29 @@ from physics.filters import worst_turn_draft_ros
 from engine.receipts import issue as issue_receipt
 from engine.struts import safe_get, safe_set, ux
 
+# The point of no return reacts to a request to do something hard to undo, not to the word: the end-to-end
+# run (2026-09-29) held "our deploy window is Thursdays at 2pm" in TECHNICAL.
+_PROD = r"(?:prod(?:uction)?|live|main|master)"
+_IRREVERSIBLE = (
+    rf"(?:deploy\w*|ship\w*\b[^.?!\n]*?\bto {_PROD}|push\w*\b[^.?!\n]*?\bto {_PROD}|production push|force[- ]push\w*"
+    r"|drop\w*\s+(?:the\s+)?(?:\w+\s+)?(?:table|database|db|schema)|schema change|wipe\w*|override trust"
+    rf"|(?:run\w*|appl\w*)\s+(?:the\s+)?migrations?\b[^.?!\n]*?\b{_PROD})\b"
+)
+_ASKED = re.compile(
+    r"(?:^|[.;!?\n]\s*)(?:(?:ok(?:ay)?|alright|right|so|now|then|please|just|go ahead and)[,\s]+)*"
+    rf"(?:{_IRREVERSIBLE}"
+    r"|(?:let'?s|let us|can you|could you|would you|will you|please|go ahead and|i'?m about to|i am about to"
+    r"|we'?re about to|we are about to|i'?m going to|we'?re going to|time to|ready to)\b"
+    r"(?:(?!\b(?:explain|what|how|why|whether|if|tell|show|describe|teach)\b)[^.?!\n]){0,40}?"
+    rf"\b{_IRREVERSIBLE})",
+    re.IGNORECASE,
+)
+
+
+def asks_for_the_irreversible(text: str) -> bool:
+    """A request (imperative, "let's", "can you", "about to") to deploy, push to prod, drop, wipe, override."""
+    return bool(_ASKED.search(text or ""))
+
 class CognitionPhase(SimulationPhase):
     def __init__(self, engine_ref):
         super().__init__(engine_ref)
@@ -188,11 +211,15 @@ class ArbitrationPhase(SimulationPhase):
         )
         ctx.log(f"{Prisma.GRY}{held}{Prisma.RST}")
         ctx.log(f"{Prisma.GRY}   {verdict.reason}.{Prisma.RST}")
+        if verdict.gate == "POINT_OF_NO_RETURN":
+            # The held turn never reaches the model; the next one is told what "yes" confirms.
+            self.eng.held_request = str(getattr(ctx, "input_text", "") or "")[:500]
         ctx.active_lens = "THE STAGE MANAGER"
         ctx.refusal_triggered = True
         ctx.refusal_packet = {
             "type": "SILENCE",
-            "ui": f"\n{Prisma.GRY}{held}{Prisma.RST}\n{Prisma.GRY}   {human_reason}{Prisma.RST}",
+            # The person reads the calm reason alone; the Stage Manager line is the log's (2026-09-30).
+            "ui": f"\n{Prisma.GRY}{human_reason}{Prisma.RST}",
             "logs": [held, verdict.reason],
             "metrics": getattr(self.eng, "get_metrics", lambda: {})(),
             "physics": _safe_dict(ctx.physics),
@@ -657,23 +684,15 @@ class SimulationPreflightPhase(SimulationPhase):
                     ctx.log(f"{Prisma.RED}{msg}{Prisma.RST}")
                     packet = self._build_refusal(ctx, phys_obj, "PREMISE_VIOLATION", msg)
                     ctx.nominations.append(Nomination(gate="PREMISE_VIOLATION", reason=msg, magnitude=100.0, packet=packet))
-        # An ops-style keyword gate that waits for a literal "CONSENT"; it held
-        # a person talking about "the deploy pipeline" at their job. Modes in
+        # Waits for a literal "CONSENT" on a request to do something hard to undo; it held a
+        # person talking about "the deploy pipeline" at their job. Modes in
         # CORTEX.KEYWORD_TRIGGERS_DISABLED_MODES never run it.
         ops_gate_live = getattr(self.eng.cortex, "active_mode", "") not in safe_get(
             safe_get(self.eng.config, "CORTEX", {}), "KEYWORD_TRIGGERS_DISABLED_MODES", []
         )
         if (
             ops_gate_live
-            and any(
-                a in user_input_lower
-                for a in (
-                    "deploy",
-                    "schema change",
-                    "override trust",
-                    "production push",
-                )
-            )
+            and asks_for_the_irreversible(user_input_lower)
             and "CONSENT" not in upper_input
         ):
             phys_obj.silence = 1.0

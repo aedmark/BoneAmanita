@@ -434,7 +434,7 @@
     "NABLA_SILENCE": "Holding space, as asked.",
     "APOPTOTIC_BLOCK": "Something invisible got mixed into that text and I stripped it out. Try sending it again.",
     "PREMISE_VIOLATION": "I don't have anything to work from yet. Paste it in and I'll take a look.",
-    "POINT_OF_NO_RETURN": "That sounds hard to undo once it's done. Checking you mean to go ahead before we do.",
+    "POINT_OF_NO_RETURN": "That sounds hard to undo once it's done. Are you sure you want to go ahead?",
     "ATP_FLOOR": "There's a lot pulling in different directions right now, and not quite enough left in me to sort through it this moment.",
     "TENSION_MAGNITUDE": "A few different threads are pulling at once here, and they don't fit together yet.",
     "_default": "I need a moment before I can answer that."

@@ -381,6 +381,7 @@ class BoneAmanita:
     out_of_reach = None
     running_on_empty = False
     file_asked = None
+    held_request = None
     _capability_check = None
 
     def _capabilities(self):

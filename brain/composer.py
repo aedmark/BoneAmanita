@@ -694,6 +694,12 @@ class PromptComposer:
             somatic_budget_block = "\n".join(budget_lines) + "\n"
         if state.get("running_on_empty"):
             somatic_budget_block += self.RUNNING_ON_EMPTY
+        if held := state.get("held_request"):
+            somatic_budget_block += (
+                f"=== HELD LAST TURN ===\nLast turn they asked: \"{held}\". You asked whether they were sure, since it "
+                "is hard to undo. If this message confirms it, answer that request now; you cannot run it for them, so "
+                "give them what they need to do it. If it does not, answer this message as usual.\n"
+            )
         if file_asked := state.get("file_asked"):
             somatic_budget_block += (
                 f"=== SAVE A FILE ===\nThey asked for {file_asked}. Write the whole file inside "

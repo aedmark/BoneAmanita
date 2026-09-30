@@ -45,13 +45,14 @@ everything the engine learns or needs to resume (ROADMAP Track E).
   was 2 of 3). And two rules narrowed: a stage direction is a body action ("*sighs*", "(leaning back)"),
   not any aside or *emphasis*; a stutter holds no word, so "Hey." to "hey" is a reply. D2b's first drafts,
   re-validated: 230 to 193 of 960 rejected (205 to 162 on the retake); the rest are the style rules proper.
+- **Done, 20.7.4.74: the point of no return reacts to a request, not the word** (write-up below). The
+  hold reads "That sounds hard to undo once it's done. Are you sure you want to go ahead?" alone, and the
+  next turn is handed what was held. Live: the deploy window answered; "let's deploy the log parser to
+  production" held; "Yes, go ahead." got the deploy steps, to run themselves.
 - **Next, in order:**
-  1. The ops keyword gate (`phases/cognitive.py`, POINT_OF_NO_RETURN) holds any mention of "deploy" until
-     a literal CONSENT; it held "our deploy window is Thursdays at 2pm" in TECHNICAL, where deploy talk is
-     normal. It should react to a request to do something irreversible, not to the word.
-  2. A command's reply includes unrelated queued event logs (a pacemaker line in `/mode`'s output):
+  1. A command's reply includes unrelated queued event logs (a pacemaker line in `/mode`'s output):
      `process_turn` flushes every event into the command UI.
-  3. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
+  2. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
      only in the REM tick; the checkpoint and the gate's commit are two transactions).
 - **To discuss:**
   - Noticed, not investigated: the TECHNICAL prompt carries "ALIGNMENT: You are the Conversationalist"
@@ -65,7 +66,7 @@ everything the engine learns or needs to resume (ROADMAP Track E).
   polish.
 - **Test runs** go under `systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0` (a MagicMock
   runaway once took the session down), after `reset.sh`, and never while a background engine run is using
-  `saves/`. Full suite 996 passed, 5 skipped.
+  `saves/`. Full suite 1000 passed, 5 skipped.
 - **Historical note:** the 09-25 and 09-26 run tables below counted the dialogue entry, which is never
   empty; counted from the screen, runs 0925 to 0926c had 8, 6, 10, 15, 25 and 3 blank replies (write-up:
   `docs/bonereport.html`).
@@ -873,6 +874,27 @@ police (`engine/prose.py`: `mask_code` blanks fenced and inline code, same lengt
   reverted alone fails one). D2b's saved first drafts re-validated: 230 to 193 of 960 (gemma4:12b 123 to
   115, e4b 107 to 78), the retake 205 to 162. What is left: negative comparisons, "it sounds like you", a
   closing question to a flagging partner, narrating their state, "the weight of".
+
+**The point of no return reacts to a request (2026-09-30, 20.7.4.74).** Gordon: work on the deploy keyword
+gate. `phases/cognitive.py` held any message containing "deploy", "schema change", "override trust" or
+"production push" until a literal CONSENT (outside `KEYWORD_TRIGGERS_DISABLED_MODES`, CONVERSATION): the run
+held "Quick one: our deploy window is Thursdays at 2pm." in TECHNICAL, the one mode where deploy talk is
+routine. `asks_for_the_irreversible` now holds a request to do the act: an imperative ("Deploy it.", "OK,
+deploy to prod now") or a frame ("let's", "can you", "please", "go ahead and", "I'm about to", "we're going
+to", "time to") before deploying, shipping or pushing to prod, a force push, dropping a table, database or
+schema, a wipe, migrations on prod, a schema change, overriding trust. A mention, a question ("How do I deploy
+to production safely?"), or asking to explain ("Can you explain what a force push does?") passes. CONSENT
+still lifts it; a plain "yes" on the next turn is not a request, so it passes too.
+`tests/test_preflight_nominations.py`: the old game-mode test expected a mention to be held (now: a mention
+passes everywhere, a request holds in ADVENTURE and TECHNICAL), plus `RequestsNotWords` (8 requests, 7
+mentions, the deploy window in TECHNICAL); the old word match fails 2.
+- The live check found three more, fixed on Gordon's go: every held turn opened with "The Stage Manager
+  holds the floor empty. Nothing here is ready to be said yet." (now the log's; the person reads the calm
+  reason alone, every gate); the reason said "before we do" of a deploy the engine cannot run (now "Are you
+  sure you want to go ahead?"); and "Yes, go ahead." reached a model that never saw the held turn (now
+  `eng.held_request`, handed once as HELD LAST TURN: answer it if confirmed, "you cannot run it for them, so
+  give them what they need to do it"). `TheHoldAndTheYes` (each of the four changes reverted fails it).
+  Suite 1000 passed, 5 skipped.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

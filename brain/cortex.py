@@ -306,6 +306,7 @@ class TheCortex:
             self.last_shadow_nodes = []
         sim_result["halcyon_recall"] = self._halcyon_recall(ctx, user_input)
         sim_result["halcyon_refusal"] = self._take_refusal()
+        sim_result["held_request"] = self._take_held()
         from engine.gate.recall import zone
 
         found = sim_result["halcyon_recall"] if isinstance(sim_result["halcyon_recall"], dict) else {}
@@ -1074,6 +1075,15 @@ class TheCortex:
         )
         return found
 
+    def _take_held(self) -> Optional[str]:
+        """The request the point of no return held last turn, handed to this prompt once."""
+        eng = getattr(getattr(self.svc, "orchestrator", None), "eng", None)
+        found = getattr(eng, "held_request", None)
+        if not isinstance(found, str) or not found:
+            return None
+        eng.held_request = None
+        return found
+
     def _take_refusal(self) -> Optional[Dict[str, Any]]:
         """Last turn's refusal, handed to this prompt once."""
         eng = getattr(getattr(self.svc, "orchestrator", None), "eng", None)
@@ -1358,6 +1368,7 @@ class TheCortex:
             "somatic_budget": somatic_budget,
             "out_of_reach": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "out_of_reach", None),
             "running_on_empty": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "running_on_empty", False) is True,
+            "held_request": self._str_or_none(sim_result.get("held_request")),
             "file_asked": self._str_or_none(getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "file_asked", None)),
             "village": village_data,
             "user_profile": {"name": "Traveler"},

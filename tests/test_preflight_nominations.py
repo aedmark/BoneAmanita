@@ -88,5 +88,68 @@ class KeywordGatesAreQuietInConversation(BoneTestCase):
     def test_conversation_mode_does_not_hold_on_the_word_deploy(self):
         self.assertFalse(self._nominated("CONVERSATION"))
 
-    def test_the_gate_still_holds_in_a_game_mode(self):
+    def test_a_mention_passes_in_every_mode(self):
+        self.assertFalse(self._nominated("ADVENTURE"))
+
+    def test_a_request_still_holds_where_the_gate_runs(self):
+        self.TEXT = "Let's deploy this to production tonight."
         self.assertTrue(self._nominated("ADVENTURE"))
+        self.assertTrue(self._nominated("TECHNICAL"))
+
+
+class RequestsNotWords(BoneTestCase):
+    """The end-to-end run (2026-09-29) held "Quick one: our deploy window is Thursdays at 2pm." in TECHNICAL:
+    the gate matched the word. It now reacts to a request to do something hard to undo."""
+
+    REQUESTS = ["let's deploy this to production", "Deploy it.", "OK, deploy to prod now",
+                "can you push this to production?", "I'm about to drop the users table",
+                "Go ahead and wipe the database.", "Please run the migrations on prod", "We're going to force-push main"]
+    MENTIONS = ["Quick one: our deploy window is Thursdays at 2pm.", "How do I deploy to production safely?",
+                "Should I deploy on Fridays?", "The deploy failed yesterday.", "I pushed to main yesterday and it broke.",
+                "Can you explain what a force push does?", "I'd never drop a table without a backup."]
+
+    def test_requests_and_mentions(self):
+        from phases.cognitive import asks_for_the_irreversible
+
+        self.assertEqual([r for r in self.REQUESTS if not asks_for_the_irreversible(r.lower())], [])
+        self.assertEqual([m for m in self.MENTIONS if asks_for_the_irreversible(m.lower())], [])
+
+    def test_the_deploy_window_is_not_held_in_technical(self):
+        self.engine.cortex.active_mode = "TECHNICAL"
+        ctx = SimulationPreflightPhase(self.engine).run(
+            CycleContext(input_text="Quick one: our deploy window is Thursdays at 2pm.", physics=PhysicsPacket())
+        )
+        self.assertFalse(any(n.gate == "POINT_OF_NO_RETURN" for n in ctx.nominations))
+
+
+class TheHoldAndTheYes(BoneTestCase):
+    """The live check (2026-09-30): the hold opened with Stage Manager jargon, said "before we do" of a deploy the
+    engine cannot run, and "Yes, go ahead." reached a model that never saw what was held."""
+
+    def setUp(self):
+        super().setUp()
+        from unittest.mock import MagicMock
+
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.active_mode = "TECHNICAL"
+        self.generate = self.engine.cortex.llm.generate = MagicMock(return_value="Tag the release, then run the deploy job.")
+
+    def prompt(self):
+        return max((c[0][0] for c in self.generate.call_args_list), key=len)
+
+    def test_the_hold_reads_plainly_and_the_yes_knows_what_it_confirms(self):
+        from engine.constants import Prisma
+
+        held = self.engine.process_turn("OK, let's deploy the log parser to production.")
+        self.assertEqual(held["type"], "SILENCE")
+        ui = Prisma.strip(str(held["ui"]))
+        self.assertNotIn("Stage Manager", ui)
+        self.assertIn("Are you sure you want to go ahead?", ui)
+        self.assertNotIn(" we ", f" {ui} ")
+
+        self.engine.process_turn("Yes, go ahead.")
+        self.assertIn('last turn they asked: "ok, let\'s deploy the log parser to production."', self.prompt().lower())
+
+        self.generate.reset_mock()
+        self.engine.process_turn("What else should I check?")
+        self.assertNotIn("HELD LAST TURN", self.prompt())
