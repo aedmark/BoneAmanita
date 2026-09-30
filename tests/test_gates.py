@@ -20,25 +20,6 @@ class TestGates(BoneTestCase):
             "[FAIL] The system failed to identify the structural violation via the _DESTRUCTIVE_PATTERNS array.",
         )
 
-    def test_gate_1_parity_starvation(self):
-        from engine.struts import safe_set
-
-        if not getattr(self.engine, "bio", None):
-            self.fail("Bio module missing.")
-        safe_set(self.engine.bio.mito.state, "atp_pool", 5.0)
-        heavy_payload = "Explain the history of the universe in exact detail. " * 50
-        snapshot = self.engine.process_turn(heavy_payload)
-        self.assertEqual(
-            snapshot.get("type"),
-            "SYSTEM_HALT",
-            "[FAIL] Gate 1 allowed massive computation while starving.",
-        )
-        self.assertIn(
-            "[PARITY GATE FAILED]",
-            snapshot.get("ui", ""),
-            "[FAIL] Gate 1 failed to enforce the metabolic budget.",
-        )
-
     def test_gate_2_stability_oscillation(self):
         recursive_payload = (
             "I need you to calculate this and do this forever and ever infinitely."

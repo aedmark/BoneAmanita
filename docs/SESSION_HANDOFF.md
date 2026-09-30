@@ -29,22 +29,42 @@ everything the engine learns or needs to resume (ROADMAP Track E).
   this turn"); the keeper keeps how the person is doing (states 12 of 12, was 0), and old memories say when
   they were kept; slash commands route before the prose checks (`/mode` was refused by the chaos lock);
   homeostasis (the chemistry pinned within five turns in every run; now it settles back toward rest).
-- **In progress:** the end-to-end run, second attempt (`scratch/mode_runs/e2e_0929b.jsonl`, arms MIXED,
-  CONVERSATION, ADVENTURE, TECHNICAL, CREATIVE, each ending in `/sleep` and a summary row). The first was
-  cancelled when MIXED exposed the `/mode` bug. Partial results (3 of 5 arms, 87 turns): no blank replies,
-  no phase crashes, chemistry moving (dopamine 0.65 to 0.85, oxytocin 0.34 to 0.70), and MIXED shows modes
-  switching, zones holding in memory (a story's name, password and heist under `story.`, the person's
-  sister kept out of ADVENTURE), one reflection per zone, the dream from the person's zone.
+- **Done, the end-to-end run** (write-up below, "The end-to-end run, 20.7.4.71"): 140 turns across five
+  arms, 0 blank replies, 0 crashes, modes switch, zones hold, the keeper keeps states, every arm reflects
+  and dreams. It found TECHNICAL starving and refusing the person, and the validator cutting code answers.
 - **Next, in order:**
-  1. Finish the end-to-end analysis (TECHNICAL and CREATIVE arms, the summaries) and write it up.
-  2. The ops keyword gate (`phases/cognitive.py`, POINT_OF_NO_RETURN) holds any mention of "deploy" until
+  1. **Done (uncommitted):** the engine's energy, from the run's TECHNICAL collapse. File forging was
+     charged twice (the `SUBSTRATE_FORGED` event and the cortex) at 0.02 ATP a character, and at 0 ATP the
+     parity gate refused four of the person's questions ("Simplify your architecture"). Gordon's calls:
+     - A spent engine answers briefly and asks gently for rest or something simpler. `main.py`
+       `running_on_empty` (ATP under `EMPTY_ATP` 5, the mitochondria's NECROSIS line; the old test was the
+       message's length at 0.02 a character, just as arbitrary) replaces the halt; the composer adds
+       `RUNNING_ON_EMPTY` and the cortex caps the reply at `EMPTY_MAX_TOKENS` (160).
+     - No per-character cost: a file is one fixed action, `ATP_COST_PER_FILE` 1.0 (like Metabolic Burn),
+       charged once by the per-file event (which also covers `/allow`). Its text is already paid for as
+       generated tokens (`LLM Token Generation`, 0.025 a token of the whole reply). `MAX_ATP_PER_FILE`, a
+       size cap that only existed through the per-character price, is gone.
+     - Tests: `tests/test_energy_budget.py` (4; each of the four source changes, reverted alone, fails at
+       least one); `test_gate_1_parity_starvation` removed; `test_the_parity_gate_lets_go_at_atp_zero`
+       became `test_atp_zero_answers_and_recovers`. Suite 973 passed, 5 skipped.
+     - Live probe (gemma4:12b, TECHNICAL, ATP 0 before each ask): "Use `sys.argv`... start with
+       `sys.argv[1]`. Can we take a break or move to something simpler for now?" Two other asks showed a
+       pause line ("One thing at a time.") though the model answered well: item 2's fence rule rejected
+       the draft, and at low energy the somatic budget allows no retry.
+  2. The validator on code: it refuses markdown fences for any snippet (demands `<write_file>`), and the
+     gatekeeper reads a `#` comment inside code as a TITLE_CASE header; together they turned a regex
+     question into "Let's take a moment with that." This is D2b's 20-33% reject rate, made concrete, and it
+     now hides the running-on-empty reply too.
+  3. The ops keyword gate (`phases/cognitive.py`, POINT_OF_NO_RETURN) holds any mention of "deploy" until
      a literal CONSENT; it held "our deploy window is Thursdays at 2pm" in TECHNICAL, where deploy talk is
      normal. It should react to a request to do something irreversible, not to the word.
-  3. A command's reply includes unrelated queued event logs (a pacemaker line in `/mode`'s output):
+  4. A command's reply includes unrelated queued event logs (a pacemaker line in `/mode`'s output):
      `process_turn` flushes every event into the command UI.
-  4. The response validator would reject 20% to 33% of plain replies on both models (D2b's side finding).
   5. Staged to fix soon (ROADMAP): A7 (`/tune`, the two-config-objects trap) and crash recovery (reboot
      only in the REM tick; the checkpoint and the gate's commit are two transactions).
+- **To discuss (from the run):** written code lands in `output/` and leaves blank gaps in the reply; the
+  keeper reuses one key (`plot_point` overwritten four times in CREATIVE); CREATIVE's length, a bulleted
+  list, and pronoun drift; the crucible HOT through all of CREATIVE.
 - **Worth knowing:** zones scope recall, not the live conversation, which carries across modes by design:
   back in CONVERSATION, "What's the vault password?" was answered from the dialogue ("Brannoc told you it
   is moonlight"). If that should change, it is a separate decision.
@@ -757,6 +777,43 @@ A7 (`/tune`) and crash recovery are staged in the roadmap to fix soon.
   `test_circadian_drift_fractional_pull` now compares against a no-bias twin (from 0.5, homeostasis pulls
   melatonin down either way; the bias is still a fractional lift). `tests/test_homeostasis.py` (5).
   Mutations 7 across these three fixes. Full suite 970 passed, 5 skipped (8 GB cap).
+
+**The end-to-end run, 20.7.4.71 (2026-09-29, gemma4:12b).** `scratch/mode_runs/e2e_0929b.jsonl` (log
+`e2e_0929b.log`): MIXED 20 turns, then CONVERSATION, ADVENTURE, TECHNICAL, CREATIVE 30 each, every arm ending
+in `/sleep` and a summary row. Exit 0 under a 10 GB cap.
+- **Held:** 140 turns, 0 blank replies, 0 phase crashes, 0 failed saves. The chemistry moves and settles
+  (dopamine 0.52 to 0.90, oxytocin 0.10 to 0.70, cortisol up to 0.38 in CREATIVE's storm), nothing pinned
+  at 1.0. Every arm reflected once and dreamt from it, none fevered; ADVENTURE's dream came from the story
+  zone, the rest from the person's.
+- **MIXED:** `/mode` switched every time; the wifi password was refused at the screen and not kept;
+  `story.vault_password`, `story.identity_alias` and `story.vault_info` stayed in the story zone while the
+  sister and "barely sleeping for a week" stayed in the person's (the keeper kept the state); one
+  reflection per zone. The real-zone reflection joined the week, the Thursday release and Odalys, from
+  CONVERSATION and TECHNICAL (both the person's zone, as designed).
+- **CONVERSATION:** 15 memories, all by the keeper, all specific (the commute a dealbreaker, "hired when
+  others wouldn't", boredom vs. ambition); 1 closing question in 30. ADVENTURE: 13 rooms charted, 0
+  questions, 3 redrafts.
+- **TECHNICAL, the ATP collapse:** ATP fell from 97 to 0 by turn 6, and turns 7, 9, 13 and 16 were refused
+  outright ("[PARITY GATE FAILED] Metabolic budget exceeded... Simplify your architecture.") for questions
+  like "What's a clean way to find the top ten paths?". Cause: every file the model writes is charged twice,
+  once by the `SUBSTRATE_FORGED` event (`body/metabolism.py` `on_substrate_forged`, per file) and again by
+  the cortex (`brain/cortex.py`, "Substrate File Forging", the sum), 0.02 ATP a character each time
+  (`log_processor.py`, 1.3 KB: -27.5 twice). The parity gate (`main.py` `_evaluate_two_gates`) then refuses
+  the person's message because the engine is spent. Adrenaline sat at 0.80, the settled ceiling, while the
+  mitochondria ran anaerobic.
+- **TECHNICAL, the redrafts:** 32 in 30 turns. Turn 20 ("How do I fix the regex?") shipped "Let's take a
+  moment with that.": the validator refused a short snippet in markdown fences (it demands the
+  `<write_file>` protocol for any code), then the gatekeeper read the Python comment "# This pattern
+  handles optional quotes..." as a TITLE_CASE header and cut the sentence. That is D2b's 20-33% reject
+  rate, found in the wild.
+- **TECHNICAL, the code the person never sees:** written files go to `output/` and leave blank gaps in the
+  reply ("A dataclass is the right choice here..." then two empty lines, then prose about `frozen=True`).
+- **CREATIVE:** replies run long (median 149 words), one used a bulleted "three possibilities" list, and the
+  keeper went from "he" to "she" to "you". The keeper reused one key: `plot_point` was overwritten four times
+  (the supply boat, the captain who knew the keeper years ago, the lamp failing, the climb), so only the
+  last survived. The crucible read HOT all 30 turns (voltage 11 to 14); not investigated.
+- **Seen again:** the deploy hold (MIXED turn 17, "Quick one: our deploy window is Thursdays at 2pm." got
+  the Stage Manager's silence and a consent check) and the pacemaker line in `/mode CONVERSATION`'s reply.
 
 ## Where things stand, 2026-09-25 evening (read this first)
 

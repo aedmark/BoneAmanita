@@ -67,6 +67,7 @@ class TheCortex:
         "TECHNICAL": ("SYSTEM_KERNEL", "The System Kernel"),
         "CREATIVE": ("CATALYST", "The Catalyst"),
     }
+    EMPTY_MAX_TOKENS = 160
 
     def __init__(self, services: CortexServices, llm_client=None):
         self.ballast_active = False
@@ -336,6 +337,8 @@ class TheCortex:
         somatic_budget = full_state.get("somatic_budget")
         if somatic_budget and somatic_budget.word_cap:
             llm_params["max_tokens"] = min(llm_params.get("max_tokens", 4096), somatic_budget.word_cap * 2 + 50)
+        if full_state.get("running_on_empty"):
+            llm_params["max_tokens"] = min(llm_params.get("max_tokens", 4096), self.EMPTY_MAX_TOKENS)
 
         structural_ctx, cognitive_path, token_cost = self._route_dual_memory(user_input)
         if structural_ctx:
@@ -983,8 +986,8 @@ class TheCortex:
                 sim_result["ui"] = (
                     str(sim_result.get("ui", "")) + "\n\n" + "\n".join(s_logs)
                 )
+            # Charged per file by SUBSTRATE_FORGED (body/metabolism.py); charging here too drained TECHNICAL.
             if s_cost > 0:
-                self.svc.bio.mito.adjust_atp(-s_cost, "Substrate File Forging")
                 sim_result["ui"] = (
                     str(sim_result.get("ui", ""))
                     + f"\n{Prisma.OCHRE}METABOLIC: File forging consumed {s_cost:.1f} ATP.{Prisma.RST}"
@@ -1346,6 +1349,7 @@ class TheCortex:
             "world": world,
             "somatic_budget": somatic_budget,
             "out_of_reach": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "out_of_reach", None),
+            "running_on_empty": getattr(getattr(getattr(self.svc, "orchestrator", None), "eng", None), "running_on_empty", False) is True,
             "village": village_data,
             "user_profile": {"name": "Traveler"},
             "vsl": self.consultant.state.__dict__

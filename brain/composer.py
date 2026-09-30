@@ -466,6 +466,10 @@ class PromptComposer:
         "BUREAU",
         "AUTOPHAGY",
     )
+    RUNNING_ON_EMPTY = (
+        "=== RUNNING ON EMPTY ===\nYou are nearly out of energy. Answer in one or two sentences. Then ask, gently "
+        "and plainly, for a rest or for something simpler for now. Do not describe your body or your systems.\n"
+    )
 
     def __init__(self, lore_ref, config_ref=None):
         self.lore: dict = lore_ref or {}
@@ -686,6 +690,8 @@ class PromptComposer:
                     "answer or suggestion, and ask nothing of them this turn."
                 )
             somatic_budget_block = "\n".join(budget_lines) + "\n"
+        if state.get("running_on_empty"):
+            somatic_budget_block += self.RUNNING_ON_EMPTY
         if out_of_reach := state.get("out_of_reach"):
             somatic_budget_block += (
                 f"=== OUT OF REACH ===\nThey asked for something you cannot do. {out_of_reach.limit} "

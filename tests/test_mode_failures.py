@@ -125,13 +125,14 @@ class HaltsCannotLockTheEngine(BoneTestCase):
         self.engine._generate_halt("test halt")
         self.assertGreater(self.engine.bio.mito.state.atp_pool, 0.0)
 
-    def test_the_parity_gate_lets_go_at_atp_zero(self):
+    def test_atp_zero_answers_and_recovers(self):
+        # Since 2026-09-29 a spent engine answers briefly instead of halting (tests/test_energy_budget.py).
         self.engine.set_atp(0.0)
         messages = ["I walk north toward the old mill", "I open the rusted gate slowly",
                     "I look under the bench near the wall", "I call out to whoever lives here"]
         types = [self.engine.process_turn(m).get("type") for m in messages]
-        self.assertEqual(types[0], "SYSTEM_HALT", types)
-        self.assertNotEqual(types[-1], "SYSTEM_HALT", types)
+        self.assertNotIn("SYSTEM_HALT", types)
+        self.assertGreater(self.engine.bio.mito.state.atp_pool, self.engine.EMPTY_ATP)
 
     def test_friction_does_not_score_as_malignancy(self):
         packet = PhysicsPacket()

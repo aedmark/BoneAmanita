@@ -376,8 +376,10 @@ class BoneAmanita:
 
     ABSOLUTE_FRICTION = 999.0
     MALIGNANCY_HALT = 0.8
+    EMPTY_ATP = 5.0  # the mitochondria's NECROSIS line
 
     out_of_reach = None
+    running_on_empty = False
     _capability_check = None
 
     def _capabilities(self):
@@ -503,14 +505,12 @@ class BoneAmanita:
     def _evaluate_two_gates(
         self, clean_in: str, active_phys: Any
     ) -> Optional[Dict[str, Any]]:
-        estimated_cost = len(clean_in) * 0.02
         state = self._mito_state
         current_atp = float(state.atp_pool) if state else 100.0
-        if estimated_cost > current_atp:
-            self.apply_absolute_friction(active_phys)
-            return self._generate_halt(
-                f"[PARITY GATE FAILED] Metabolic budget exceeded. Action Cost: {estimated_cost:.1f}, Available ATP: {current_atp:.1f}. Simplify your architecture."
-            )
+        # A spent engine answers briefly and asks for rest; refusing the person punished them for its own work.
+        self.running_on_empty = current_atp < self.EMPTY_ATP
+        if self.running_on_empty:
+            self.events.log(f"Running on empty (ATP {current_atp:.1f}). Answering briefly.", "BIO")
         if clean_in.count("do this forever") > 0 or clean_in.count("infinite") > 3:
             self.apply_absolute_friction(active_phys)
             return self._generate_halt(
@@ -522,6 +522,7 @@ class BoneAmanita:
         self, user_message: str, clean_in: str, is_system: bool
     ) -> Optional[Dict[str, Any]]:
         active_phys = self.active_physics
+        self.running_on_empty = False
         if self.health <= 0.0:
             return self.trigger_death(active_phys)
         grammar_rules = RealityLayer.get_rules(

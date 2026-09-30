@@ -348,8 +348,7 @@ class TheSubstrate:
         from engine.core import LoreManifest
 
         self.config = LoreManifest.get_instance().get("SUBSTRATE_CONFIG") or {
-            "ATP_COST_PER_CHAR": 0.02,
-            "MAX_ATP_PER_FILE": 100.0,
+            "ATP_COST_PER_FILE": 1.0,
             "SUBSTRATE_WRITE_RETRIES": 3,
         }
 
@@ -413,12 +412,8 @@ class TheSubstrate:
                     f"/deny {rel} drops it.{Prisma.RST}"
                 )
                 continue
-            w_cost = len(w["content"]) * self.config.get("ATP_COST_PER_CHAR", 0.02)
-            if w_cost > self.config.get("MAX_ATP_PER_FILE", 100.0):
-                logs.append(
-                    f"{Prisma.VIOLET}FATAL ERROR: {s_name} exceeds absolute biological carrying capacity (Cost: {w_cost:.1f} ATP). Purged from system.{Prisma.RST}"
-                )
-                continue
+            # One action per file; its text was already paid for as generated tokens (cortex, LLM Token Generation).
+            w_cost = float(self.config.get("ATP_COST_PER_FILE", 1.0))
             if stamina_pool - cost < w_cost:
                 retries = w.get("retries", 0) + 1
                 if retries > self.config.get("SUBSTRATE_WRITE_RETRIES", 3):
