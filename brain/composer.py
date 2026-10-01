@@ -16,7 +16,7 @@ from mechanics.projector import is_system_label
 from engine.struts import safe_get, ux, ux_format
 from body.somatic_metrics import STAGE_DIRECTION, WORD, trim_to_sentence_cap
 from engine.prose import close_gaps, in_code, mask_code
-
+from brain.prism import SelfClaimPrism
 
 class SynapseError(Exception):
     pass
@@ -453,6 +453,7 @@ class PromptComposer:
         )
         self.fog_protocol = []
         self.inv_protocol = []
+        self.prism = SelfClaimPrism()
 
     def load_template(self, template_data: Dict[str, Any]):
         if template_data:
@@ -906,6 +907,15 @@ class PromptComposer:
         persona_block = [
             line.format(role=role) if "{role}" in line else line for line in baseline
         ]
+
+        # Prismatic Self Claims
+        if hasattr(self, "prism"):
+            active_claims = self.prism.get_active_claims(bio, vsl_state or {})
+            if active_claims:
+                persona_block.insert(0, "[SYSTEM IDENTITY - UNBREAKABLE CORE FACTS]")
+                for i, claim in enumerate(reversed(active_claims)):
+                    persona_block.insert(1, f"- {claim}")
+                persona_block.insert(len(active_claims) + 1, "[END IDENTITY]")
         evolved_axioms = global_data.get("EVOLVED_AXIOMS", [])
         if evolved_axioms:
             persona_block.append("EVOLVED AXIOMS:")

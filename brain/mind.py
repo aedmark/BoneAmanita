@@ -349,7 +349,9 @@ class DreamEngine:
         soul_snapshot: Dict[str, Any],
         bio_state: Dict[str, Any],
         active_mode: str = "",
+        physics_state: Dict[str, Any] = None,
     ) -> Tuple[str, Dict[str, float]]:
+        physics_state = physics_state or {}
         chem = safe_get(bio_state, "chem", {})
         cortisol = float(safe_get(chem, "cortisol", 0.0))
         available_atp = float(safe_get(safe_get(bio_state, "mito", {}), "atp", 0.0))
@@ -364,7 +366,7 @@ class DreamEngine:
         shift.update(consolidated_shift)
         if not dream_text:
             dream_text, narrative_shift = self._generate_narrative_dream(
-                soul_snapshot, chem, cortisol
+                soul_snapshot, chem, cortisol, physics_state=physics_state
             )
             shift.update(narrative_shift)
         if (shift.pop("is_deep_rem", False)) or (
@@ -530,11 +532,20 @@ class DreamEngine:
         return dream_text, shift
 
     def _generate_narrative_dream(
-        self, soul_snapshot: Dict[str, Any], chem: Dict[str, float], cortisol: float
+        self, soul_snapshot: Dict[str, Any], chem: Dict[str, float], cortisol: float, physics_state: Dict[str, Any] = None
     ) -> Tuple[Optional[str], Dict[str, Any]]:
+        physics_state = physics_state or {}
         shift = {}
         dream_text = None
         is_deep_rem = False
+        v_norm = min(1.0, max(0.0, float(physics_state.get("voltage", 0.0)) / 10.0))
+        r_norm = min(1.0, max(0.0, float(physics_state.get("resonance", 0.0))))
+        d_norm = min(1.0, max(0.0, float(chem.get("dopamine", 0.0))))
+        c_norm = min(1.0, max(0.0, float(chem.get("cortisol", 0.0))))
+        s_norm = min(1.0, max(0.0, float(chem.get("serotonin", 0.0))))
+        o_norm = min(1.0, max(0.0, float(chem.get("oxytocin", 0.0))))
+        current_affect = [v_norm, r_norm, d_norm, c_norm, s_norm, o_norm]
+
         cortical_stack = (
             list(self.mem.cortical_stack) if self.mem.cortical_stack else []
         )
@@ -544,7 +555,7 @@ class DreamEngine:
             vector = self._w2v(anchor_word)
             if vector is not None:
                 fossils = self.mem.subconscious.dredge_vibe_by_vector(
-                    vector, k=1, cortisol=cortisol
+                    vector, k=1, cortisol=cortisol, affect_vector=current_affect
                 )
                 if fossils and fossils[0].get("score", 0.0) > 0.8:
                     fossil_word = fossils[0]["word"]
@@ -610,7 +621,11 @@ class DreamEngine:
                 or "echo"
             )
             self.mem.subconscious.bury(
-                {"word": clean_seed, "mass": min(10.0, 5.0 + (cortisol * 5.0))},
+                {
+                    "word": clean_seed,
+                    "mass": min(10.0, 5.0 + (cortisol * 5.0)),
+                    "affect": current_affect
+                },
                 config_ref=self.cfg,
             )
         shift["is_deep_rem"] = is_deep_rem

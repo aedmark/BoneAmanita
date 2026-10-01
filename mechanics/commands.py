@@ -622,12 +622,14 @@ class CommandProcessor:
                 bio_state["chem"] = bio.endo.get_state() if hasattr(bio, "endo") else {}
                 if hasattr(bio, "mito"):
                     bio_state["mito"] = {"atp": bio.mito.state.atp_pool, "ros": bio.mito.state.ros_buildup}
+            active_phys = getattr(self.interface.eng, "active_physics", None)
             dream_text, effects = dreamer.enter_rem_cycle(
                 snapshot,
                 bio_state,
                 active_mode=getattr(
                     getattr(self.interface.eng, "cortex", None), "active_mode", ""
                 ),
+                physics_state=vars(active_phys) if hasattr(active_phys, "__dict__") else {},
             )
             orchestrator = getattr(self.interface.eng, "orchestrator", None)
             remembered = orchestrator.sleep_dream() if orchestrator else None

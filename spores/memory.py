@@ -201,7 +201,7 @@ class SubconsciousStrata:
                 self.rank_bank, self.bitmap, self.quantizer = None, None, None
 
     def dredge_vibe_by_vector(
-        self, query_vector, k: int = 3, cortisol: float = 0.0
+        self, query_vector, k: int = 3, cortisol: float = 0.0, affect_vector: list = None
     ) -> list:
         total_memories = len(self.metadata_log)
         if total_memories == 0 or self.rank_bank is None:
@@ -221,13 +221,15 @@ class SubconsciousStrata:
         Q_arr = np.ascontiguousarray(Q_arr, dtype=np.float32)
         top_indices, scores = [], []
 
+        fetch_k = min(effective_k * 5, total_memories) if affect_vector is not None else effective_k
+
         if ordvec is not None and self.quantizer is not None and self.bitmap is not None:
-            coarse_k = min(effective_k * 8, total_memories)
+            coarse_k = min(fetch_k * 8, total_memories)
             candidates = np.ascontiguousarray(
                 self.bitmap.top_m_candidates(Q_arr, coarse_k).astype(np.uint32)
             )
             scores, top_indices = self.quantizer.search_asymmetric_subset(
-                Q_arr, candidates, effective_k
+                Q_arr, candidates, fetch_k
             )
 
         if not len(top_indices):
@@ -240,11 +242,11 @@ class SubconsciousStrata:
                     norms_bank[valid] * norm_q
                 )
 
-                if total_memories <= effective_k:
+                if total_memories <= fetch_k:
                     top_indices = np.argsort(all_scores)[::-1]
                 else:
-                    top_indices = np.argpartition(all_scores, -effective_k)[
-                        -effective_k:
+                    top_indices = np.argpartition(all_scores, -fetch_k)[
+                        -fetch_k:
                     ]
                     top_indices = top_indices[np.argsort(all_scores[top_indices])[::-1]]
 
@@ -258,11 +260,26 @@ class SubconsciousStrata:
                     {"word": meta.get("word"), "score": float(score), "data": meta}
                 )
 
-        return results
+        if affect_vector is not None and len(affect_vector) == 6:
+            affect_arr = np.array(affect_vector, dtype=np.float32)
+            alpha = max(0.2, 0.8 - (cortisol * 0.6))
+            for res in results:
+                meta_affect = res["data"].get("affect")
+                if meta_affect and len(meta_affect) == 6:
+                    meta_arr = np.array(meta_affect, dtype=np.float32)
+                    dist = np.linalg.norm(affect_arr - meta_arr)
+                    norm_dist = min(1.0, float(dist) / 2.45)
+                    penalty = norm_dist * alpha
+                    res["score"] = max(0.0, res["score"] - penalty)
+            
+            results.sort(key=lambda x: x["score"], reverse=True)
+            results = [r for r in results if r["score"] >= min_score_threshold]
 
-    def dredge_vibe(self, trigger_word: str, k: int = 3, cortisol: float = 0.0) -> list:
+        return results[:effective_k]
+
+    def dredge_vibe(self, trigger_word: str, k: int = 3, cortisol: float = 0.0, affect_vector: list = None) -> list:
         Q = _word_to_vector(trigger_word)
-        return self.dredge_vibe_by_vector(Q, k, cortisol)
+        return self.dredge_vibe_by_vector(Q, k, cortisol, affect_vector)
 
 
 class MemoryCore:
