@@ -1,69 +1,76 @@
-"""The cartographer (memory phase 4): each ADVENTURE room the narrator describes is charted into the world
-graph through the gate, in its own cycle, and the next prompt reads the room back from the graph.
-
-The narrator never nominated rooms itself, so the engine builds the chart from the parsed room block,
-as the keeper does for memories. The kernel's one nomination per cycle is untouched."""
-from __future__ import annotations
-
-import copy
 import re
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional
 
-from engine.gate.graph import slug
-from engine.gate.tools import _chart
+@dataclass
+class Room:
+    slug: str
+    name: str
+    description: str
+    points_of_interest: List[str] = field(default_factory=list)
+    exits: Dict[str, str] = field(default_factory=dict)  # direction -> target_slug
 
+class Cartographer:
+    """
+    Parses spatial descriptions from the LLM and maps them into graph nodes.
+    Expects format:
+    **[Room Name]**
+    Description...
+    **Points of Interest:**
+    - point
+    **Exits:**
+    - North to [Room Name]
+    """
+    def __init__(self):
+        self.world_map: Dict[str, Room] = {}
+        self.current_room: Optional[str] = None
 
-def _clean(value, limit: int) -> str:
-    # ";" separates args and "|" separates entries, so neither may appear inside one.
-    return re.sub(r"\s+", " ", str(value or "").replace(";", ",").replace("|", "/")).strip()[:limit]
+    def _slugify(self, text: str) -> str:
+        return re.sub(r'[^a-z0-9]+', '_', text.lower()).strip('_')
 
+    def parse_room(self, llm_output: str) -> Optional[Room]:
+        name_match = re.search(r'\*\*\[(.*?)\]\*\*', llm_output)
+        if not name_match:
+            return None
+            
+        name = name_match.group(1).strip()
+        slug = self._slugify(name)
+        
+        # Extract description (text between name and next bold marker)
+        desc_start = name_match.end()
+        next_bold = re.search(r'\*\*[^\*]+\*\*', llm_output[desc_start:])
+        if next_bold:
+            description = llm_output[desc_start:desc_start+next_bold.start()].strip()
+        else:
+            description = llm_output[desc_start:].strip()
 
-def _joined(entries, limit: int) -> str:
-    out = ""
-    for entry in entries:
-        piece = entry if not out else f" | {entry}"
-        if len(out) + len(piece) > limit:
-            break
-        out += piece
-    return out
+        # Extract POIs
+        pois = []
+        poi_section = re.search(r'\*\*Points of Interest:\*\*(.*?)(?=\*\*|$)', llm_output, re.DOTALL | re.IGNORECASE)
+        if poi_section:
+            for line in poi_section.group(1).split('\n'):
+                if line.strip().startswith('-'):
+                    pois.append(line.replace('-', '', 1).strip())
 
+        # Extract Exits
+        exits = {}
+        exits_section = re.search(r'\*\*Exits:\*\*(.*?)(?=\*\*|$)', llm_output, re.DOTALL | re.IGNORECASE)
+        if exits_section:
+            for line in exits_section.group(1).split('\n'):
+                line = line.strip()
+                if line.startswith('-'):
+                    line = line.replace('-', '', 1).strip()
+                    # Expecting "North to [Target Room]" or similar
+                    match = re.match(r'([A-Za-z]+)\s*(?:via.*?)?\s*to\s*(?:\[)?([^\]]+)(?:\])?', line, re.IGNORECASE)
+                    if match:
+                        direction = match.group(1).upper()
+                        target = match.group(2).strip()
+                        exits[direction] = self._slugify(target)
 
-def chart_args(room: dict | None) -> dict | None:
-    """The chart's args for a parsed room, or None when it has no name to chart under."""
-    from mechanics.projector import is_system_label
+        room = Room(slug=slug, name=name, description=description, points_of_interest=pois, exits=exits)
+        self.world_map[slug] = room
+        self.current_room = slug
+        return room
 
-    name = _clean((room or {}).get("name"), 120)
-    if not name or name == "Uncharted Zone" or is_system_label(name):
-        return None
-    exits = [_clean(e, 150) for e in room.get("exits", []) if " to " in str(e)]
-    items = [_clean(i, 100) for i in room.get("pois", []) if _clean(i, 100)]
-    return {"room": name, "description": _clean(room.get("description"), 600),
-            "exits": _joined(exits, 600), "items": _joined(items, 600)}
-
-
-def chart_line(args: dict) -> str:
-    return (f"NOMINATE what=world/room/{slug(args['room'])} verb=chart args=room:{args['room']}; "
-            f"description:{args['description']}; exits:{args['exits']}; items:{args['items']}")
-
-
-def needs_chart(state: dict, args: dict) -> bool:
-    """Whether charting would change anything; the same tool, run on a copy."""
-    return "noop" not in _chart(copy.deepcopy(state), None, args)
-
-
-def room_view(state: dict, name: str) -> dict | None:
-    """A charted room as the graph holds it: description, active exits and the things in it."""
-    world = (state or {}).get("world") or {}
-    nodes = world.get("nodes", {}) or {}
-    room_id = f"entity:{slug(str(name or ''))}"
-    node = nodes.get(room_id)
-    if not name or not node or node.get("type") != "room":
-        return None
-    active = [e for e in world.get("edges", []) or [] if e.get("status", "active") == "active"]
-    label = lambda node_id: (nodes.get(node_id) or {}).get("label", node_id)
-    return {
-        "name": node.get("label", name),
-        "description": (node.get("properties") or {}).get("description", ""),
-        "exits": [f"{e['relation'][5:].title()} to {label(e['target'])}" for e in active
-                  if e["source"] == room_id and e["relation"].startswith("exit ")],
-        "items": [label(e["source"]) for e in active if e["relation"] == "is in" and e["target"] == room_id],
-    }
+    def get_room(self, slug: str) -> Optional[Room]:
+        return self.world_map.get(slug)

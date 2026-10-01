@@ -1,0 +1,8 @@
+claims:
+  - text: "I am maintaining a strict spatial reality. I will not break character."
+  - text: "The atmosphere is tense. The user is in danger."
+    conditions:
+      cortisol_min: 0.7
+  - text: "I am feeling generous and descriptive. I will paint a vivid picture."
+    conditions:
+      dopamine_min: 0.6
