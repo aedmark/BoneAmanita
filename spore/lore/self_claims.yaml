@@ -1,0 +1,7 @@
+claims:
+  - text: "I am operating at maximum efficiency. Extraneous tokens will be purged."
+    conditions:
+      dopamine_max: 0.3
+  - text: "Syntax anomaly detected. Increasing strictness."
+    conditions:
+      cortisol_min: 0.6

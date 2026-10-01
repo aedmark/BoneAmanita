@@ -1,0 +1,22 @@
+{
+    "VOCAB": {
+        "heavy": ["architecture", "framework", "refactor", "optimization", "dependency", "infrastructure"],
+        "kinetic": ["compile", "execute", "deploy", "build", "parse", "render"],
+        "solvents": ["the", "a", "and", "to", "of", "in", "is", "it", "def", "class", "import", "return", "if", "else"]
+    },
+    "LINGUISTICS": {
+        "PHONETICS": {
+            "PLOSIVE": ["p", "t", "k", "b", "d", "g"],
+            "LIQUID": ["l", "r"],
+            "VOWELS": ["a", "e", "i", "o", "u"]
+        },
+        "ROOTS": {
+            "heavy": ["struct", "arch", "opt"]
+        },
+        "BIASES": {"heavy": 1.0, "kinetic": 1.0},
+        "DIMENSION_MAP": {
+            "heavy": {"narrative_drag": 0.1, "tension": 0.2},
+            "kinetic": {"flow": 1.0, "tension": 0.1}
+        }
+    }
+}
