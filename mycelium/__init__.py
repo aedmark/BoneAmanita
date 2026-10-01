@@ -18,3 +18,4 @@ __all__ = [
     "ResponseValidator",
     "HalcyonStore"
 ]
+from .llm import OllamaInterface
