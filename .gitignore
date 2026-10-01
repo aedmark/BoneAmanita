@@ -51,3 +51,4 @@ dummy.jsonl
 # .idea/ is deliberately absent: the PyCharm project files are tracked.
 *.swp
 .DS_Store
+/tools/mycelium_demo.py
