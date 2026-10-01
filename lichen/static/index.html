@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lichen | Adventure Mode</title>
+    <style>
+        :root {
+            --bg: #0a0e0a;
+            --fg: #33ff33;
+            --dim: #1a4d1a;
+            --accent: #00ffcc;
+            --warn: #ff3333;
+            --font: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: var(--font);
+            margin: 0;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 250px 1fr 300px;
+            gap: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .panel {
+            border: 1px solid var(--dim);
+            background: rgba(10, 14, 10, 0.9);
+            box-shadow: 0 0 10px rgba(51, 255, 51, 0.1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            text-transform: uppercase;
+            font-weight: bold;
+            border-bottom: 1px solid var(--dim);
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            color: var(--accent);
+        }
+
+        /* Vitals Panel */
+        .vitals-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .bar-container {
+            width: 100%;
+            height: 10px;
+            background: #111;
+            border: 1px solid var(--dim);
+            margin-top: 5px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        /* Terminal Panel */
+        .terminal-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            grid-column: 2;
+        }
+
+        #output {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .user-msg { color: var(--accent); margin-top: 10px; }
+        .sys-msg { color: var(--fg); margin-bottom: 10px; }
+        .error-msg { color: var(--warn); margin-bottom: 10px; }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+            border-top: 1px solid var(--dim);
+            padding-top: 10px;
+        }
+
+        .prompt { margin-right: 10px; color: var(--accent); }
+        
+        #command-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--fg);
+            font-family: var(--font);
+            font-size: 16px;
+            outline: none;
+        }
+
+        /* Room Panel */
+        .room-details { margin-bottom: 20px; }
+        .room-name { color: var(--accent); font-weight: bold; font-size: 1.1em; }
+        .room-desc { margin: 10px 0; font-size: 0.9em; opacity: 0.8; }
+        .list-item { margin-left: 15px; display: list-item; list-style-type: square; }
+
+        /* Inventory */
+        .inv-slot {
+            padding: 5px 0;
+            border-bottom: 1px dashed var(--dim);
+            font-size: 0.9em;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--dim); }
+
+    </style>
+</head>
+<body>
+
+    <!-- Left Panel: Vitals -->
+    <div class="panel">
+        <div class="panel-title">Biological Status</div>
+        <div class="vitals-container">
+            <div>
+                <span>Stamina / ATP</span> <span id="stamina-val" style="float:right">100.0</span>
+                <div class="bar-container"><div id="stamina-bar" class="bar-fill" style="background: var(--fg); width: 100%;"></div></div>
+            </div>
+            <div>
+                <span>Dopamine</span> <span id="dopamine-val" style="float:right">0.10</span>
+                <div class="bar-container"><div id="dopamine-bar" class="bar-fill" style="background: #ff00ff; width: 10%;"></div></div>
+            </div>
+            <div>
+                <span>Cortisol</span> <span id="cortisol-val" style="float:right">0.10</span>
+                <div class="bar-container"><div id="cortisol-bar" class="bar-fill" style="background: var(--warn); width: 10%;"></div></div>
+            </div>
+            <div style="margin-top:20px; border-top: 1px dashed var(--dim); padding-top: 10px;">
+                <span>Narrative Drag</span> <span id="drag-val" style="float:right">0.60</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Center Panel: Terminal -->
+    <div class="panel terminal-wrapper">
+        <div class="panel-title">Lichen Terminal</div>
+        <div id="output">
+            <div class="sys-msg">Initializing Lichen Interface...</div>
+            <div class="sys-msg">Type /look to see your surroundings, or /inventory to check your pockets.</div>
+        </div>
+        <div class="input-line">
+            <span class="prompt">>&nbsp;</span>
+            <input type="text" id="command-input" autocomplete="off" autofocus spellcheck="false">
+        </div>
+    </div>
+
+    <!-- Right Panel: Room & Inventory -->
+    <div class="panel">
+        <div class="panel-title">Cartographer Map</div>
+        <div id="room-info" class="room-details">
+            <div class="room-name">Nowhere</div>
+            <div class="room-desc">The map is empty. Move to chart the world.</div>
+        </div>
+        
+        <div class="panel-title" style="margin-top: 20px;">GordonKnot</div>
+        <div id="inventory-list">
+            <!-- Inventory items injected here -->
+        </div>
+        <div style="margin-top: 10px; font-size: 0.8em; color: var(--dim);" id="inv-capacity">Capacity: 0/0</div>
+    </div>
+
+    <script>
+        const input = document.getElementById('command-input');
+        const output = document.getElementById('output');
+
+        input.addEventListener('keypress', async function(e) {
+            if (e.key === 'Enter' && input.value.trim() !== '') {
+                const text = input.value.trim();
+                input.value = '';
+                
+                const uDiv = document.createElement('div');
+                uDiv.className = 'user-msg';
+                uDiv.innerText = `> ${text}`;
+                output.appendChild(uDiv);
+                output.scrollTop = output.scrollHeight;
+
+                try {
+                    const res = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ message: text })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    const sDiv = document.createElement('div');
+                    sDiv.className = data.response.includes('FIREWALL') ? 'error-msg' : 'sys-msg';
+                    sDiv.innerText = data.response;
+                    output.appendChild(sDiv);
+                    output.scrollTop = output.scrollHeight;
+
+                    document.getElementById('stamina-val').innerText = data.vitals.stamina.toFixed(1);
+                    document.getElementById('stamina-bar').style.width = `${Math.min(100, Math.max(0, data.vitals.stamina))}%`;
+                    
+                    document.getElementById('dopamine-val').innerText = data.vitals.dopamine.toFixed(2);
+                    document.getElementById('dopamine-bar').style.width = `${Math.min(100, data.vitals.dopamine * 100)}%`;
+                    
+                    document.getElementById('cortisol-val').innerText = data.vitals.cortisol.toFixed(2);
+                    document.getElementById('cortisol-bar').style.width = `${Math.min(100, data.vitals.cortisol * 100)}%`;
+                    
+                    document.getElementById('drag-val').innerText = data.vitals.drag.toFixed(2);
+
+                    if (data.room) {
+                        const rInfo = document.getElementById('room-info');
+                        let rHtml = `<div class="room-name">${data.room.name}</div>`;
+                        rHtml += `<div class="room-desc">${data.room.description}</div>`;
+                        
+                        if (data.room.pois && data.room.pois.length > 0) {
+                            rHtml += `<div style="color:var(--accent)">Points of Interest:</div>`;
+                            data.room.pois.forEach(p => rHtml += `<div class="list-item">${p}</div>`);
+                        }
+                        if (data.room.exits && data.room.exits.length > 0) {
+                            rHtml += `<div style="color:var(--accent); margin-top:5px;">Exits:</div>`;
+                            data.room.exits.forEach(e => rHtml += `<div class="list-item">${e}</div>`);
+                        }
+                        rInfo.innerHTML = rHtml;
+                    }
+
+                    const invList = document.getElementById('inventory-list');
+                    invList.innerHTML = '';
+                    if (data.inventory.length === 0) {
+                        invList.innerHTML = '<div class="inv-slot" style="color:var(--dim)">[Empty Pockets]</div>';
+                    } else {
+                        data.inventory.forEach(item => {
+                            invList.innerHTML += `<div class="inv-slot">${item}</div>`;
+                        });
+                    }
+                    document.getElementById('inv-capacity').innerText = `Capacity: ${data.inventory.length}/${data.max_slots}`;
+
+                } catch (err) {
+                    const eDiv = document.createElement('div');
+                    eDiv.className = 'error-msg';
+                    eDiv.innerText = `[API Error] Failed to connect to Lichen server.`;
+                    output.appendChild(eDiv);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
