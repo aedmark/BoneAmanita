@@ -36,7 +36,7 @@ from engine.core import (
 )
 from engine.cycle import GeodesicOrchestrator
 from engine.genesis import DEPENDS_ON, VILLAGE_KEYS, BoneGenesis
-from lichen.commands import CommandProcessor
+from mechanics.commands import CommandProcessor
 from mechanics.lexicon import LexiconService
 from mechanics.setup import ConfigWizard
 from mechanics.providers import environment_config

@@ -8,8 +8,8 @@ from __future__ import annotations
 import copy
 import re
 
-from engine.gate.graph import slug
-from engine.gate.tools import _chart
+from .graph import slug
+from .tools import _chart
 
 
 def _clean(value, limit: int) -> str:

@@ -14,7 +14,7 @@ from engine.constants import Prisma
 from engine.core import EventBus, LoreManifest
 from drivers import BoneConsultant, DriverRegistry
 from machine import BoneArchitect, TheConsolidator
-from lichen.inventory import GordonKnot
+from mechanics.inventory import GordonKnot
 from engine.presets import BoneConfig
 from protocols import (
     KintsugiProtocol,

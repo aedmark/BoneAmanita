@@ -89,7 +89,7 @@ class RandomTest(BoneTestCase):
 
         def test_dream_seed_determinism(self):
             print("\n--- RANDOM: Dream Seed Determinism ---")
-            from lichen.inventory import GordonKnot
+            from mechanics.inventory import GordonKnot
 
             manifest = LoreManifest.get_instance()
             manifest._cache["ITEM_GENERATION"] = {
@@ -144,7 +144,7 @@ class RandomTest(BoneTestCase):
             )
 
     def test_ux_string_decoupling_inventory(self):
-        from lichen.inventory import Item
+        from mechanics.inventory import Item
 
         manifest = LoreManifest.get_instance()
         if "ux_strings" not in manifest._cache:

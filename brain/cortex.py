@@ -275,7 +275,7 @@ class TheCortex:
         if self.active_mode == "ADVENTURE" and self.current_room_name and not is_system_label(self.current_room_name):
             sim_result["world"]["room_name"] = self.current_room_name
             # The graph's version of the room, charted from earlier replies, is what is true in the story.
-            from lichen.cartographer import room_view
+            from engine.gate.cartographer import room_view
 
             if charted := room_view(getattr(ctx, "halcyon_state", None), self.current_room_name):
                 sim_result["world"]["room"] = charted

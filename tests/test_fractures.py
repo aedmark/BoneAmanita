@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 from archetypes.symbiosis import SymbiosisManager
-from lichen.commands import CommandProcessor
+from mechanics.commands import CommandProcessor
 from physics.models import PhysicsPacket
 from tests.base import BoneTestCase
 

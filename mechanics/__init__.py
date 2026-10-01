@@ -1,6 +1,6 @@
-from lichen.commands import CommandProcessor
+from mechanics.commands import CommandProcessor
 from mechanics.dspycritic import DSPyCritic
-from lichen.inventory import GordonKnot, Item
+from mechanics.inventory import GordonKnot, Item
 from mechanics.lexicon import LexiconService, LexiconStore
 from mechanics.reporter import CycleReporter
 from mechanics.tools import TheTclWeaver
