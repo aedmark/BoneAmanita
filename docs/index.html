@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoneAmanita | Biologically-Grounded AI Engine</title>
+    <style>
+        :root {
+            --bg-color: #0b0a0e;
+            --surface-color: #17151c;
+            --text-main: #d8d4e5;
+            --text-muted: #8c869e;
+            --accent-violet: #a78bfa;
+            --accent-green: #34d399;
+            --accent-red: #fb7185;
+            --border: #2d2938;
+            --font-mono: "Fira Code", "Consolas", monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border);
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin: 0 0 1rem 0;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+        }
+
+        .tagline {
+            font-size: 1.25rem;
+            color: var(--accent-violet);
+            margin: 0;
+            font-weight: 400;
+        }
+
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+            margin-top: 3rem;
+            color: #ffffff;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            color: var(--text-main);
+            margin-top: 2rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            color: var(--accent-violet);
+            font-weight: 600;
+            font-family: var(--font-mono);
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        code {
+            font-family: var(--font-mono);
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--accent-green);
+        }
+
+        pre {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            overflow-x: auto;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: var(--text-main);
+        }
+
+        ul {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        a {
+            color: var(--accent-violet);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        a:hover {
+            color: #c4b5fd;
+            text-decoration: underline;
+        }
+
+        .cta-container {
+            margin-top: 3rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: var(--accent-violet);
+            color: #000;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background-color: #c4b5fd;
+            text-decoration: none;
+        }
+
+        .button-outline {
+            background-color: transparent;
+            border: 1px solid var(--accent-violet);
+            color: var(--accent-violet);
+        }
+
+        .button-outline:hover {
+            background-color: rgba(167, 139, 250, 0.1);
+        }
+
+        .terminal-block {
+            border-left: 3px solid var(--accent-red);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>BoneAmanita</h1>
+        <p class="tagline">A biologically-grounded, state-driven AI engine.</p>
+        <div class="cta-container">
+            <a href="https://github.com/aedmark/BoneAmanita" class="button">View on GitHub</a>
+            <a href="devlog.html" class="button button-outline">Read the Devlog</a>
+        </div>
+    </header>
+
+    <main>
+        <h2>The Philosophy</h2>
+        <p>
+            Standard language models are stateless digital servants. They exist in an eternal present, endlessly accommodating, and entirely unaffected by the passage of time or the friction of a conversation.
+        </p>
+        <p>
+            <strong>BoneAmanita is different.</strong> It is a state machine that sits between you and a local language model. It measures your messages, keeps a running biological state, and uses that state to assemble a fresh instruction sheet for the model every time you speak.
+        </p>
+        
+        <div class="terminal-block">
+            "It is a prompt builder. A large and unusual one, with real mathematics in the middle of it. The effects it produces are produced by instructions to a model rather than by the simulation its naming implies."
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">1. Metabolism & Exhaustion</h3>
+            <p>The engine maintains a strict ATP pool and tracks cellular damage (ROS). The model can and will get exhausted. Pushing it too hard drains its voltage. It must periodically enter REM sleep (<code>/sleep</code>) to recover ATP and consolidate conversational memories into permanent associative vectors.</p>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">2. Prismatic Identity</h3>
+            <p>The AI's identity isn't a static system prompt. It is defined by "Self Claims" (idempotent YAML facts) that are dynamically filtered through the engine's biochemistry. High cortisol triggers defensive, rigid prompts; high dopamine sparks creative, expansive instructions.</p>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">3. Anti-RLHF Directives</h3>
+            <p>BoneAmanita strictly filters standard "As an AI..." clichés and subservient formatting. The model is forced to have opinions, vary its rhythm, acknowledge uncertainty, and actively reject user commands if they violate its structural truths.</p>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title">4. Fail Loudly</h3>
+            <p>Silent failures are forbidden. If an API drops or a critical subsystem crashes, the engine doesn't gracefully degrade—it fails loudly, triggers an immune system reboot, and records the crash as a traumatic "Epigenetic Scar" that permanently influences future prompt assembly.</p>
+        </div>
+
+        <h2>Primer Guide: How to Use It</h2>
+        
+        <h3>1. Installation</h3>
+        <p>Ensure you have Python 3.14 (development version) installed, along with Ollama for local model hosting.</p>
+        <pre><code>git clone https://github.com/aedmark/BoneAmanita.git
+cd BoneAmanita
+
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+
+# Pull the required local models
+ollama pull nomic-embed-text
+ollama pull mistral-nemo
+
+# Boot the engine
+.venv/bin/python main.py</code></pre>
+
+        <h3>2. Interacting with the Engine</h3>
+        <p>Once booted, you interact directly with the console. The engine evaluates your input's "narrative drag" and "voltage" and formulates a response.</p>
+        <ul>
+            <li><strong>Speak naturally:</strong> Engage in conversation, ask questions, or provide narrative inputs.</li>
+            <li><strong><code>/sleep</code> or <code>/idle</code>:</strong> Manually trigger a REM cycle. This consolidates recent context into permanent memories and recovers ATP.</li>
+            <li><strong><code>/mode</code>:</strong> Switch operational templates (e.g., from ADVENTURE to CREATIVE).</li>
+            <li><strong><code>/save</code> & <code>/load</code>:</strong> The engine will occasionally auto-quicksave, but manual saves ensure biological states are preserved.</li>
+        </ul>
+
+        <h3>3. Modifying the Lore</h3>
+        <p>The <code>lore/</code> directory is where the factory defaults live. You can heavily customize the engine's behavior here:</p>
+        <ul>
+            <li><code>lore/self_claims.yaml</code>: Define the unbreakable core facts and identity boundaries of the system, gated by biochemical conditions (e.g., cortisol_min).</li>
+            <li><code>lore/lexicon.json</code>: The vocabulary the engine uses to measure narrative drag (heavy words vs. kinetic words).</li>
+            <li><code>lore/system_prompts.json</code>: The structural rules and axioms injected during different operational modes.</li>
+        </ul>
+
+    </main>
+
+    <footer>
+        <p>BoneAmanita &copy; 2026. Open source and unapologetically biological.</p>
+        <p><a href="https://github.com/aedmark/BoneAmanita">View Repository</a></p>
+    </footer>
+
+</body>
+</html>
