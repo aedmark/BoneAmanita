@@ -245,14 +245,14 @@ class BrainSubstrateTests(BoneTestCase):
         cortex = TheCortex(services=services)
 
         long_text = "word " * 105
-        is_faithful, reason = cortex._run_heuristic_audit("Hello", long_text, e_u=0.85, beta=0.0)
+        is_faithful, reason = cortex._run_heuristic_audit("Hello", long_text, e_u=0.95, beta=0.0)
         self.assertFalse(
             is_faithful, "[FAIL] Heuristic audit failed to block overly verbose response under high exhaustion."
         )
         self.assertIn("verbose", reason.lower())
 
         q_text = "Are you sure about that?"
-        is_faithful, reason = cortex._run_heuristic_audit("Hello", q_text, e_u=0.85, beta=0.0)
+        is_faithful, reason = cortex._run_heuristic_audit("Hello", q_text, e_u=0.95, beta=0.0)
         self.assertFalse(is_faithful, "[FAIL] Heuristic audit failed to block interrogating an exhausted user.")
         self.assertIn("question", reason.lower())
 
@@ -261,7 +261,7 @@ class BrainSubstrateTests(BoneTestCase):
         self.assertFalse(is_faithful, "[FAIL] Heuristic audit failed to block heavy response under high tension.")
 
         good_text = "I am here with you. We will rest."
-        is_faithful, reason = cortex._run_heuristic_audit("Hello", good_text, e_u=0.85, beta=0.85)
+        is_faithful, reason = cortex._run_heuristic_audit("Hello", good_text, e_u=0.95, beta=0.85)
         self.assertTrue(is_faithful, "[FAIL] Heuristic audit falsely blocked a safe, short, declarative response.")
 
 

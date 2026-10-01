@@ -938,8 +938,16 @@ class PromptComposer:
         ]
         evolved_axioms = global_data.get("EVOLVED_AXIOMS", [])
         if evolved_axioms:
-            persona_block.append("EVOLVED AXIOMS (LEARNED THROUGH TRAUMA):")
+            persona_block.append("EVOLVED AXIOMS:")
             persona_block.extend([f"- {axiom}" for axiom in evolved_axioms])
+        epigenetic_scars = global_data.get("EPIGENETIC_SCARS", [])
+        if epigenetic_scars:
+            persona_block.append("EPIGENETIC SCARS (PAST TRAUMA):")
+            persona_block.extend([f"- {scar}" for scar in epigenetic_scars])
+        epigenetic_boons = global_data.get("EPIGENETIC_BOONS", [])
+        if epigenetic_boons:
+            persona_block.append("EPIGENETIC BOONS (PAST BREAKTHROUGHS):")
+            persona_block.extend([f"- {boon}" for boon in epigenetic_boons])
         if phase_shift_note:
             persona_block.append(phase_shift_note)
         voltage = 30.0

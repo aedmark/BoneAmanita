@@ -1163,7 +1163,17 @@ class TheCortex:
             word_count = len(prose.split())
             has_question = "?" in prose
 
-            if e_u > 0.8:
+            c_cfg = safe_get(self.cfg, "CORTEX", {})
+            base_exhaustion_gate = float(safe_get(c_cfg, "EXHAUSTION_GATE", 0.8))
+            
+            resonance = float(self.last_physics.get("resonance", 0.0))
+            health = float(self.last_physics.get("health", 100.0))
+            
+            resonance_bonus = resonance * 0.1
+            health_bonus = max(0.0, (health - 80.0) / 20.0) * 0.1
+            dynamic_threshold = base_exhaustion_gate + resonance_bonus + health_bonus
+
+            if e_u > dynamic_threshold:
                 if word_count > 100:
                     self.heavy_cap = 100
                     return (
