@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import yaml
 
-from engine.gate.cartographer import chart_args, chart_line, room_view
+from lichen.cartographer import chart_args, chart_line, room_view
 from engine.gate.graph import empty_world
 from engine.gate.kernel import Boundary, Gate
 from engine.gate.tools import TOOLS, build_invariants

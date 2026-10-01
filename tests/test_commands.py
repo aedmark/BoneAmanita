@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from engine.constants import Prisma
 from main import BoneAmanita
-from mechanics.commands import CommandProcessor, CommandStateInterface, ResourceTax
+from lichen.commands import CommandProcessor, CommandStateInterface, ResourceTax
 from tests.base import BoneTestCase
 
 
