@@ -1,12 +1,20 @@
 """
-Mycelium: A generalized library for state-driven, biologically-constrained agentic workflows.
-Extracted from the BoneAmanita engine.
+Mycelium: The Core Biological Logic Root.
+Extracted from BoneAmanita. Provides the baseline biological simulation, 
+lexical mapping, and prompt composer for all connected 'Fruiting Bodies'.
 """
 
-from .soma import Soma, ExhaustionError
-from .prism import Prism
-from .macrophage import Macrophage, ToxicityError
-from .strata import Strata
+from .lexicon import LinguisticAnalyzer
+from .physics import PhysicsPacket, EnergyState, SpatialState
+from .composer import PromptComposer, ResponseValidator
+from .store import HalcyonStore
 
-__version__ = "0.1.0"
-__all__ = ["Soma", "ExhaustionError", "Prism", "Macrophage", "ToxicityError", "Strata"]
+__all__ = [
+    "LinguisticAnalyzer",
+    "PhysicsPacket",
+    "EnergyState",
+    "SpatialState",
+    "PromptComposer",
+    "ResponseValidator",
+    "HalcyonStore"
+]
