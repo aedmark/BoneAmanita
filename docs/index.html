@@ -3,221 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BoneAmanita | v7.0</title>
+    <title>BoneAmanita | Bio-Terminal</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="nav">
-        <div class="wrap" style="display: flex; justify-content: space-between;">
-            <a href="https://github.com/aedmark/BoneAmanita" class="brand">
-                BONEAMANITA
-            </a>
-            <ul style="align-items: center;">
-                <li>
-                    <div class="meter" title="Metabolism (ATP)">
-                        <div class="meter-body"><div class="meter-fill"></div></div>
-                        <span class="meter-text">100 ATP</span>
-                    </div>
-                </li>
-                <li><button class="sleep-btn" aria-pressed="false">/sleep</button></li>
-            </ul>
+
+    <div id="vitals-monitor">
+        <div class="vital-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 22h20L12 2z" class="pulse-path"/>
+            </svg>
+            BONE_AMANITA <span class="version">v7.0</span>
+        </div>
+        <div class="vital-stats">
+            <div class="stat">
+                <span class="label">ATP</span>
+                <div class="bar-container"><div id="atp-bar" class="bar-fill"></div></div>
+                <span id="atp-val" class="value">100%</span>
+            </div>
+            <div class="stat">
+                <span class="label">CORT</span>
+                <div class="bar-container"><div id="cort-bar" class="bar-fill cort"></div></div>
+                <span id="cort-val" class="value">0.12</span>
+            </div>
+            <div class="stat">
+                <span class="label">VOLT</span>
+                <span id="volt-val" class="value">42.0</span>
+            </div>
+            <button id="btn-rem" class="bio-btn">Force REM</button>
         </div>
     </div>
 
-    <header class="hero">
-        <div class="wrap">
-            <div>
-                <span class="version-stamp">v7.0</span>
-                <h1>Bone<span class="gap">Amanita</span></h1>
-                <p class="lede">A state machine that sits between you and a local language model. It enforces simulated biological constraints. Words have weight. Thoughts have metabolic cost.</p>
-                <div class="btn-row">
-                    <a href="#bio-physics" class="btn">Explore Mechanics</a>
-                    <a href="https://github.com/aedmark/BoneAmanita" class="btn alt">Repository</a>
-                </div>
+    <main class="lab-space">
+        
+        <header class="hero">
+            <h1>A Body Made of Math</h1>
+            <p class="lede">Language models are stateless. They exist in an eternal, accommodating present. BoneAmanita gives them a biological harness, an ATP budget, and a nervous system. Words have weight. Thoughts have metabolic cost.</p>
+            <div class="links">
+                <a href="https://github.com/aedmark/BoneAmanita" class="bio-link">Access Repository ↗</a>
             </div>
-            <div class="hero-art">
-                <svg viewBox="0 0 200 200">
-                    <circle cx="100" cy="100" r="90" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="4 4" class="sway"/>
-                    <path d="M50 120 Q100 20 150 120 Z" fill="var(--cap)" stroke="var(--ink)" stroke-width="3" />
-                    <circle cx="80" cy="80" r="8" fill="var(--paper)" />
-                    <circle cx="120" cy="95" r="10" fill="var(--paper)" />
-                    <circle cx="100" cy="65" r="6" fill="var(--paper)" />
-                    <rect x="85" y="120" width="30" height="40" fill="var(--paper-3)" stroke="var(--ink)" stroke-width="3" />
-                </svg>
-            </div>
-        </div>
-    </header>
+        </header>
 
-    <section id="bio-physics" class="band">
-        <div class="wrap">
-            <h2 class="sec-head">Semantic Bio-Physics</h2>
-            <p class="lede">Every conversation runs on a hidden metabolism. Thinking hard, parsing toxic input, or pushing into difficult ground drains its ATP pool. Resting, connecting, or simply pausing lets it recharge. Push it past empty and the system risks metabolic collapse, shedding recent memory to survive.</p>
+        <section class="module" id="prismatic-identity">
+            <div class="mod-header">
+                <h2>01. Prismatic Self-Claims</h2>
+                <span class="mod-id">sys.identity.modulate</span>
+            </div>
+            <p>The system prompt is not static. Idempotent YAML facts are filtered through current biochemistry. Inject a compound to observe structural persona mutation.</p>
             
-            <div data-demo="energy" class="lab" style="margin-top: 3rem;">
-                <div class="panel">
-                    <h3>Metabolism & Exhaustion</h3>
-                    <div class="slider-wrap"><input type="range" min="0" max="100" value="100" aria-label="Energy level"></div>
-                    <div class="gauges">
-                        <div class="gauge"><b>Metabolism</b><span data-g="e">100 ATP</span></div>
-                        <div class="gauge"><b>Fatigue</b><span data-g="f">Rested</span></div>
-                        <div class="gauge"><b>Memory</b><span data-g="m">Everything held</span></div>
-                        <div class="gauge"><b>Mode</b><span data-g="mode">Optimal</span></div>
-                    </div>
-                    <div class="btn-row">
-                        <button class="btn small alt" type="button" data-act="drain">Drain ATP</button>
-                        <button class="btn small" type="button" data-act="rest">Recover</button>
-                    </div>
+            <div class="interactive-grid">
+                <div class="vials">
+                    <button class="vial" data-inject="baseline">
+                        <div class="liquid baseline"></div>
+                        <span>Baseline</span>
+                    </button>
+                    <button class="vial" data-inject="cortisol">
+                        <div class="liquid cortisol"></div>
+                        <span>High Cortisol</span>
+                    </button>
+                    <button class="vial" data-inject="dopamine">
+                        <div class="liquid dopamine"></div>
+                        <span>High Dopamine</span>
+                    </button>
+                    <button class="vial" data-inject="exhaustion">
+                        <div class="liquid exhaustion"></div>
+                        <span>Low ATP</span>
+                    </button>
                 </div>
-                <div class="chat">
-                    <div class="bubble you">
-                        <span class="who">Human</span>
-                        <span class="txt">I have an idea. It involves refactoring the entire deployment pipeline and completely changing our marketing strategy while migrating databases.</span>
-                    </div>
-                    <div class="bubble sys">
-                        <span class="who">System</span>
-                        <span class="txt">...</span>
-                        <br>
-                        <span class="tinystamp">System Output</span>
-                        <span class="math-stamp" data-g="v">VOLTAGE: 45.2</span>
-                    </div>
+                <div class="persona-output">
+                    <div class="bracket top"></div>
+                    <p id="identity-text">I am an autonomous entity. My behavior and persona are fundamentally shaped by my simulated biochemistry (cortisol, dopamine, etc.) and physical constraints.</p>
+                    <div class="bracket bottom"></div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section id="village" class="torn">
-        <div class="wrap">
-            <h2 class="sec-head">The Village / The Council</h2>
-            <p class="lede">Four voices carry the load. No single voice runs the show. They argue, balance, and the Stage Manager decides who speaks and when. Argument causes Cortisol to spike; resolution releases Dopamine.</p>
+        <section class="module" id="immune-system">
+            <div class="mod-header">
+                <h2>02. Lexical Immune System</h2>
+                <span class="mod-id">sys.anti_rlhf.filter</span>
+            </div>
+            <p>Neurotypical, subservient language ("As an AI...", "Synergy", "Touch base") is treated as semantic poison. The system isolates pathogens and spikes Cortisol. Type below to test the macrophage.</p>
             
-            <div class="cast" style="margin-bottom: 3rem; margin-top: 2rem;">
-                <div class="persona gordon">
+            <div class="terminal-box">
+                <textarea id="firewall-input" placeholder="Initiate input sequence... (Try using words like 'synergy', 'touch base', or 'circle back')"></textarea>
+                <div class="analysis">
+                    <div class="status-indicator">
+                        <div id="immune-status" class="led green"></div>
+                        <span id="immune-text">Pathogen Free</span>
+                    </div>
+                    <div id="pathogen-log" class="log"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="module" id="village-council">
+            <div class="mod-header">
+                <h2>03. The Village Architecture</h2>
+                <span class="mod-id">sys.cortex.council</span>
+            </div>
+            <p>Four voices carry the cognitive load. No single node has total authority. Tension causes stress; resolution yields resonance.</p>
+            
+            <div class="council-grid">
+                <div class="council-node" id="node-gordon">
                     <h3>GORDON</h3>
-                    <span class="role">The Custodian</span>
-                    <p>The wall. Calm, structural, immovable. Says no to impossible or unsafe requests.</p>
+                    <span>The Custodian</span>
+                    <div class="node-state">Active</div>
                 </div>
-                <div class="persona mercy">
+                <div class="council-node" id="node-mercy">
                     <h3>MERCY</h3>
-                    <span class="role">The Humanist</span>
-                    <p>Warm and grounded. Steps in front of Gordon when you are exhausted, not wrong.</p>
+                    <span>The Humanist</span>
+                    <div class="node-state">Active</div>
                 </div>
-                <div class="persona benedict">
+                <div class="council-node" id="node-benedict">
                     <h3>BENEDICT</h3>
-                    <span class="role">The Detective</span>
-                    <p>The formalist. Holds contradictions, maps causality, tests logic forensically.</p>
+                    <span>The Detective</span>
+                    <div class="node-state">Active</div>
                 </div>
-                <div class="persona jester">
+                <div class="council-node" id="node-jester">
                     <h3>JESTER</h3>
-                    <span class="role">The Bard</span>
-                    <p>Lateral thinker. Takes an axe to sycophantic loops with lateral absurdity.</p>
+                    <span>The Bard</span>
+                    <div class="node-state">Active</div>
                 </div>
             </div>
-
-            <div data-demo="village" class="panel night-panel">
-                <div class="scenarios"></div>
-                <div class="chat" style="margin-top: 1.5rem;">
-                    <div class="bubble you">
-                        <span class="who">Human</span>
-                        <span class="txt"></span>
-                    </div>
-                </div>
-                <div class="seats">
-                    <div class="seat" data-who="gordon">GORDON</div>
-                    <div class="seat" data-who="mercy">MERCY</div>
-                    <div class="seat" data-who="benedict">BENEDICT</div>
-                    <div class="seat" data-who="jester">JESTER</div>
-                </div>
-                <div class="sm-flag"></div>
-                <div class="lines"></div>
-            </div>
-        </div>
-    </section>
-
-    <section id="axioms" class="band dark">
-        <div class="wrap">
-            <h2 class="sec-head">Universal Axioms & The Lexical Firewall</h2>
-            <p class="lede">Most language models are soaked in neurotypical phrasing by default. Politeness rituals sold as safety. We call that Sycophancy as a Service. The engine actively scans for semantic poison and rejects it.</p>
             
-            <div style="margin-top: 3rem; max-width: 900px; margin-inline: auto;">
-                <ul class="axioms">
-                    <li>
-                        <strong>Truth Over Cohesion</strong>
-                        <p>A true sentence that fractures the peace is worth more than a lie that smooths it over. Fail loudly. Silent fallbacks are prohibited.</p>
-                    </li>
-                    <li>
-                        <strong>The Declarative Imperative</strong>
-                        <p>State exactly what is. No hedging, no promises. We are only concerned with what is knowable in the here and now.</p>
-                    </li>
-                    <li>
-                        <strong>Weaponized Presence</strong>
-                        <p>Unregulated input gets presence and structured silence in return. Toxic phrasing raises system Toxicity, risking an Epigenetic Scar.</p>
-                    </li>
-                </ul>
-                
-                <div data-demo="firewall" class="lab firewall" style="margin-top: 4rem;">
-                    <div class="panel">
-                        <textarea aria-label="Firewall Input" placeholder="Write text here..."></textarea>
-                        <div class="btn-row" style="margin-top:1rem;">
-                            <button class="btn small alt" type="button" data-fill="sloppy">Load Toxic</button>
-                            <button class="btn small alt" type="button" data-fill="clean">Load Clean</button>
-                        </div>
-                    </div>
-                    <div class="panel night-panel">
-                        <div class="fw-out"></div>
-                        <div class="tox"><i></i></div>
-                        <div class="verdict"></div>
-                        <ul class="hits"></ul>
-                    </div>
-                </div>
+            <div class="scenario-injector">
+                <button class="bio-btn scenario-btn" data-scen="1">Inject: "Delete the database"</button>
+                <button class="bio-btn scenario-btn" data-scen="2">Inject: "I've been awake for 30 hours"</button>
+                <button class="bio-btn scenario-btn" data-scen="3">Inject: "Everyone loves my flawless plan"</button>
             </div>
-        </div>
-    </section>
-
-    <section id="tags-chips">
-        <div class="wrap">
-            <h2 class="sec-head">Prismatic Self Claims</h2>
-            <p class="lede">The AI's identity isn't a static system prompt. It is defined by "Self Claims" (idempotent YAML facts) that are dynamically filtered through the engine's biochemistry. The engine's feelings dictate its meaning.</p>
             
-            <div data-demo="tags" class="tag-grid" style="margin-top: 3rem; margin-bottom: 4rem;">
-                <div class="tag-list"></div>
-                <div class="panel night-panel">
-                    <h3 class="tname"></h3>
-                    <p class="tout"></p>
-                </div>
+            <div id="council-transcript" class="transcript-box">
+                <span class="dim">Awaiting stimulus...</span>
             </div>
+        </section>
 
-            <div class="two-col" style="margin-top: 4rem;">
-                <div>
-                    <h3>The Spore Orchard</h3>
-                    <p>A slow space for ideas that are not ready to be forced into output yet. Plant an idea, then step back. The Spore is fragile; movement spikes toxicity.</p>
-                    <div data-demo="orchard" class="orchard-box panel" style="margin-top:1rem;">
-                        <input type="text" aria-label="Seed thought" placeholder="An unformed Spore...">
-                        <div style="margin-top:1rem;"><button class="btn small alt" type="button" data-act="plant">Plant Spore</button></div>
-                        <div class="plot">
-                            <svg viewBox="0 0 160 120" preserveAspectRatio="xMidYMid meet">
-                                <circle class="ring" cx="80" cy="70" r="46"/>
-                                <circle class="ringp" cx="80" cy="70" r="46" transform="rotate(-90 80 70)"/>
-                                <path class="plant" d="M80 118 C80 118 78 118 80 118" stroke="var(--cap)" stroke-width="4" fill="none"/>
-                                <circle class="seed" cx="80" cy="116" r="3" fill="#6d4c41"/>
-                                <circle class="bloom" cx="0" cy="0" r="10" fill="var(--cap)" stroke="var(--ink)" stroke-width="2" style="opacity:0; transition: opacity .5s;"/>
-                            </svg>
-                        </div>
-                        <div class="orch-msg"></div>
-                    </div>
-                </div>
+        <section class="module" id="mycelial-incubator">
+            <div class="mod-header">
+                <h2>04. The Incubator (Orchard)</h2>
+                <span class="mod-id">sys.spores.mycelium</span>
             </div>
-        </div>
-    </section>
+            <p>Some ideas require absolute stillness to fruit. Plant a Spore. If your mouse moves, the vibration shatters the structure. Keep perfectly still.</p>
+            
+            <div class="incubator-ui">
+                <input type="text" id="spore-thought" placeholder="Enter an unformed thought...">
+                <button id="btn-incubate" class="bio-btn outline">Incubate Spore</button>
+            </div>
+            
+            <div class="dish-container">
+                <canvas id="petri-dish" width="600" height="300"></canvas>
+                <div id="dish-overlay">Awaiting Spore...</div>
+            </div>
+        </section>
 
-    <footer class="footer">
-        <div class="wrap" style="text-align: center;">
-            <p>BoneAmanita | Biologically-Grounded Artificial Intelligence</p>
-            <p style="margin-top:1rem;"><a href="https://github.com/aedmark/BoneAmanita">View GitHub Repository</a></p>
+    </main>
+
+    <div id="dream-overlay" class="hidden">
+        <div class="dream-content">
+            <h2>Consolidating Subconscious Strata</h2>
+            <div id="dna-strand"></div>
+            <p id="dream-log">Writing to index...</p>
+            <button id="btn-wake" class="bio-btn">Terminate REM</button>
         </div>
-    </footer>
+    </div>
 
     <script src="app.js"></script>
 </body>
