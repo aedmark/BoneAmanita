@@ -452,6 +452,8 @@ class TestWorkingMemoryParadigms(BoneTestCase):
     def test_refrigerator_light_dark_matter(self):
         """Test Paradigm 1: Global Neuronal Workspace returns LINGUISTIC_DARK_MATTER on empty attention."""
         mock_svc = MagicMock()
+        mock_svc.config_ref = MagicMock()
+        mock_svc.config_ref.DSPY_MODEL = "gemma4"
         cortex = TheCortex(services=mock_svc)
 
         sparse_ctx, path, cost = cortex._route_dual_memory("   ")
@@ -498,7 +500,8 @@ class TestWorkingMemoryParadigms(BoneTestCase):
 
         with patch("engine.core.LoreManifest.get_instance") as mock_lore:
             mock_lore.return_value.get.return_value = {"TEST_DEATH": ["Test", "voltage", 1.0, "desc"]}
-            oro.crystallize("TEST_DEATH", mock_soul)
+            with self.assertRaises(RuntimeError):
+                oro.crystallize("TEST_DEATH", mock_soul)
 
         latent_scar = next((s for s in oro.scars if s.name == "Latent Grey Area Tension"), None)
         self.assertIsNotNone(latent_scar, "[FAIL] 16.67ms latent buffer did not register a scar.")

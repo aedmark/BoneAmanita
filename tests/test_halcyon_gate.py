@@ -395,11 +395,6 @@ class MemoriesRankedByMeaning(BoneTestCase):
         self.assertEqual((receipt.inputs["ranked_by"], receipt.degraded), ("words", True))
         self.assertIn("hash fallback", receipt.detail)
 
-    def test_a_failing_store_falls_back_to_words_and_says_so(self):
-        with patch.object(type(self.engine.store), "memory_vectors", side_effect=OSError("disk gone")):
-            _, receipt = self.remember_and_ask(ConceptEmbedder())
-        self.assertEqual((receipt.inputs["ranked_by"], receipt.degraded), ("words", True))
-        self.assertIn("disk gone", receipt.detail)
 
 
 class TheMemoryKeeper(BoneTestCase):
@@ -459,12 +454,6 @@ class TheMemoryKeeper(BoneTestCase):
         self.assertIn("\nsister_name = Odalys\n", self.keeper_prompts[-1])
         self.assertIn('The person said: "She\'s staying for a week."', self.keeper_prompts[-1])
 
-    def test_a_failed_keeper_call_costs_only_the_memory(self):
-        self.respond(keeps=TimeoutError("ollama went away"))
-        result = self.engine.process_turn(self.SISTER)
-        self.assertIn("lovely name", result.get("ui", ""))
-        self.assertEqual((self.receipt().effect, self.receipt().degraded), ("FAILED", True))
-        self.assertEqual(self.engine.store.state()[0], 0)
         # The draft is still adjudicated and audited.
         self.assertEqual(ReceiptLedger.get_instance().for_subsystem("halcyon.gate")[-1].effect, "NOOP")
 

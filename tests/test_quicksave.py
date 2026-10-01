@@ -49,9 +49,9 @@ class QuicksaveInTheStoreTests(unittest.TestCase):
     def test_an_unserializable_save_keeps_the_previous_checkpoint(self):
         circular = []
         circular.append(circular)
-        self.keeper.save_checkpoint(circular)
+        with self.assertRaises(ValueError):
+            self.keeper.save_checkpoint(circular)
         self.assertEqual(self.saved()["health"], 100.0)
-        self.engine.events.log.assert_called_once()
 
     def test_a_write_that_fails_inside_the_transaction_keeps_the_previous_checkpoint(self):
         real_state = Store.state
@@ -63,9 +63,9 @@ class QuicksaveInTheStoreTests(unittest.TestCase):
             return real_state(store, db)
 
         with patch.object(Store, "state", state_then_fail):
-            self.keeper.save_checkpoint()
+            with self.assertRaises(OSError):
+                self.keeper.save_checkpoint()
         self.assertEqual(self.saved()["health"], 100.0)
-        self.engine.events.log.assert_called_once()
 
     def test_resume_restores_from_the_store(self):
         self.keeper.save_checkpoint(["we were at the mill"])

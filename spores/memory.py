@@ -67,7 +67,7 @@ class SubconsciousStrata:
         if ordvec and self.rank_bank is not None and len(self.rank_bank) >= 32:
             dim = self.rank_bank.shape[1]
             self.bitmap = SignBitmap(dim)
-            self.quantizer = RankQuant(dim, 8)
+            self.quantizer = RankQuant(dim, 4)
             self.bitmap.add(self.rank_bank)
             self.quantizer.add(self.rank_bank)
 

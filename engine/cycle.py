@@ -217,7 +217,11 @@ class PhaseExecutor:
                 break
             if not simulator.check_circuit_breaker(phase.name):
                 continue
-            ctx = phase.run(ctx)
+            try:
+                ctx = phase.run(ctx)
+            except Exception as e:
+                simulator.handle_phase_crash(ctx, phase.name, e)
+                break
             if health is not None and (comp := _CRASH_COMPONENT_MAP.get(phase.name)):
                 health.ran_cleanly(comp)
         return ctx

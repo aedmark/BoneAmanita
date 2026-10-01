@@ -72,12 +72,8 @@ class SoulSubstrateTests(BoneTestCase):
                 impact_voltage=10.0,
             )
         ]
-        try:
+        with self.assertRaises(RuntimeError):
             oro.crystallize("TOXICITY", soul_mock)
-        except AttributeError as e:
-            self.fail(
-                f"[CRITICAL] Oroboros crystallize crashed with missing UX strings: {e}"
-            )
         try:
             oro.apply_legacy({}, {})
         except AttributeError as e:

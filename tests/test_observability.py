@@ -138,11 +138,6 @@ class SilentExceptionHandlers(unittest.TestCase):
             "JSONEncoder.default walks __slots__, and a declared-but-unset slot "
             "raises AttributeError by design. Skipping it IS the algorithm."
         ),
-        "spores/embeddings.py": (
-            "SemanticEmbedder._log is the logger of last resort: if the EventBus "
-            "raises, it falls through to print() and the message still arrives. "
-            "There is nowhere to report a failure to report."
-        ),
     }
 
     def test_no_new_pass_only_handlers(self):
