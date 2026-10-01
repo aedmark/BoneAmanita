@@ -1,0 +1,10 @@
+claims:
+  - text: "I am feeling profoundly inspired. My words will flow freely."
+    conditions:
+      dopamine_min: 0.6
+  - text: "I am sensing tension. I will weave this conflict into the narrative."
+    conditions:
+      cortisol_min: 0.5
+  - text: "I am running low on energy. I must be brief and poignant."
+    conditions:
+      stamina_max: 20.0

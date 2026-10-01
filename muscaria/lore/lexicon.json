@@ -1,0 +1,22 @@
+{
+    "VOCAB": {
+        "heavy": ["dream", "abyss", "shadow", "soul", "eternity", "void", "whisper"],
+        "kinetic": ["dance", "soar", "weep", "shatter", "bloom", "cascade"],
+        "solvents": ["the", "a", "and", "to", "of", "in", "is", "it"]
+    },
+    "LINGUISTICS": {
+        "PHONETICS": {
+            "PLOSIVE": ["p", "t", "k", "b", "d", "g"],
+            "LIQUID": ["l", "r"],
+            "VOWELS": ["a", "e", "i", "o", "u"]
+        },
+        "ROOTS": {
+            "heavy": ["somn", "aeth", "lumin"]
+        },
+        "BIASES": {"heavy": 1.0, "kinetic": 1.5},
+        "DIMENSION_MAP": {
+            "heavy": {"narrative_drag": 0.2, "tension": 0.1, "flow": 0.5},
+            "kinetic": {"flow": 1.5, "tension": 0.0}
+        }
+    }
+}
