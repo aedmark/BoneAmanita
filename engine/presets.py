@@ -378,11 +378,8 @@ class BoneConfig:
         preset_path = os.path.join(base_dir, "lore", "tuning_presets.json")
         tuning_data = {}
         if os.path.exists(preset_path):
-            try:
-                with open(preset_path, "r", encoding="utf-8") as f:
-                    tuning_data = json.load(f)
-            except Exception as e:
-                print(f"Failed to load {preset_path}: {e}")
+            with open(preset_path, "r", encoding="utf-8") as f:
+                tuning_data = json.load(f)
         core_sectors = [
             "PHYSICS",
             "BIO",

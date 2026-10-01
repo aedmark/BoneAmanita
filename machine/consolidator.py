@@ -22,14 +22,8 @@ class TheConsolidator:
         triplet = payload.get("triplet")
         if not triplet:
             return
-        try:
-            msg = f"Syntactic Compiler accrued 1 new Few-Shot weight in dynamic memory."
-            self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "CORTEX")
-        except Exception as e:
-            self.events.log(
-                f"{Prisma.RED}Failed to process syntactic weights: {e}{Prisma.RST}",
-                "CONSOLIDATOR", "ERROR",
-            )
+        msg = f"Syntactic Compiler accrued 1 new Few-Shot weight in dynamic memory."
+        self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "CORTEX")
 
     def _on_shadow_engaged(self, payload):
         source = payload.get("source", "core")

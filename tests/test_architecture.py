@@ -209,18 +209,13 @@ class ArchitectureTests(BoneTestCase):
     def test_immune_system_malformed_physics_resilience(self):
         engine = BoneAmanita({})
         fractured_phys = {"random_key": 42, "string_val": "broken"}
-        try:
-            result = engine._evaluate_immune_response(
-                user_message="test", active_phys=fractured_phys
-            )
-            self.assertIsNone(
-                result,
-                "[FAIL] Immune system falsely flagged fractured physics as an anomaly.",
-            )
-        except Exception as e:
-            self.fail(
-                f"Engine crashed when immune system encountered malformed physics data: {e}"
-            )
+        result = engine._evaluate_immune_response(
+            user_message="test", active_phys=fractured_phys
+        )
+        self.assertIsNone(
+            result,
+            "[FAIL] Immune system falsely flagged fractured physics as an anomaly.",
+        )
 
     def test_arch_eventbus_ghost_prevention(self):
         execution_count = {"hits": 0}
@@ -255,22 +250,19 @@ class ArchitectureTests(BoneTestCase):
                     if file.endswith(".py"):
                         file_path = os.path.join(root, file)
                         with open(file_path, "r", encoding="utf-8") as f:
-                            try:
-                                tree = ast.parse(f.read(), filename=file)
-                                for node in ast.walk(tree):
-                                    if isinstance(node, ast.ImportFrom):
-                                        if node.module in restricted_modules:
+                            tree = ast.parse(f.read(), filename=file)
+                            for node in ast.walk(tree):
+                                if isinstance(node, ast.ImportFrom):
+                                    if node.module in restricted_modules:
+                                        violations.append(
+                                            f"{file}: 'from {node.module}' (Should be 'from mechanics.{node.module}')"
+                                        )
+                                elif isinstance(node, ast.Import):
+                                    for alias in node.names:
+                                        if alias.name in restricted_modules:
                                             violations.append(
-                                                f"{file}: 'from {node.module}' (Should be 'from mechanics.{node.module}')"
+                                                f"{file}: 'import {alias.name}' (Unqualified)"
                                             )
-                                    elif isinstance(node, ast.Import):
-                                        for alias in node.names:
-                                            if alias.name in restricted_modules:
-                                                violations.append(
-                                                    f"{file}: 'import {alias.name}' (Unqualified)"
-                                                )
-                            except Exception:
-                                pass
 
         def test_telemetry_anchoring(self):
             from engine.core import TelemetryService

@@ -294,16 +294,7 @@ class EventBus:
         try:
             callbacks = self.subscribers.get(event_type, ())
             for callback in callbacks:
-                try:
-                    callback(data)
-                except Exception as e:
-                    if event_type != "EVENT_FAILURE":
-                        cb_name = getattr(callback, "__name__", str(callback))
-                        self.log(
-                            f"Subscriber '{cb_name}' failed: {e}",
-                            source="EVENT_FAILURE",
-                            level="CRIT",
-                        )
+                callback(data)
         finally:
             active_events.discard(event_type)
 
@@ -419,11 +410,7 @@ class LoreManifest:
         """The overlay the engine learned for a category; None before a store is attached."""
         if self.persistence is None:
             return None
-        try:
-            return self.persistence.record(f"lore.{category}")
-        except Exception as e:
-            logger.warning(f"{Prisma.YEL}Could not read learned lore for '{category}': {e}{Prisma.RST}")
-            return None
+        return self.persistence.record(f"lore.{category}")
 
     def attach_store(self, store) -> None:
         """Learned lore lives in the engine's Halcyon store. Old saves/lore/*.json overlays are imported
@@ -455,19 +442,6 @@ class LoreManifest:
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except FileNotFoundError:
-            return None
-        except Exception as e:
-            err_msg = f"Parse error in '{category}': {e}. Returning empty structure without modifying disk."
-            logger.error(f"{Prisma.RED}{err_msg}{Prisma.RST}")
-            if tel := TelemetryService.get_instance():
-                tel.record_event(
-                    {
-                        "source": "LORE",
-                        "level": "CRIT",
-                        "text": err_msg,
-                        "_type": "EVENT_LOG",
-                    }
-                )
             return None
 
     def inject(self, category: str, data: Any):
@@ -504,21 +478,8 @@ class LoreManifest:
             return
         factory = self._read_json(self.DATA_DIR, cat_key)
         learned = self._overlay(factory if factory is not None else {}, self._cache[cat_key])
-        try:
-            self.persistence.put_record(f"lore.{cat_key}", json.loads(json.dumps(learned, cls=JSONEncoder)))
-            logger.info(f"{Prisma.GRY}Persisted what was learned in '{cat_key}' to the store.{Prisma.RST}")
-        except Exception as e:
-            err_msg = f"Failed to save '{cat_key}': {e}"
-            logger.critical(f"{Prisma.RED}{err_msg}{Prisma.RST}")
-            if tel := TelemetryService.get_instance():
-                tel.record_event(
-                    {
-                        "source": "LORE",
-                        "level": "CRIT",
-                        "text": err_msg,
-                        "_type": "EVENT_LOG",
-                    }
-                )
+        self.persistence.put_record(f"lore.{cat_key}", json.loads(json.dumps(learned, cls=JSONEncoder)))
+        logger.info(f"{Prisma.GRY}Persisted what was learned in '{cat_key}' to the store.{Prisma.RST}")
 
     def flush_cache(self, category: Optional[str] = None):
         with self._lock:
@@ -812,10 +773,7 @@ class CyberneticGovernor:
         dim = int(fp32_matrix.shape[1])
         bitmap = ordvec.SignBitmap(dim)
         bitmap.add(fp32_matrix)
-        try:
-            quantizer = ordvec.RankQuant(dim, 8)
-        except Exception:
-            quantizer = ordvec.RankQuant(dim, 4)
+        quantizer = ordvec.RankQuant(dim, 8)
         quantizer.add(fp32_matrix)
         self.memory_bitmap = bitmap
         self.memory_rq = quantizer

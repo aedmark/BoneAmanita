@@ -67,10 +67,6 @@ class MemoryKeeper:
         usage = getattr(self.llm, "last_usage", None)
         try:
             answer = self.llm.generate(PROMPT.format(kept=kept, message=message), {"temperature": 0.2, "max_tokens": 120})
-        except Exception as e:
-            logger.warning(f"Memory keeper call failed, nothing kept this turn: {type(e).__name__}: {e}")
-            issue_receipt("halcyon.keeper", "FAILED", result_count=0, degraded=True, detail=f"{type(e).__name__}: {e}")
-            return None
         finally:
             if usage is not None:
                 self.llm.last_usage = usage

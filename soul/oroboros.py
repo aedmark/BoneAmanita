@@ -165,14 +165,9 @@ class TheOroboros:
             "scars": [vars(s) for s in self.scars],
             "myths": [vars(m) for m in self.myths],
         }
-        try:
-            if self.persistence is None:
-                raise RuntimeError("no store attached")
-            self.persistence.put_record(self.RECORD, payload)
-        except Exception as e:
-            print(
-                f"{Prisma.RED}[OROBOROS]: Failed to write legacy payload: {e}{Prisma.RST}"
-            )
+        if self.persistence is None:
+            raise RuntimeError("no store attached")
+        self.persistence.put_record(self.RECORD, payload)
 
     def inherit(self, physics: Any, bio: Any):
         """At boot: scars mark the starting physics every time, and add their trauma once per generation

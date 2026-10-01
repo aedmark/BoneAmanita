@@ -439,34 +439,21 @@ class TheSubstrate:
                     w["retries"] = retries
                     retained_writes.append(w)
                 continue
-            try:
-                os.makedirs(os.path.dirname(s_path), exist_ok=True)
-                with open(s_path, "w", encoding="utf-8") as f:
-                    f.write(w["content"])
-                if not existed:
-                    ledger.record_created(rel)
-                    ledger.save()
-                cost += w_cost
-                kb_size = len(w["content"]) / 1024.0
-                logs.append(
-                    f"{Prisma.GRN}Physically forged {s_path} ({kb_size:.1f} KB).{Prisma.RST}"
+            os.makedirs(os.path.dirname(s_path), exist_ok=True)
+            with open(s_path, "w", encoding="utf-8") as f:
+                f.write(w["content"])
+            if not existed:
+                ledger.record_created(rel)
+                ledger.save()
+            cost += w_cost
+            kb_size = len(w["content"]) / 1024.0
+            logs.append(
+                f"{Prisma.GRN}Physically forged {s_path} ({kb_size:.1f} KB).{Prisma.RST}"
+            )
+            if self.events:
+                self.events.publish(
+                    "SUBSTRATE_FORGED", {"cost": w_cost, "file": s_name}
                 )
-                if self.events:
-                    self.events.publish(
-                        "SUBSTRATE_FORGED", {"cost": w_cost, "file": s_name}
-                    )
-            except Exception as e:
-                retries = w.get("retries", 0) + 1
-                if retries > self.config.get("SUBSTRATE_WRITE_RETRIES", 3):
-                    logs.append(
-                        f"{Prisma.VIOLET}FATAL ERROR: Write failed 3 times for {s_name} - {e}. Purging corrupted matter.{Prisma.RST}"
-                    )
-                else:
-                    logs.append(
-                        f"{Prisma.RED}CRITICAL FAULT: Write failed - {e}. Retrying ({retries}/3).{Prisma.RST}"
-                    )
-                    w["retries"] = retries
-                    retained_writes.append(w)
         self.pending_writes = retained_writes
         return logs, cost
 

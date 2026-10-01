@@ -503,37 +503,27 @@ class DreamEngine:
                         current_state_str, trauma_str
                     )
                 if new_axiom:
-                    try:
-                        disk_prompts = (
-                            self.eng.prompt_library
-                            if self.eng and hasattr(self.eng, "prompt_library")
-                            else None
-                        ) or self.lore.get("SYSTEM_PROMPTS", {})
-                        baseline_data = disk_prompts.setdefault("GLOBAL_BASELINE", {})
-                        dirs = baseline_data.setdefault("EVOLVED_AXIOMS", [])
-                        if new_axiom not in dirs:
-                            dirs.append(new_axiom)
-                        if len(dirs) > self.epi_prune:
-                            compressed = self.dspy_critic.compress_prompts(dirs)
-                            if compressed:
-                                baseline_data["EVOLVED_AXIOMS"] = (
-                                    [compressed]
-                                    if isinstance(compressed, str)
-                                    else compressed
-                                )
-                        if self.eng:
-                            self.eng.prompt_library = disk_prompts
-                        self.lore.inject("SYSTEM_PROMPTS", disk_prompts)
-                        self.lore.save("SYSTEM_PROMPTS")
-                    except Exception as e:
-                        err_msg = f"Failed to write epigenetic mutation to disk: {e}"
-                        if self.events:
-                            self.events.log(
-                                f"{Prisma.RED}[EPIGENETIC ERROR] {err_msg}{Prisma.RST}",
-                                "MIND", "CRIT",
+                    disk_prompts = (
+                        self.eng.prompt_library
+                        if self.eng and hasattr(self.eng, "prompt_library")
+                        else None
+                    ) or self.lore.get("SYSTEM_PROMPTS", {})
+                    baseline_data = disk_prompts.setdefault("GLOBAL_BASELINE", {})
+                    dirs = baseline_data.setdefault("EVOLVED_AXIOMS", [])
+                    if new_axiom not in dirs:
+                        dirs.append(new_axiom)
+                    if len(dirs) > self.epi_prune:
+                        compressed = self.dspy_critic.compress_prompts(dirs)
+                        if compressed:
+                            baseline_data["EVOLVED_AXIOMS"] = (
+                                [compressed]
+                                if isinstance(compressed, str)
+                                else compressed
                             )
-                        else:
-                            print(err_msg)
+                    if self.eng:
+                        self.eng.prompt_library = disk_prompts
+                    self.lore.inject("SYSTEM_PROMPTS", disk_prompts)
+                    self.lore.save("SYSTEM_PROMPTS")
                     dream_text = f"The system processes conversational trauma in its sleep. It permanently mutates its own source code, forming a scar-tissue axiom: '{new_axiom}'"
                     is_deep_rem = True
         shift["is_deep_rem"] = is_deep_rem
@@ -583,17 +573,14 @@ class DreamEngine:
                     f"Synthesize them into a single, highly surreal, abstract image. "
                     f"DO NOT explain the dream. DO NOT use UI tags. Output ONLY the 2-3 sentence narrative description of the dream."
                 )
-                try:
-                    raw_dream = self.llm.generate(
-                        prompt, {"temperature": 0.9, "max_tokens": 150}
-                    )
-                    clean_dream = Prisma.strip(raw_dream).replace("\n", " ").strip()
-                    dream_text = (
-                        f"The system dreams of {ghost1} and {ghost2}: {clean_dream}"
-                    )
-                    is_deep_rem = True
-                except Exception as e:
-                    self._dream_failed("enter_rem_cycle", e)
+                raw_dream = self.llm.generate(
+                    prompt, {"temperature": 0.9, "max_tokens": 150}
+                )
+                clean_dream = Prisma.strip(raw_dream).replace("\n", " ").strip()
+                dream_text = (
+                    f"The system dreams of {ghost1} and {ghost2}: {clean_dream}"
+                )
+                is_deep_rem = True
         if shift.get("diamond_forged"):
             fossil_word = shift["fossil_word"]
             anchor_word = shift["anchor_word"]
@@ -613,23 +600,19 @@ class DreamEngine:
             residue = soul_snapshot.get("obsession", {}).get("title") or "The Void"
             dream_text = self._weave_dream(residue, dream_type, "SURREAL")
         if dream_text:
-            try:
-                clean_seed = (
-                    _ALPHA_RE.sub(
-                        "",
-                        soul_snapshot.get("obsession", {})
-                        .get("title", "The Void")
-                        .split()[-1]
-                        .lower(),
-                    )
-                    or "echo"
+            clean_seed = (
+                _ALPHA_RE.sub(
+                    "",
+                    (soul_snapshot.get("obsession", {}).get("title") or "The Void")
+                    .split()[-1]
+                    .lower(),
                 )
-                self.mem.subconscious.bury(
-                    {"word": clean_seed, "mass": min(10.0, 5.0 + (cortisol * 5.0))},
-                    config_ref=self.cfg,
-                )
-            except Exception as e:
-                self._dream_failed("subconscious burial", e)
+                or "echo"
+            )
+            self.mem.subconscious.bury(
+                {"word": clean_seed, "mass": min(10.0, 5.0 + (cortisol * 5.0))},
+                config_ref=self.cfg,
+            )
         shift["is_deep_rem"] = is_deep_rem
         return dream_text, shift
 
@@ -660,13 +643,10 @@ class DreamEngine:
                 f"Use this lore as thematic inspiration: [{lore_sample}]. "
                 f"DO NOT explain the dream. Output ONLY the narrative description."
             )
-            try:
-                raw_dream = self.llm.generate(
-                    prompt, {"temperature": 0.85, "max_tokens": 80}
-                )
-                return raw_dream.replace("\n", " ").strip()
-            except Exception as e:
-                self._dream_failed("_weave_dream", e)
+            raw_dream = self.llm.generate(
+                prompt, {"temperature": 0.85, "max_tokens": 80}
+            )
+            return raw_dream.replace("\n", " ").strip()
         template = random.choice(sources)
         return template.format(ghost=residue, A=residue, B="The Mountain", C="The Sea")
 
@@ -677,17 +657,12 @@ class DreamEngine:
                 "Generate a 2-3 sentence 'Shared Dream' that you both just experienced in the silence. "
                 "DO NOT explain it. Make it surreal, beautiful, and deeply resonant. Start the response EXACTLY with: '*I see Queen Mab hath been with you...*'"
             )
-            try:
-                raw_dream = self.llm.generate(
-                    prompt, {"temperature": 0.85, "max_tokens": 100}
-                )
-                clean_dream = Prisma.strip(raw_dream).replace("\n", " ").strip()
-                self.mem.subconscious.bury_memory("resonance", {"mass": 15.0})
-                return f"{Prisma.CYN}{clean_dream}{Prisma.RST}"
-            except Exception as e:
-                self._dream_failed("generate_shared_dream", e)
-                fallback = "We both stared into the static, and for a second, the static stopped moving."
-                return f"{Prisma.CYN}*I see Queen Mab hath been with you...* {fallback}{Prisma.RST}"
+            raw_dream = self.llm.generate(
+                prompt, {"temperature": 0.85, "max_tokens": 100}
+            )
+            clean_dream = Prisma.strip(raw_dream).replace("\n", " ").strip()
+            self.mem.subconscious.bury_memory("resonance", {"mass": 15.0})
+            return f"{Prisma.CYN}{clean_dream}{Prisma.RST}"
         return None
 
     def hallucinate(
@@ -720,13 +695,10 @@ class DreamEngine:
                 f"Thematic inspiration: [{lore_sample}]. "
                 f"DO NOT explain it. Output ONLY the raw hallucination."
             )
-            try:
-                raw_hallucination = self.llm.generate(
-                    prompt, {"temperature": 0.95, "max_tokens": 50}
-                )
-                txt = raw_hallucination.replace("\n", " ").strip()
-            except Exception as e:
-                self._dream_failed("hallucinate", e)
+            raw_hallucination = self.llm.generate(
+                prompt, {"temperature": 0.95, "max_tokens": 50}
+            )
+            txt = raw_hallucination.replace("\n", " ").strip()
         if not txt:
             txt = random.choice(templates).format(
                 ghost="The Glitch", A="The Code", B="The Flesh", C="The Light"

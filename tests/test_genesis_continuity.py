@@ -103,7 +103,8 @@ class TheLineageLivesInTheStore(BoneTestCase):
 
     def test_a_death_with_no_store_attached_writes_no_file(self):
         oro = TheOroboros(config_ref=self.test_config)
-        self.die(oro)
+        with self.assertRaises(RuntimeError):
+            self.die(oro)
         self.assertFalse(os.path.exists(TheOroboros.LEGACY_FILE))
 
     def test_an_old_legacy_file_is_imported_once_and_kept(self):

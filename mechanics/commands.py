@@ -66,11 +66,7 @@ class CommandStateInterface:
                    "antibodies": antibodies,
                    "soul_data": self.eng.soul.to_dict() if hasattr(self.eng, "soul") else None,
                    "continuity": continuity_packet, "world_atlas": atlas_data,"mutations": getattr(self.eng, "mutations", {}), "joy_history": getattr(self.eng, "joy_history", [])}
-        try:
-            return self.eng.mind.mem.save(**payload)
-        except Exception as e:
-            self.log(f"{self.P.RED}Save failed at memory core: {e}{self.P.RST}", "ERR")
-            return ux("command_state", "unreachable_error")
+        return self.eng.mind.mem.save(**payload)
 
     def get_vitals(self) -> Dict[str, float]:
         from engine.struts import safe_get
@@ -278,32 +274,26 @@ class CommandProcessor:
         so it has to be stated outright: the organism sounds exactly the same
         whether its recall is associative or arbitrary.
         """
-        try:
-            from spores.embeddings import SemanticEmbedder
+        from spores.embeddings import SemanticEmbedder
 
-            e = SemanticEmbedder.get_instance()
-            if e.degraded:
-                return (
-                    f"Memory:  {self.P.YEL}{e.backend} @ {e.dimension}d [DEGRADED]{self.P.RST}\n"
-                    f"         {self.P.YEL}No embedding backend. Associative recall is "
-                    f"arbitrary, not approximate.{self.P.RST}"
-                )
-            return f"Memory:  {self.P.GRN}{e.model} @ {e.dimension}d{self.P.RST}"
-        except Exception as ex:
-            return f"Memory:  {self.P.GRY}unavailable ({ex}){self.P.RST}"
+        e = SemanticEmbedder.get_instance()
+        if e.degraded:
+            return (
+                f"Memory:  {self.P.YEL}{e.backend} @ {e.dimension}d [DEGRADED]{self.P.RST}\n"
+                f"         {self.P.YEL}No embedding backend. Associative recall is "
+                f"arbitrary, not approximate.{self.P.RST}"
+            )
+        return f"Memory:  {self.P.GRN}{e.model} @ {e.dimension}d{self.P.RST}"
 
     def _cmd_report(self, _parts):
-        try:
-            telemetry = getattr(self.interface.eng, "telemetry", None)
-            if not telemetry:
-                self.interface.log(f"{self.P.RED}Telemetry module offline. Cannot generate report.{self.P.RST}")
-                return True
-            report_text = telemetry.get_report()
-            summary_text = telemetry.generate_session_summary()
-            self.interface.log(f"{self.P.CYN}=== SYSTEM REPORT ==={self.P.RST}\n{report_text}")
-            self.interface.log(f"{self.P.CYN}=== SESSION SUMMARY ==={self.P.RST}\n{summary_text}")
-        except Exception as e:
-            self.interface.log(f"{self.P.RED}Failed to generate report: {e}{self.P.RST}")
+        telemetry = getattr(self.interface.eng, "telemetry", None)
+        if not telemetry:
+            self.interface.log(f"{self.P.RED}Telemetry module offline. Cannot generate report.{self.P.RST}")
+            return True
+        report_text = telemetry.get_report()
+        summary_text = telemetry.generate_session_summary()
+        self.interface.log(f"{self.P.CYN}=== SYSTEM REPORT ==={self.P.RST}\n{report_text}")
+        self.interface.log(f"{self.P.CYN}=== SESSION SUMMARY ==={self.P.RST}\n{summary_text}")
         return True
 
     def _cmd_diag(self, _parts):
@@ -316,17 +306,14 @@ class CommandProcessor:
             self.interface.log(f"{self.P.YEL}=== TUNED THIS SESSION ==={self.P.RST}")
             for key, t in tuned.items():
                 self.interface.log(f"  {key}: {t['stock']} -> {t['value']}" + ("" if t["live"] else " (at next start)"))
-        try:
-            telemetry = getattr(self.interface.eng, "telemetry", None)
-            if not telemetry:
-                self.interface.log(f"{self.P.RED}Telemetry module offline. Cannot run diagnostics.{self.P.RST}")
-                return True
-            fatal = telemetry.get_last_fatal_error()
-            thoughts = telemetry.get_last_thoughts()
-            self.interface.log(f"{self.P.RED}=== LAST FATAL ERROR ==={self.P.RST}\n{fatal}")
-            self.interface.log(f"{self.P.YEL}=== LAST THOUGHTS ==={self.P.RST}\n{thoughts}")
-        except Exception as e:
-            self.interface.log(f"{self.P.RED}Diag failure: {e}{self.P.RST}")
+        telemetry = getattr(self.interface.eng, "telemetry", None)
+        if not telemetry:
+            self.interface.log(f"{self.P.RED}Telemetry module offline. Cannot run diagnostics.{self.P.RST}")
+            return True
+        fatal = telemetry.get_last_fatal_error()
+        thoughts = telemetry.get_last_thoughts()
+        self.interface.log(f"{self.P.RED}=== LAST FATAL ERROR ==={self.P.RST}\n{fatal}")
+        self.interface.log(f"{self.P.YEL}=== LAST THOUGHTS ==={self.P.RST}\n{thoughts}")
         return True
 
     def _report_receipts(self):
@@ -458,12 +445,7 @@ class CommandProcessor:
 
     def _cmd_export(self, parts):
         path = parts[1] if len(parts) > 1 else "saves/fractal_adventure.json"
-        try:
-            written = self.interface.eng.export_adventure(path)
-        except Exception as e:
-            msg = ux_format("command_alerts", "export_failed", default="Export failed: {e}", e=e)
-            self.interface.log(f"{self.P.RED}{msg}{self.P.RST}")
-            return True
+        written = self.interface.eng.export_adventure(path)
         msg = ux_format("command_alerts", "export_success",
                         default="Adventure written for FractalOS: {path} (open it there with `adventure {path}`).",
                         path=written)
@@ -581,9 +563,6 @@ class CommandProcessor:
             self.interface.log(f"{self.P.CYN}{msg}{self.P.RST}")
         except ValueError:
             self.interface.log(ux("command_alerts", "truth_invalid") or "Invalid truth mode.")
-        except Exception as e:
-            msg = ux_format("command_alerts", "truth_failure", default="Truth failed: {error}", error=e)
-            self.interface.log(msg)
         return True
 
     def _cmd_use(self, parts):
@@ -810,19 +789,16 @@ class CommandProcessor:
         if not llm or not cortex.dialogue_buffer:
             self.interface.log(f"{self.P.RED}Error: Cortex LLM unavailable or memory buffer is empty.{self.P.RST}")
             return True
-        try:
-            history = "\n".join(cortex.dialogue_buffer)
-            prompt = ("SYSTEM_INSTRUCTION: You are the archivist of a surreal journey. "
-                      "Read the following recent dialogue history and write a whimsical, reflective, first-person diary entry (1-5 paragraphs) "
-                      "summarizing the events and emotional undercurrents so far. Focus on the mood, the strange tension, and the overarching theme. "
-                      "DO NOT use AI-isms. Write like a traveler recording a dream.\n\n"
-                      f"DIALOGUE HISTORY:\n{history}")
-            journal_entry = llm.generate(prompt, {"temperature": 0.85, "max_tokens": 300})
-            self.interface.log(f"\n{self.P.WHT}{journal_entry}{self.P.RST}\n")
-            file_name = f"journal_entry_{int(time.time())}.txt"
-            self._execute_substrate_write(file_name, journal_entry)
-        except Exception as e:
-            self.interface.log(f"{self.P.RED}Journal generation failed: {e}{self.P.RST}")
+        history = "\n".join(cortex.dialogue_buffer)
+        prompt = ("SYSTEM_INSTRUCTION: You are the archivist of a surreal journey. "
+                  "Read the following recent dialogue history and write a whimsical, reflective, first-person diary entry (1-5 paragraphs) "
+                  "summarizing the events and emotional undercurrents so far. Focus on the mood, the strange tension, and the overarching theme. "
+                  "DO NOT use AI-isms. Write like a traveler recording a dream.\n\n"
+                  f"DIALOGUE HISTORY:\n{history}")
+        journal_entry = llm.generate(prompt, {"temperature": 0.85, "max_tokens": 300})
+        self.interface.log(f"\n{self.P.WHT}{journal_entry}{self.P.RST}\n")
+        file_name = f"journal_entry_{int(time.time())}.txt"
+        self._execute_substrate_write(file_name, journal_entry)
         return True
 
     def _cmd_hallucinate(self, _parts):

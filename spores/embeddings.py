@@ -104,11 +104,8 @@ class SemanticEmbedder:
 
     def _log(self, message: str, level: str = "INFO"):
         if self.events is not None and hasattr(self.events, "log"):
-            try:
-                self.events.log(message, "EMBED", level)
-                return
-            except Exception:
-                pass
+            self.events.log(message, "EMBED", level)
+            return
         print(message)
 
     def _resolve_backend(self):
@@ -129,19 +126,15 @@ class SemanticEmbedder:
                     "WARN",
                 )
                 continue
-            try:
-                if probe():
-                    self.degraded = False
-                    self.detail = f"resolved via {candidate}"
-                    self._log(
-                        f"{Prisma.GRN}Semantic cortex online: "
-                        f"{self.backend}:{self.model} @ {self.dimension}d.{Prisma.RST}",
-                        "INFO",
-                    )
-                    return
-            except Exception as e:
-                failures.append(f"{candidate}: {type(e).__name__}: {e}")
-                continue
+            if probe():
+                self.degraded = False
+                self.detail = f"resolved via {candidate}"
+                self._log(
+                    f"{Prisma.GRN}Semantic cortex online: "
+                    f"{self.backend}:{self.model} @ {self.dimension}d.{Prisma.RST}",
+                    "INFO",
+                )
+                return
             failures.append(f"{candidate}: {self.detail}")
         self.backend = "hash"
         self.model = "shake_256"
@@ -255,22 +248,15 @@ class SemanticEmbedder:
                 return None
             self._last_reprobe = now
             target = self._lost_backend or ("http" if self._settings["BACKEND"] in ("auto", "", "http") else self._settings["BACKEND"])
-            try:
-                if target == "http":
-                    vectors = self._http_embed([_PROBE_TEXT], timeout=float(self._settings["REPROBE_TIMEOUT"]))
-                    model, dim = str(self._settings["MODEL"]), len(vectors[0]) if vectors and vectors[0] else 0
-                elif target == "sentence_transformers" and self._st_model is not None:
-                    model, dim = self._lost_model, len(self._st_model.encode([_PROBE_TEXT])[0])
-                else:
-                    raise RuntimeError(f"{target} cannot be re-probed mid-session")
-                if not dim:
-                    raise ValueError("the probe returned no vector")
-            except Exception as e:
-                # Every REPROBE_SECONDS while down; the receipt is the signal, the log stays at debug.
-                logging.getLogger("bone").log(logging.DEBUG, f"Embedder re-probe: {target} still down ({e})")
-                issue_receipt("embeddings.reprobe", "STILL_DOWN", result_count=0, degraded=True,
-                              inputs={"backend": target}, detail=f"{type(e).__name__}: {e}")
-                return "STILL_DOWN"
+            if target == "http":
+                vectors = self._http_embed([_PROBE_TEXT], timeout=float(self._settings["REPROBE_TIMEOUT"]))
+                model, dim = str(self._settings["MODEL"]), len(vectors[0]) if vectors and vectors[0] else 0
+            elif target == "sentence_transformers" and self._st_model is not None:
+                model, dim = self._lost_model, len(self._st_model.encode([_PROBE_TEXT])[0])
+            else:
+                raise RuntimeError(f"{target} cannot be re-probed mid-session")
+            if not dim:
+                raise ValueError("the probe returned no vector")
             if dim != self.dimension:
                 outcome, detail = "RESTART_NEEDED", (f"{target}:{model} answers at {dim}d, but this session's "
                                                      f"vectors are {self.dimension}d; restart to use it")
@@ -347,40 +333,21 @@ class SemanticEmbedder:
 
         vector_backend = self.backend
         failure = ""
-        try:
-            raw = self._raw_embed(pending)
-            if len(raw) != len(pending):
-                raise ValueError("embedding batch row count mismatch")
-            finalized = []
-            for row in raw:
-                if len(row) != self.dimension:
-                    raise ValueError("embedding vector dimension mismatch")
-                vec = [float(v) for v in row]
-                if not all(math.isfinite(v) for v in vec):
-                    raise ValueError("embedding vector contains non-finite values")
-                finalized.append(self._finalize(vec))
-            self._consecutive_failures = 0
-            self.degraded = self.backend == "hash"
-            if not self.degraded:
-                self.detail = f"vectorized via {self.backend}"
-        except Exception as e:
-            failure = self.detail = f"{type(e).__name__}: {e}"
-            if "embed_failure" not in self._warned:
-                self._warned.add("embed_failure")
-                self._log(
-                    f"{Prisma.YEL}Vectorization failed ({self.detail}). "
-                    f"Serving hash coordinates for this sweep.{Prisma.RST}",
-                    "WARN",
-                )
-            self._degrade(e)
-            vector_backend = "hash"
-            pending = list(dict.fromkeys(t for t in cleaned if t))
-            finalized = [
-                self._finalize(_hash_to_vector(t, self.dimension)) for t in pending
-            ]
-            fallback = dict(zip(pending, finalized))
-            results = [fallback[t] if t else [0.0] * self.dimension for t in cleaned]
-            cache_hits = 0
+        raw = self._raw_embed(pending)
+        if len(raw) != len(pending):
+            raise ValueError("embedding batch row count mismatch")
+        finalized = []
+        for row in raw:
+            if len(row) != self.dimension:
+                raise ValueError("embedding vector dimension mismatch")
+            vec = [float(v) for v in row]
+            if not all(math.isfinite(v) for v in vec):
+                raise ValueError("embedding vector contains non-finite values")
+            finalized.append(self._finalize(vec))
+        self._consecutive_failures = 0
+        self.degraded = self.backend == "hash"
+        if not self.degraded:
+            self.detail = f"vectorized via {self.backend}"
 
         for text, vec in zip(pending, finalized):
             if not failure or self.backend == "hash":

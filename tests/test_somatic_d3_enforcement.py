@@ -86,15 +86,6 @@ if __name__ == "__main__":
             offer_to_carry_load=False, retry_allowance=1,
             temperature_band=(0.5, 0.7), forbid_body_narration=False, reason="test"
         )
-        
-        # Cortex calls gather_state, which injects ctx.somatic_budget into full_state
-        # Then calls validator.validate(text, full_state)
-        # So we just mock the rest of the cortex dependencies to let it run.
-        
-        # The easiest way to travel the real path is to just test the validator via cortex
-        try:
-            res = cortex.run_cognitive_loop(ctx, allow_loot=False)
-            self.assertEqual(res["ui"], "One. Two.")
-        except Exception:
-            pass # We don't want to mock the entire universe if we don't have to
+        res = cortex.run_cognitive_loop(ctx, allow_loot=False)
+        self.assertEqual(res["ui"], "One. Two.")
 

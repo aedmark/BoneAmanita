@@ -316,12 +316,7 @@ def run(mode_arm, out):
 
 def run_child(path, arm):
     with open(path, "a", encoding="utf-8") as out:
-        try:
-            run(arm, out)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            out.write(json.dumps({"mode": arm, "turn": "crash", "error": repr(e)}) + "\n")
+        run(arm, out)
 
 
 if __name__ == "__main__":

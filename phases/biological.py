@@ -117,40 +117,35 @@ class MetabolismPhase(SimulationPhase):
         return ctx
 
     def _calculate_homeostasis_reward(self, ctx: CycleContext):
-        try:
-            resonance = getattr(ctx.physics, "resonance", 0.0)
-            trauma_accum = getattr(self.eng, "trauma_accum", {})
-            trauma_sum = (
-                sum(trauma_accum.values()) if isinstance(trauma_accum, dict) else 0.0
-            )
-            atp = (
-                self.eng.bio.mito.state.atp_pool
-                if getattr(self.eng, "_mito_state", None)
-                else 0.0
-            )
-            reward = 0.0
-            if resonance > 0.6 and trauma_sum < 10.0:
-                reward += 1.0
-            if atp <= self.starvation_thresh or self.eng.stamina <= 0:
-                reward -= 1.0
+        resonance = getattr(ctx.physics, "resonance", 0.0)
+        trauma_accum = getattr(self.eng, "trauma_accum", {})
+        trauma_sum = (
+            sum(trauma_accum.values()) if isinstance(trauma_accum, dict) else 0.0
+        )
+        atp = (
+            self.eng.bio.mito.state.atp_pool
+            if getattr(self.eng, "_mito_state", None)
+            else 0.0
+        )
+        reward = 0.0
+        if resonance > 0.6 and trauma_sum < 10.0:
+            reward += 1.0
+        if atp <= self.starvation_thresh or self.eng.stamina <= 0:
+            reward -= 1.0
 
-            if reward != 0.0:
-                cfg = getattr(self.eng, "config", None)
-                if cfg is not None:
-                    if isinstance(cfg, dict):
-                        current_reward = cfg.get("Q_MATRIX_REWARD", 0.0)
-                        cfg["Q_MATRIX_REWARD"] = current_reward + reward
-                    else:
-                        current_reward = getattr(cfg, "Q_MATRIX_REWARD", 0.0)
-                        setattr(cfg, "Q_MATRIX_REWARD", current_reward + reward)
+        if reward != 0.0:
+            cfg = getattr(self.eng, "config", None)
+            if cfg is not None:
+                if isinstance(cfg, dict):
+                    current_reward = cfg.get("Q_MATRIX_REWARD", 0.0)
+                    cfg["Q_MATRIX_REWARD"] = current_reward + reward
+                else:
+                    current_reward = getattr(cfg, "Q_MATRIX_REWARD", 0.0)
+                    setattr(cfg, "Q_MATRIX_REWARD", current_reward + reward)
 
-                color = Prisma.GRN if reward > 0 else Prisma.RED
-                ctx.log(
-                    f"{color}[Q-MATRIX]: Policy evaluated. Homeostasis Reward {reward:+.1f} applied.{Prisma.RST}"
-                )
-        except Exception as e:
+            color = Prisma.GRN if reward > 0 else Prisma.RED
             ctx.log(
-                f"{Prisma.RED}[Q-MATRIX ERROR]: Policy evaluation failed: {e}{Prisma.RST}"
+                f"{color}[Q-MATRIX]: Policy evaluated. Homeostasis Reward {reward:+.1f} applied.{Prisma.RST}"
             )
 
     def _apply_economic_stimulus(self, ctx: CycleContext, efficiency: float):

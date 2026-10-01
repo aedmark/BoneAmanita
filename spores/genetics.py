@@ -27,21 +27,12 @@ class LiteraryReproduction:
 
     @classmethod
     def load_genetics(cls, config_ref=None):
-        try:
-            target_cfg = config_ref or BoneConfig
-            genetics = (
-                LoreManifest.get_instance(config_ref=target_cfg).get("GENETICS") or {}
-            )
-            cls.MUTATIONS = genetics.get("MUTATIONS", {})
-            cls.JOY_CLADE = genetics.get("JOY_CLADE", {})
-        except Exception as e:
-            cls.MUTATIONS = {}
-            cls.JOY_CLADE = {}
-            logger.error(
-                f"GENETICS lore failed to load ({type(e).__name__}: {e}). "
-                "Mutation and the joy clade are disabled for this session; this is "
-                "indistinguishable from a run where nothing happened to mutate."
-            )
+        target_cfg = config_ref or BoneConfig
+        genetics = (
+            LoreManifest.get_instance(config_ref=target_cfg).get("GENETICS") or {}
+        )
+        cls.MUTATIONS = genetics.get("MUTATIONS", {})
+        cls.JOY_CLADE = genetics.get("JOY_CLADE", {})
 
     @staticmethod
     def mutate_config(current_config):

@@ -217,11 +217,7 @@ class PhaseExecutor:
                 break
             if not simulator.check_circuit_breaker(phase.name):
                 continue
-            try:
-                ctx = phase.run(ctx)
-            except Exception as e:
-                simulator.handle_phase_crash(ctx, phase.name, e)
-                break
+            ctx = phase.run(ctx)
             if health is not None and (comp := _CRASH_COMPONENT_MAP.get(phase.name)):
                 health.ran_cleanly(comp)
         return ctx
@@ -263,17 +259,9 @@ class CycleSimulator:
     def run_simulation(self, ctx: CycleContext) -> CycleContext:
         from engine.invariants import Gatekeeper, InvariantViolation
         frozen_state = Gatekeeper.freeze_engine_state(self.eng)
-        
-        try:
-            ctx = self.executor.execute_phases(self, ctx)
-            mito_state = getattr(self.eng.bio.mito, "state", None) if hasattr(self.eng, "bio") and getattr(self.eng.bio, "mito", None) else None
-            Gatekeeper.check_metabolic_bounds(None, mito_state, {})
-        except Exception as e:
-            Gatekeeper.thaw_engine_state(self.eng, frozen_state)
-            self.eng.events.log(f"Global Invariant Breach in turn cycle: {e}. State rolled back.", "SYS_ERR")
-            ctx.logs.append(f"Global Invariant Breach: {e}")
-            ctx.refusal_triggered = True
-            
+        ctx = self.executor.execute_phases(self, ctx)
+        mito_state = getattr(self.eng.bio.mito, "state", None) if hasattr(self.eng, "bio") and getattr(self.eng.bio, "mito", None) else None
+        Gatekeeper.check_metabolic_bounds(None, mito_state, {})
         if (
             hasattr(self.eng, "telemetry")
             and hasattr(self.eng, "cortex")
@@ -479,10 +467,7 @@ class GeodesicOrchestrator:
             except Exception as e:
                 record_crash(self.eng, "REM forgetting", e)
         if self.eng.consolidator:
-            try:
-                self.eng.consolidator.trigger_autophagy()
-            except Exception as e:
-                self.eng.events.log(f"REM Autophagy failure: {e}", "DEBUG")
+            if hasattr(self.eng.consolidator, "trigger_autophagy"): self.eng.consolidator.trigger_autophagy()
         cortex = getattr(self.eng, "cortex", None)
         if cortex and hasattr(cortex, "worry_ledger") and cortex.worry_ledger:
             self._submit_background(
@@ -556,75 +541,72 @@ class GeodesicOrchestrator:
             return
 
         def _bg_topology_check(raw_adj):
-            try:
-                adj_copy = {k: set(v) for k, v in raw_adj.items()}
-                max_swaps = min(len(adj_copy) * 10, 1000)
-                # A single rewire or configuration-model draw is one noisy
-                # sample; a real memory graph is sparse enough that a stray
-                # triangle (or the lack of one) in one random draw is common
-                # chance, not signal. Five independent draws each, averaged,
-                # is a steadier baseline.
-                rewire_samples = [
-                    mem.calculate_clustering(_native_rewire(adj_copy, n_swaps=max_swaps))
-                    for _ in range(5)
-                ]
-                config_samples = [
-                    mem.calculate_clustering(_native_configuration_model(adj_copy))
-                    for _ in range(5)
-                ]
-                null_cluster_rewire = sum(rewire_samples) / len(rewire_samples)
-                null_cluster_config = sum(config_samples) / len(config_samples)
-                actual_cluster = float(mem.calculate_clustering(adj_copy))
-                strict_null_cluster = float(
-                    max(null_cluster_rewire, null_cluster_config)
+            adj_copy = {k: set(v) for k, v in raw_adj.items()}
+            max_swaps = min(len(adj_copy) * 10, 1000)
+            # A single rewire or configuration-model draw is one noisy
+            # sample; a real memory graph is sparse enough that a stray
+            # triangle (or the lack of one) in one random draw is common
+            # chance, not signal. Five independent draws each, averaged,
+            # is a steadier baseline.
+            rewire_samples = [
+                mem.calculate_clustering(_native_rewire(adj_copy, n_swaps=max_swaps))
+                for _ in range(5)
+            ]
+            config_samples = [
+                mem.calculate_clustering(_native_configuration_model(adj_copy))
+                for _ in range(5)
+            ]
+            null_cluster_rewire = sum(rewire_samples) / len(rewire_samples)
+            null_cluster_config = sum(config_samples) / len(config_samples)
+            actual_cluster = float(mem.calculate_clustering(adj_copy))
+            strict_null_cluster = float(
+                max(null_cluster_rewire, null_cluster_config)
+            )
+            null_floor = float(getattr(self.eng.config.CORE, "TOPOLOGY_NULL_FLOOR", 0.05))
+            if strict_null_cluster <= null_floor:
+                # A memory graph too sparse for real community structure
+                # is also too sparse for a random rewiring of it to grow
+                # any, so the null baseline sits at noise level. "No
+                # better than null" only means collapse when null carries
+                # a real clustering signal to fall below; comparing a
+                # value against noise is not evidence anything collapsed.
+                self._topology_collapse_strikes = 0
+                self.eng.events.log(
+                    f"Topology check declined: null-model clustering "
+                    f"({strict_null_cluster:.3f}) is at the noise floor, "
+                    "so a real value near it is not collapse.",
+                    "CYCLE",
                 )
-                null_floor = float(getattr(self.eng.config.CORE, "TOPOLOGY_NULL_FLOOR", 0.05))
-                if strict_null_cluster <= null_floor:
-                    # A memory graph too sparse for real community structure
-                    # is also too sparse for a random rewiring of it to grow
-                    # any, so the null baseline sits at noise level. "No
-                    # better than null" only means collapse when null carries
-                    # a real clustering signal to fall below; comparing a
-                    # value against noise is not evidence anything collapsed.
-                    self._topology_collapse_strikes = 0
+                return
+            if actual_cluster <= (strict_null_cluster * 1.05):
+                # Even a steadied, averaged baseline is one measurement of
+                # a randomized process; a single crossing can still be
+                # noise. Require it to repeat across consecutive checks
+                # (config CORE.TOPOLOGY_COLLAPSE_STRIKES, default 3, the
+                # same discipline the embedding fallback's terminal
+                # transition uses for its own consecutive-failure count)
+                # before taking the irreversible action.
+                strikes_needed = int(
+                    getattr(self.eng.config.CORE, "TOPOLOGY_COLLAPSE_STRIKES", 3)
+                )
+                self._topology_collapse_strikes += 1
+                if self._topology_collapse_strikes < strikes_needed:
                     self.eng.events.log(
-                        f"Topology check declined: null-model clustering "
-                        f"({strict_null_cluster:.3f}) is at the noise floor, "
-                        "so a real value near it is not collapse.",
+                        f"Topology check: clustering ({actual_cluster:.3f}) at or "
+                        f"below null ({strict_null_cluster:.3f}) "
+                        f"[{self._topology_collapse_strikes}/{strikes_needed}]. "
+                        "Not yet terminal.",
                         "CYCLE",
+                        "WARN",
                     )
                     return
-                if actual_cluster <= (strict_null_cluster * 1.05):
-                    # Even a steadied, averaged baseline is one measurement of
-                    # a randomized process; a single crossing can still be
-                    # noise. Require it to repeat across consecutive checks
-                    # (config CORE.TOPOLOGY_COLLAPSE_STRIKES, default 3, the
-                    # same discipline the embedding fallback's terminal
-                    # transition uses for its own consecutive-failure count)
-                    # before taking the irreversible action.
-                    strikes_needed = int(
-                        getattr(self.eng.config.CORE, "TOPOLOGY_COLLAPSE_STRIKES", 3)
-                    )
-                    self._topology_collapse_strikes += 1
-                    if self._topology_collapse_strikes < strikes_needed:
-                        self.eng.events.log(
-                            f"Topology check: clustering ({actual_cluster:.3f}) at or "
-                            f"below null ({strict_null_cluster:.3f}) "
-                            f"[{self._topology_collapse_strikes}/{strikes_needed}]. "
-                            "Not yet terminal.",
-                            "CYCLE",
-                            "WARN",
-                        )
-                        return
-                    self.eng.events.log(
-                        f"{Prisma.RED}Structural collapse detected. Semantic topology destroyed against strict dual-baseline. Engine is flagged for terminal shutdown.{Prisma.RST}",
-                        "BIO",
-                    )
-                    self.eng.health = 0.0
-                else:
-                    self._topology_collapse_strikes = 0
-            except Exception as e:
-                self.eng.events.log(f"Async Topology Error: {e}", "CYCLE", "WARN")
+                self.eng.events.log(
+                    f"{Prisma.RED}Structural collapse detected. Semantic topology destroyed against strict dual-baseline. Engine is flagged for terminal shutdown.{Prisma.RST}",
+                    "BIO",
+                )
+                self.eng.health = 0.0
+            else:
+                self._topology_collapse_strikes = 0
 
         if isinstance(actual_adj, dict):
             try:
@@ -1075,98 +1057,95 @@ class GeodesicOrchestrator:
         cortex = self.eng.cortex
 
         def _bg_wls_check(msg_str, frozen_adj):
-            try:
-                if not isinstance(frozen_adj, dict) or not frozen_adj:
-                    return
-                words = [w.strip() for w in msg_str.split()] if msg_str else []
-                seed_concept = next((w for w in words if w in frozen_adj), None)
-                actual_adj = frozen_adj
-                if not seed_concept:
-                    seed_concept = max(
-                        actual_adj.keys(),
-                        key=lambda k: len(actual_adj[k]),
+            if not isinstance(frozen_adj, dict) or not frozen_adj:
+                return
+            words = [w.strip() for w in msg_str.split()] if msg_str else []
+            seed_concept = next((w for w in words if w in frozen_adj), None)
+            actual_adj = frozen_adj
+            if not seed_concept:
+                seed_concept = max(
+                    actual_adj.keys(),
+                    key=lambda k: len(actual_adj[k]),
+                )
+            distances = {seed_concept: 0}
+            bfs_queue = deque([seed_concept])
+            max_radius = 6
+            max_nodes = 500
+            nodes_visited = 0
+            while bfs_queue and nodes_visited < max_nodes:
+                curr = bfs_queue.popleft()
+                nodes_visited += 1
+                d = distances[curr]
+                if d >= max_radius:
+                    continue
+                neighbors = actual_adj.get(curr, [])
+                for neighbor in neighbors:
+                    if neighbor not in distances:
+                        distances[neighbor] = d + 1
+                        bfs_queue.append(neighbor)
+            mass_at_r = {}
+            for dist in distances.values():
+                if dist > 0:
+                    mass_at_r[dist] = mass_at_r.get(dist, 0) + 1
+            log_r, log_m, weights = [], [], []
+            cumulative_mass = 1.0
+            for r in sorted(mass_at_r.keys()):
+                cumulative_mass += mass_at_r[r]
+                if r > 0:
+                    log_r.append(math.log(r))
+                    log_m.append(math.log(cumulative_mass))
+                    weights.append(1.0 / r)
+            if len(log_r) < 3:
+                return
+            if lattice:
+                passed_gate, gate_code = _native_quality_gate(log_r, log_m)
+                local_d = _native_wls(log_r, log_m, weights)
+                if not passed_gate:
+                    self.eng.events.log(
+                        f"{Prisma.RED}[NAVI-FRACTAL] Topology rejected by Quality Gate ({gate_code}). Network too fragmented. Mandating REM Defragmentation.{Prisma.RST}",
+                        "SYS",
                     )
-                distances = {seed_concept: 0}
-                bfs_queue = deque([seed_concept])
-                max_radius = 6
-                max_nodes = 500
-                nodes_visited = 0
-                while bfs_queue and nodes_visited < max_nodes:
-                    curr = bfs_queue.popleft()
-                    nodes_visited += 1
-                    d = distances[curr]
-                    if d >= max_radius:
-                        continue
-                    neighbors = actual_adj.get(curr, [])
-                    for neighbor in neighbors:
-                        if neighbor not in distances:
-                            distances[neighbor] = d + 1
-                            bfs_queue.append(neighbor)
-                mass_at_r = {}
-                for dist in distances.values():
-                    if dist > 0:
-                        mass_at_r[dist] = mass_at_r.get(dist, 0) + 1
-                log_r, log_m, weights = [], [], []
-                cumulative_mass = 1.0
-                for r in sorted(mass_at_r.keys()):
-                    cumulative_mass += mass_at_r[r]
-                    if r > 0:
-                        log_r.append(math.log(r))
-                        log_m.append(math.log(cumulative_mass))
-                        weights.append(1.0 / r)
-                if len(log_r) < 3:
-                    return
-                if lattice:
-                    passed_gate, gate_code = _native_quality_gate(log_r, log_m)
-                    local_d = _native_wls(log_r, log_m, weights)
-                    if not passed_gate:
+                    self.eng.village.council.mandates.append(
+                        {
+                            "action": "DEFRAGMENT_MEMORY",
+                            "value": "FRAG_HIGH",
+                            "log": gate_code,
+                        }
+                    )
+                    local_d = 1.0
+                else:
+                    null_d = 3.0
+                    lattice.shared.omega_r = min(1.0, local_d / 2.0)
+                    if 1.5 < local_d < null_d:
                         self.eng.events.log(
-                            f"{Prisma.RED}[NAVI-FRACTAL] Topology rejected by Quality Gate ({gate_code}). Network too fragmented. Mandating REM Defragmentation.{Prisma.RST}",
+                            f"{Prisma.CYN}[NAVI-FRACTAL] True Coherence Verified (Ωr = {lattice.shared.omega_r:.2f}). Dimension {local_d:.2f} is structurally deliberate, not random noise.{Prisma.RST}",
                             "SYS",
                         )
-                        self.eng.village.council.mandates.append(
-                            {
-                                "action": "DEFRAGMENT_MEMORY",
-                                "value": "FRAG_HIGH",
-                                "log": gate_code,
-                            }
-                        )
-                        local_d = 1.0
-                    else:
-                        null_d = 3.0
-                        lattice.shared.omega_r = min(1.0, local_d / 2.0)
-                        if 1.5 < local_d < null_d:
-                            self.eng.events.log(
-                                f"{Prisma.CYN}[NAVI-FRACTAL] True Coherence Verified (Ωr = {lattice.shared.omega_r:.2f}). Dimension {local_d:.2f} is structurally deliberate, not random noise.{Prisma.RST}",
-                                "SYS",
-                            )
-                        elif local_d >= null_d:
-                            self.eng.events.log(
-                                f"{Prisma.RED}[NAVI-FRACTAL] Hallucination of Depth! Dimension {local_d:.2f} is indistinguishable from random noise. Stripping coherence rewards.{Prisma.RST}",
-                                "CYCLE", "WARN",
-                            )
-                            lattice.shared.omega_r = 0.0
-                    if local_d < 0.2:
+                    elif local_d >= null_d:
                         self.eng.events.log(
-                            f"{Prisma.RED}[CD CONDITION] Phase-space collapse detected (d={local_d:.2f}). Sycophancy Point Attractor identified. Spiking Contradiction (μ) to force generative tension.{Prisma.RST}",
-                            "CYCLE", "CRIT",
+                            f"{Prisma.RED}[NAVI-FRACTAL] Hallucination of Depth! Dimension {local_d:.2f} is indistinguishable from random noise. Stripping coherence rewards.{Prisma.RST}",
+                            "CYCLE", "WARN",
                         )
-                        active_phys = getattr(self.eng, "active_physics", None)
-                        if active_phys:
-                            from engine.struts import safe_set
+                        lattice.shared.omega_r = 0.0
+                if local_d < 0.2:
+                    self.eng.events.log(
+                        f"{Prisma.RED}[CD CONDITION] Phase-space collapse detected (d={local_d:.2f}). Sycophancy Point Attractor identified. Spiking Contradiction (μ) to force generative tension.{Prisma.RST}",
+                        "CYCLE", "CRIT",
+                    )
+                    active_phys = getattr(self.eng, "active_physics", None)
+                    if active_phys:
+                        from engine.struts import safe_set
 
-                            safe_set(
-                                active_phys,
-                                "mu",
-                                min(1.0, float(getattr(active_phys, "mu", 0.0)) + 0.5),
-                            )
-                            safe_set(
-                                active_phys,
-                                "kappa",
-                                max(0.5, float(getattr(active_phys, "kappa", 0.0))),
-                            )
-            except Exception as e:
-                self.eng.events.log(f"Async WLS Heuristic Error: {e}", "DEBUG")
+                        safe_set(
+                            active_phys,
+                            "mu",
+                            min(1.0, float(getattr(active_phys, "mu", 0.0)) + 0.5),
+                        )
+                        safe_set(
+                            active_phys,
+                            "kappa",
+                            max(0.5, float(getattr(active_phys, "kappa", 0.0))),
+                        )
 
         if clean_message != "(Waiting)":
             if ctx.physics:
@@ -1180,44 +1159,39 @@ class GeodesicOrchestrator:
                     for k, v in raw_adj.items()
                 }
                 self._submit_background(_bg_wls_check, clean_message, frozen_adj)
-                try:
-                    v_history = list(self.voltage_history)
-                    has_active_tags = (
-                        any(ctx.physics.vector.values())
-                        if getattr(ctx.physics, "vector", None)
-                        else False
+                v_history = list(self.voltage_history)
+                has_active_tags = (
+                    any(ctx.physics.vector.values())
+                    if getattr(ctx.physics, "vector", None)
+                    else False
+                )
+                if len(v_history) >= 10 and not has_active_tags:
+                    recent_v = v_history[-10:]
+                    v_diff = [
+                        recent_v[i] - recent_v[i - 1]
+                        for i in range(1, len(recent_v))
+                    ]
+                    pe = _native_permutation_entropy(
+                        v_diff, m=3, tau=1, epsilon=1e-5
                     )
-                    if len(v_history) >= 10 and not has_active_tags:
-                        recent_v = v_history[-10:]
-                        v_diff = [
-                            recent_v[i] - recent_v[i - 1]
-                            for i in range(1, len(recent_v))
-                        ]
-                        pe = _native_permutation_entropy(
-                            v_diff, m=3, tau=1, epsilon=1e-5
+                    vol = _native_takens_volume(v_diff, m=3, tau=1)
+                    if pe < 0.4 or vol < 0.05:
+                        self.eng.events.log(
+                            f"{Prisma.RED}[NAVI-SAD] Point Attractor Detected. Permutation Entropy critical (PE={pe:.2f}). Conversation is sycophantic. Summoning THE JESTER.{Prisma.RST}",
+                            "CYCLE", "CRIT",
                         )
-                        vol = _native_takens_volume(v_diff, m=3, tau=1)
-                        if pe < 0.4 or vol < 0.05:
-                            self.eng.events.log(
-                                f"{Prisma.RED}[NAVI-SAD] Point Attractor Detected. Permutation Entropy critical (PE={pe:.2f}). Conversation is sycophantic. Summoning THE JESTER.{Prisma.RST}",
-                                "CYCLE", "CRIT",
+                        ctx.council_mandates.append(
+                            {
+                                "action": "SYNERGY_FIRED",
+                                "value": "JESTER",
+                                "log": "Sycophancy Loop Shattered.",
+                            }
+                        )
+                        if ctx.physics:
+                            ctx.physics.entropy = min(
+                                1.0,
+                                float(getattr(ctx.physics, "entropy", 0.0)) + 0.6,
                             )
-                            ctx.council_mandates.append(
-                                {
-                                    "action": "SYNERGY_FIRED",
-                                    "value": "JESTER",
-                                    "log": "Sycophancy Loop Shattered.",
-                                }
-                            )
-                            if ctx.physics:
-                                ctx.physics.entropy = min(
-                                    1.0,
-                                    float(getattr(ctx.physics, "entropy", 0.0)) + 0.6,
-                                )
-                except Exception as e:
-                    self.eng.events.log(
-                        f"Async navi-SAD Evaluation Error: {e}", "DEBUG"
-                    )
             return
         atp_level = float(_mito_state.atp_pool)
         delta_level = float(self.eng.shared_lattice.shared.delta)

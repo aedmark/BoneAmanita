@@ -56,56 +56,52 @@ class DSPyCritic:
         self.enabled = DSPY_AVAILABLE
         self.cfg = config_ref
         if self.enabled:
-            try:
-                from engine.presets import BoneConfig
-                from engine.struts import safe_get
+            from engine.presets import BoneConfig
+            from engine.struts import safe_get
 
-                def get_cfg(key: str, default: Any) -> Any:
-                    val_upper = safe_get(self.cfg, key.upper())
-                    if val_upper is not None:
-                        return val_upper
-                    val_lower = safe_get(self.cfg, key.lower())
-                    if val_lower is not None:
-                        return val_lower
-                    return getattr(BoneConfig, key.upper(), default)
+            def get_cfg(key: str, default: Any) -> Any:
+                val_upper = safe_get(self.cfg, key.upper())
+                if val_upper is not None:
+                    return val_upper
+                val_lower = safe_get(self.cfg, key.lower())
+                if val_lower is not None:
+                    return val_lower
+                return getattr(BoneConfig, key.upper(), default)
 
-                from mechanics.providers import CLOUD_ENDPOINTS, KEY_ENV, normalize_provider
-                import os
-                provider = normalize_provider(get_cfg("provider", "ollama"))
-                model_name = get_cfg("dspy_model", "gemma4:e4b")
-                raw_url = (
-                    get_cfg("base_url", "http://127.0.0.1:11434/v1")
-                    or "http://127.0.0.1:11434/v1"
+            from mechanics.providers import CLOUD_ENDPOINTS, KEY_ENV, normalize_provider
+            import os
+            provider = normalize_provider(get_cfg("provider", "ollama"))
+            model_name = get_cfg("dspy_model", "gemma4:e4b")
+            raw_url = (
+                get_cfg("base_url", "http://127.0.0.1:11434/v1")
+                or "http://127.0.0.1:11434/v1"
+            )
+            clean_url = raw_url.replace("/chat/completions", "")
+            if provider in ("ollama", "lm_studio"):
+                self.lm = dspy.LM(
+                    model=f"openai/{model_name}",
+                    api_base=clean_url,
+                    api_key="local-model-doesnt-need-a-key",
                 )
-                clean_url = raw_url.replace("/chat/completions", "")
-                if provider in ("ollama", "lm_studio"):
-                    self.lm = dspy.LM(
-                        model=f"openai/{model_name}",
-                        api_base=clean_url,
-                        api_key="local-model-doesnt-need-a-key",
-                    )
-                elif provider in CLOUD_ENDPOINTS:
-                    key = os.getenv(KEY_ENV[provider]) or get_cfg("api_key", "")
-                    prefix = "openai" if provider == "xai" else "anthropic"
-                    options = {"api_key": key, "max_tokens": 1024}
-                    if provider == "xai":
-                        options["api_base"] = CLOUD_ENDPOINTS[provider].removesuffix("/chat/completions")
-                    self.lm = dspy.LM(model=f"{prefix}/{model_name}", **options)
-                else:
-                    self.lm = dspy.LM(model=model_name)
-                dspy.settings.configure(lm=self.lm)
-                self.judge = dspy.ChainOfThought(AssessFaithfulness)
-                self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)
-                self.compressor = dspy.ChainOfThought(CompressAxioms)
-                from physics.maths import NaviSADProtocol
+            elif provider in CLOUD_ENDPOINTS:
+                key = os.getenv(KEY_ENV[provider]) or get_cfg("api_key", "")
+                prefix = "openai" if provider == "xai" else "anthropic"
+                options = {"api_key": key, "max_tokens": 1024}
+                if provider == "xai":
+                    options["api_base"] = CLOUD_ENDPOINTS[provider].removesuffix("/chat/completions")
+                self.lm = dspy.LM(model=f"{prefix}/{model_name}", **options)
+            else:
+                self.lm = dspy.LM(model=model_name)
+            dspy.settings.configure(lm=self.lm)
+            self.judge = dspy.ChainOfThought(AssessFaithfulness)
+            self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)
+            self.compressor = dspy.ChainOfThought(CompressAxioms)
+            from physics.maths import NaviSADProtocol
 
-                self.navi_sad = NaviSADProtocol(history_size=5)
-                print(
-                    f"{Prisma.CYN}[DSPy]: Real-Time Critic Online. Model: {model_name} via {provider}{Prisma.RST}"
-                )
-            except Exception as e:
-                print(f"{Prisma.RED}[DSPy INIT FAULT]: {e}{Prisma.RST}")
-                self.enabled = False
+            self.navi_sad = NaviSADProtocol(history_size=5)
+            print(
+                f"{Prisma.CYN}[DSPy]: Real-Time Critic Online. Model: {model_name} via {provider}{Prisma.RST}"
+            )
 
     def audit_generation(
         self,
@@ -125,42 +121,34 @@ class DSPyCritic:
                 False,
                 f"Mathematical Sycophancy Detected. Malignancy Factor ({malignancy:.2f}) exceeds biological limits. Output is structurally hollow.",
             )
-        try:
-            result = self.judge(
-                system_mode=active_mode,
-                context=memory_context,
-                question=user_query,
-                answer=generated_response,
-            )
-            if "true" not in str(result.faithfulness).lower():
-                return False, getattr(result, "reasoning", "No reasoning provided.")
-            return True, "Faithful."
-        except Exception as e:
-            print(f"\n{Prisma.RED}DSPy JUDGE OFFLINE: {e} - Failing open.{Prisma.RST}")
-            return True, "Critic failed to open."
+        result = self.judge(
+            system_mode=active_mode,
+            context=memory_context,
+            question=user_query,
+            answer=generated_response,
+        )
+        if "true" not in str(result.faithfulness).lower():
+            return False, getattr(result, "reasoning", "No reasoning provided.")
+        return True, "Faithful."
 
     def evolve_prompt(self, current_configuration: str, failure_context: str) -> str:
         if not self.enabled:
             return ""
-        try:
-            result = self.evolver(
-                current_configuration=current_configuration,
-                failure_context=failure_context,
+        result = self.evolver(
+            current_configuration=current_configuration,
+            failure_context=failure_context,
+        )
+        directive = str(result.new_directive)
+        malignancy = self.navi_sad.calculate_malignancy_factor(
+            directive, current_drag=10.0
+        )
+        if malignancy > 0.5:
+            print(
+                f"\n{Prisma.RED}DSPy EVOLVER REJECTED: Mutation mathematically malignant (Score: {malignancy:.2f}). Discarding rot.{Prisma.RST}"
             )
-            directive = str(result.new_directive)
-            malignancy = self.navi_sad.calculate_malignancy_factor(
-                directive, current_drag=10.0
-            )
-            if malignancy > 0.5:
-                print(
-                    f"\n{Prisma.RED}DSPy EVOLVER REJECTED: Mutation mathematically malignant (Score: {malignancy:.2f}). Discarding rot.{Prisma.RST}"
-                )
-                return ""
-            print(f"\n{Prisma.CYN}[Epigenetic Mutation]: {directive}{Prisma.RST}")
-            return directive
-        except Exception as e:
-            print(f"\n{Prisma.RED}DSPy EVOLVER FAULT: {e}{Prisma.RST}")
             return ""
+        print(f"\n{Prisma.CYN}[Epigenetic Mutation]: {directive}{Prisma.RST}")
+        return directive
 
     def compress_prompts(self, directives: list) -> list:
         if not self.enabled or not directives:
@@ -168,21 +156,17 @@ class DSPyCritic:
         print(
             f"\n{Prisma.MAG}Compressing {len(directives)} directives into foundational axioms...{Prisma.RST}"
         )
-        try:
-            raw_output = str(
-                self.compressor(
-                    current_directives="\n".join(directives)
-                ).compressed_axioms
-            ).split("\n")
-            new_rules = [
-                line.strip()
-                for line in raw_output
-                if "STRUCTURAL TRUTH:" in line.upper() or "REMEMBER:" in line.upper()
-            ] or [line.strip() for line in raw_output if line.strip()]
-            print(
-                f"{Prisma.GRN}COMPRESSION SUCCESS: Reduced to {len(new_rules)} axioms.{Prisma.RST}"
-            )
-            return new_rules
-        except Exception as e:
-            print(f"\n{Prisma.RED}DSPy COMPRESSOR FATAL ERROR: {e}{Prisma.RST}")
-            return directives
+        raw_output = str(
+            self.compressor(
+                current_directives="\n".join(directives)
+            ).compressed_axioms
+        ).split("\n")
+        new_rules = [
+            line.strip()
+            for line in raw_output
+            if "STRUCTURAL TRUTH:" in line.upper() or "REMEMBER:" in line.upper()
+        ] or [line.strip() for line in raw_output if line.strip()]
+        print(
+            f"{Prisma.GRN}COMPRESSION SUCCESS: Reduced to {len(new_rules)} axioms.{Prisma.RST}"
+        )
+        return new_rules

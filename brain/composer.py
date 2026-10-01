@@ -205,8 +205,6 @@ class LLMInterface:
                 err = f"HTTP {e.code}: {error_body}"
             except (urllib.error.URLError, TimeoutError) as e:
                 err = e
-            except Exception as e:
-                err = f"Unexpected Protocol Failure: {e}"
             self._log_flicker(attempt, err)
             if attempt < network_retries:
                 time.sleep(2**attempt)
@@ -324,23 +322,14 @@ class LLMInterface:
             if self.strict_live:
                 raise
             if self.provider != "ollama":
-                try:
-                    fallback = self._local_fallback(payload)
-                    if fallback is not None:
-                        if self.events:
-                            self.events.log(
-                                f"{Prisma.OCHRE}Primary synapse failed. Substrate routed to local fallback.{Prisma.RST}",
-                                "SYS",
-                            )
-                        return fallback
-                except Exception as fallback_error:
+                fallback = self._local_fallback(payload)
+                if fallback is not None:
                     if self.events:
                         self.events.log(
-                            f"{Prisma.YEL}Local fallback also failed: "
-                            f"{type(fallback_error).__name__}: {fallback_error}{Prisma.RST}",
+                            f"{Prisma.OCHRE}Primary synapse failed. Substrate routed to local fallback.{Prisma.RST}",
                             "SYS",
-                            "WARN",
                         )
+                    return fallback
             self.failure_count += 1
             self.last_failure_time = time.time()
             if self.failure_count >= self.failure_threshold:
@@ -379,25 +368,15 @@ class LLMInterface:
         )
         fallback_payload = base_payload.copy()
         fallback_payload["model"] = safe_get(self.cfg, "OLLAMA_FALLBACK", "llama3.1:8b")
-        try:
-            c_cfg = safe_get(self.cfg, "CORTEX", {})
-            fallback_timeout = float(safe_get(c_cfg, "LLM_FALLBACK_TIMEOUT", 120.0))
-            return self._transmit(
-                fallback_payload,
-                timeout=fallback_timeout,
-                network_retries=1,
-                override_url=url,
-                override_key="ollama",
-            )
-        except Exception as e:
-            if self.events:
-                self.events.log(
-                    f"{Prisma.YEL}Local fallback transmit failed ({url}): "
-                    f"{type(e).__name__}: {e}{Prisma.RST}",
-                    "SYS",
-                    "WARN",
-                )
-            return None
+        c_cfg = safe_get(self.cfg, "CORTEX", {})
+        fallback_timeout = float(safe_get(c_cfg, "LLM_FALLBACK_TIMEOUT", 120.0))
+        return self._transmit(
+            fallback_payload,
+            timeout=fallback_timeout,
+            network_retries=1,
+            override_url=url,
+            override_key="ollama",
+        )
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.events:
@@ -418,35 +397,26 @@ class LLMInterface:
             self.events.log(f"{Prisma.GRY}{log_msg}{Prisma.RST}", "DEBUG")
         dreamer = self.dreamer
         if dreamer is not None and hasattr(dreamer, "hallucinate"):
-            try:
-                hallucination, relief = dreamer.hallucinate(
-                    {"ENTROPY": len(prompt) % 10}, trauma_level=2.0, via_synapse=False
-                )
-                if (
-                    relief > 0
-                    and self.events
-                    and (
-                        msg := ux_format(
-                            "brain_strings", "mock_pressure_release", relief=relief
-                        )
+            hallucination, relief = dreamer.hallucinate(
+                {"ENTROPY": len(prompt) % 10}, trauma_level=2.0, via_synapse=False
+            )
+            if (
+                relief > 0
+                and self.events
+                and (
+                    msg := ux_format(
+                        "brain_strings", "mock_pressure_release", relief=relief
                     )
-                ):
-                    self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "DREAM")
-                return ux_format(
-                    "brain_strings",
-                    "mock_hallucination",
-                    default=f"[{reason}] {hallucination}",
-                    reason=reason,
-                    hallucination=hallucination,
                 )
-            except Exception as e:
-                if self.events:
-                    self.events.log(
-                        f"{Prisma.YEL}Mock generation could not reach the dreamer: "
-                        f"{type(e).__name__}: {e}. Falling back to static.{Prisma.RST}",
-                        "SYS",
-                        "WARN",
-                    )
+            ):
+                self.events.log(f"{Prisma.VIOLET}{msg}{Prisma.RST}", "DREAM")
+            return ux_format(
+                "brain_strings",
+                "mock_hallucination",
+                default=f"[{reason}] {hallucination}",
+                reason=reason,
+                hallucination=hallucination,
+            )
         return ux_format(
             "brain_strings", "mock_static", default=f"[{reason}] ...", reason=reason
         )

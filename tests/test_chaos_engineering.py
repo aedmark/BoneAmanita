@@ -208,10 +208,6 @@ class TestChaosEngineering(BoneTestCase):
             self.fail(
                 f"[CRITICAL] Engine crashed with UnboundLocalError due to missing village member: {e}"
             )
-        except Exception as e:
-            self.fail(
-                f"[CRITICAL] Engine crashed unexpectedly when a village member was suppressed: {e}"
-            )
 
     @staticmethod
     def _bridged_cliques(clique_size: int, count: int) -> dict:
@@ -355,12 +351,7 @@ class TestChaosEngineering(BoneTestCase):
         self.engine.events.subscribe("DIRTY_TEST", telemetry.record_event)
         initial_subs = len(self.engine.events.subscribers.get("DIRTY_TEST", []))
         toxic_object = {"safe_string": "hello", "fatal_lock": threading.Lock()}
-        try:
-            self.engine.events.publish("DIRTY_TEST", toxic_object)
-        except Exception as e:
-            self.fail(
-                f"[CRITICAL] EventBus crashed when handling dirty telemetry data: {e}"
-            )
+        self.engine.events.publish("DIRTY_TEST", toxic_object)
         final_subs = len(self.engine.events.subscribers.get("DIRTY_TEST", []))
         self.assertEqual(
             initial_subs,
@@ -394,10 +385,6 @@ class TestChaosEngineering(BoneTestCase):
         except AttributeError as e:
             self.fail(
                 f"[CRITICAL] trigger_death crashed due to missing Cortex attributes: {e}"
-            )
-        except Exception as e:
-            self.fail(
-                f"[CRITICAL] trigger_death failed gracefully with missing Cortex: {e}"
             )
 
     def test_massive_context_rem_indexing(self):

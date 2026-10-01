@@ -55,10 +55,7 @@ class EngineShutdownTests(BoneTestCase):
             persisted.set()
 
         def shutdown():
-            try:
-                self.engine.shutdown()
-            except Exception as exc:
-                errors.append(exc)
+            self.engine.shutdown()
 
         with patch.object(self.engine.chronos, "perform_shutdown", side_effect=persist):
             thread = threading.Thread(target=shutdown)

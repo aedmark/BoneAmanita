@@ -41,8 +41,9 @@ class EdgeBranchCoverageTests(BoneTestCase):
         dummy_soul = MagicMock()
         dummy_soul.eng.trauma_accum = {}
         dummy_soul.core_memories = []
-        msg = oroboros.crystallize("TOXICITY", dummy_soul)
-        self.assertIsNotNone(msg, "Oroboros failed to parse malformed legacy data.")
+        msg = None
+        with self.assertRaises(RuntimeError):
+            msg = oroboros.crystallize("TOXICITY", dummy_soul)
         self.assertTrue(
             any("Fragmented" in s.name for s in oroboros.scars),
             "Scar failed to generate from malformed data.",

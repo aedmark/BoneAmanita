@@ -65,19 +65,11 @@ class SubconsciousStrata:
 
     def _rebuild_ordvec(self, context_msg="Rebuild"):
         if ordvec and self.rank_bank is not None and len(self.rank_bank) >= 32:
-            try:
-                dim = self.rank_bank.shape[1]
-                self.bitmap = SignBitmap(dim)
-                try:
-                    self.quantizer = RankQuant(dim, 8)
-                except Exception:
-                    self.quantizer = RankQuant(dim, 4)
-                self.bitmap.add(self.rank_bank)
-                self.quantizer.add(self.rank_bank)
-            except Exception as e:
-                print(f"\n[ORDVEC] {context_msg} Failure: {e}")
-                self.bitmap = None
-                self.quantizer = None
+            dim = self.rank_bank.shape[1]
+            self.bitmap = SignBitmap(dim)
+            self.quantizer = RankQuant(dim, 8)
+            self.bitmap.add(self.rank_bank)
+            self.quantizer.add(self.rank_bank)
 
     def _iter_entries(self):
         if not os.path.exists(self.filepath):
@@ -115,13 +107,7 @@ class SubconsciousStrata:
                 words.append(e["word"])
 
         if np is not None and words:
-            try:
-                _words_to_matrix(words)
-            except Exception as e:
-                logger.warning(
-                    f"Batch vector warm failed for {len(words)} word(s) "
-                    f"({type(e).__name__}: {e}); falling back to one call per word."
-                )
+            _words_to_matrix(words)
             for word in words:
                 vec = np.array(_word_to_vector(word), dtype=np.float32)
                 remainder = vec.shape[0] % 64
@@ -178,14 +164,9 @@ class SubconsciousStrata:
                             and self.bitmap is not None
                             and self.quantizer is not None
                         ):
-                            try:
-                                vec_2d = np.ascontiguousarray([vec], dtype=np.float32)
-                                self.bitmap.add(vec_2d)
-                                self.quantizer.add(vec_2d)
-                            except Exception as e:
-                                print(f"\n[ORDVEC] Append Failure: {e}")
-                                self.bitmap = None
-                                self.quantizer = None
+                            vec_2d = np.ascontiguousarray([vec], dtype=np.float32)
+                            self.bitmap.add(vec_2d)
+                            self.quantizer.add(vec_2d)
             return True
         except IOError as e:
             logger.error(
@@ -195,35 +176,29 @@ class SubconsciousStrata:
             return False
 
     def _prune_strata(self):
-        try:
-            with open(self.filepath, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-            file_keep_count = int(len(lines) * 0.9)
-            survivors = lines[-file_keep_count:] if file_keep_count else []
-            fd, temp_path = tempfile.mkstemp(dir=self.directory, text=True)
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.writelines(survivors)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(temp_path, self.filepath)
-            if self.metadata_log:
-                meta_keep = int(len(self.metadata_log) * 0.9)
-                self.metadata_log = self.metadata_log[-meta_keep:] if meta_keep else []
-                self.index = {e["word"]: e for e in self.metadata_log if "word" in e}
-            if self.rank_bank is not None:
-                rank_keep = int(len(self.rank_bank) * 0.9)
-                if rank_keep > 0:
-                    self.rank_bank = np.ascontiguousarray(
-                        self.rank_bank[-rank_keep:], dtype=np.float32
-                    )
-                    self._rebuild_ordvec("Prune Rebuild")
-                else:
-                    self.rank_bank, self.bitmap, self.quantizer = None, None, None
-        except Exception as e:
-            logger.error(
-                f"Strata pruning failed ({type(e).__name__}: {e}). {self.filepath} is "
-                "no longer bounded and will keep growing until this is fixed."
-            )
+        with open(self.filepath, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        file_keep_count = int(len(lines) * 0.9)
+        survivors = lines[-file_keep_count:] if file_keep_count else []
+        fd, temp_path = tempfile.mkstemp(dir=self.directory, text=True)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.writelines(survivors)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp_path, self.filepath)
+        if self.metadata_log:
+            meta_keep = int(len(self.metadata_log) * 0.9)
+            self.metadata_log = self.metadata_log[-meta_keep:] if meta_keep else []
+            self.index = {e["word"]: e for e in self.metadata_log if "word" in e}
+        if self.rank_bank is not None:
+            rank_keep = int(len(self.rank_bank) * 0.9)
+            if rank_keep > 0:
+                self.rank_bank = np.ascontiguousarray(
+                    self.rank_bank[-rank_keep:], dtype=np.float32
+                )
+                self._rebuild_ordvec("Prune Rebuild")
+            else:
+                self.rank_bank, self.bitmap, self.quantizer = None, None, None
 
     def dredge_vibe_by_vector(
         self, query_vector, k: int = 3, cortisol: float = 0.0
@@ -248,22 +223,12 @@ class SubconsciousStrata:
 
         if ordvec is not None and self.quantizer is not None and self.bitmap is not None:
             coarse_k = min(effective_k * 8, total_memories)
-            try:
-                candidates = np.ascontiguousarray(
-                    self.bitmap.top_m_candidates(Q_arr, coarse_k).astype(np.uint32)
-                )
-                scores, top_indices = self.quantizer.search_asymmetric_subset(
-                    Q_arr, candidates, effective_k
-                )
-            except Exception as e:
-                if not getattr(SubconsciousStrata, "_ordvec_warned", False):
-                    SubconsciousStrata._ordvec_warned = True
-                    print(
-                        f"[ORDVEC] Fastscan unavailable ({type(e).__name__}: {e}). "
-                        f"Falling back to exact cosine; results stay correct, "
-                        f"searches are O(N)."
-                    )
-                top_indices, scores = [], []
+            candidates = np.ascontiguousarray(
+                self.bitmap.top_m_candidates(Q_arr, coarse_k).astype(np.uint32)
+            )
+            scores, top_indices = self.quantizer.search_asymmetric_subset(
+                Q_arr, candidates, effective_k
+            )
 
         if not len(top_indices):
             norm_q = np.linalg.norm(Q_arr)

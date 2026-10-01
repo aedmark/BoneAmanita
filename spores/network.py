@@ -77,53 +77,41 @@ class MycelialNetwork:
             if target is None:
                 return False
         leaf = parts[-1]
-        try:
-            safe_set(target, leaf, value)
-            return True
-        except Exception as e:
-            logger.warning(
-                f"Config mutation {leaf!r} -> {value!r} did not apply: "
-                f"{type(e).__name__}: {e}"
-            )
-            return False
+        safe_set(target, leaf, value)
+        return True
 
     def evaluate_system_state(self, stamina: float, trauma_vector: dict):
-        try:
-            max_cap = int(safe_get(self.cfg, "MAX_MEMORY_CAPACITY", 100))
-            saturation = min(1.0, len(self.graph) / max(1, max_cap))
-            exhaustion = max(0.0, (100.0 - stamina) / 100.0)
-            toxicity = (
-                max(trauma_vector.values())
-                if isinstance(trauma_vector, dict) and trauma_vector
-                else 0.0
+        max_cap = int(safe_get(self.cfg, "MAX_MEMORY_CAPACITY", 100))
+        saturation = min(1.0, len(self.graph) / max(1, max_cap))
+        exhaustion = max(0.0, (100.0 - stamina) / 100.0)
+        toxicity = (
+            max(trauma_vector.values())
+            if isinstance(trauma_vector, dict) and trauma_vector
+            else 0.0
+        )
+        if toxicity > 0.6:
+            action = "DEFENSIVE"
+            self._mutate_config("BIO.ROS_CRITICAL", 150.0)
+            self._mutate_config("STAMINA_REGEN", 15.0)
+        elif exhaustion > 0.6 or saturation > 0.8:
+            action = "THROTTLE_DOWN"
+            self._mutate_config("PHYSICS.VOLTAGE_MAX", 50.0)
+            self._mutate_config("PHYSICS.DRAG_HALT", 20.0)
+        else:
+            action = "OPEN_FLOODGATES"
+            self._mutate_config("SHAPLEY_MASS_THRESHOLD", 2.0)
+            self._mutate_config("AKASHIC.AUTOPHAGY_YIELD", 30.0)
+
+        if hasattr(self.events, "log") and action != getattr(
+            self, "last_governor_action", None
+        ):
+            self.events.log(
+                f"{Prisma.MAG}[AUTONOMIC GOVERNOR]: {action} policy engaged. Physics constraints mutated.{Prisma.RST}",
+                "PHYSICS",
             )
-            if toxicity > 0.6:
-                action = "DEFENSIVE"
-                self._mutate_config("BIO.ROS_CRITICAL", 150.0)
-                self._mutate_config("STAMINA_REGEN", 15.0)
-            elif exhaustion > 0.6 or saturation > 0.8:
-                action = "THROTTLE_DOWN"
-                self._mutate_config("PHYSICS.VOLTAGE_MAX", 50.0)
-                self._mutate_config("PHYSICS.DRAG_HALT", 20.0)
-            else:
-                action = "OPEN_FLOODGATES"
-                self._mutate_config("SHAPLEY_MASS_THRESHOLD", 2.0)
-                self._mutate_config("AKASHIC.AUTOPHAGY_YIELD", 30.0)
+            self.last_governor_action = action
 
-            if hasattr(self.events, "log") and action != getattr(
-                self, "last_governor_action", None
-            ):
-                self.events.log(
-                    f"{Prisma.MAG}[AUTONOMIC GOVERNOR]: {action} policy engaged. Physics constraints mutated.{Prisma.RST}",
-                    "PHYSICS",
-                )
-                self.last_governor_action = action
-
-            return action
-        except Exception as e:
-            if hasattr(self.events, "log"):
-                self.events.log(f"[AUTONOMIC GOVERNOR ERROR]: {e}", "MYCELIUM", "WARN")
-            return "ERROR"
+        return action
 
     def _on_scar_recorded(self, payload):
         if payload.get("concept"):
@@ -437,22 +425,13 @@ class MycelialNetwork:
         from archetypes.village import ParadoxSeed
 
         loaded_seeds = []
-        try:
-            scenarios = LoreManifest.get_instance().get("SCENARIOS") or {}
-            raw_seeds = scenarios.get("SEEDS", [])
-            for item in raw_seeds:
-                q = item.get("question", "Undefined Paradox")
-                t = set(item.get("triggers", []))
-                seed = ParadoxSeed(q, t)
-                loaded_seeds.append(seed)
-        except Exception as e:
-            logger.error(
-                f"SCENARIOS.SEEDS failed to load ({type(e).__name__}: {e}). Falling back "
-                "to one hardcoded paradox; everything authored in lore/ is inert."
-            )
-            loaded_seeds = [
-                ParadoxSeed("Does the mask eat the face?", {"mask", "face", "hide"})
-            ]
+        scenarios = LoreManifest.get_instance().get("SCENARIOS") or {}
+        raw_seeds = scenarios.get("SEEDS", [])
+        for item in raw_seeds:
+            q = item.get("question", "Undefined Paradox")
+            t = set(item.get("triggers", []))
+            seed = ParadoxSeed(q, t)
+            loaded_seeds.append(seed)
         return loaded_seeds
 
     def tend_garden(self, current_words):

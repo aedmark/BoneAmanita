@@ -96,11 +96,7 @@ class MitochondrialForge:
         tmpl = self.narrative.get(key, "")
         if not tmpl:
             return ""
-        try:
-            return tmpl.format(**kwargs)
-        except Exception as e:
-            print(f"{Prisma.RED}Missing narrative kwargs for '{key}': {e}{Prisma.RST}")
-            return tmpl
+        return tmpl.format(**kwargs)
 
     def _trigger_anaerobic_bypass(
         self, raw_cost: float, chaos_waste: float = 0.0

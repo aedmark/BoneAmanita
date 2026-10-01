@@ -806,24 +806,17 @@ class TheCortex:
                     if active_mems
                     else "Empty Void."
                 )
-                try:
-                    is_faithful, judge_reason = self.dspy_critic.audit_generation(
-                        user_input, ctx_str, final_text, active_mode=self.active_mode
+                is_faithful, judge_reason = self.dspy_critic.audit_generation(
+                    user_input, ctx_str, final_text, active_mode=self.active_mode
+                )
+                if not is_faithful:
+                    rejected_by = "dspy_critic"
+                    val_res["feedback_instruction"] = (
+                        f"CRITICAL FAILURE: {judge_reason}. If the user is exhausted, drastically shorten and soften your tone."
                     )
-                    if not is_faithful:
-                        rejected_by = "dspy_critic"
-                        val_res["feedback_instruction"] = (
-                            f"CRITICAL FAILURE: {judge_reason}. If the user is exhausted, drastically shorten and soften your tone."
-                        )
-                        if self.events:
-                            self.events.log(
-                                f"DSPy Critic Objected: {judge_reason.split('.')[0][:60]}...",
-                                "SYS",
-                            )
-                except Exception:
                     if self.events:
                         self.events.log(
-                            f"{Prisma.OCHRE}[CRITIC OFFLINE]: DSPy parse failed. Bypassing.{Prisma.RST}",
+                            f"DSPy Critic Objected: {judge_reason.split('.')[0][:60]}...",
                             "SYS",
                         )
             if not val_res.get("feedback_instruction"):
@@ -1051,12 +1044,7 @@ class TheCortex:
         state = zoned(state, store.memory_modes() if store is not None else {}, self.active_mode)
         scores, why = None, "the embedder is on its hash fallback"
         if store is not None:
-            try:
-                scores = meaning_scores(state, user_input, store, self._recall_embedder(), held=held)
-            except Exception as e:
-                why = f"meaning ranking failed ({type(e).__name__}: {e})"
-                if self.events:
-                    self.events.log(f"Halcyon recall fell back to word overlap: {why}", "CORTEX", "WARN")
+            scores = meaning_scores(state, user_input, store, self._recall_embedder(), held=held)
         found = recall(
             state,
             user_input,
@@ -1065,13 +1053,9 @@ class TheCortex:
             scores=scores,
         )
         if store is not None and found["memories"]:
-            try:
-                meta = store.memory_meta()
-                found["kept_at"] = {k: meta[k]["kept_at"] for k, _ in found["memories"] if k in meta}
-                store.note_recalled([key for key, _ in found["memories"]])
-            except Exception as e:
-                if self.events:
-                    self.events.log(f"Recall counts not saved: {type(e).__name__}: {e}", "CORTEX", "WARN")
+            meta = store.memory_meta()
+            found["kept_at"] = {k: meta[k]["kept_at"] for k, _ in found["memories"] if k in meta}
+            store.note_recalled([key for key, _ in found["memories"]])
         held = found["held"]
         by_words = bool(held["memories"]) and found["ranked_by"] == "words"
         issue_receipt(

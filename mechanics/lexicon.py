@@ -83,11 +83,7 @@ class LexiconStore:
         """Sync the whole learned vocabulary to the store (each word is already written as it is learned)."""
         if self.persistence is None:
             return
-        try:
-            self.persistence.save_learned_vocabulary(self.LEARNED_VOCAB)
-        except Exception as e:
-            if msg := ux("lexicon_strings", "hive_corruption"):
-                print(f"{Prisma.RED}{msg.format(e=f'Failed to save the learned vocabulary: {e}')}{Prisma.RST}")
+        self.persistence.save_learned_vocabulary(self.LEARNED_VOCAB)
 
     def get_raw(self, category: str) -> Set[str]:
         base = self.VOCAB.get(category, set())
@@ -137,10 +133,7 @@ class LexiconStore:
         cat_dict[w] = tick
         self._index_word(w, category)
         if self.persistence is not None:
-            try:
-                self.persistence.learn_word(category, w, tick, evicted=oldest_word)
-            except Exception as e:
-                logger.warning("Could not save the learned word %r: %s", w, e)
+            self.persistence.learn_word(category, w, tick, evicted=oldest_word)
         return True
 
     def harvest(self, text: Any) -> Dict[str, List[str]]:
@@ -445,15 +438,9 @@ class LexiconService:
     def warm_resonance(self, words: List[str]) -> None:
         if not words or not self.ensure_resonance():
             return
-        try:
-            from spores.embeddings import SemanticEmbedder
+        from spores.embeddings import SemanticEmbedder
 
-            SemanticEmbedder.get_instance().embed_batch(words)
-        except Exception as e:
-            logger.warning(
-                f"[RESONANCE] Batch warm failed ({type(e).__name__}: {e}); "
-                f"unknown words will resolve one at a time."
-            )
+        SemanticEmbedder.get_instance().embed_batch(words)
 
     def get_current_category(self, word: str) -> Optional[str]:
         categories = self._STORE.get_categories_for_word(word)

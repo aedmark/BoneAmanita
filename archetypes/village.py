@@ -353,13 +353,7 @@ class TheCartographer:
             return
         self.world_graph.clear()
         for nid, n_data in data.get("nodes", {}).items():
-            try:
-                self.world_graph[nid] = GeniusLoci.from_dict(n_data)
-            except Exception as e:
-                logger.warning(
-                    f"World node {nid!r} could not be restored and has been dropped "
-                    f"from the atlas: {type(e).__name__}: {e}"
-                )
+            self.world_graph[nid] = GeniusLoci.from_dict(n_data)
         self.current_node_id = data.get("current_id", "GENESIS_POINT")
         if "GENESIS_POINT" not in self.world_graph:
             self._init_genesis()

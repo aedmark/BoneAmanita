@@ -228,19 +228,13 @@ class TheGatekeeper:
         if ctx.physics.matter.counts.get("antigen", 0) > 2:
             return reject("TOXICITY", "gatekeeper_toxic")
         raw_len = len(ctx.input_text)
-        try:
-            text = CerebrospinalFluidFilter.wash(ctx.input_text)
-            is_idempotent = text == ctx.input_text
-            strip_rate = raw_len - len(text)
-            ctx.input_text = text
-            m_a_thresh = float(safe_get(phys_cfg, "MALIGNANCY_STRIP_THRESHOLD", 5.0))
-            if strip_rate > m_a_thresh:
-                return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
-        except Exception as e:
-            from engine.core import record_crash
-
-            record_crash(None, f"CSF wash raised on {raw_len} chars of input (FATAL_ENCODING)", e)
-            return reject("FATAL_ENCODING", "gatekeeper_cursed")
+        text = CerebrospinalFluidFilter.wash(ctx.input_text)
+        is_idempotent = text == ctx.input_text
+        strip_rate = raw_len - len(text)
+        ctx.input_text = text
+        m_a_thresh = float(safe_get(phys_cfg, "MALIGNANCY_STRIP_THRESHOLD", 5.0))
+        if strip_rate > m_a_thresh:
+            return reject("MALIGNANCY_SPIKE", "gatekeeper_toxic", color=Prisma.RED)
         if strip_rate > 0:
             ctx.clean_words = self.lex.clean(ctx.input_text)
         if self._audit_safety(ctx.clean_words):

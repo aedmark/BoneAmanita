@@ -148,12 +148,7 @@ def report(path):
 
 def run_child(path, mode):
     with open(path, "a", encoding="utf-8") as out:
-        try:
-            run(mode, out)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            out.write(json.dumps({"mode": mode, "phase": "crash", "error": repr(e)}) + "\n")
+        run(mode, out)
 
 
 if __name__ == "__main__":

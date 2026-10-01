@@ -132,16 +132,12 @@ class MetabolicGovernor:
         tmpl = text_map.get(lookup, defaults.get(mode, ""))
         if not isinstance(tmpl, str):
             tmpl = ""
-        try:
-            return tmpl.format(
-                color=colors.get(mode, Prisma.WHT),
-                reset=Prisma.RST,
-                volts=physics.get("voltage", 0.0),
-                beta=physics.get("beta_index", 0.0),
-            )
-        except Exception as e:
-            print(f"{Prisma.RED}Format error for '{mode}': {e}{Prisma.RST}")
-            return f"{colors.get(mode, '')}{defaults.get(mode, '')}{Prisma.RST}"
+        return tmpl.format(
+            color=colors.get(mode, Prisma.WHT),
+            reset=Prisma.RST,
+            volts=physics.get("voltage", 0.0),
+            beta=physics.get("beta_index", 0.0),
+        )
 
     def calculate_coupling(
         self, phi: float, resonance_delta: float, user_exhaustion: float

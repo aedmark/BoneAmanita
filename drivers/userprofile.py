@@ -100,16 +100,10 @@ class UserProfile:
     def save(self):
         if self.persistence is None:
             return
-        try:
-            self.persistence.put_record(
-                self.RECORD,
-                {"name": self.name, "affinities": self.affinities, "confidence": self.confidence},
-            )
-        except Exception as e:
-            logger.warning(
-                f"User profile could not be saved to the store: "
-                f"{type(e).__name__}: {e}. Affinities learned this turn are lost."
-            )
+        self.persistence.put_record(
+            self.RECORD,
+            {"name": self.name, "affinities": self.affinities, "confidence": self.confidence},
+        )
 
     def _apply(self, data):
         if isinstance(data.get("affinities"), dict):

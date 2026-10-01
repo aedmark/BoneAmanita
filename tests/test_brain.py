@@ -105,12 +105,7 @@ class BrainSubstrateTests(BoneTestCase):
             "physics": {"voltage": 75.0, "narrative_drag": 5.0, "chi": 0.8},
             "bio": {},
         }
-        try:
-            state = cortex.gather_state(sim_result)
-        except Exception as e:
-            self.fail(
-                f"[CRITICAL] Cortex gather_state failed to parse the native dictionary: {e}"
-            )
+        state = cortex.gather_state(sim_result)
         self.assertEqual(state["physics"]["voltage"], 75.0)
 
     def test_dream_engine_strict_mock_subconscious(self):

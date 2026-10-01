@@ -144,27 +144,20 @@ class BoneAmanita:
         )
 
     def _load_system_prompts(self):
-        try:
-            self.prompt_library = (
-                LoreManifest.get_instance().get("system_prompts") or {}
-            )
-            if self.prompt_library:
-                p = "lore/system_prompts.json"
-                self.events.log(
-                    f"{Prisma.GRY}{ux('main_strings', 'prompt_lib_loaded').format(p=p)}{Prisma.RST}",
-                    "SYS",
-                )
-            else:
-                self.events.log(
-                    f"{Prisma.YEL}{ux('main_strings', 'prompt_lib_warn')}{Prisma.RST}",
-                    "KERNEL", "WARN",
-                )
-        except Exception as e:
+        self.prompt_library = (
+            LoreManifest.get_instance().get("system_prompts") or {}
+        )
+        if self.prompt_library:
+            p = "lore/system_prompts.json"
             self.events.log(
-                f"{Prisma.RED}{ux('main_strings', 'prompt_lib_crit').format(e=e)}{Prisma.RST}",
-                "KERNEL", "CRIT",
+                f"{Prisma.GRY}{ux('main_strings', 'prompt_lib_loaded').format(p=p)}{Prisma.RST}",
+                "SYS",
             )
-            self.prompt_library = {}
+        else:
+            self.events.log(
+                f"{Prisma.YEL}{ux('main_strings', 'prompt_lib_warn')}{Prisma.RST}",
+                "KERNEL", "WARN",
+            )
 
     def _initialize_cognition(self):
         self.soma = SomaticLoop(self.bio, self.mind.mem, self.lex, self.events)
@@ -789,27 +782,23 @@ class BoneAmanita:
             "last_output": last_out,
             "inventory": getattr(gordon, "inventory", []),
         }
-        try:
-            repro = getattr(self.village, "repro", None)
-            mutations_data = (
-                repro.attempt_reproduction(self, "MITOSIS")[1] if repro else {}
-            )
-            path = self.mind.mem.save(
-                health=0,
-                stamina=self.stamina,
-                mutations=mutations_data,
-                trauma_accum=self.trauma_accum,
-                joy_history=[],
-                mitochondria_traits=mito_state_dict,
-                antibodies={},
-                soul_data=self.soul.to_dict(),
-                continuity=continuity_packet,
-            )
-            saved_msg = ux("main_strings", "legacy_saved")
-            death_log.append(f"{Prisma.WHT}{saved_msg.format(path=path)}{Prisma.RST}")
-        except Exception as e:
-            fail_msg = ux("main_strings", "save_failed")
-            death_log.append(fail_msg.format(e=e))
+        repro = getattr(self.village, "repro", None)
+        mutations_data = (
+            repro.attempt_reproduction(self, "MITOSIS")[1] if repro else {}
+        )
+        path = self.mind.mem.save(
+            health=0,
+            stamina=self.stamina,
+            mutations=mutations_data,
+            trauma_accum=self.trauma_accum,
+            joy_history=[],
+            mitochondria_traits=mito_state_dict,
+            antibodies={},
+            soul_data=self.soul.to_dict(),
+            continuity=continuity_packet,
+        )
+        saved_msg = ux("main_strings", "legacy_saved")
+        death_log.append(f"{Prisma.WHT}{saved_msg.format(path=path)}{Prisma.RST}")
         if self.cortex:
             self.cortex.purge_context()
         return {

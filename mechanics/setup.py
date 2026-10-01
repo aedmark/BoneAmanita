@@ -24,26 +24,16 @@ class ConfigWizard:
     @staticmethod
     def load_or_create():
         if os.path.exists(ConfigWizard.CONFIG_FILE):
-            try:
-                with open(ConfigWizard.CONFIG_FILE, encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception as e:
-                err_msg = ux("main_strings", "config_load_err")
-                print(f"{Prisma.RED}{err_msg.format(e=e)}{Prisma.RST}")
-                ConfigWizard._backup_corrupt_file()
+            with open(ConfigWizard.CONFIG_FILE, encoding="utf-8") as f:
+                return json.load(f)
         return ConfigWizard._run_setup()
 
     @staticmethod
     def _backup_corrupt_file():
         backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
-        try:
-            os.rename(ConfigWizard.CONFIG_FILE, backup_name)
-            msg = ux("main_strings", "config_backup")
-            print(f"{Prisma.YEL}{msg.format(backup_name=backup_name)}{Prisma.RST}")
-        except Exception as e:
-            print(
-                f"{Prisma.YEL}[WIZARD] Non-fatal issue archiving config: {e}{Prisma.RST}"
-            )
+        os.rename(ConfigWizard.CONFIG_FILE, backup_name)
+        msg = ux("main_strings", "config_backup")
+        print(f"{Prisma.YEL}{msg.format(backup_name=backup_name)}{Prisma.RST}")
 
     @staticmethod
     def _run_setup():
@@ -145,16 +135,11 @@ class ConfigWizard:
         ui_choice = input(f"{Prisma.paint('>', 'C')} ").strip()
         ui_mode = ConfigWizard._UI_MODES.get(ui_choice, "MINIMAL")
         config["default_ui_depth"] = ui_mode
-        try:
-            with open(ConfigWizard.CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(config, f, indent=4)
-            commit_msg = ux("main_strings", "config_committed")
-            cfg = getattr(BoneConfig, "GUI", object())
-            setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02)
-            typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=setup_speed)
-            time.sleep(1)
-        except Exception as e:
-            fail_msg = ux("main_strings", "write_failed")
-            print(f"{Prisma.paint(fail_msg.format(e=e), 'R')}")
-            sys.exit(1)
+        with open(ConfigWizard.CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4)
+        commit_msg = ux("main_strings", "config_committed")
+        cfg = getattr(BoneConfig, "GUI", object())
+        setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02)
+        typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=setup_speed)
+        time.sleep(1)
         return config

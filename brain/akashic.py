@@ -198,28 +198,21 @@ class TheAkashicRecord:
         log_msg: str,
         log_color: str,
     ):
-        try:
-            prompts = self.lore.get("SYSTEM_PROMPTS") or {}
-            epigenetic_list = prompts.setdefault("GLOBAL_BASELINE", {}).setdefault(
-                category_key, []
-            )
-            if not isinstance(epigenetic_list, list):
-                epigenetic_list = []
-                prompts["GLOBAL_BASELINE"][category_key] = epigenetic_list
-            if axiom not in epigenetic_list:
-                epigenetic_list.append(axiom)
-                if len(epigenetic_list) > max_items:
-                    epigenetic_list.pop(0)
-                self.lore.inject("SYSTEM_PROMPTS", prompts)
-                self.lore.save("SYSTEM_PROMPTS")
-                if self.events:
-                    self.events.log(f"{log_color}{log_msg}{Prisma.RST}", "SYS")
-        except Exception as e:
+        prompts = self.lore.get("SYSTEM_PROMPTS") or {}
+        epigenetic_list = prompts.setdefault("GLOBAL_BASELINE", {}).setdefault(
+            category_key, []
+        )
+        if not isinstance(epigenetic_list, list):
+            epigenetic_list = []
+            prompts["GLOBAL_BASELINE"][category_key] = epigenetic_list
+        if axiom not in epigenetic_list:
+            epigenetic_list.append(axiom)
+            if len(epigenetic_list) > max_items:
+                epigenetic_list.pop(0)
+            self.lore.inject("SYSTEM_PROMPTS", prompts)
+            self.lore.save("SYSTEM_PROMPTS")
             if self.events:
-                self.events.log(
-                    f"{Prisma.RED}Failed to mutate system_prompts ({category_key}): {e}{Prisma.RST}",
-                    "SYS",
-                )
+                self.events.log(f"{log_color}{log_msg}{Prisma.RST}", "SYS")
 
     def record_glimmer(self, concept: str, paradigm: str):
         axiom = f"STRUCTURAL SUCCESS [{concept.upper()}]: The system achieved deep resonance using this paradigm: '{paradigm}'. Remember this."
@@ -389,19 +382,11 @@ class TheAkashicRecord:
         some of it inside lore/). Nothing persists until the engine attaches its store."""
         if self.persistence is None:
             return
-        try:
-            self.persistence.put_record(f"akashic.{category}", json.loads(json.dumps(data, cls=JSONEncoder)))
-            if msg := ux("akashic_strings", "saved_category"):
-                if self.events:
-                    self.events.log(
-                        f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}",
-                        "AKASHIC",
-                    )
-        except Exception as e:
-            msg = ux("akashic_strings", "save_failed_category")
+        self.persistence.put_record(f"akashic.{category}", json.loads(json.dumps(data, cls=JSONEncoder)))
+        if msg := ux("akashic_strings", "saved_category"):
             if self.events:
                 self.events.log(
-                    f"{Prisma.RED}{msg.format(category=category, error=e)}{Prisma.RST}",
+                    f"{Prisma.GRY}{msg.format(category=category)}{Prisma.RST}",
                     "AKASHIC",
                 )
 
@@ -475,30 +460,18 @@ class TheAkashicRecord:
             (boons_path, "EPIGENETIC_BOONS"),
         ]:
             if os.path.exists(path):
-                try:
-                    with open(path, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                        prompts.setdefault("GLOBAL_BASELINE", {})[key] = (
-                            data if isinstance(data, list) else []
-                        )
-                        needs_migration = True
-                        paths_to_remove.append(path)
-                except Exception as e:
-                    if self.events:
-                        self.events.log(
-                            f"{Prisma.RED}Failed to migrate legacy {key}: {e}.{Prisma.RST}"
-                        )
-        if needs_migration:
-            try:
-                self.lore.inject("SYSTEM_PROMPTS", prompts)
-                self.lore.save("SYSTEM_PROMPTS")
-                for p in paths_to_remove:
-                    os.remove(p)
-            except Exception as e:
-                if self.events:
-                    self.events.log(
-                        f"{Prisma.RED}Migration save failed: {e}. Legacy files kept intact.{Prisma.RST}"
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    prompts.setdefault("GLOBAL_BASELINE", {})[key] = (
+                        data if isinstance(data, list) else []
                     )
+                    needs_migration = True
+                    paths_to_remove.append(path)
+        if needs_migration:
+            self.lore.inject("SYSTEM_PROMPTS", prompts)
+            self.lore.save("SYSTEM_PROMPTS")
+            for p in paths_to_remove:
+                os.remove(p)
 
     def archive_dream(self, dream_text: str):
         """Archives a dream and immediately persists it to disk."""
