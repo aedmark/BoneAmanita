@@ -741,7 +741,7 @@ class GeodesicOrchestrator:
             return None
 
     def _chart_room(self, ctx, room: dict) -> None:
-        from engine.gate.cartographer import chart_args, chart_line, needs_chart
+        from lichen.cartographer import chart_args, chart_line, needs_chart
         from engine.gate.kernel import Gate
 
         seq, state = self.eng.store.state()
