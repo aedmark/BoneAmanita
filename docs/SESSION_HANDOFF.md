@@ -203,6 +203,12 @@ it lived near 30 ATP with the vagus support stepping in). The rate was hardcoded
 mode's `atp_per_token` in `BonePresets.MODES` (0.025 for the other three), charged by `TheCortex._token_burn`.
 `tests/test_energy_budget.py` `TheTokenRateIsTheModes` (fails at 0.025). Suite 1044 passed, 5 skipped.
 
+**The TECHNICAL arm on 20.7.4.85** (`scratch/mode_runs/tech_1003d.jsonl`, 30 turns, gemma4:12b, exit 0; only
+TECHNICAL's rate changed, so the other arms of `e2e_1003c` stand). ATP min / median / end 20 / 44 / 42, was
+12 / 30 / 37; no turn under 20 (3); token generation -181 (-216), Metabolic Burn -114 (-149), Emergency Vagus
+Nerve Support +15 (+60). It still drifts down through a long coding session (91 to the low 30s, one dip to 20 at
+turn 26) and recovers. 0 blank, 0 crashes, 0 pauses; code in 24 of 30; redrafts 4 (2); 9 memories, none a question.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
