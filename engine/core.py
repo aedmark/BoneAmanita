@@ -773,7 +773,7 @@ class CyberneticGovernor:
         dim = int(fp32_matrix.shape[1])
         bitmap = ordvec.SignBitmap(dim)
         bitmap.add(fp32_matrix)
-        quantizer = ordvec.RankQuant(dim, 8)
+        quantizer = ordvec.RankQuant(dim, 4)  # ordvec 0.5 takes 1, 2 or 4 bits
         quantizer.add(fp32_matrix)
         self.memory_bitmap = bitmap
         self.memory_rq = quantizer

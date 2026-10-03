@@ -94,6 +94,26 @@ from reading the commits).
   directive. `tests/test_brain.py` `test_a_thriving_engine_does_not_raise_the_persons_line` (fails with them).
 - Suite 1028 passed, 5 skipped.
 
+**20.7.4.82: the keeper keeps what is said, not what is asked; the Creative Determinant runs again.**
+- The keeper kept six of TECHNICAL's questions as facts (`utc_conversion_question = user asked if parser should
+  convert to UTC`, `pandas_usage_query`). Probe (gemma4:12b, 3 samples, each turn's message with the memory the
+  keeper actually saw then): the old prompt kept those six every time; out of context it kept none, so the
+  task requests already kept (`feature_request = count requests per status code`) prime it. `engine/gate/keeper.py`
+  now says to keep what the person states, never that they asked (no `*_question`, no "user asked whether..."),
+  with one tell-and-ask example. Questions left alone 30 of 48 to 48 of 48; isolated facts (sister, commute,
+  Python 3.9, log format) 18 to 17 of 21. Lost: "Agreed, keep it stdlib. How do I type hint the generator?" (the
+  old prompt missed it out of context too), and two one-off instructions ("Add a docstring"), arguably right.
+  Wordings that named question examples were worse: any message with a question in it came back NONE.
+- The bitmap gate raised `ValueError: bits must be 1, 2, or 4` on every turn of `e2e_1003`: the codemod
+  collapsed `try RankQuant(dim, 8) / except: RankQuant(dim, 4)` to the 8-bit branch, which ordvec 0.5 refuses, so
+  the governor fell back to PID and the Creative Determinant did nothing for the whole run (on 09-30 it reported
+  a regime every turn). `engine/core.py` asks for 4 bits, as `spores/memory.py` does. The gate's tests stub the
+  index; `tests/test_creative_determinant.py` `TheRealIndexBuilds` builds the real one (fails at 8).
+- Found reading the codemod for more of the same: `run_simulation` freezes the engine state but nothing thaws
+  it; the invariant rollback went with its handler. Restore and a pass over the codemod's 92 removed handlers
+  are next.
+- Suite 1029 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

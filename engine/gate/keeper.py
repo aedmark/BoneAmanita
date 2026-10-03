@@ -18,6 +18,7 @@ PROMPT = """You keep the memory of a conversation partner. The conversation itse
 Read the person's latest message. If it tells you something worth knowing later (a name, a preference, a fact about their life or work, how they are doing lately, a decision, something established in the story, or a creative idea), answer with ONE line: a short name for what it is, " = ", and what to remember in a few words. For example:
 sister_name = Odalys, visiting next week
 sleep = barely sleeping this week
+Keep what the person states, never that they asked something: no name like utc_question or pandas_query, no value like "user asked whether..." or "user wants to know...". A message that only asks is NONE; one that states something and asks ("We deploy on Debian. How do I add a service?") keeps what it states (deploy_os = Debian).
 If it changes or corrects something already kept, reuse that name. A new fact of the same kind is not a change: give it its own highly specific name (e.g., 'captain_backstory', 'city_infrastructure_ideas'). NEVER use generic names like 'plot_point', 'idea', 'detail', or 'fact', because generic names overwrite each other. ALWAYS make the key specific to the actual content. Never keep a real password, key, token, or card or ID number; a password in a story is fine. If there is nothing new worth keeping, answer with exactly: NONE
 
 Already kept:

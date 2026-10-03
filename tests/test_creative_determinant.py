@@ -275,3 +275,20 @@ class WhatSurvivesOfTheDeterminant(unittest.TestCase):
         atp, ros = CreativeDeterminantEngine().execute_metabolic_tick(-0.5)
         self.assertLess(atp, 0.0)
         self.assertGreater(ros, 0.0)
+
+
+class TheRealIndexBuilds(unittest.TestCase):
+    """The fake bitmap skips ordvec; this builds the real one (64 dims, since the suite's hash is 8)."""
+
+    def test_the_governor_indexes_memory_with_ordvec(self):
+        from types import SimpleNamespace
+        from engine.core import ORDVEC_AVAILABLE
+
+        if not ORDVEC_AVAILABLE:
+            self.skipTest("ordvec is not installed")
+        rng = np.random.default_rng(7)
+        vectors = {w: rng.standard_normal(64).tolist() for w in ("salt", "lamp", "tower", "storm")}
+        gov = CyberneticGovernor()
+        gov._cached_vectorizer = vectors.get
+        self.assertTrue(gov._sync_ordvec_indices(SimpleNamespace(graph=dict.fromkeys(vectors, {}))))
+        self.assertIsNotNone(gov.memory_rq)
