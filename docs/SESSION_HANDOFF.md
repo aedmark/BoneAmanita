@@ -46,6 +46,21 @@ through `record_crash`, so the turn went on and only the tests saw it (`test_car
 `test_provenance.py` 1). Back to `engine.gate.cartographer`. Suite 998 passed, 4 skipped (1025 before the
 fail-loudly commits removed the swallow tests).
 
+**The end-to-end run on 20.7.4.78** (2026-10-03, gemma4:12b; `scratch/mode_runs/e2e_1003.jsonl`, same script as
+`e2e_0930`, 140 turns, exit 0 under a 10 GB cap). The first live run since fail loudly: 0 blank replies, 0 phase
+crashes, no tracebacks in the log, 0 failed saves. Per arm, then vs now:
+- TECHNICAL: pause lines 2 to 0, redrafts 9 to 6, ATP minimum 38.8 to 56.1 (end 73.5); code in 23 of 30.
+- CREATIVE: bulleted replies 15 to 0, "we" 1 to 0; the keeper kept 17 distinct names (`cat_name`,
+  `captain_backstory`, `plot_event_lamp`...; was 4 with `plot_point` overwritten). Redrafts 19 to 22, mostly
+  banned phrases ("landscape", "the weight of"). ATP dipped to 18.3 at turn 13 on a Mitophagy reset (-30),
+  which fires once or twice in CREATIVE in every run since 0929b; not new. Crucible HOT throughout, by design.
+  Choices now come as bold "**Option 1:**" lines instead of bullets.
+- ADVENTURE: 16 memories (5), 33 rooms (30), redrafts 4 to 3. CONVERSATION: 20 memories (15), redrafts 6 to 7.
+  MIXED: zones held, redrafts 4 to 8.
+- TECHNICAL's keeper now keeps questions as facts (`utc_conversion_question`, `pandas_usage_query`).
+- Not exercised: the hash fallback finding below (Ollama was up), and whether the exhaustion cap or Self
+  Claims changed anything (the harness does not record the prompt).
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
