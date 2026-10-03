@@ -259,6 +259,19 @@ class BrainSubstrateTests(BoneTestCase):
         is_faithful, reason = cortex._run_heuristic_audit("Hello", good_text, e_u=0.95, beta=0.85)
         self.assertTrue(is_faithful, "[FAIL] Heuristic audit falsely blocked a safe, short, declarative response.")
 
+    def test_a_thriving_engine_does_not_raise_the_persons_line(self):
+        """D0's flagging partner peaked at 0.61; a resonant, healthy engine still caps them."""
+        services = CortexServices(
+            events=MagicMock(), lore=MagicMock(), lexicon=MagicMock(), inventory=MagicMock(),
+            consultant=MagicMock(), orchestrator=MagicMock(), symbiosis=MagicMock(),
+            mind_memory=MagicMock(), bio=MagicMock(), config_ref=self.config,
+        )
+        cortex = TheCortex(services=services)
+        cortex.last_physics = {"resonance": 1.0, "health": 100.0}
+        is_faithful, reason = cortex._run_heuristic_audit("Hello", "word " * 105, e_u=0.61, beta=0.0)
+        self.assertFalse(is_faithful)
+        self.assertIn("verbose", reason.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

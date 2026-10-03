@@ -961,8 +961,9 @@ peaking at 5 to 45 rather than 98.
   the body for them as deception.
 - **The exhaustion gate is `CORTEX.EXHAUSTION_GATE`, now 0.5.** D0 measured a
   flagging partner peaking at 0.61, so 0.8 could never fire. 0.5 sits above the
-  engaged mean (0.38) and below the flagging mean (0.56). Since 2026-09-30
-  (`f08b32c`) the engine's resonance and health add up to 0.2 to it.
+  engaged mean (0.38) and below the flagging mean (0.56). The heuristic audit
+  reads the same line; `f08b32c` let the engine's resonance and health add up
+  to 0.2 to it, removed in 20.7.4.81 (it lifted the line above a flagging person).
 - **`gemma4:12b` is the default model** (D7), with `CORTEX.REASONING_EFFORT`
   defaulting to `none`.
 
@@ -1442,4 +1443,4 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
 - **Affective retrieval, done properly:** Querying memory by physics state ("find memories that felt like this moment"). Doing it right means storing an affective vector alongside the semantic one and searching that index deliberately.
 - **Shrink to what actually carries the value:** The composer, the validator, and the physics-to-prompt mapping produce nearly all of the observable behaviour. A smaller engine built from just those, with the embeddings work kept, would be easier to defend and easier to explain.
 - ~~**Reconcile "Fail loudly" with the actual defensive style**~~ (Done 2026-09-30, `2f70ddf`): the swallowing excepts are gone. It also removed the hash fallback's catches; restored for backend errors only in 20.7.4.80.
-- **The Affect Vector & profile seeding:** Whether biology must be engine-computed, and profile seeding (idempotent YAML facts, protected visibility). Self claims were built 2026-09-30 (`c90e24f`, `lore/self_claims.yaml`, `brain/prism.py`); whether their felt-state wording fits Track D is open (SESSION_HANDOFF.md, 2026-10-03).
+- **The Affect Vector & profile seeding:** Whether biology must be engine-computed, and profile seeding (idempotent YAML facts, protected visibility). Self claims were built 2026-09-30 (`c90e24f`, `lore/self_claims.yaml`, `brain/prism.py`); the four that narrated a felt state were cut in 20.7.4.81 (Track D).

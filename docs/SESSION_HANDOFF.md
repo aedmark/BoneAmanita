@@ -20,7 +20,7 @@ recorded (24 and a `LICENSE` commit, 2026-09-30 and 10-01, not in the version se
   generic keys (`plot_point`, `idea`, `detail`) on top of 20.7.4.77's naming rule.
 - **The exhaustion gate moves with the engine** (`f08b32c`). `_run_heuristic_audit` reads
   `CORTEX.EXHAUSTION_GATE` (0.5) and adds `resonance x 0.1` and up to 0.1 for health over 80, so a healthy,
-  resonant engine waits until 0.7. Open item 7's "hardcoded 0.8" is gone. The composer now reads
+  resonant engine waits until 0.7. Open item 7's "hardcoded 0.8" is gone. (Bonuses removed, 20.7.4.81.) The composer now reads
   `EPIGENETIC_SCARS` and `EPIGENETIC_BOONS` into the persona block (open item 11: scars had been written,
   never read).
 - **Fail loudly** (`2f70ddf`, `d60f798`; list in `broad_excepts.txt`, codemod `tools/strip_broad_excepts.py`).
@@ -31,7 +31,8 @@ recorded (24 and a `LICENSE` commit, 2026-09-30 and 10-01, not in the version se
   the code now agrees with the convention.
 - **Prismatic Self Claims** (`c90e24f`). `lore/self_claims.yaml` (loaded once at boot), filtered by
   `brain/prism.py` `SelfClaimPrism` on the engine's state (cortisol, dopamine, voltage, resonance), and put
-  in the prompt at the top tier as `[SYSTEM IDENTITY - UNBREAKABLE CORE FACTS]`. Was shelved (09-27) with
+  in the prompt at the top tier as `[SYSTEM IDENTITY - UNBREAKABLE CORE FACTS]` (cut to the two core claims,
+  20.7.4.81). Was shelved (09-27) with
   the affect vector and profile seeds; those two stay shelved.
 - **The site** (`73642e2`, `6e54315`, `6c7bb8d`). `docs/index.html`, `docs/style.css`, `docs/app.js`: a
   GitHub Pages homepage and primer, the "Bio-Terminal".
@@ -59,7 +60,7 @@ crashes, no tracebacks in the log, 0 failed saves. Per arm, then vs now:
   MIXED: zones held, redrafts 4 to 8.
 - TECHNICAL's keeper now keeps questions as facts (`utc_conversion_question`, `pandas_usage_query`).
 - Not exercised: the hash fallback (Ollama was up; fixed in 20.7.4.80), and whether the exhaustion cap or Self
-  Claims changed anything (the harness does not record the prompt).
+  Claims (both changed in 20.7.4.81) changed anything (the harness does not record the prompt).
 
 **20.7.4.80: the hash fallback catches again, narrowly.** The codemod had removed the `try` around the boot
 probe, the re-probe and `embed_batch` (`spores/embeddings.py`), so with no embedding server the boot probe
@@ -78,17 +79,25 @@ boot falls back; a `KeyError` still raises. 17 fail on the codemod's version, 1 
   `tests/test_spores.py` `test_the_network_forges_a_diamond` (fails without it).
 - Suite 1026 passed, 5 skipped.
 
+**20.7.4.81: no felt state in the prompt, and the person's line stays put** (Gordon's calls on two findings
+from reading the commits).
+- Self Claims narrated a body: four of the six were conditioned on the engine's state and told the model what
+  it felt ("I am exhausted and running on empty", "flooded with dopamine", "a deep sense of resonance"), and
+  `high_stress_defense` told it to distrust the person under stress. That is what C5 measured as performance
+  and what Track D's first decision rules out. `lore/self_claims.yaml` keeps `core_identity` and
+  `core_worldview` only, with a note why; `brain/prism.py` still reads `conditions`. `tests/test_composer.py`
+  `SelfClaimsNarrateNoBody`: the claims are the same at any state (3 of 4 cases fail on the old file).
+- The heuristic audit's exhaustion line (`_run_heuristic_audit`, a hardcoded 0.8 until `f08b32c`) had become
+  `CORTEX.EXHAUSTION_GATE` plus up to 0.1 for resonance and 0.1 for health over 80: up to 0.7 for a healthy,
+  resonant engine, above the 0.61 D0's flagging partner peaked at, so the cap would miss the person it is for.
+  The bonuses are gone; the audit reads the flat gate (0.5), the same line as the composer's exhaustion
+  directive. `tests/test_brain.py` `test_a_thriving_engine_does_not_raise_the_persons_line` (fails with them).
+- Suite 1028 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
-**To discuss (found reading the commits above, not changed):**
-- **Self Claims perform a body.** Four of the six claims tell the model what it feels ("I am exhausted and
-  running on empty", "flooded with dopamine", "a deep sense of resonance") and one tells it to distrust the
-  person under stress. That is what C5 measured as performance and what Track D's first decision rules out:
-  the engine's state sets what it can afford, it is never narrated to the model.
-- **The dynamic exhaustion gate can outrun the person.** D0 measured a flagging partner peaking at 0.61; a
-  healthy, resonant engine's gate is now 0.7, so the exhaustion cap would never fire for the person it is
-  for. The bonuses raise the bar for the person when the engine is doing well, the reverse of the split.
+**To discuss:**
 - Still from 09-29: the live conversation carries across modes (zones scope recall only).
 
 ## Where things stood, 2026-09-29 (Halcyon integration, REM reflection, validation)
@@ -4307,9 +4316,9 @@ The short list below is what a session should know without reading it.
    `ROADMAP.md` D2: address the partner rather than the entity, state
    numbers rather than adjectives, forbid body narration, and move it out
    of the `[INTERNAL USE ONLY]` block. Each change is measured before it is
-   adopted. The threshold is `CORTEX.EXHAUSTION_GATE` (0.5) plus the
-   engine's resonance and health bonuses (up to +0.2, `f08b32c`); see the
-   2026-10-03 entry for why that may be too high.
+   adopted. The threshold is `CORTEX.EXHAUSTION_GATE` (0.5), read by both
+   the composer and the heuristic audit; `f08b32c`'s resonance and health
+   bonuses were removed in 20.7.4.81.
 8. ~~**Reasoning models on Ollama get mock prose.**~~ **Fixed 2026-09-17.**
    The stop list cut a thinking model's reasoning and emptied the reply. Now
    an empty reply is retried once without stops; if that fills it the model is

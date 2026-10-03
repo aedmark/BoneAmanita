@@ -164,3 +164,23 @@ class TestPromptComposer(BoneTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SelfClaimsNarrateNoBody(unittest.TestCase):
+    """Track D: the engine's state never becomes something the model is told it feels."""
+
+    def test_the_claims_are_the_same_whatever_the_state(self):
+        from brain.prism import SelfClaimPrism
+
+        prism = SelfClaimPrism()
+        calm = prism.get_active_claims({"chem": {}}, {})
+        extremes = [
+            ({"chem": {"cortisol": 0.95}}, {}),
+            ({"chem": {"dopamine": 0.9, "cortisol": 0.1}}, {}),
+            ({"chem": {}}, {"voltage": 1.0}),
+            ({"chem": {}}, {"resonance": 0.95}),
+        ]
+        self.assertTrue(calm)
+        for bio, phys in extremes:
+            with self.subTest(bio=bio, phys=phys):
+                self.assertEqual(prism.get_active_claims(bio, phys), calm)
