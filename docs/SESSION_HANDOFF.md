@@ -9,9 +9,65 @@ already hit and fixed, and a "what would we do differently" retrospective —
 see [TESTING.md](TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
-## Where things stand, 2026-09-29 (Halcyon integration, REM reflection, validation)
+## Where things stand, 2026-10-03 (after the extraction; 20.7.4.78)
 
-**RESUME HERE (2026-09-29).** BoneAmanita keeps the conversation loop, the bio-physics and the lexical
+**RESUME HERE (2026-10-03).** Between 20.7.4.77 and this entry, 23 commits landed that this file never
+recorded (24 and a `LICENSE` commit, 2026-09-30 and 10-01, not in the version sequence). In order:
+- **Mode identity, the keeper, CREATIVE's style** (`9627170`). The "ALIGNMENT: You are the
+  Conversationalist" rule left `GLOBAL_BASELINE` for CONVERSATION's own directives, so TECHNICAL, ADVENTURE
+  and CREATIVE no longer carry it (the 09-29 "noticed, not investigated" item). CREATIVE's style guide limits
+  bulleted lists and length and holds the pronoun to "I" (the run's drift). The keeper's prompt forbids
+  generic keys (`plot_point`, `idea`, `detail`) on top of 20.7.4.77's naming rule.
+- **The exhaustion gate moves with the engine** (`f08b32c`). `_run_heuristic_audit` reads
+  `CORTEX.EXHAUSTION_GATE` (0.5) and adds `resonance x 0.1` and up to 0.1 for health over 80, so a healthy,
+  resonant engine waits until 0.7. Open item 7's "hardcoded 0.8" is gone. The composer now reads
+  `EPIGENETIC_SCARS` and `EPIGENETIC_BOONS` into the persona block (open item 11: scars had been written,
+  never read).
+- **Fail loudly** (`2f70ddf`, `d60f798`; list in `broad_excepts.txt`, codemod `tools/strip_broad_excepts.py`).
+  40+ `except Exception` blocks that swallowed errors are gone; those that re-raise or go through
+  `record_crash` stay. Exposed and fixed: a `None.split()` in REM generation (`brain/mind.py`) and a dead
+  `trigger_autophagy()` call (`engine/cycle.py`). The tests that pinned the silent degrade-to-hash were
+  removed, edge tests now expect the `RuntimeError`. This settles the "Reconcile Fail loudly" future idea:
+  the code now agrees with the convention.
+- **Prismatic Self Claims** (`c90e24f`). `lore/self_claims.yaml` (loaded once at boot), filtered by
+  `brain/prism.py` `SelfClaimPrism` on the engine's state (cortisol, dopamine, voltage, resonance), and put
+  in the prompt at the top tier as `[SYSTEM IDENTITY - UNBREAKABLE CORE FACTS]`. Was shelved (09-27) with
+  the affect vector and profile seeds; those two stay shelved.
+- **The site** (`73642e2`, `6e54315`, `6c7bb8d`). `docs/index.html`, `docs/style.css`, `docs/app.js`: a
+  GitHub Pages homepage and primer, the "Bio-Terminal".
+- **The extraction** (`ece6f72` to `0fe3da8`). The Mycelium core library and three fruiting bodies, Lichen
+  (ADVENTURE, with a FastAPI UI and a live Ollama connection), Muscaria (CREATIVE) and Spore (TECHNICAL),
+  were built here, then moved to their own repository. BoneAmanita stays the monolith parent; nothing here
+  imports them. `tests/test_mycelium.py` went with them (Gordon moved it, 10-03).
+
+**20.7.4.78, this session.** The `LICENSE` commit `2f3d2b9` also changed `engine/cycle.py`'s cartographer
+import to `lichen.cartographer`, which the extraction then deleted: every ADVENTURE room failed to chart,
+through `record_crash`, so the turn went on and only the tests saw it (`test_cartographer.py` 4,
+`test_provenance.py` 1). Back to `engine.gate.cartographer`. Suite 998 passed, 4 skipped (1025 before the
+fail-loudly commits removed the swallow tests).
+
+**Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
+"Decisions already made").
+
+**To discuss (found reading the commits above, not changed):**
+- **The hash fallback no longer catches.** The codemod removed the `try` around the boot probe, the re-probe
+  and `embed_batch`. With `BONE_EMBED_BACKEND=auto` and no embedding server, `_http_embed`'s
+  `raise_for_status` or connection error now leaves the probe instead of falling through to hash; a server
+  that dies mid-session raises out of every embed call instead of serving hash coordinates for the sweep.
+  That contradicts "The hash fallback stays" below. The suite cannot see it (pinned to `hash`, which never
+  probes). Either the decision changes or the fallback gets a narrow `except requests.RequestException`.
+- **Self Claims perform a body.** Four of the six claims tell the model what it feels ("I am exhausted and
+  running on empty", "flooded with dopamine", "a deep sense of resonance") and one tells it to distrust the
+  person under stress. That is what C5 measured as performance and what Track D's first decision rules out:
+  the engine's state sets what it can afford, it is never narrated to the model.
+- **The dynamic exhaustion gate can outrun the person.** D0 measured a flagging partner peaking at 0.61; a
+  healthy, resonant engine's gate is now 0.7, so the exhaustion cap would never fire for the person it is
+  for. The bonuses raise the bar for the person when the engine is doing well, the reverse of the split.
+- Still from 09-29: the live conversation carries across modes (zones scope recall only).
+
+## Where things stood, 2026-09-29 (Halcyon integration, REM reflection, validation)
+
+BoneAmanita keeps the conversation loop, the bio-physics and the lexical
 firewall; Brad's Iris/Halcyon gate owns memory and world mutations; `saves/iris.db` is the one store for
 everything the engine learns or needs to resume (ROADMAP Track E).
 - **Done, 2026-09-26 to 09-27:** the graft, reviewed and fixed (20.7.4.44); every learned or session store
@@ -3812,6 +3868,12 @@ them as a specification:
   only useful for that if the messages carry real content instead of
   terse titles.
 
+- **Embedding calls are not metered into ATP.** Decided with Gordon,
+  2026-10-03. Every other retrieval has a thermodynamic cost;
+  `SemanticEmbedder` calls do not, including the ones word resolution makes
+  on novel words. This was open item 1 (a tuning decision, not a repair);
+  don't reopen it as a "missing cost".
+
 ## Environment / toolchain
 
 - **Repo**: Do not rely on git commits or logs or comments for repo information. That kind of information should be found in here.
@@ -4184,11 +4246,8 @@ python tools/audit_receipts.py         # which subsystems reported real work
 
 The short list below is what a session should know without reading it.
 
-1. **Embedding calls are not metered into ATP.** Every other retrieval in
-   the engine has a thermodynamic cost; `SemanticEmbedder` calls do not,
-   and word resolution now makes them on novel words too. The poetic-names
-   decision treats these costs as load-bearing, so arguably they should
-   be. Left alone because it is a tuning decision, not a repair.
+1. ~~**Embedding calls are not metered into ATP.**~~ **Decided 2026-10-03:
+   they stay unmetered** (see "Decisions already made").
 2. ~~**The metabolic economy kills the engine by turn six.**~~ **Repaired
    2026-09-17** (`ROADMAP.md` D0 repairs; ATP holds 16 to 53 across 30 live
    turns). What follows is the original finding. *Confirmed
@@ -4222,8 +4281,9 @@ The short list below is what a session should know without reading it.
    `ROADMAP.md` D2: address the partner rather than the entity, state
    numbers rather than adjectives, forbid body narration, and move it out
    of the `[INTERNAL USE ONLY]` block. Each change is measured before it is
-   adopted. The threshold is `e > 0.8`, hardcoded in `brain/composer.py`,
-   not in `BoneConfig`.
+   adopted. The threshold is `CORTEX.EXHAUSTION_GATE` (0.5) plus the
+   engine's resonance and health bonuses (up to +0.2, `f08b32c`); see the
+   2026-10-03 entry for why that may be too high.
 8. ~~**Reasoning models on Ollama get mock prose.**~~ **Fixed 2026-09-17.**
    The stop list cut a thinking model's reasoning and emptied the reply. Now
    an empty reply is retried once without stops; if that fills it the model is
@@ -4250,7 +4310,9 @@ with no gain in compliance over reasoning off.
    `EPIGENETIC_SCARS` to `lore/system_prompts.json` via `lore.save`, a tracked
    file. No composer read of that key was found. `tests/test_scars.py`. If
    scars should not write lore, the fix is in `TheAkashicRecord`, not a
-   return to the guards.
+   return to the guards. Since `f08b32c` the composer reads
+   `EPIGENETIC_SCARS` (and `EPIGENETIC_BOONS`) into the persona block, so
+   a recorded scar now reaches the prompt.
 
 ## Future ideas (not started, no urgency)
 
@@ -4266,7 +4328,6 @@ with no gain in compliance over reasoning off.
   embeddings work kept, would be easier to defend and easier to explain
   than the current surface area. Raised as an option, not a
   recommendation; the current breadth is clearly part of the point.
-- **Reconcile `conventions.md`'s "Fail loudly" with the actual
-  defensive style.** Right now the document and the code disagree, and
-  the code wins by 87 broad excepts. Either is defensible; the
-  disagreement isn't.
+- ~~**Reconcile "Fail loudly" with the actual defensive style.**~~ Done
+  2026-09-30 (`2f70ddf`): the swallowing excepts are gone; the code fails
+  loudly. See the 2026-10-03 entry for what that did to the hash fallback.

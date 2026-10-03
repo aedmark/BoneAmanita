@@ -961,7 +961,8 @@ peaking at 5 to 45 rather than 98.
   the body for them as deception.
 - **The exhaustion gate is `CORTEX.EXHAUSTION_GATE`, now 0.5.** D0 measured a
   flagging partner peaking at 0.61, so 0.8 could never fire. 0.5 sits above the
-  engaged mean (0.38) and below the flagging mean (0.56).
+  engaged mean (0.38) and below the flagging mean (0.56). Since 2026-09-30
+  (`f08b32c`) the engine's resonance and health add up to 0.2 to it.
 - **`gemma4:12b` is the default model** (D7), with `CORTEX.REASONING_EFFORT`
   defaulting to `none`.
 
@@ -1426,7 +1427,7 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
   - ~~R2. Reflect~~ (Done 2026-09-29, 20.7.4.69): once per sleep and per zone (with at least two new memories), one call reads what was kept since that zone's last reflection, with how each felt, and writes what it means together, as an engine-built `reflect` nomination through the gate (`reflection.<name>`, `story.reflection.<name>`; receipted `halcyon.reflect`, zoned, forgettable, traceable to its memories; it feels like the average of what it came from).
   - ~~R3. Dream~~ (Done 2026-09-29, 20.7.4.70): built from the reflections written since the last dream in the zone of the mode it sleeps in, with how they felt, instead of the lore templates (no new reflection, no dream); a Fever Dream above the old nightmare threshold (trauma 0.5), labelled so, as the Hypervisor says. `/sleep` and `/idle` reflect and dream at once and show it. Kept as `rem.last_dream`, receipted `halcyon.dream`.
   - R4. On waking: the idle REM path already shows `dream_log` once on the next turn ("While you were gone, the system dreamt of: ..."), and since R3 it holds only memory dreams, one per sleep with something new. What is left is polish, if wanted.
-  - Shelved for a later discussion (Gordon, 2026-09-27): whether the biology must be engine-computed (Iris lets the model propose its next affect vector, bounded per turn), how Iris's canonical Self claims overlap the lore, and profile seeding (idempotent YAML facts, protected visibility, disputed conflict groups).
+  - Shelved for a later discussion (Gordon, 2026-09-27): whether the biology must be engine-computed (Iris lets the model propose its next affect vector, bounded per turn), how Iris's canonical Self claims overlap the lore, and profile seeding (idempotent YAML facts, protected visibility, disputed conflict groups). Self claims since built (2026-09-30, `c90e24f`).
 - ~~3. Backfill tests~~ (Done 2026-09-27, 3a to 3g below): Ensure all legacy memory mechanisms (like the Lexicon) are either updated to use the SQLite state or formally deprecated. (Partly done 2026-09-26: the gate's own behaviour is pinned in `tests/test_halcyon_gate.py`, the JSON-era tests are gone or converted to plain-prose drafts.) Gordon's call, 2026-09-26: move every learned or session store into the Halcyon store, one at a time with tests; keep `spores/` (subconscious recall), telemetry, the crash log, tool grants and config as they are.
   - ~~3a. Chronos quicksave~~ (Done 2026-09-26): `saves/quicksave.json` is now the `engine_checkpoint` row in `saves/iris.db`, tagged with the canonical sequence; an old quicksave is imported once and renamed.
   - ~~3b. `fractal_adventure.json`~~ (Done 2026-09-27): rooms and items are part of the checkpoint; an old file is imported once; the FractalOS file is written only by `/export` (Gordon's call). Memory phase 4 (the world graph as the story's truth) is still open.
@@ -1440,5 +1441,5 @@ Brad's `bone-iris` (Halcyon) solved this by pushing all validation to a deny-by-
 ## Future Ideas (Shelved & No Urgency)
 - **Affective retrieval, done properly:** Querying memory by physics state ("find memories that felt like this moment"). Doing it right means storing an affective vector alongside the semantic one and searching that index deliberately.
 - **Shrink to what actually carries the value:** The composer, the validator, and the physics-to-prompt mapping produce nearly all of the observable behaviour. A smaller engine built from just those, with the embeddings work kept, would be easier to defend and easier to explain.
-- **Reconcile `conventions.md`'s "Fail loudly" with the actual defensive style:** Right now the document and the code disagree, and the code wins by 87 broad excepts. Either is defensible; the disagreement isn't.
-- **The Affect Vector & Self Claims:** Whether biology must be engine-computed, how canonical Self claims overlap lore, and profile seeding (idempotent YAML facts, protected visibility).
+- ~~**Reconcile "Fail loudly" with the actual defensive style**~~ (Done 2026-09-30, `2f70ddf`): the swallowing excepts are gone. It also removed the hash fallback's catches; see SESSION_HANDOFF.md, 2026-10-03.
+- **The Affect Vector & profile seeding:** Whether biology must be engine-computed, and profile seeding (idempotent YAML facts, protected visibility). Self claims were built 2026-09-30 (`c90e24f`, `lore/self_claims.yaml`, `brain/prism.py`); whether their felt-state wording fits Track D is open (SESSION_HANDOFF.md, 2026-10-03).
