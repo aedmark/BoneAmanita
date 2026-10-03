@@ -158,6 +158,35 @@ daemon's `record_crash` (reply lost); a command's had **no barrier** (it reached
   tests back to expecting the previous checkpoint kept and the failure logged (`d60f798` had them expect
   the raise). Suite 1042 passed, 5 skipped.
 
+**The end-to-end run on 20.7.4.83** (`scratch/mode_runs/e2e_1003b.jsonl`, 140 turns, gemma4:12b, exit 0): 0 blank
+replies, 0 phase crashes, no tracebacks, no `crashes.log`. The Creative Determinant runs again: 36 turns read the
+regime off the bitmap (0 in `e2e_1003`), 22 declined on too small a corpus, 4 raised (each arm's first turn or
+two, under 3 memories, as on 09-30). TECHNICAL's keeper kept 9 facts, none a question; redrafts 6 to 0. ADVENTURE
+charted 45 rooms (33). The exhaustion gate cannot be judged here: the scripted person's E_u never passed 0.16
+(D2b's tired-partner harness is the one for it). TECHNICAL's ATP fell to 13.8 (56.1), which led to the next fix.
+
+**20.7.4.84: a redraft no longer discounts every later turn's burn.** Since 20.5.0 the cortex set
+`phys_state["is_steering_retry"] = True` on a redraft and nothing cleared it; the physics persists, so from a
+session's first redraft every Metabolic Burn ran at 20% (`burn_rate 0.2`). The metabolism runs eight phases
+before cognition and a retry never re-runs it, so the flag never discounted a retry, only everything after it.
+In every recorded run CONVERSATION and CREATIVE ran at 20% from turn 0 to 2, TECHNICAL from its first redraft;
+`e2e_1003b`'s TECHNICAL had none, ran the burn as written for the first time (4 to 5 ATP a turn, not about 1),
+and fell to 13.8. Every ATP figure since D0, the repair's "16 to 53" included, was measured at a fifth of the
+burn. The flag is gone (`brain/cortex.py`, `body/metabolism.py`); a retry is still charged as Cognitive Stumble
+and its tokens. `tests/test_body.py` `test_a_redraft_does_not_discount_later_burns` (fails with the flag). The
+economy at full burn is unmeasured: the next end-to-end run is the first.
+
+**20.7.4.84, also: CREATIVE offers directions only when asked.** Its style guide said "Offer distinct, wild or
+unique options for every idea" (since 15.8.2), so a reply to a direction ("Make the keeper older") ended in a menu,
+and the 10-sentence cap (`SENTENCE_CAP_DEFAULT`) cut it: in `e2e_1003` 23 of 30 replies had one and 18 ended on a
+bare option heading ("**Option 3: The Shared Secret**"); 20.7.4.80's "fewer bullets" only turned bullets into bold
+headings with a paragraph each, which spend more sentences (09-30: 11 menus, 2 cut). Rule 3 now reads: offer two or
+three directions, a line each, when the person is exploring, unsure or asks for ideas; when they give a direction,
+write it fully and stop. Probe (`creative_probe_{old,new}.jsonl`, 10 turns on a night-ferry story, 4 asking for
+ideas, 6 giving directions, gemma4:12b): menus on directions 1 to 0, menus cut 4 to 0; idea turns still get ideas
+(one numbered list, a line each; three as prose alternatives). Left: one direction reply ("Have the engine fail")
+still closed on two "You could..." lines; an idea reply said "We can take this" (rule 6).
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

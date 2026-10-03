@@ -754,8 +754,6 @@ class TheCortex:
         val_res = {"valid": False}
         final_prompt = base_prompt
         for attempt in range(cognitive_retries):
-            if attempt > 0:
-                phys_state["is_steering_retry"] = True
             val_res = {"valid": False}
             rejected_by, reject_detail, gate_txt = "validator", "", ""
             raw_resp = self.llm.generate(final_prompt, llm_params)

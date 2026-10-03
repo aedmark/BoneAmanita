@@ -78,6 +78,15 @@ class BiologyArchitectureTests(BoneTestCase):
             20.0,
             "[FAIL] Anaerobic Bypass did not apply the hardcoded 20.0 HP burn.",
         )
+
+    def test_a_redraft_does_not_discount_later_burns(self):
+        """is_steering_retry, once set by a redraft, cut every later turn's burn to 20% (20.5.0 to 20.7.4.83)."""
+        packet = {"voltage": 14.0, "depth": 0.1, "connectivity": 0.5}
+        burns = []
+        for extra in ({}, {"is_steering_retry": True}):
+            self.mito.state.atp_pool, self.mito.state.ros_buildup = 50.0, 5.0
+            burns.append(self.mito.process_cycle({**packet, **extra}).total_burn)
+        self.assertEqual(burns[0], burns[1])
         self.assertTrue(
             self.mito.state.ros_buildup > 0.0,
             "[FAIL] Anaerobic Bypass failed to generate ROS waste.",

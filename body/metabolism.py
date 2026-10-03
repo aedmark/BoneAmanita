@@ -128,9 +128,6 @@ class MitochondrialForge:
     ) -> MetabolicReceipt:
         if self.state.atp_pool > 95.0 and self.state.ros_buildup < 1.0:
             return MetabolicReceipt(0, 0, 0, 0, 0, "NOMINAL", "Fresh Start")
-        is_steering_retry = safe_get(physics_packet, "is_steering_retry", False)
-        burn_rate = 0.2 if is_steering_retry else 1.0
-        modifier = modifier * burn_rate
         cfg = safe_get(self.cfg, "BIO", {})
         depth = float(safe_get(physics_packet, "depth", 0.3))
         connectivity = float(safe_get(physics_packet, "connectivity", 0.2))
