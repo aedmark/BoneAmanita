@@ -187,6 +187,22 @@ ideas, 6 giving directions, gemma4:12b): menus on directions 1 to 0, menus cut 4
 (one numbered list, a line each; three as prose alternatives). Left: one direction reply ("Have the engine fail")
 still closed on two "You could..." lines; an idea reply said "We can take this" (rule 6).
 
+**The end-to-end run on 20.7.4.84, the first at full burn** (after a reboot; `scratch/mode_runs/e2e_1003c.jsonl`,
+140 turns, gemma4:12b, exit 0). 0 blank replies, 0 phase crashes, 0 pause lines, no tracebacks, no `crashes.log`.
+The economy holds: no arm near running on empty (ATP under 5). ATP min / median / end, then (`e2e_1003b`, 20%):
+MIXED 89 / 94 / 93 (92 / 98 / 98); CONVERSATION 35 / 61 / 64 (88 / 95 / 98), drifting down to turn 20 and
+climbing back, where it used to sit at 88 to 98 whatever happened; ADVENTURE 87 / 95 / 92 (91 / 97 / 97);
+TECHNICAL 12 / 30 / 37 (14 / 33 / 44), Emergency Vagus Nerve Support +60 over the arm; CREATIVE 69 / 82 / 85
+(32 / 73 / 65): the burn costs it 187 (52), but no menus means fewer tokens (146, was 188), half the redrafts
+(12, 22) and banned-phrase tax (43, 89), and no Mitophagy reset (60). The Creative Determinant read a regime on
+93 turns (41 declined on a small corpus, 6 raised in each arm's first turns). CREATIVE menus 0 of 30 (10, 7
+cut). TECHNICAL kept 9 memories, none a question; code in 24 of 30 replies.
+
+**20.7.4.85: TECHNICAL pays 0.020 ATP a token** (Gordon, from that run: its replies are mostly code, and at 0.025
+it lived near 30 ATP with the vagus support stepping in). The rate was hardcoded in the cortex; it is now each
+mode's `atp_per_token` in `BonePresets.MODES` (0.025 for the other three), charged by `TheCortex._token_burn`.
+`tests/test_energy_budget.py` `TheTokenRateIsTheModes` (fails at 0.025). Suite 1044 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

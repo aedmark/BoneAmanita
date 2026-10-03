@@ -416,7 +416,7 @@ class TheCortex:
             if self.svc.bio and raw_resp:
                 gen_tokens = max(1, len(raw_resp) // 4)
                 ros_yield = gen_tokens * 0.015
-                atp_burn = gen_tokens * 0.025
+                atp_burn = self._token_burn(gen_tokens)
 
                 current_ros = float(self.svc.bio.mito.state.ros_buildup)
                 self.svc.bio.mito.state.ros_buildup = min(
@@ -1105,6 +1105,10 @@ class TheCortex:
     @staticmethod
     def _str_or_none(value):
         return value if isinstance(value, str) else None
+
+    def _token_burn(self, tokens: int) -> float:
+        """ATP for the tokens a reply generated, at its mode's rate (TECHNICAL's code is cheaper)."""
+        return tokens * float(BonePresets.MODES.get(self.active_mode, {}).get("atp_per_token", 0.025))
 
     def _pause_line(self) -> str:
         """What the person sees when every draft was rejected: a short shared pause, never the engine's state.

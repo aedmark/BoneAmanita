@@ -4,6 +4,7 @@ A file now costs one fixed action (its text is already paid for as generated tok
 answers briefly and asks for rest instead of refusing."""
 
 import tempfile
+import unittest
 from unittest.mock import MagicMock, patch
 
 from mechanics.tools import TheSubstrate
@@ -62,3 +63,16 @@ class RunningOnEmpty(BoneTestCase):
         prompt, params = self.generate.call_args[0]
         self.assertNotIn("RUNNING ON EMPTY", prompt)
         self.assertGreater(params.get("max_tokens", 4096), self.engine.cortex.EMPTY_MAX_TOKENS)
+
+
+class TheTokenRateIsTheModes(unittest.TestCase):
+    """TECHNICAL's replies are mostly code: 0.020 ATP a token, 0.025 elsewhere (e2e_1003c, Gordon)."""
+
+    def test_technical_pays_less_per_token(self):
+        from brain.cortex import TheCortex
+
+        cortex = TheCortex.__new__(TheCortex)
+        for mode, rate in (("TECHNICAL", 0.020), ("CONVERSATION", 0.025), ("CREATIVE", 0.025), ("ADVENTURE", 0.025)):
+            with self.subTest(mode=mode):
+                cortex.active_mode = mode
+                self.assertAlmostEqual(cortex._token_burn(1000), 1000 * rate)
