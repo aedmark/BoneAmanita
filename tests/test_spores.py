@@ -169,6 +169,16 @@ class SporeEcosystemTests(BoneTestCase):
             action_flood, "OPEN_FLOODGATES", "[FAIL] Governor did not shift to OPEN_FLOODGATES when healthy."
         )
 
+    def test_the_network_forges_a_diamond(self):
+        """Deep REM calls mem.forge_diamond on the network; it reaches the core."""
+        from spores.network import MycelialNetwork
+        from unittest.mock import MagicMock
+
+        net = MycelialNetwork(events=MagicMock(), config_ref=self.config)
+        net.graph.update({"anchor": {"edges": {}, "is_diamond": False}, "fossil": {"edges": {}, "is_diamond": False}})
+        self.assertTrue(net.forge_diamond("anchor", "fossil"))
+        self.assertTrue(net.graph["anchor"]["is_diamond"])
+
     def test_cordyceps_bloom_and_antidote(self):
         """Ensures the Cordyceps blooms under trauma and Lichen cures it."""
         from spores.biome import BioCordyceps, BioLichen

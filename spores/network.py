@@ -128,6 +128,9 @@ class MycelialNetwork:
     def calculate_mass(self, node):
         return self.memory_core.calculate_mass(node)
 
+    def forge_diamond(self, node_a, node_b):
+        return self.memory_core.forge_diamond(node_a, node_b)
+
     def calculate_clustering(self, adj: Dict[str, set]) -> float:
         """Average local clustering coefficient over an adjacency dict.
 

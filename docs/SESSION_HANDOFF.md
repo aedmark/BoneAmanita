@@ -58,19 +58,30 @@ crashes, no tracebacks in the log, 0 failed saves. Per arm, then vs now:
 - ADVENTURE: 16 memories (5), 33 rooms (30), redrafts 4 to 3. CONVERSATION: 20 memories (15), redrafts 6 to 7.
   MIXED: zones held, redrafts 4 to 8.
 - TECHNICAL's keeper now keeps questions as facts (`utc_conversion_question`, `pandas_usage_query`).
-- Not exercised: the hash fallback finding below (Ollama was up), and whether the exhaustion cap or Self
+- Not exercised: the hash fallback (Ollama was up; fixed in 20.7.4.80), and whether the exhaustion cap or Self
   Claims changed anything (the harness does not record the prompt).
+
+**20.7.4.80: the hash fallback catches again, narrowly.** The codemod had removed the `try` around the boot
+probe, the re-probe and `embed_batch` (`spores/embeddings.py`), so with no embedding server the boot probe
+raised instead of falling back, and a server lost mid-session raised out of every embed call; the leftovers
+(`_degrade` never called, `failure` never set) showed the design was still there. Back, but only for
+`_BACKEND_ERRORS` (`OSError`, which covers every `requests` error and timeouts; `ValueError` for a malformed
+reply; `RuntimeError` for torch): those fall back to hash, loudly (WARN, CRIT on severing, `DEGRADED`
+receipts); anything else is our bug and raises. `_log` stays without its swallow. Live, a dead port at boot:
+"No embedding backend reachable (http: ConnectionError ...)", `hash:shake_256 8d [DEGRADED]`, embeds served.
+The 13 tests the codemod removed are back (`tests/test_embeddings.py` `HttpBackend`), plus two: no server at
+boot falls back; a `KeyError` still raises. 17 fail on the codemod's version, 1 with the catch widened to
+`Exception`. "The hash fallback stays" holds as written.
+- On the way, from the full suite (intermittent): deep REM calls `self.mem.forge_diamond`, which
+  `MycelialNetwork` never passed through to `MemoryCore` (since 20.6.6; the codemod removed what swallowed
+  it), so a REM that found a fossil scoring over 0.8 crashed. `spores/network.py` delegates it now;
+  `tests/test_spores.py` `test_the_network_forges_a_diamond` (fails without it).
+- Suite 1026 passed, 5 skipped.
 
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
 **To discuss (found reading the commits above, not changed):**
-- **The hash fallback no longer catches.** The codemod removed the `try` around the boot probe, the re-probe
-  and `embed_batch`. With `BONE_EMBED_BACKEND=auto` and no embedding server, `_http_embed`'s
-  `raise_for_status` or connection error now leaves the probe instead of falling through to hash; a server
-  that dies mid-session raises out of every embed call instead of serving hash coordinates for the sweep.
-  That contradicts "The hash fallback stays" below. The suite cannot see it (pinned to `hash`, which never
-  probes). Either the decision changes or the fallback gets a narrow `except requests.RequestException`.
 - **Self Claims perform a body.** Four of the six claims tell the model what it feels ("I am exhausted and
   running on empty", "flooded with dopamine", "a deep sense of resonance") and one tells it to distrust the
   person under stress. That is what C5 measured as performance and what Track D's first decision rules out:
@@ -4345,4 +4356,4 @@ with no gain in compliance over reasoning off.
   recommendation; the current breadth is clearly part of the point.
 - ~~**Reconcile "Fail loudly" with the actual defensive style.**~~ Done
   2026-09-30 (`2f70ddf`): the swallowing excepts are gone; the code fails
-  loudly. See the 2026-10-03 entry for what that did to the hash fallback.
+  loudly. The hash fallback's catches went with them and came back narrowed (20.7.4.80).

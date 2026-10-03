@@ -15,6 +15,9 @@ LEGACY_HASH_DIM = 8
 _CACHE_CAPACITY = 4096
 _MAX_CONSECUTIVE_FAILURES = 3
 _PROBE_TEXT = "the cartographer maps the room"
+# What a backend throws when it is down or answers badly (requests' errors are OSErrors; torch raises
+# RuntimeError). These fall back to hash, loudly; anything else is our bug and raises.
+_BACKEND_ERRORS = (OSError, ValueError, RuntimeError)
 
 _DEFAULTS: Dict[str, Any] = {
     "BACKEND": "auto",
@@ -126,15 +129,19 @@ class SemanticEmbedder:
                     "WARN",
                 )
                 continue
-            if probe():
-                self.degraded = False
-                self.detail = f"resolved via {candidate}"
-                self._log(
-                    f"{Prisma.GRN}Semantic cortex online: "
-                    f"{self.backend}:{self.model} @ {self.dimension}d.{Prisma.RST}",
-                    "INFO",
-                )
-                return
+            try:
+                if probe():
+                    self.degraded = False
+                    self.detail = f"resolved via {candidate}"
+                    self._log(
+                        f"{Prisma.GRN}Semantic cortex online: "
+                        f"{self.backend}:{self.model} @ {self.dimension}d.{Prisma.RST}",
+                        "INFO",
+                    )
+                    return
+            except _BACKEND_ERRORS as e:
+                failures.append(f"{candidate}: {type(e).__name__}: {e}")
+                continue
             failures.append(f"{candidate}: {self.detail}")
         self.backend = "hash"
         self.model = "shake_256"
@@ -248,15 +255,22 @@ class SemanticEmbedder:
                 return None
             self._last_reprobe = now
             target = self._lost_backend or ("http" if self._settings["BACKEND"] in ("auto", "", "http") else self._settings["BACKEND"])
-            if target == "http":
-                vectors = self._http_embed([_PROBE_TEXT], timeout=float(self._settings["REPROBE_TIMEOUT"]))
-                model, dim = str(self._settings["MODEL"]), len(vectors[0]) if vectors and vectors[0] else 0
-            elif target == "sentence_transformers" and self._st_model is not None:
-                model, dim = self._lost_model, len(self._st_model.encode([_PROBE_TEXT])[0])
-            else:
-                raise RuntimeError(f"{target} cannot be re-probed mid-session")
-            if not dim:
-                raise ValueError("the probe returned no vector")
+            try:
+                if target == "http":
+                    vectors = self._http_embed([_PROBE_TEXT], timeout=float(self._settings["REPROBE_TIMEOUT"]))
+                    model, dim = str(self._settings["MODEL"]), len(vectors[0]) if vectors and vectors[0] else 0
+                elif target == "sentence_transformers" and self._st_model is not None:
+                    model, dim = self._lost_model, len(self._st_model.encode([_PROBE_TEXT])[0])
+                else:
+                    raise RuntimeError(f"{target} cannot be re-probed mid-session")
+                if not dim:
+                    raise ValueError("the probe returned no vector")
+            except _BACKEND_ERRORS as e:
+                # Every REPROBE_SECONDS while down; the receipt is the signal, the log stays at debug.
+                logging.getLogger("bone").log(logging.DEBUG, f"Embedder re-probe: {target} still down ({e})")
+                issue_receipt("embeddings.reprobe", "STILL_DOWN", result_count=0, degraded=True,
+                              inputs={"backend": target}, detail=f"{type(e).__name__}: {e}")
+                return "STILL_DOWN"
             if dim != self.dimension:
                 outcome, detail = "RESTART_NEEDED", (f"{target}:{model} answers at {dim}d, but this session's "
                                                      f"vectors are {self.dimension}d; restart to use it")
@@ -333,21 +347,40 @@ class SemanticEmbedder:
 
         vector_backend = self.backend
         failure = ""
-        raw = self._raw_embed(pending)
-        if len(raw) != len(pending):
-            raise ValueError("embedding batch row count mismatch")
-        finalized = []
-        for row in raw:
-            if len(row) != self.dimension:
-                raise ValueError("embedding vector dimension mismatch")
-            vec = [float(v) for v in row]
-            if not all(math.isfinite(v) for v in vec):
-                raise ValueError("embedding vector contains non-finite values")
-            finalized.append(self._finalize(vec))
-        self._consecutive_failures = 0
-        self.degraded = self.backend == "hash"
-        if not self.degraded:
-            self.detail = f"vectorized via {self.backend}"
+        try:
+            raw = self._raw_embed(pending)
+            if len(raw) != len(pending):
+                raise ValueError("embedding batch row count mismatch")
+            finalized = []
+            for row in raw:
+                if len(row) != self.dimension:
+                    raise ValueError("embedding vector dimension mismatch")
+                vec = [float(v) for v in row]
+                if not all(math.isfinite(v) for v in vec):
+                    raise ValueError("embedding vector contains non-finite values")
+                finalized.append(self._finalize(vec))
+            self._consecutive_failures = 0
+            self.degraded = self.backend == "hash"
+            if not self.degraded:
+                self.detail = f"vectorized via {self.backend}"
+        except _BACKEND_ERRORS as e:
+            failure = self.detail = f"{type(e).__name__}: {e}"
+            if "embed_failure" not in self._warned:
+                self._warned.add("embed_failure")
+                self._log(
+                    f"{Prisma.YEL}Vectorization failed ({self.detail}). "
+                    f"Serving hash coordinates for this sweep.{Prisma.RST}",
+                    "WARN",
+                )
+            self._degrade(e)
+            vector_backend = "hash"
+            pending = list(dict.fromkeys(t for t in cleaned if t))
+            finalized = [
+                self._finalize(_hash_to_vector(t, self.dimension)) for t in pending
+            ]
+            fallback = dict(zip(pending, finalized))
+            results = [fallback[t] if t else [0.0] * self.dimension for t in cleaned]
+            cache_hits = 0
 
         for text, vec in zip(pending, finalized):
             if not failure or self.backend == "hash":
