@@ -69,3 +69,26 @@ class CycleNativeMathTests(BoneTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class InvariantRollback(unittest.TestCase):
+    """A turn that ends with negative ATP is rolled back and refused, not kept."""
+
+    def test_a_breach_restores_the_frozen_state(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        mito = SimpleNamespace(state=SimpleNamespace(atp_pool=40.0))
+        eng = SimpleNamespace(health=90.0, stamina=80.0, trauma_accum={"panic": 0.1},
+                              bio=SimpleNamespace(mito=mito), events=MagicMock())
+
+        def spend(_sim, ctx):
+            eng.health, mito.state.atp_pool = 10.0, -5.0
+            return ctx
+
+        sim = CycleSimulator.__new__(CycleSimulator)
+        sim.eng, sim.executor = eng, SimpleNamespace(execute_phases=spend)
+        ctx = sim.run_simulation(SimpleNamespace(logs=[], refusal_triggered=False))
+        self.assertTrue(ctx.refusal_triggered)
+        self.assertEqual((eng.health, mito.state.atp_pool), (90.0, 40.0))
+        self.assertIn("Invariant Breach", ctx.logs[-1])

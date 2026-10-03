@@ -1,6 +1,9 @@
+import logging
 from typing import Any
 
 from engine.constants import Prisma
+
+logger = logging.getLogger("bone")
 
 try:
     import dspy
@@ -103,6 +106,15 @@ class DSPyCritic:
                 f"{Prisma.CYN}[DSPy]: Real-Time Critic Online. Model: {model_name} via {provider}{Prisma.RST}"
             )
 
+    def _ask(self, module, what: str, **inputs):
+        """One call into DSPy (a separate model, through litellm); None when it fails, which is logged."""
+        try:
+            return module(**inputs)
+        except Exception as e:
+            # Only the library call is inside: our parsing of its answer still raises.
+            logger.warning(f"DSPy {what} failed, skipped this time: {type(e).__name__}: {e}")
+            return None
+
     def audit_generation(
         self,
         user_query: str,
@@ -121,12 +133,15 @@ class DSPyCritic:
                 False,
                 f"Mathematical Sycophancy Detected. Malignancy Factor ({malignancy:.2f}) exceeds biological limits. Output is structurally hollow.",
             )
-        result = self.judge(
+        result = self._ask(
+            self.judge, "judge",
             system_mode=active_mode,
             context=memory_context,
             question=user_query,
             answer=generated_response,
         )
+        if result is None:
+            return True, "Critic unavailable; failing open."
         if "true" not in str(result.faithfulness).lower():
             return False, getattr(result, "reasoning", "No reasoning provided.")
         return True, "Faithful."
@@ -134,10 +149,13 @@ class DSPyCritic:
     def evolve_prompt(self, current_configuration: str, failure_context: str) -> str:
         if not self.enabled:
             return ""
-        result = self.evolver(
+        result = self._ask(
+            self.evolver, "evolver",
             current_configuration=current_configuration,
             failure_context=failure_context,
         )
+        if result is None:
+            return ""
         directive = str(result.new_directive)
         malignancy = self.navi_sad.calculate_malignancy_factor(
             directive, current_drag=10.0
@@ -156,11 +174,10 @@ class DSPyCritic:
         print(
             f"\n{Prisma.MAG}Compressing {len(directives)} directives into foundational axioms...{Prisma.RST}"
         )
-        raw_output = str(
-            self.compressor(
-                current_directives="\n".join(directives)
-            ).compressed_axioms
-        ).split("\n")
+        result = self._ask(self.compressor, "compressor", current_directives="\n".join(directives))
+        if result is None:
+            return directives
+        raw_output = str(result.compressed_axioms).split("\n")
         new_rules = [
             line.strip()
             for line in raw_output

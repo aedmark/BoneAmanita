@@ -265,7 +265,14 @@ class CycleSimulator:
         frozen_state = Gatekeeper.freeze_engine_state(self.eng)
         ctx = self.executor.execute_phases(self, ctx)
         mito_state = getattr(self.eng.bio.mito, "state", None) if hasattr(self.eng, "bio") and getattr(self.eng.bio, "mito", None) else None
-        Gatekeeper.check_metabolic_bounds(None, mito_state, {})
+        try:
+            Gatekeeper.check_metabolic_bounds(None, mito_state, {})
+        except InvariantViolation as e:
+            # A turn that breaks an invariant is undone, not kept; phase crashes are handled per phase.
+            Gatekeeper.thaw_engine_state(self.eng, frozen_state)
+            self.eng.events.log(f"Global Invariant Breach in turn cycle: {e}. State rolled back.", "SYS_ERR")
+            ctx.logs.append(f"Global Invariant Breach: {e}")
+            ctx.refusal_triggered = True
         if (
             hasattr(self.eng, "telemetry")
             and hasattr(self.eng, "cortex")

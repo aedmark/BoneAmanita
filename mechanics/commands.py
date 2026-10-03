@@ -136,7 +136,14 @@ class CommandRegistry:
             return True
         cmd = parts[0].lower()
         if func := self.commands.get(cmd):
-            return func(parts)
+            try:
+                return func(parts)
+            except Exception as e:
+                # The barrier for every command: a failing one is reported, the session goes on.
+                from engine.core import record_crash
+                record_crash(getattr(self.state, "eng", None), f"Command {cmd} failed", e)
+                self.state.log(f"{cmd} failed: {type(e).__name__}: {e}", "CMD")
+                return True
         msg = ux_format("command_registry", "unknown_command", default="Unknown command: {cmd}", cmd=cmd)
         self.state.log(msg, "CMD")
         return True

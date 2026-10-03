@@ -24,14 +24,23 @@ class ConfigWizard:
     @staticmethod
     def load_or_create():
         if os.path.exists(ConfigWizard.CONFIG_FILE):
-            with open(ConfigWizard.CONFIG_FILE, encoding="utf-8") as f:
-                return json.load(f)
+            try:
+                with open(ConfigWizard.CONFIG_FILE, encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                err_msg = ux("main_strings", "config_load_err")
+                print(f"{Prisma.RED}{err_msg.format(e=e)}{Prisma.RST}")
+                ConfigWizard._backup_corrupt_file()
         return ConfigWizard._run_setup()
 
     @staticmethod
     def _backup_corrupt_file():
         backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
-        os.rename(ConfigWizard.CONFIG_FILE, backup_name)
+        try:
+            os.rename(ConfigWizard.CONFIG_FILE, backup_name)
+        except OSError as e:
+            print(f"{Prisma.YEL}[WIZARD] Non-fatal issue archiving config: {e}{Prisma.RST}")
+            return
         msg = ux("main_strings", "config_backup")
         print(f"{Prisma.YEL}{msg.format(backup_name=backup_name)}{Prisma.RST}")
 

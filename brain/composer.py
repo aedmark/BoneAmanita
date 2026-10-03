@@ -1,3 +1,4 @@
+import http.client
 import json
 import os
 import random
@@ -203,7 +204,8 @@ class LLMInterface:
                 if e.code < 500 and e.code != 429:
                     raise SynapseError(f"HTTP {e.code}: {error_body}")
                 err = f"HTTP {e.code}: {error_body}"
-            except (urllib.error.URLError, TimeoutError) as e:
+            except (OSError, http.client.HTTPException) as e:
+                # URLError and timeouts are OSErrors; a reset mid-response is not a URLError.
                 err = e
             self._log_flicker(attempt, err)
             if attempt < network_retries:
@@ -370,13 +372,19 @@ class LLMInterface:
         fallback_payload["model"] = safe_get(self.cfg, "OLLAMA_FALLBACK", "llama3.1:8b")
         c_cfg = safe_get(self.cfg, "CORTEX", {})
         fallback_timeout = float(safe_get(c_cfg, "LLM_FALLBACK_TIMEOUT", 120.0))
-        return self._transmit(
-            fallback_payload,
-            timeout=fallback_timeout,
-            network_retries=1,
-            override_url=url,
-            override_key="ollama",
-        )
+        try:
+            return self._transmit(
+                fallback_payload,
+                timeout=fallback_timeout,
+                network_retries=1,
+                override_url=url,
+                override_key="ollama",
+            )
+        except (SynapseError, ValueError) as e:
+            # None lets generate() fall through to the circuit breaker instead of raising past it.
+            if self.events:
+                self.events.log(f"{Prisma.YEL}Local fallback transmit failed ({url}): {type(e).__name__}: {e}{Prisma.RST}", "SYS", "WARN")
+            return None
 
     def mock_generation(self, prompt: str, reason: str = "SIMULATION") -> str:
         if self.events:

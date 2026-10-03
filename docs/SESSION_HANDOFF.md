@@ -110,9 +110,53 @@ from reading the commits).
   a regime every turn). `engine/core.py` asks for 4 bits, as `spores/memory.py` does. The gate's tests stub the
   index; `tests/test_creative_determinant.py` `TheRealIndexBuilds` builds the real one (fails at 8).
 - Found reading the codemod for more of the same: `run_simulation` freezes the engine state but nothing thaws
-  it; the invariant rollback went with its handler. Restore and a pass over the codemod's 92 removed handlers
-  are next.
+  it; the invariant rollback went with its handler (restored with the audit, 20.7.4.83).
 - Suite 1029 passed, 5 skipped.
+
+**20.7.4.83: the codemod audited; the rollback and A2's kept handlers restored.** `2f70ddf` removed 92
+`except Exception` handlers; 82 in the engine were still gone (an AST diff of each file against `2f70ddf^`,
+tests and tools left out). Judged by A2's own triage (optional backends keep a narrow catch and say so;
+defensive-by-habit goes; crash barriers stay and record the traceback), against where an exception goes now:
+a phase's goes to `handle_phase_crash` (recorded, component offline, turn ends); the rest of a turn's to the
+daemon's `record_crash` (reply lost); a command's had **no barrier** (it reached the REPL and ended the session).
+- **Restored**, each reported, narrowed where the failure has a type:
+  - The invariant rollback (`engine/cycle.py`): `run_simulation` froze the state and nothing thawed it.
+    `InvariantViolation` only; ATP is clamped at `ATP_COLLAPSE` on the main path, so it is a guard.
+  - One barrier for every command (`CommandRegistry.execute`): recorded, "`/x` failed: ...", session goes on.
+    Covers `/save`, `/report`, `/diag`, `/export`, `/truth`, `/journal` and `/sleep`'s dreams.
+  - `save_checkpoint` (every turn's end, in the main thread, nothing above it): a failure ended the session
+    after the reply was made; its docstring promised "a failure keeps the previous one", and does again.
+    `resume_checkpoint` starts fresh on a checkpoint it cannot read; shutdown saves memory, the lexicon and
+    the akashic each alone; village hydration drops one bad villager, not the rest.
+  - The LLM transport retries `OSError` and `http.client.HTTPException` (a reset mid-response is neither a
+    `URLError` nor a timeout); a failed local fallback returns `None` so `generate` reaches its circuit
+    breaker instead of raising past it.
+  - DSPy (`mechanics/dspycritic.py` `_ask`): only the library call (a second model, through litellm) is
+    covered; the judge fails open, the evolver and compressor skip; our parsing of its answer still raises.
+  - File writes retry `OSError` up to `SUBSTRATE_WRITE_RETRIES` (the counter was there, unreachable); a
+    corrupt `config.json` is backed up and the wizard runs again; a spore or atlas that cannot be read wakes
+    the engine fresh (recorded); a world node with bad data is dropped; one failing event subscriber no
+    longer stops the publisher or the other subscribers.
+- **Left removed, on purpose:**
+  - Lore and config read at boot (the lore JSON parser, presets, system prompts, genetics, scenario seeds,
+    template formats): a bad file should stop the boot, not run on an empty structure.
+  - Redundant now: the embedder handles its own backend errors (20.7.4.80) and `generate` circuit-breaks
+    to mock, so the batch-warm, resonance, recall-ranking, keeper and dream catches had nothing left to catch
+    but bugs.
+  - The engine's own arithmetic and bookkeeping (governors, Q-matrix, CSF wash, config mutation, the
+    syntax consolidator): a failure is a bug, and the phase barrier records it. Background tasks report
+    through their future's `record_crash`.
+  - ordvec's fastscan fallbacks in `spores/memory.py`: the version is pinned, so a failure is a version
+    break, and RankQuant showed what a quiet fallback costs.
+- **Store writes mid-turn stay loud** (Gordon left it to Claude, 2026-10-03): recall counts, the user
+  profile, the learned lexicon and lore, akashic, oroboros, epigenetic mutations and the death save used to
+  log and lose that one write; now a failing store ends the turn, recorded. The store is the one place
+  everything is kept (Track E), and a local SQLite write fails only when something is really wrong (disk
+  full, a lock held by another process), so a turn that goes on without it would hide that.
+- `tests/test_failure_boundaries.py` (12; 11 fail on the codemod's source, the twelfth pins that DSPy's
+  catch stays narrow); `tests/test_cycle.py` `InvariantRollback`; `tests/test_quicksave.py`'s two checkpoint
+  tests back to expecting the previous checkpoint kept and the failure logged (`d60f798` had them expect
+  the raise). Suite 1042 passed, 5 skipped.
 
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").

@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from body import BioSystem
 from engine.constants import Prisma
-from engine.core import LoreManifest, MindSystem, PhysSystem
+from engine.core import LoreManifest, MindSystem, PhysSystem, record_crash
 from machine.crucible import TheCrucible
 from machine.forge import TheForge
 from machine.pacemaker import ThePacemaker
@@ -116,7 +116,13 @@ class BoneArchitect:
         events = embryo.bio.events
         load_result = None
         if hasattr(embryo.mind.mem, "autoload_last_spore"):
-            load_result = embryo.mind.mem.autoload_last_spore()
+            # A saved spore that cannot be read must not keep the engine from waking; it wakes fresh.
+            try:
+                load_result = embryo.mind.mem.autoload_last_spore()
+            except Exception as e:
+                record_crash(None, "Spore resurrection failed", e)
+                msg = ux("machine_strings", "arch_spore_fail") or "Spore resurrection failed: {e}"
+                events.log(f"{Prisma.RED}{msg.format(e=e)}{Prisma.RST}", "ARCHITECT", "CRIT")
         results = list(load_result) if load_result else []
         results.extend([None] * max(0, 5 - len(results)))
         mito_legacy, _, soul_legacy, continuity, atlas = results[:5]
@@ -126,11 +132,15 @@ class BoneArchitect:
         embryo.soul_legacy = soul_legacy
         embryo.continuity = continuity
         if atlas and embryo.physics.nav:
-            embryo.physics.nav.load_state(atlas)
-            msg = (
-                ux("machine_strings", "arch_map_restored") or "World Map restored."
-            )
-            events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
+            try:
+                embryo.physics.nav.load_state(atlas)
+            except Exception as e:
+                record_crash(None, "Atlas restore failed", e)
+                msg = ux("machine_strings", "arch_map_corrupt") or "Atlas corrupt, discarding map: {e}"
+                events.log(f"{Prisma.OCHRE}{msg.format(e=e)}{Prisma.RST}", "ARCHITECT", "WARN")
+            else:
+                msg = ux("machine_strings", "arch_map_restored") or "World Map restored."
+                events.log(f"{Prisma.MAG}{msg}{Prisma.RST}", "SYS")
         if embryo.bio.mito.state.atp_pool <= 0.0:
             cfg = safe_get(embryo.bio.config_ref, "METABOLISM", {})
             genesis_val = float(safe_get(cfg, "GENESIS_VOLTAGE", 100.0))

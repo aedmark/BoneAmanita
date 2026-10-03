@@ -39,31 +39,38 @@ class ChronosKeeper:
 
     def save_checkpoint(self, history: Optional[list] = None) -> str:
         """The resume point goes to the Halcyon store (one atomic row); a failure keeps the previous one."""
-        store = getattr(self.eng, "store", None)
-        if store is None:
-            raise RuntimeError("no Halcyon store to checkpoint into")
-        start_history = (
-            history if history is not None else self.eng.cortex.dialogue_buffer
-        )
-        state_data = {
-            "health": self.eng.health,
-            "stamina": self.eng.stamina,
-            "trauma_accum": self.eng.trauma_accum,
-            "soul_data": self.eng.soul.to_dict(),
-            "village_data": self._gather_village_state(),
-            "user_model": self._gather_user_model(),
-            "continuity": self._build_continuity_packet(),
-            "timestamp": time.time(),
-            # A list: the buffer is a deque, which default=str saved as the text "deque([...])".
-            "chat_history": list(start_history),
-            "adventure": self._gather_adventure(),
-        }
-        # default=str turns what JSON cannot hold into text, as the old quicksave did.
-        # Secrets are withheld; the dialogue and continuity would otherwise carry them to disk.
-        story = getattr(self.eng, "in_story", lambda: False)()
-        store.save_checkpoint(scrub_all(json.loads(json.dumps(state_data, default=str)), story))
-        msg_save = ux("protocol_strings", "chronos_save_success")
-        return msg_save.format(path=f"{store.path} (engine_checkpoint)")
+        try:
+            store = getattr(self.eng, "store", None)
+            if store is None:
+                raise RuntimeError("no Halcyon store to checkpoint into")
+            start_history = (
+                history if history is not None else self.eng.cortex.dialogue_buffer
+            )
+            state_data = {
+                "health": self.eng.health,
+                "stamina": self.eng.stamina,
+                "trauma_accum": self.eng.trauma_accum,
+                "soul_data": self.eng.soul.to_dict(),
+                "village_data": self._gather_village_state(),
+                "user_model": self._gather_user_model(),
+                "continuity": self._build_continuity_packet(),
+                "timestamp": time.time(),
+                # A list: the buffer is a deque, which default=str saved as the text "deque([...])".
+                "chat_history": list(start_history),
+                "adventure": self._gather_adventure(),
+            }
+            # default=str turns what JSON cannot hold into text, as the old quicksave did.
+            # Secrets are withheld; the dialogue and continuity would otherwise carry them to disk.
+            story = getattr(self.eng, "in_story", lambda: False)()
+            store.save_checkpoint(scrub_all(json.loads(json.dumps(state_data, default=str)), story))
+            msg_save = ux("protocol_strings", "chronos_save_success")
+            return msg_save.format(path=f"{store.path} (engine_checkpoint)")
+        except Exception as e:
+            # Runs at the end of every turn with nothing above it; a failure must not end the session.
+            from engine.core import record_crash
+            record_crash(self.eng, "Checkpoint save failed", e)
+            self.eng.events.log(ux("protocol_strings", "chronos_save_failed_log").format(e=e), "SYS_ERR")
+            return ux("protocol_strings", "chronos_save_failed_msg").format(e=e)
 
     def _load_checkpoint(self) -> Optional[Dict[str, Any]]:
         """The store's resume point; a pre-SQLite saves/quicksave.json is imported once and renamed."""
@@ -83,45 +90,52 @@ class ChronosKeeper:
         return data
 
     def resume_checkpoint(self) -> Tuple[bool, list]:
-        data = self._load_checkpoint()
-        if data is None:
-            msg = ux("protocol_strings", "chronos_resume_none")
-            print(f"{Prisma.GRY}{msg}{Prisma.RST}")
+        try:
+            data = self._load_checkpoint()
+            if data is None:
+                msg = ux("protocol_strings", "chronos_resume_none")
+                print(f"{Prisma.GRY}{msg}{Prisma.RST}")
+                return False, []
+            msg1 = ux("protocol_strings", "chronos_resume_hydrating")
+            print(f"{Prisma.CYN}{msg1.format(path=getattr(self.eng.store, 'path', 'the store'))}{Prisma.RST}")
+            self.resumed_adventure = data.get("adventure")
+            self.eng.health = data.get("health", 100.0)
+            self.eng.stamina = data.get("stamina", 100.0)
+            self.eng.trauma_accum = data.get("trauma_accum", {})
+            if "soul_data" in data and hasattr(self.eng, "soul"):
+                self.eng.soul.load_from_dict(data["soul_data"])
+            if "village_data" in data:
+                self._restore_village_state(data["village_data"])
+            if "user_model" in data:
+                self._restore_user_model(data["user_model"])
+            if "continuity" in data:
+                self.eng.embryo.continuity = data["continuity"]
+                saved_hash = data["continuity"].get("kernel_hash", "UNKNOWN")
+                current_hash = getattr(self.eng, "kernel_hash", "UNKNOWN")
+                if saved_hash != "UNKNOWN" and saved_hash != current_hash:
+                    print(
+                        f"{Prisma.VIOLET}Temporal fracture detected. Bridging timeline [{saved_hash}] into [{current_hash}].{Prisma.RST}"
+                    )
+                else:
+                    print(
+                        f"{Prisma.GRY}Timeline absolute. Kernel Hash [{current_hash}] locked.{Prisma.RST}"
+                    )
+            restored_history = self._history_from(data.get("chat_history", []))
+            # The gate commits mid-turn and the checkpoint at its end; a crash between them left the store a
+            # turn ahead. Its messages fill the dialogue back in (2026-09-30).
+            saved = self.eng.store.checkpoint() or {}
+            if saved.get("updated_at") and (missed := self.eng.store.dialogue_since(saved["updated_at"])):
+                restored_history += [f"Traveler: {said}\nSystem: {answered}" for said, answered in missed]
+                print(f"{Prisma.GRY}Recovered {len(missed)} turn(s) saved after the last checkpoint.{Prisma.RST}")
+            msg2 = ux("protocol_strings", "chronos_resume_success")
+            print(f"{Prisma.GRN}{msg2}{Prisma.RST}")
+            return True, restored_history
+        except Exception as e:
+            # A checkpoint that cannot be read must not keep the engine from booting; it starts fresh.
+            from engine.core import record_crash
+            record_crash(self.eng, "Checkpoint resume failed", e)
+            print(f"{Prisma.RED}{ux('protocol_strings', 'chronos_resume_failed').format(e=e)}{Prisma.RST}")
             return False, []
-        msg1 = ux("protocol_strings", "chronos_resume_hydrating")
-        print(f"{Prisma.CYN}{msg1.format(path=getattr(self.eng.store, 'path', 'the store'))}{Prisma.RST}")
-        self.resumed_adventure = data.get("adventure")
-        self.eng.health = data.get("health", 100.0)
-        self.eng.stamina = data.get("stamina", 100.0)
-        self.eng.trauma_accum = data.get("trauma_accum", {})
-        if "soul_data" in data and hasattr(self.eng, "soul"):
-            self.eng.soul.load_from_dict(data["soul_data"])
-        if "village_data" in data:
-            self._restore_village_state(data["village_data"])
-        if "user_model" in data:
-            self._restore_user_model(data["user_model"])
-        if "continuity" in data:
-            self.eng.embryo.continuity = data["continuity"]
-            saved_hash = data["continuity"].get("kernel_hash", "UNKNOWN")
-            current_hash = getattr(self.eng, "kernel_hash", "UNKNOWN")
-            if saved_hash != "UNKNOWN" and saved_hash != current_hash:
-                print(
-                    f"{Prisma.VIOLET}Temporal fracture detected. Bridging timeline [{saved_hash}] into [{current_hash}].{Prisma.RST}"
-                )
-            else:
-                print(
-                    f"{Prisma.GRY}Timeline absolute. Kernel Hash [{current_hash}] locked.{Prisma.RST}"
-                )
-        restored_history = self._history_from(data.get("chat_history", []))
-        # The gate commits mid-turn and the checkpoint at its end; a crash between them left the store a
-        # turn ahead. Its messages fill the dialogue back in (2026-09-30).
-        saved = self.eng.store.checkpoint() or {}
-        if saved.get("updated_at") and (missed := self.eng.store.dialogue_since(saved["updated_at"])):
-            restored_history += [f"Traveler: {said}\nSystem: {answered}" for said, answered in missed]
-            print(f"{Prisma.GRY}Recovered {len(missed)} turn(s) saved after the last checkpoint.{Prisma.RST}")
-        msg2 = ux("protocol_strings", "chronos_resume_success")
-        print(f"{Prisma.GRN}{msg2}{Prisma.RST}")
-        return True, restored_history
 
     @staticmethod
     def _history_from(saved: Any) -> list:
@@ -156,22 +170,17 @@ class ChronosKeeper:
         atlas = nav.to_dict() if hasattr(nav, "to_dict") else {}
         soul = safe_get(self.eng, "soul")
         soul_data = soul.to_dict() if hasattr(soul, "to_dict") else {}
+        from engine.core import record_crash
+
         mind = safe_get(self.eng, "mind")
         mem = safe_get(mind, "mem")
         if mem and hasattr(mem, "save"):
-            mem.save(
-                health=float(safe_get(self.eng, "health", 0.0)),
-                stamina=float(safe_get(self.eng, "stamina", 0.0)),
-                mutations={},
-                trauma_accum=safe_get(self.eng, "trauma_accum", {}),
-                joy_history=[],
-                mitochondria_traits=mito_traits,
-                antibodies=immune_data,
-                soul_data=soul_data,
-                village_data=self._gather_village_state(),
-                continuity=continuity_packet,
-                world_atlas=atlas,
-            )
+            # Each save stands alone at shutdown: one failure must not lose the others.
+            try:
+                self._save_memory(mem, continuity_packet, mito_traits, immune_data, soul_data, atlas)
+            except Exception as e:
+                record_crash(self.eng, "Shutdown: memory save failed", e)
+                print(f"{Prisma.RED}{ux('protocol_strings', 'chronos_mem_save_fail').format(e=e)}{Prisma.RST}")
         subsystems = [
             ("LEXICON", self.eng.lex, "save"),
             ("AKASHIC", self.eng.akashic, "save_all"),
@@ -180,7 +189,26 @@ class ChronosKeeper:
             if hasattr(sys, method):
                 msg4 = ux("protocol_strings", "chronos_persisting")
                 print(f"{Prisma.GRY}{msg4.format(name=name)}{Prisma.RST}")
-                getattr(sys, method)()
+                try:
+                    getattr(sys, method)()
+                except Exception as e:
+                    record_crash(self.eng, f"Shutdown: {name} persist failed", e)
+                    print(f"{Prisma.OCHRE}{ux('protocol_strings', 'chronos_persist_fail').format(name=name, e=e)}{Prisma.RST}")
+
+    def _save_memory(self, mem, continuity_packet, mito_traits, immune_data, soul_data, atlas):
+        mem.save(
+            health=float(safe_get(self.eng, "health", 0.0)),
+            stamina=float(safe_get(self.eng, "stamina", 0.0)),
+            mutations={},
+            trauma_accum=safe_get(self.eng, "trauma_accum", {}),
+            joy_history=[],
+            mitochondria_traits=mito_traits,
+            antibodies=immune_data,
+            soul_data=soul_data,
+            village_data=self._gather_village_state(),
+            continuity=continuity_packet,
+            world_atlas=atlas,
+        )
 
     def _gather_adventure(self) -> Optional[Dict[str, Any]]:
         """Rooms and items, saved with the rest of the checkpoint (they were fractal_adventure.json)."""
@@ -219,7 +247,13 @@ class ChronosKeeper:
         for name, data in state_data.items():
             comp = getattr(self.eng.village, name, None)
             if hasattr(comp, "load_state"):
-                comp.load_state(data)
+                try:
+                    comp.load_state(data)
+                except Exception as e:
+                    # One villager's bad save is dropped and reported; the rest still hydrate.
+                    from engine.core import record_crash
+                    record_crash(self.eng, f"Village hydration failed [{name}]", e)
+                    self.eng.events.log(f"Village Hydration Error [{name}]: {e}", "SYS_ERR")
 
     def get_crash_path(self, prefix="crash"):
         os.makedirs(self.CRASH_DIR, exist_ok=True)

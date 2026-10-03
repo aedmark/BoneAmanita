@@ -294,7 +294,14 @@ class EventBus:
         try:
             callbacks = self.subscribers.get(event_type, ())
             for callback in callbacks:
-                callback(data)
+                try:
+                    callback(data)
+                except Exception as e:
+                    # One subscriber's failure is reported, and neither the publisher nor the others pay for it.
+                    record_crash(None, f"Subscriber to {event_type} failed", e)
+                    if event_type != "EVENT_FAILURE":
+                        cb_name = getattr(callback, "__name__", str(callback))
+                        self.log(f"Subscriber '{cb_name}' failed: {e}", source="EVENT_FAILURE", level="CRIT")
         finally:
             active_events.discard(event_type)
 
