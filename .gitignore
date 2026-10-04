@@ -48,7 +48,8 @@ test_strata.json
 dummy.jsonl
 
 # --- Editors and OS -------------------------------------------------------
-# .idea/ is deliberately absent: the PyCharm project files are tracked.
+# Gordon's local PyCharm settings; never tracked.
+.idea/
 *.swp
 .DS_Store
 /tools/mycelium_demo.py
