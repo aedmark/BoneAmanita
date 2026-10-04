@@ -68,10 +68,9 @@ def dump_state(obj: Any) -> dict:
         return obj.to_dict()
     elif isinstance(obj, dict):
         return obj
-    try:
+    if hasattr(obj, "__dict__"):
         return vars(obj)
-    except TypeError:
-        return {k: getattr(obj, k) for k in getattr(obj, "__slots__", []) if hasattr(obj, k)}
+    return {k: getattr(obj, k) for k in getattr(obj, "__slots__", []) if hasattr(obj, k)}
 
 def zone_home(cfg: Any, zone: Any) -> Tuple[float, float]:
     """The engine's one home (voltage, drag): the zone's entry in PHYSICS.MANIFOLDS, else DEFAULT."""

@@ -412,14 +412,13 @@ class GordonKnot:
         return f"{Prisma.GRN}{msg.format(item=tool_name)}{Prisma.RST}"
 
     def safe_remove_item(self, item_name: str, new_location: str = "VOID") -> bool:
-        try:
-            clean_name = item_name.upper()
-            self.inventory.remove(clean_name)
-            if item := self.get_item_data(clean_name):
-                item.location = new_location
-            return True
-        except ValueError:
+        clean_name = item_name.upper()
+        if clean_name not in self.inventory:
             return False
+        self.inventory.remove(clean_name)
+        if item := self.get_item_data(clean_name):
+            item.location = new_location
+        return True
 
     def rummage(self, physics_ref: Any, stamina_pool: float) -> Tuple[bool, str, float]:
         inv_cfg = safe_get(self.cfg, "INVENTORY", {})

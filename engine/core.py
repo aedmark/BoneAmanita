@@ -113,12 +113,8 @@ class JSONEncoder(json.JSONEncoder):
             if isinstance(slots, str):
                 slots = [slots]
             for k in slots:
-                try:
-                    val = getattr(o, k)
-                    if not isinstance(val, _LOCK_TYPES):
-                        safe_dict[k] = val
-                except AttributeError:
-                    pass
+                if hasattr(o, k) and not isinstance(val := getattr(o, k), _LOCK_TYPES):
+                    safe_dict[k] = val
             return _redact_secrets(safe_dict)
 
         if hasattr(o, "__dict__"):
@@ -129,6 +125,8 @@ class JSONEncoder(json.JSONEncoder):
         try:
             return super().default(o)
         except TypeError:
+            # The value is lost from the save, so say so.
+            logger.warning(f"JSONEncoder: a {type(o).__name__} could not be saved; wrote a placeholder in its place.")
             return f"<Unserializable: {type(o).__name__}>"
 
 @dataclass

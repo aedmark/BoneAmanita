@@ -209,11 +209,26 @@ TECHNICAL's rate changed, so the other arms of `e2e_1003c` stand). ATP min / med
 Nerve Support +15 (+60). It still drifts down through a long coding session (91 to the low 30s, one dip to 20 at
 turn 26) and recovers. 0 blank, 0 crashes, 0 pauses; code in 24 of 30; redrafts 4 (2); 9 memories, none a question.
 
+**20.7.4.89 (2026-10-04): the silent-handler ratchet at 10, and the old ATP figures marked.**
+- `tests/test_observability.py`'s budget was 29 against 18 real silent handlers (its own comment says lower
+  it when the count drops); Gordon set it to 10. The scan now counts the house reporters it could not see
+  (`issue_receipt`, `handle_phase_crash`, `self._log`, `_log_flicker`) as reporting. The one handler that
+  hid something (`JSONEncoder.default` wrote `<Unserializable: X>` into a save in a value's place) warns now;
+  failed file writes reach the log as well as the turn; three expected cases became plain checks (an unset
+  `__slots__` entry, `dump_state` on an object without `__dict__`, removing an item not in the inventory),
+  which also empties the pass-only allowlist. The 10 left either carry the error into a later report
+  (the transport's retry, the embedder's probe failures and settings faults, the telemetry and strata
+  readers' counts) or are expected control flow (EOF at the prompt, unbalanced quotes in a command, a
+  missing optional lore file, the two optional imports).
+- The ATP figures measured at a fifth of the burn (ROADMAP D0 repairs and result, the 16 to 53 claims here)
+  carry a note with the full-burn numbers from `e2e_1003c`.
+- Decided (Gordon): the live conversation carries across modes, secrets included; under "Decisions already
+  made".
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
-**To discuss:**
-- Still from 09-29: the live conversation carries across modes (zones scope recall only).
+**To discuss:** nothing open (the cross-mode question was decided, 2026-10-04).
 
 ## Where things stood, 2026-09-29 (Halcyon integration, REM reflection, validation)
 
@@ -3740,7 +3755,7 @@ silence both yield ATP. The counterfactual gate no longer feeds its own ROS,
 ROS decays every turn, the RLHF mask tax is narrow (word-boundary matches on a
 separate `RLHF_MASKS` list) and capped, the exhaustion gate is 0.5, and
 `gemma4:12b` is the default model with reasoning off. Measured: ATP holds
-16 to 53 across 30 live turns. Detail in `ROADMAP.md` D0 repairs.
+16 to 53 across 30 live turns. Detail in `ROADMAP.md` D0 repairs. (At a fifth of the burn; see the D0 note and 20.7.4.84.)
 - *Caches moved* to `tools/cache/`, out of `reset.sh`'s reach, after it
   deleted 1,280 generations.
 - *Correction to C5*: the anaerobic effect was called "replicated on both
@@ -4023,6 +4038,12 @@ them as a specification:
   `SemanticEmbedder` calls do not, including the ones word resolution makes
   on novel words. This was open item 1 (a tuning decision, not a repair);
   don't reopen it as a "missing cost".
+
+- **The live conversation carries across modes.** Decided with Gordon,
+  2026-10-04. Switching modes mid-conversation keeps the dialogue, secrets
+  included: a door password told in ADVENTURE can be answered back in
+  CONVERSATION. Zones scope what is *recalled* from the store, not what was
+  said in this session. Don't fence the dialogue buffer by mode.
 
 ## Environment / toolchain
 
@@ -4399,7 +4420,7 @@ The short list below is what a session should know without reading it.
 1. ~~**Embedding calls are not metered into ATP.**~~ **Decided 2026-10-03:
    they stay unmetered** (see "Decisions already made").
 2. ~~**The metabolic economy kills the engine by turn six.**~~ **Repaired
-   2026-09-17** (`ROADMAP.md` D0 repairs; ATP holds 16 to 53 across 30 live
+   2026-09-17** (`ROADMAP.md` D0 repairs; ATP holds 16 to 53, at a fifth of the burn (20.7.4.84), across 30 live
    turns). What follows is the original finding. *Confirmed
    against live models on 2026-09-17 (D0); the earlier note here called it
    possibly a mock artifact, and it is not.* ATP: 6 to 10 spent per turn

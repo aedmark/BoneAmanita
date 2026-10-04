@@ -935,6 +935,8 @@ Gordon's calls, implemented and measured. A 30-turn live census on gemma4:12b
 now ends with ATP between 16 and 53 (it used to be zero from turn six) and ROS
 peaking at 5 to 45 rather than 98.
 
+> **Measured at a fifth of the burn (found 2026-10-03, 20.7.4.84).** From a session's first redraft, a stuck `is_steering_retry` flag ran every Metabolic Burn at 20%, so this figure understates the cost. At full burn (`e2e_1003c`, gemma4:12b, 30 turns an arm), ATP min / median: CONVERSATION 35 / 61, ADVENTURE 87 / 95, CREATIVE 69 / 82, TECHNICAL 20 / 44 (at 0.020 ATP a token, 20.7.4.85).
+
 - **The metabolic cycle always runs.** `MetabolismPhase` used to return early
   when a mode set `atp_drain_enabled: False`, which skipped the cycle, and the
   cycle is where every income path lives (vagus support under 20 ATP, PID
@@ -976,6 +978,8 @@ Every constant above is in `lore/tuning_presets.json` and registered in
 (engaged, tiring, flagging, distressed, recovering), persistence patched off,
 the real embedder, an ATP ledger that records every write to the pool and
 who made it. Re-run it; the cache is `tools/cache/somatic_census.jsonl`.
+
+> **Measured at a fifth of the burn (found 2026-10-03, 20.7.4.84).** From a session's first redraft, a stuck `is_steering_retry` flag ran every Metabolic Burn at 20%, so this figure understates the cost. At full burn (`e2e_1003c`, gemma4:12b, 30 turns an arm), ATP min / median: CONVERSATION 35 / 61, ADVENTURE 87 / 95, CREATIVE 69 / 82, TECHNICAL 20 / 44 (at 0.020 ATP a token, 20.7.4.85).
 
 **Both.** The engine's economy rests at depletion, and the person's signal
 moves the right way but never reaches the gate that would use it.

@@ -93,7 +93,7 @@ class SilentExceptionHandlers(unittest.TestCase):
     # `handle_phase_crash`, an `err` string carried to a later raise), so the
     # number overstates the problem. The unambiguous measure is the
     # pass-only ban below, which is at zero tolerance.
-    BUDGET = 29
+    BUDGET = 10
 
     def test_silent_handler_count_does_not_grow(self):
         silent = []
@@ -112,11 +112,15 @@ class SilentExceptionHandlers(unittest.TestCase):
                     and (
                         (
                             isinstance(n.func, ast.Attribute)
-                            and n.func.attr
-                            in {"log", "warning", "error", "critical", "exception", "print"}
+                            and (
+                                n.func.attr in {"log", "warning", "error", "critical", "exception", "print"}
+                                # House reporters: self._log, _log_flicker, and the phase crash barrier.
+                                or n.func.attr.startswith("_log")
+                                or n.func.attr == "handle_phase_crash"
+                            )
                         )
                         # record_crash writes the traceback to crashes.log and telemetry.
-                        or (isinstance(n.func, ast.Name) and n.func.id in {"print", "record_crash"})
+                        or (isinstance(n.func, ast.Name) and n.func.id in {"print", "record_crash", "issue_receipt"})
                     )
                     for n in inner
                 )
@@ -133,12 +137,7 @@ class SilentExceptionHandlers(unittest.TestCase):
     # The two handlers whose entire body is `pass`, and why each one is right.
     # This is an allowlist rather than a budget because every entry has to be
     # argued for in writing, and a reviewer can disagree with a line of it.
-    PASS_ONLY_ALLOWED = {
-        "engine/core.py": (
-            "JSONEncoder.default walks __slots__, and a declared-but-unset slot "
-            "raises AttributeError by design. Skipping it IS the algorithm."
-        ),
-    }
+    PASS_ONLY_ALLOWED = {}
 
     def test_no_new_pass_only_handlers(self):
         """A handler whose whole body is `pass` or `continue` and nothing else.

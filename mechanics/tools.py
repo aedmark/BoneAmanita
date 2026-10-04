@@ -444,6 +444,7 @@ class TheSubstrate:
                 with open(s_path, "w", encoding="utf-8") as f:
                     f.write(w["content"])
             except OSError as e:
+                logger.warning(f"Writing {s_path} failed: {type(e).__name__}: {e}")
                 retries = w.get("retries", 0) + 1
                 if retries > self.config.get("SUBSTRATE_WRITE_RETRIES", 3):
                     logs.append(f"{Prisma.VIOLET}FATAL ERROR: Write failed {retries - 1} times for {s_name} - {e}. Purging corrupted matter.{Prisma.RST}")
