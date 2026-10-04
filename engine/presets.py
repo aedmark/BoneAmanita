@@ -314,7 +314,7 @@ class BoneConfig:
         "BASELINE_WINDOW": 8,
         "BREVITY_FLOOR": 0.5,
         "DISENGAGEMENT_RATE": 0.3,
-        "REENGAGEMENT_RATE": 0.10,
+        "REENGAGEMENT_RATE": 0.15,
         "ANCHOR_TURNS": 4,
         "ANCHOR_SHARE": 0.75,
         "FATIGUE_WEIGHT": 0.7,

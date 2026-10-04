@@ -26,7 +26,7 @@ DISTRESS_SIGNS = (
 # Tiredness said out loud; length alone misses a person who stays terse throughout.
 FATIGUE_SIGNS = re.compile(
     # "g'night" needs its g: the optional one made any "night" ("night and day") a tired word.
-    r"(?i)\b(?:tired|exhausted|beat|worn out|drained|wiped|knackered|sleepy|crash(?:ed|ing)?|long day"
+    r"(?i)\b(?:tired|exhausted|beat|worn out|burn(?:ed|t) out|drained|wiped|knackered|sleepy|crash(?:ed|ing)?|long day"
     r"|(?:go|going|gonna go|wanna go|heading|off) to bed|bed ?time|hit the hay|g'?night|nite"
     r"|good ?night|call it a night|turn in|shut (?:my )?eyes|need (?:some |a )?(?:sleep|nap)|can'?t sleep"
     r"|can'?t be bothered|done for (?:the day|today|tonight)|running on empty|meh|whatever|can'?t be arsed)\b"
@@ -90,6 +90,17 @@ class SharedLatticeDriver:
             score += 0.3
         return min(1.0, score)
 
+    def revise_with_reading(self, reading: float) -> bool:
+        """The keeper's model reading of the same message (0-1, after the reply): this turn's update is redone
+        from whichever is higher, so the model can raise what the words showed but never mute it."""
+        before, signal = getattr(self, "_turn_read", (None, None))
+        if before is None or reading is None or reading <= signal:
+            return False
+        rate = self._user_cfg("DISENGAGEMENT_RATE", 0.3) if reading > before else self._user_cfg("REENGAGEMENT_RATE", 0.15)
+        self.u.E_u = max(0.0, min(1.0, before + (reading - before) * rate))
+        self._turn_read = (before, reading)
+        return True
+
     def infer_and_couple(
         self,
         text: str,
@@ -119,10 +130,11 @@ class SharedLatticeDriver:
 
         if is_user_turn and first_pass_this_turn:
             disengagement = self.read_disengagement(text, count_repetition)
+            self._turn_read = (self.u.E_u, disengagement)
             rate = (
                 self._user_cfg("DISENGAGEMENT_RATE", 0.3)
                 if disengagement > self.u.E_u
-                else self._user_cfg("REENGAGEMENT_RATE", 0.10)
+                else self._user_cfg("REENGAGEMENT_RATE", 0.15)
             )
             self.u.E_u = max(
                 0.0, min(1.0, self.u.E_u + (disengagement - self.u.E_u) * rate)

@@ -141,3 +141,27 @@ class TheWeightOfIsACliche(BoneTestCase):
         self.assertEqual(gatekeeper.last_rejection["text"].lower(), "the weight of")
         text, cut = gatekeeper.salvage()
         self.assertEqual(text, "Start small. Sleep on it.")
+
+
+class TheKeeperReadsTiredness(BoneTestCase):
+    """The keeper's one call also says how worn out the message sounded (TIRED: 0-10); the person model takes it."""
+
+    def test_the_reading_is_parsed_and_never_becomes_a_memory(self):
+        from engine.gate.keeper import MemoryKeeper
+
+        keeper = MemoryKeeper(None)
+        self.assertEqual(MemoryKeeper.tired_from("NONE\nTIRED: 7"), 0.7)
+        self.assertIsNone(keeper.line_for("NONE\nTIRED: 7"))
+        line = keeper.line_for("dog_name = Pepper\nTIRED: 2")
+        self.assertIn("key:dog_name", line)
+        self.assertIsNone(MemoryKeeper.tired_from("dog_name = Pepper"))
+
+    def test_the_reading_can_raise_the_turn_but_never_lower_it(self):
+        lattice = SharedLatticeDriver()
+        feed(lattice, ["I adopted a rescue dog three weeks ago. Her name is Pepper, she's about four."] * 4)
+        feed(lattice, ["Just got a text from work. Typical."])
+        words_only = lattice.u.E_u
+        self.assertFalse(lattice.revise_with_reading(0.0), "a lower reading must not mute the words")
+        self.assertEqual(lattice.u.E_u, words_only)
+        self.assertTrue(lattice.revise_with_reading(0.8))
+        self.assertGreater(lattice.u.E_u, words_only)

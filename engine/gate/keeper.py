@@ -20,6 +20,7 @@ sister_name = Odalys, visiting next week
 sleep = barely sleeping this week
 Keep what the person states, never that they asked something: no name like utc_question or pandas_query, no value like "user asked whether..." or "user wants to know...". A message that only asks is NONE; one that states something and asks ("We deploy on Debian. How do I add a service?") keeps what it states (deploy_os = Debian).
 If it changes or corrects something already kept, reuse that name. A new fact of the same kind is not a change: give it its own highly specific name (e.g., 'captain_backstory', 'city_infrastructure_ideas'). NEVER use generic names like 'plot_point', 'idea', 'detail', or 'fact', because generic names overwrite each other. ALWAYS make the key specific to the actual content. Never keep a real password, key, token, or card or ID number; a password in a story is fine. If there is nothing new worth keeping, answer with exactly: NONE
+After that line (or NONE), always add one more line: TIRED: and a number from 0 to 10 for how worn out the person sounds in this message, from their tone as well as their words. An ordinary, engaged message is 0; 10 is spent. How they sound right now goes on this line only, never as a memory (no current_mood, no mood_current).
 
 Already kept:
 {kept}
@@ -29,6 +30,7 @@ The person said: "{message}"
 _ANSWER = re.compile(r"^[\s>*`-]*([A-Za-z][A-Za-z0-9_ -]{0,39}?)[\s`*]*=\s*(.+?)[\s`*]*$")
 # The template's own words: "key = dog_name: Brisket" stored everything under "key", each over the last.
 _PLACEHOLDER = {"key", "name", "memory", "fact", "value", "short_name"}
+_TIRED = re.compile(r"^\W*TIRED\s*:\s*(\d+(?:\.\d+)?)", re.I | re.M)
 _INNER = re.compile(r"^([A-Za-z][A-Za-z0-9_ -]{0,39}?)\s*[:=]\s*(.+)$")
 
 
@@ -39,6 +41,13 @@ def _key(raw: str) -> str:
 class MemoryKeeper:
     def __init__(self, llm, enabled: bool = True, shown: int = 30, max_value: int = 200):
         self.llm, self.enabled, self.shown, self.max_value = llm, enabled, shown, max_value
+        self.last_tired = None  # 0-1, the model's reading of how worn out the last message sounded
+
+    @staticmethod
+    def tired_from(answer: str):
+        """The TIRED line's 0-10 as 0-1, or None when the keeper gave none."""
+        m = _TIRED.search(str(answer or ""))
+        return min(1.0, float(m.group(1)) / 10.0) if m else None
 
     def line_for(self, answer: str, prefix: str = ""):
         """The NOMINATE line for the keeper's answer, or None when it kept nothing or answered off-format.
@@ -61,6 +70,7 @@ class MemoryKeeper:
     def propose(self, message: str, memory: dict, prefix: str = ""):
         """One call; returns the NOMINATE line or None, and receipts what it decided. `memory` is this
         zone's, shown without `prefix` so the keeper reuses its names."""
+        self.last_tired = None
         if not self.enabled or not str(message or "").strip():
             return None
         kept = "\n".join(f"{k.removeprefix(prefix) if prefix else k} = {v}"
@@ -72,11 +82,12 @@ class MemoryKeeper:
             if usage is not None:
                 self.llm.last_usage = usage
         line = self.line_for(answer, prefix)
+        self.last_tired = self.tired_from(answer)
         issue_receipt(
             "halcyon.keeper",
             "PROPOSED" if line else "NONE",
             result_count=1 if line else 0,
-            inputs={"held": len(memory or {})},
+            inputs={"held": len(memory or {}), "tired": self.last_tired},
             detail=scrub(line or str(answer or "").strip()[:80]),
         )
         return line

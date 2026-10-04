@@ -247,6 +247,31 @@ reaches 0.6 1 of 18 to 8 of 18 (0.4: 6 to 17 of 18); scripted 71% / 17% to 93% /
 reach 0.6; each fails on the old code). Suite 1047 passed, 5 skipped. Still a word count and a vocabulary: B,
 a reading by the model, is next.
 
+**20.7.4.91: the keeper also reads how tired they sound** (B, on the keeper's call, Gordon's choice: no extra
+call, one turn behind). The keeper's answer gains a line, `TIRED: 0-10`, "an ordinary, engaged message is 0"
+(`engine/gate/keeper.py`; `MemoryKeeper.tired_from`, `last_tired`, receipted as `halcyon.keeper` inputs
+`tired`; a colon, not `=`, so it never parses as a memory). After the reply, `engine/cycle.py` hands it to
+`SharedLatticeDriver.revise_with_reading`, which redoes that turn's E_u update from whichever is higher, the
+words' signal or the model's: the model can raise what the words showed, never mute it. It reaches the next reply.
+- Probe (`scratch/tired_probe{,2}.jsonl`; all 750 messages of the 25 cached conversations through the keeper prompt
+  on gemma4:12b, 150 also through the old prompt). The first wording ("0 fresh, engaged") rated engaged messages
+  3/10 and put 9% of engaged turns over 0.4; anchoring "ordinary, engaged is 0" brought that back to 1%.
+  The keeper's saving is unchanged in kind: kept-or-not agrees on 135 of 150, mood-type keys 10 against the
+  old prompt's 15.
+- `USER.REENGAGEMENT_RATE` 0.1 to 0.15 (Gordon): with the model's readings, a person stayed read as tired through
+  the whole recovering stretch. Simulated, with the reading: at 0.1 flagging at 0.6 47%, 14 of 18 reaching it,
+  recovering misread 71%; at 0.15 35%, 13 of 18, 34%; at 0.2 31%, 12 of 18, 19%. 0.15 keeps the words-only
+  fallback (for turns the keeper does not run) at 66% of flagging turns over 0.4 (55% at 0.2), and missing a
+  flagging person costs more than capping a recovering one a few turns longer.
+- "burned out" / "burnt out" are tired words now (`test_governor_macro_policy_shift` sends "I am completely
+  burned out" and, at the faster fall, the words read it as recovering).
+- Simulated conversations, words only at 0.1 (20.7.4.90) then with the reading at 0.15: flagging turns at or over
+  0.6 17% to 35%, conversations reaching 0.6 8 to 13 of 18, recovering turns misread 10% to 34%, engaged false
+  positives 1% to 1%.
+- `tests/test_distress.py` `TheKeeperReadsTiredness` (2: the line parses and never becomes a memory; a reading
+  raises a turn and never lowers it). Suite 1049 passed, 5 skipped. Not yet seen live: the next end-to-end or
+  responsive run is the first with it.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

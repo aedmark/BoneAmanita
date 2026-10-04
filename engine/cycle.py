@@ -977,6 +977,9 @@ class GeodesicOrchestrator:
                             here = zoned(state, self.eng.store.memory_modes(), mode)["self"]["memory"]
                             if line := keeper.propose(user_message, here, STORY if zone(mode) == "story" else ""):
                                 gate_text, by = f"{model_raw or self.HELD_RATIONALE}\n{line}", "keeper"
+                            # The keeper's reading of how worn out they sounded reaches the next reply.
+                            if (lattice := getattr(self.eng, "shared_lattice", None)) is not None:
+                                lattice.revise_with_reading(keeper.last_tired)
                         if gate_text:
                             receipt = gate.adjudicate(gate_text)
 
