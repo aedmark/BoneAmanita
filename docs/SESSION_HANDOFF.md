@@ -23,7 +23,7 @@ recorded (24 and a `LICENSE` commit, 2026-09-30 and 10-01, not in the version se
   resonant engine waits until 0.7. Open item 7's "hardcoded 0.8" is gone. (Bonuses removed, 20.7.4.81.) The composer now reads
   `EPIGENETIC_SCARS` and `EPIGENETIC_BOONS` into the persona block (open item 11: scars had been written,
   never read).
-- **Fail loudly** (`2f70ddf`, `d60f798`; list in `broad_excepts.txt`, codemod `tools/strip_broad_excepts.py`).
+- **Fail loudly** (`2f70ddf`, `d60f798`; codemod `tools/strip_broad_excepts.py`; what it removed is in `2f70ddf`'s diff, its one-off list `broad_excepts.txt` deleted in 20.7.4.88).
   40+ `except Exception` blocks that swallowed errors are gone; those that re-raise or go through
   `record_crash` stay. Exposed and fixed: a `None.split()` in REM generation (`brain/mind.py`) and a dead
   `trigger_autophagy()` call (`engine/cycle.py`). The tests that pinned the silent degrade-to-hash were
