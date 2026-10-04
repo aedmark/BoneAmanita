@@ -272,6 +272,26 @@ words' signal or the model's: the model can raise what the words showed, never m
   raises a turn and never lowers it). Suite 1049 passed, 5 skipped. Not yet seen live: the next end-to-end or
   responsive run is the first with it.
 
+**The end-to-end run on 20.7.4.91** (`scratch/mode_runs/e2e_1004.jsonl`, 140 turns, gemma4:12b, exit 0): 0 blank
+replies, 0 phase crashes, no tracebacks, no `crashes.log`. The keeper read tiredness on all 139 of its calls (130 at
+0; 0.7 on "Honestly I haven't slept properly in a week", 0.4 on "Hey. Long day."); no memory a mood, a question or
+`tired`; E_u never above 0.28 for a person who never tires. Creative Determinant read on 93 turns. TECHNICAL ATP
+min / median 20 / 48. CREATIVE: its menus came back, 16 of 30 (0 in `e2e_1003c`, same prompt): "Write me the opening
+of a story about a lighthouse keeper" got three directions and the pattern held for direction after direction;
+its ATP min / median 21 / 54 (more banned-phrase tax, a Mitophagy reset). ADVENTURE slid to 53 over its last
+eight turns on ordinary burn.
+
+**20.7.4.92: a request to write is a direction, even at the start.** CREATIVE's rule 3 adds: "A request to write or
+change something is a direction, even at the start of a story ("Write the first chapter...", "Make him funnier",
+"Give him a limp", "Change it to winter"): write it fully and stop; no menu, no list of directions." The examples
+are in neither probe (a first draft used the lighthouse arm's own messages). Probes (gemma4:12b, the real engine):
+the lighthouse arm's first 12 messages, menus 10 of 12 (`e2e_1004`) to 0 of 12; the night-ferry probe, direction
+turns 1 of 6 (the same "Have the engine fail" turn that ended in "You could..." before now ends in two numbered
+options), idea turns 4 of 4 with ideas, a line each.
+Keeper probe on the current prompt (3 samples a case): questions left alone 21 of 21, facts kept 15 of 15, small
+talk 3 of 3; the six real TECHNICAL questions with the memory the keeper saw 15 of 18 (the misses all "What about
+memory for a 5 GB log file?", kept as the file's size, as in 20.7.4.82); a TIRED line on all 57 answers.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
