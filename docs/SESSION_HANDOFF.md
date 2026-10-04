@@ -225,6 +225,28 @@ turn 26) and recovers. 0 blank, 0 crashes, 0 pauses; code in 24 of 30; redrafts 
 - Decided (Gordon): the live conversation carries across modes, secrets included; under "Decisions already
   made".
 
+**20.7.4.90: the person model can see a tired person.** In the 10-03 rescue conversation the person flagged
+("Tired. Hope she's quiet tonight.", "Just got a text from work. Typical.") and the engine's E_u peaked at 0.41:
+the composer's flagging cap (`E_U_FLAGGING` 0.6) never fired, the cortex's exhaustion gate (0.5) never fired, the
+tiring cap (0.4) once. A replay of the run's messages through `SharedLatticeDriver` reproduces the recorded E_u
+exactly. Four causes (`drivers/lattice.py`):
+- Each message counted only its strongest cue (`max(brevity, repetition, fatigue)`): a short message that also
+  says it is tired was no more tired than either. Now `max(brevity, repetition) + fatigue`, capped at 1.
+- `FATIGUE_SIGNS`' `g?'?night` made the g optional, so "night and day", "for the night" and "Night" were tired
+  words; "Just wanna go to bed" was not. `g'?night` now, plus going/gonna/wanna go to bed, bedtime, long day,
+  sleepy, knackered, need a nap, done for the day.
+- E_u moved 15% of the way toward each message (`USER.DISENGAGEMENT_RATE`), so even six straight 0.7 messages
+  could not lift it to 0.5 inside a six-turn phase. Now 0.3 (the fall stays 0.1).
+- The thresholds are a ladder, not a mismatch: tiring 0.4 (5 sentences), the cortex gate 0.5 (100 words, no
+  question), flagging 0.6 (3 sentences, 60 words). Unchanged.
+Offline over every cached conversation (7 scripted census topics, 18 simulated-person runs; no GPU), flagging
+turns at or over 0.4 / 0.6, before then after: simulated 14% / 1% to 80% / 17%, conversations whose flagging
+reaches 0.6 1 of 18 to 8 of 18 (0.4: 6 to 17 of 18); scripted 71% / 17% to 93% / 74%. Engaged turns over 0.4:
+0% to 1%, the one a person writing "Meh, that's a lot... Meh, still seems confused" after a 232-word reply.
+`tests/test_distress.py` (3: "night" is not tired, short-and-tired adds up, four of the run's flagging messages
+reach 0.6; each fails on the old code). Suite 1047 passed, 5 skipped. Still a word count and a vocabulary: B,
+a reading by the model, is next.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

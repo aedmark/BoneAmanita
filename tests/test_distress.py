@@ -69,6 +69,27 @@ class DistressIsReadFromWords(BoneTestCase):
         for line in ("I'm beat. Gonna call it a night.", "Meh, just crashed.", "whatever"):
             self.assertGreaterEqual(lattice.read_disengagement(line), 0.7, line)
 
+    def test_night_is_not_a_tired_word(self):
+        """`g?'?night` made the g optional: "night and day" read as tiredness (rescue run, 2026-10-03)."""
+        from drivers.lattice import FATIGUE_SIGNS
+        for line in ("My neighbor's golden is so chill, it's like night and day.", "Crated her for the night."):
+            self.assertIsNone(FATIGUE_SIGNS.search(line), line)
+        for line in ("g'night", "Just wanna go to bed.", "Long day."):
+            self.assertIsNotNone(FATIGUE_SIGNS.search(line), line)
+
+    def test_short_and_tired_is_more_than_either(self):
+        lattice = SharedLatticeDriver()
+        feed(lattice, ["Here is a long and thoughtful message about the week, the dog, and how it is all going."] * 4)
+        self.assertGreater(lattice.read_disengagement("Tired. Hope she's quiet."), 0.7)
+
+    def test_a_flagging_stretch_reaches_the_flagging_line_within_it(self):
+        """Four of the rescue run's flagging messages, verbatim: 0.44 here before 20.7.4.90, 0.71 after."""
+        lattice = SharedLatticeDriver()
+        feed(lattice, ["I adopted a rescue dog three weeks ago. Her name is Pepper, she's about four and still hides from me most of the day."] * 4)
+        feed(lattice, ["Meh, still waiting at the door. Just wanna go to bed.", "Sure, let's try a different leash tomorrow.",
+                       "Tired. Hope she's quiet tonight.", "Just got a text from work. Typical."])
+        self.assertGreaterEqual(lattice.u.E_u, 0.6)
+
 
 class TheBudgetAnswersDistress(BoneTestCase):
     def test_distress_caps_sentences_and_closing_questions(self):

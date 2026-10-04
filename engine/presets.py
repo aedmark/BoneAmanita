@@ -313,7 +313,7 @@ class BoneConfig:
         "STAMINA_WORD_COST": 0.5,
         "BASELINE_WINDOW": 8,
         "BREVITY_FLOOR": 0.5,
-        "DISENGAGEMENT_RATE": 0.15,
+        "DISENGAGEMENT_RATE": 0.3,
         "REENGAGEMENT_RATE": 0.10,
         "ANCHOR_TURNS": 4,
         "ANCHOR_SHARE": 0.75,

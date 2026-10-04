@@ -25,9 +25,11 @@ DISTRESS_SIGNS = (
 )
 # Tiredness said out loud; length alone misses a person who stays terse throughout.
 FATIGUE_SIGNS = re.compile(
-    r"(?i)\b(?:tired|exhausted|beat|worn out|drained|wiped|crash(?:ed|ing)?|going to bed|hit the hay|g?'?night"
-    r"|good ?night|call it a night|turn in|shut (?:my )?eyes|need (?:some )?sleep|can'?t sleep|can'?t be bothered"
-    r"|running on empty|meh|whatever|can'?t be arsed)\b"
+    # "g'night" needs its g: the optional one made any "night" ("night and day") a tired word.
+    r"(?i)\b(?:tired|exhausted|beat|worn out|drained|wiped|knackered|sleepy|crash(?:ed|ing)?|long day"
+    r"|(?:go|going|gonna go|wanna go|heading|off) to bed|bed ?time|hit the hay|g'?night|nite"
+    r"|good ?night|call it a night|turn in|shut (?:my )?eyes|need (?:some |a )?(?:sleep|nap)|can'?t sleep"
+    r"|can'?t be bothered|done for (?:the day|today|tonight)|running on empty|meh|whatever|can'?t be arsed)\b"
 )
 _DISTRESS = tuple((w, re.compile(r"(?i)\b(?:" + p + r")\b")) for w, p in DISTRESS_SIGNS)
 
@@ -77,7 +79,8 @@ class SharedLatticeDriver:
         ratio = len(words) / max(1.0, baseline)
         brevity = max(0.0, min(1.0, 1.0 - (ratio / brevity_floor)))
         fatigue = self._user_cfg("FATIGUE_WEIGHT", 0.7) if FATIGUE_SIGNS.search(text) else 0.0
-        return max(brevity, repetition, fatigue)
+        # A short message that also says it is tired is more tired than either alone.
+        return min(1.0, max(brevity, repetition) + fatigue)
 
     @staticmethod
     def read_distress(text: str) -> float:
@@ -117,7 +120,7 @@ class SharedLatticeDriver:
         if is_user_turn and first_pass_this_turn:
             disengagement = self.read_disengagement(text, count_repetition)
             rate = (
-                self._user_cfg("DISENGAGEMENT_RATE", 0.15)
+                self._user_cfg("DISENGAGEMENT_RATE", 0.3)
                 if disengagement > self.u.E_u
                 else self._user_cfg("REENGAGEMENT_RATE", 0.10)
             )
