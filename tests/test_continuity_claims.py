@@ -105,3 +105,19 @@ class ThePattern(BoneTestCase):
         self.assertIsNone(gk._find_crime(CLAIM, "CREATIVE"))
         gk.allowed = {"UNBACKED_CONTINUITY"}
         self.assertIsNone(gk._find_crime(CLAIM, "CONVERSATION"))
+
+
+class NotInTheirStory(BoneTestCase):
+    """feud20 (2026-10-05): to "I'll pick you up at 10." BoneAmanita answered "I will see you then.", and to "Did you
+    tell them why?" "I didn't tell anyone anything", as if one of the friends. IN_THEIR_STORY is the backstop."""
+
+    def test_catches_meeting_and_telling_not_their_look_alikes(self):
+        from physics.filters import TheGatekeeper
+
+        gk = TheGatekeeper(self.engine.lex)
+        for text in ("I will see you there at ten on Saturday.", "Sounds good. See you then.", "I can be there at ten.",
+                     "I haven't told anyone anything.", "I haven't spoken to anyone about it."):
+            self.assertEqual((gk._find_crime(text, "CONVERSATION") or {}).get("name"), "IN_THEIR_STORY", text)
+        for text in ("She said she'd see you there.", "I can't tell if she meant it.", "Have you talked to her?",
+                     "I can see why that hurt."):
+            self.assertIsNone(gk._find_crime(text, "CONVERSATION"), text)

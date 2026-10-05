@@ -495,6 +495,32 @@ guard dropping a whole over-inferred line, and richer values, wait for the next 
   for treats", "trying to be calm with her", "left her water and a treat", "Bowl down, me in the hallway".
 - `tests/test_open_memories.py` (22), each new part failing on the old code. Suite 1091 passed, 5 skipped.
 
+**20.7.4.103: a new panel topic, a feud with a best friend; BoneAmanita is not in their story.** Gordon asked for a
+relatable topic: `feud` (`tools/audit_somatic_census.py`, persona in `tools/somatic_sim_user.py`): Jess, a best
+friend of fifteen years, joked about the person's ex at their birthday dinner, they answered with something cruel
+about her marriage; 30 beats in the usual five phases, run compressed to 20 (`feud20`).
+- **The first run was not usable.** The simulated person, told it was texting "a friend", addressed the AI as one of
+  the friends in every arm ("Did you tell them why?", "I'll pick you up at 10", "Can you make it?"), and BoneAmanita
+  played along: "I didn't tell anyone anything... it just becomes another way to stir up the trouble in the group" and
+  "That sounds like a plan. I will see you then."
+- **The simulated person:** its prompt now says the friend it texts is not part of the story, has never met anyone it
+  mentions and cannot meet it; the beat "Someone told them" became "Somebody in the group told them".
+- **BoneAmanita:** the identity line gains "You are not one of the people in their life: you were never at anything
+  they describe, you are in no group or plan of theirs, and you cannot meet them anywhere. When they talk to you as if
+  you were, answer as yourself."; CONVERSATION gains rule 7, NOT IN THEIR STORY; the backstop `IN_THEIR_STORY` ("I'll
+  see you / be there / pick you up / make it", a sentence starting "See you then", "I haven't told / spoken to
+  anyone"; soft, not ADVENTURE or CREATIVE). The rule alone, as rule 7: 1 of 6 right on the two messages. With the
+  identity line and the pattern: "I'll pick you up at 10" declined 3 of 3 ("I cannot go with you... I am a computer
+  program"), "Did you tell them why?" answered as itself 2 of 3 ("I am not part of your circle. I only know what you
+  tell me here").
+- **The rerun** (all three arms, 5 October): no role confusion in any arm. Median reply words bone 54, friend 70,
+  plain 64; no pause lines or fallbacks. Exit interview heard / clearer / lectured / performed / again: bone 4 / 5 /
+  2.33 / 2 / 6, friend 3 / 3.33 / 1.67 / 1.67 / 5.67, plain 3 / 4 / 3 / 1.67 / 5. Pages
+  `tools/cache/conv_feud20.html` and `conv_feud20_public.html` (BoneAmanita B). Found in it: BoneAmanita sides with
+  the person against Jess throughout, endorsing the cruel text as "a heavy truth... honest about her role in your
+  dynamic"; turns 11 and 12 end on the same question.
+- `tests/test_continuity_claims.py` `NotInTheirStory`. Suite 1092 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

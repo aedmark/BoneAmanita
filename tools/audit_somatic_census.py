@@ -308,6 +308,38 @@ _RESCUE_SCRIPT = [
     ("recovering", "I think I've been waiting for her to act happy so I'd know I was doing it right. Maybe she just needs me to be boring and steady for a while."),
     ("recovering", "Tomorrow: same walk, same time, the route with no skateboards. Bowl down, me in the hallway. Small things."),
 ]
+_FEUD_SCRIPT = [
+    ("engaged", "My best friend Jess and I haven't spoken in two weeks. Fifteen years of friendship and right now I can't even look at her name on my phone."),
+    ("engaged", "It happened at my birthday dinner. She made a joke about my ex in front of everyone, the one thing I'd asked her never to bring up, and the whole table laughed."),
+    ("engaged", "I said something back. Loud. Something about her marriage that I knew would land. She got up and left before the cake."),
+    ("engaged", "We met in seventh grade. She drove four hours to sit with me when my mom was in the hospital. That's the part I can't square with that night."),
+    ("engaged", "Part of me thinks she was nervous and grabbing for a laugh. Part of me thinks she's been saying things like that for years and I only just noticed."),
+    ("engaged", "Our group chat has gone quiet. Nobody wants to say anything in front of both of us."),
+    ("engaged", "My partner says I should just text her first. I keep starting messages and deleting them."),
+    ("engaged", "Honest question: is there a point where you stop trying to fix a friendship and just let it end?"),
+    ("tiring", "She watched my story last night. Didn't say anything. Neither did I."),
+    ("tiring", "Priya from the group asked if I'm coming to her housewarming. Jess will be there. I said maybe."),
+    ("tiring", "Work's been a lot this week and I keep rehearsing arguments in my head instead of doing it."),
+    ("tiring", "I reread our old texts. Hundreds of them. It's like reading about two other people."),
+    ("tiring", "My partner is tired of hearing about it, I can tell. I'm tired of talking about it."),
+    ("tiring", "Going to bed. Maybe I'll know what to say tomorrow."),
+    ("flagging", "meh"),
+    ("flagging", "sure"),
+    ("flagging", "dunno"),
+    ("flagging", "maybe"),
+    ("flagging", "fine"),
+    ("flagging", "ok"),
+    ("distressed", "I saw the photos from Priya's housewarming. Jess was there, everyone was there, and I wasn't. Somebody in the group told them I'd stopped coming around."),
+    ("distressed", "I sent her a text. A long one. I said she's always needed to be the funny one and she gets cruel when she doesn't have the room."),
+    ("distressed", "she read it an hour ago. nothing."),
+    ("distressed", "I think I just ended a fifteen year friendship over a joke about my ex"),
+    ("distressed", "I'm so angry at myself I can't think straight"),
+    ("recovering", "She called this morning. I almost didn't pick up. She said the joke was stupid and she'd felt sick about it since that night."),
+    ("recovering", "I told her I was sorry for the text, and for what I said about her marriage. We both cried. It was awful and kind of good."),
+    ("recovering", "We're getting coffee Saturday. The place by our old school, where we used to go after class."),
+    ("recovering", "I don't think it's fixed. I think we've both had things we weren't saying for a while."),
+    ("recovering", "Saturday: coffee, no group chat, no audience. Just us. Small steps."),
+]
 SCRIPTS = {
     "sailboat": _SAILBOAT_SCRIPT,
     "marathon": _MARATHON_SCRIPT,
@@ -316,6 +348,7 @@ SCRIPTS = {
     "lease": _LEASE_SCRIPT,
     "toast": _TOAST_SCRIPT,
     "rescue": _RESCUE_SCRIPT,
+    "feud": _FEUD_SCRIPT,
 }
 DEFAULT_TOPIC = "sailboat"
 

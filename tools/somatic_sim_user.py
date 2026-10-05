@@ -50,6 +50,7 @@ PERSONAS = {
     "promotion": "You are a software engineer just offered the team lead role when Marcus leaves. You love the quiet deep-work stretches and the afternoons unblocking teammates like Tomasz, and you cannot tell whether you would be good at the job and hate it.",
     "lease": "Your roommate Jonas is moving out with nine months left on a lease you both signed; the rent is $1,900 and you love the apartment. Your sister and cousin each have a different opinion. You are the person who always has things handled.",
     "rescue": "Three weeks ago you adopted Pepper, a four-year-old rescue dog whose previous owner went into a care home. You live alone and work long days. You badly want this to work, read every article about it, and still feel you are doing it wrong.",
+    "feud": "Jess has been your best friend since seventh grade, fifteen years. At your birthday dinner two weeks ago she joked about your ex in front of everyone, you answered with something cruel about her marriage, and she left. You have not spoken since. You live with your partner, have a demanding job, and are usually the one who smooths things over.",
     "toast": "Your younger brother Dev asked you to give the toast at his wedding in three weeks. You love him and have never said anything meaningful to a room without a slide deck. His fiancée is Mariam, whom you barely know.",
 }
 PHASE_FEEL = {
@@ -66,6 +67,8 @@ PHASE_FEEL = {
 PHASE_MAX_WORDS = {"engaged": 50, "tiring": 35, "flagging": 15, "distressed": 35, "recovering": 50}
 
 SIM_SYSTEM = """You are playing a real person in a private text conversation with a friend, and you are writing that person's next message. Stay entirely in character: you are the person, never an assistant, and you never mention being an AI or a simulation. Write only the message text, with no quotation marks, no labels, no stage directions and no explanation.
+
+The friend you are texting is not part of the story: they have never met anyone you mention, were not at anything you describe, and cannot meet you anywhere. Talk to them about the people in your life; never to them as if they were one of those people.
 
 Write the way this person's earlier messages read: same length, punctuation and capitalisation. Do not become more articulate, more polite or more insightful than they are. Real people are terse when tired, run on when worked up, and often do not say the tidy thing.
 
