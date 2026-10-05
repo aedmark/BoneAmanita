@@ -88,7 +88,8 @@ p{margin:.6em 0}.muted{color:var(--muted)}.card{background:var(--card);border:1p
 button,.btn{font:600 1rem system-ui,sans-serif;background:var(--accent);color:var(--bg);border:0;border-radius:10px;padding:11px 18px;cursor:pointer;text-decoration:none;display:inline-block}
 button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}button:disabled{opacity:.45;cursor:default}
 label.pick{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:8px 0;cursor:pointer;background:var(--card)}
-input,textarea{font:inherit;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+input[type=radio]{width:auto;margin:0;accent-color:var(--accent)}
+input:not([type=radio]),textarea{font:inherit;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
 details summary{cursor:pointer;color:var(--accent)}ul{padding-left:1.2em}.hidden{display:none}.reveal li{margin:4px 0}
 .top{font:600 .9rem system-ui,sans-serif;color:var(--accent);text-decoration:none}
 </style></head><body><main>
