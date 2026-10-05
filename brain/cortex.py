@@ -780,13 +780,16 @@ class TheCortex:
             final_text, needs_rewrite = self.pragmatist.enforce_maxims(
                 final_text, user_input, phys_state, stamina_val
             )
-            if needs_rewrite:
+            # An objection is advice for the next draft; the last has none, so it goes on to the checks that cut.
+            last_draft = attempt == cognitive_retries - 1
+            if needs_rewrite and not last_draft:
                 rejected_by = "maxims"
                 val_res["feedback_instruction"] = (
                     "CRITICAL FAILURE: Maxim of Quantity violated. Your response was too long."
                 )
             if (
                 not val_res.get("feedback_instruction")
+                and not last_draft
                 and self.dspy_critic.enabled
                 and self.active_mode in ["ADVENTURE", "CONVERSATION"]
                 # Its "sycophancy" reads flagged ordinary play in ADVENTURE and left only pause lines.

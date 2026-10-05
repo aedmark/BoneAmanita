@@ -354,6 +354,21 @@ readers lean toward what they read first); `build_conversation_panel.py` moves i
   read. `audit_somatic_responsive.py --report` reads a compressed topic (`--topic rescue --compress 20 --report`).
 - Suite 1051 passed, 5 skipped.
 
+**20.7.4.98: the critic advises, it does not kill the last draft.** BoneAmanita's `rescue20` arm was rerun on
+20.7.4.97 (`20261005-093056`): recovery now shows (E_u 0.62 to 0.37 to 0.34, was 0.59 / 0.54 / 0.56; replies 20,
+29, 38 words), with the accepted flagging trade (0.50 to 0.57, one 86-word flagging reply). But turn 12, "Pepper just
+threw up on the rug. Night, again.", got the canned pause line "No rush. Take your time with it.": the DSPy critic
+refused both drafts ("highly generalized, therapeutic language"; then "It makes sense that you are exhausted" as
+boilerplate, which is narration the voice forbids), and the last-draft salvage covered only the gatekeeper, the
+validator and the length trim, so a critic objection on the last draft went straight to the pause line. Across every
+cached run the critic caused 3 pause lines (2 responsive, 1 in `e2e_0929b`). Now its verdict, and the maxims' "too
+long", are asked only of drafts that can still be redone (`brain/cortex.py` `_execute_cognitive_loop`, `last_draft`);
+the last draft goes on to the gatekeeper and validator and their sentence cuts, as "Style rules cut, they don't kill"
+already decided for the others. `tests/test_heavy_replies.py` `TheCriticOnTheLastDraft` (fails on the old code).
+`tools/build_blind_panel.py`'s fine print says "1 turn", not "1 turns". The conversation page was rebuilt from the
+new run with Gordon's trimmed fine print (his two kept disclosures; the date line now says BoneAmanita's run is from
+5 October); its turn 12 still shows the pause line, since the run predates this fix. Suite 1052 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

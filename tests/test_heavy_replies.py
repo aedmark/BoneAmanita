@@ -60,3 +60,22 @@ class LastDraftUnderTension(BoneTestCase):
         self.assertNotIn("Point 29 is worth checking", ui)
         redrafts = [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft"]
         self.assertTrue(all(r.effect == "heuristic_audit" for r in redrafts) and redrafts)
+
+
+class TheCriticOnTheLastDraft(BoneTestCase):
+    """rescue20 (2026-10-05): "Pepper just threw up on the rug." The DSPy critic refused both drafts and the person got
+    "No rush. Take your time with it." Its verdict is advice for the next draft; the last draft goes on to the checks
+    that cut, as a style crime does."""
+
+    def setUp(self):
+        super().setUp()
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self.engine.cortex.dspy_critic = MagicMock(enabled=True, audit_generation=MagicMock(return_value=(False, "too generic")))
+        self.engine.cortex.llm.generate = MagicMock(return_value="Rough end to a long day. Leave the rug till morning.")
+
+    def test_the_last_draft_is_not_thrown_away_for_the_critic(self):
+        result = self.engine.process_turn("Pepper just threw up on the rug. Night, again.")
+        self.assertIn("Leave the rug till morning", str(result.get("ui", "")))
+        calls = self.engine.cortex.dspy_critic.audit_generation.call_count
+        redrafts = [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft"]
+        self.assertEqual(len(redrafts), calls, "the critic is asked only about drafts that can still be redone")

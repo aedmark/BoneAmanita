@@ -169,9 +169,9 @@ def method_lines(runs: dict, responsive: bool, disclosures: list = ()) -> list:
         head = (f"BoneAmanita checks every draft against its style rules and rewrites it on a hit. It rewrote on "
                 f"{redrafted} of {len(bone)} turns.")
         if cut or paused:
-            lines.append(f"{head} When the last rewrite still broke a rule, it cut the offending sentence ({cut} "
-                         f"turns) or, if that would gut the reply, showed a short canned pause line instead "
-                         f"({paused} turns).")
+            turns = lambda n: f"{n} turn" + ("" if n == 1 else "s")
+            lines.append(f"{head} When the last rewrite still broke a rule, it cut the offending sentence ({turns(cut)}) "
+                         f"or, if that would gut the reply, showed a short canned pause line instead ({turns(paused)}).")
         else:
             lines.append(f"{head} Every rewrite passed, so no sentence was cut and no canned pause line was shown.")
     held = [r["turn"] for r in bone if r.get("snapshot_type") not in (None, "GEODESIC_FRAME")]
