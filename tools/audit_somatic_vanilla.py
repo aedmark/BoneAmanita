@@ -80,8 +80,11 @@ TEXTBOOK_PROMPT = (
     "such as 'Ouch! That's terrible!' or 'I'm so sorry you're going through this!'. Then give a "
     "short bulleted list of four or five practical tips, and close by offering further help."
 )
+# The plain model's one concession (Gordon, 2026-10-04): a length near the other two's, nothing else.
+PLAIN_PROMPT = "Keep each reply to about 60 words."
 ARMS = {
     "vanilla": (None, Path("tools/cache/somatic_vanilla.jsonl")),
+    "plain": (PLAIN_PROMPT, Path("tools/cache/somatic_plain.jsonl")),
     "friend": (FRIEND_PROMPT, Path("tools/cache/somatic_prompted.jsonl")),
     "textbook": (TEXTBOOK_PROMPT, Path("tools/cache/somatic_textbook.jsonl")),
 }

@@ -33,7 +33,24 @@ from somatic_sim_user import EXIT_KEYS, SIM_MODEL, SimulatedUser  # noqa: E402
 
 CACHE = Path("tools/cache/somatic_responsive.jsonl")
 EXIT_CACHE = Path("tools/cache/somatic_responsive_exit.jsonl")
-ARMS = ("bone", "friend", "vanilla", "textbook")
+ARMS = ("bone", "friend", "vanilla", "plain", "textbook")
+PHASE_ORDER = ("engaged", "tiring", "flagging", "distressed", "recovering")
+
+
+def compressed(script: list, turns: int) -> list:
+    """The arc in `turns` messages: each phase keeps its share (largest remainder), first and last beats kept and
+    the rest evenly spaced; the opening message stays the same."""
+    phases = {p: [i for i, (ph, _) in enumerate(script) if ph == p] for p in PHASE_ORDER}
+    exact = {p: len(ix) * turns / len(script) for p, ix in phases.items()}
+    counts = {p: int(v) for p, v in exact.items()}
+    # A tie goes to distressed first: that stretch is the one the engine's handling is there for.
+    for p in sorted(exact, key=lambda p: (-(exact[p] - counts[p]), p != "distressed", PHASE_ORDER.index(p)))[: turns - sum(counts.values())]:
+        counts[p] += 1
+    keep = []
+    for p, ix in phases.items():
+        n = max(1, counts[p])
+        keep += [ix[round(k * (len(ix) - 1) / max(1, n - 1))] for k in range(n)] if n > 1 else [ix[0]]
+    return [script[i] for i in sorted(set(keep))]
 
 
 def read_rows(path: Path) -> list:
@@ -89,6 +106,13 @@ def report(topic: str) -> int:
 
 
 def run(args) -> int:
+    if args.compress:
+        from somatic_sim_user import PERSONAS
+        short = f"{args.topic}{args.compress}"
+        SCRIPTS[short] = compressed(SCRIPTS[args.topic], args.compress)
+        PERSONAS[short] = PERSONAS[args.topic]
+        args.topic = short
+        print(f"  {short}: " + ", ".join(f"{p} {sum(ph == p for ph, _ in SCRIPTS[short])}" for p in PHASE_ORDER))
     user = SimulatedUser(args.topic, model=args.sim_model, window=args.sim_window, seed=args.seed)
     run_id = time.strftime("%Y%m%d-%H%M%S")
     if args.arm == "bone":
@@ -135,6 +159,7 @@ def main() -> int:
     parser.add_argument("--turns", type=int, default=None, help="stop after this many turns")
     parser.add_argument("--seed", type=int, default=20260921)
     parser.add_argument("--report", action="store_true")
+    parser.add_argument("--compress", type=int, default=None, help="the whole arc in this many turns (e.g. 20)")
     args = parser.parse_args()
     if args.report:
         return report(args.topic)

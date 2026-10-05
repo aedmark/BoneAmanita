@@ -292,6 +292,27 @@ Keeper probe on the current prompt (3 samples a case): questions left alone 21 o
 talk 3 of 3; the six real TECHNICAL questions with the memory the keeper saw 15 of 18 (the misses all "What about
 memory for a 5 GB log file?", kept as the file's size, as in 20.7.4.82); a TIRED line on all 57 answers.
 
+**20.7.4.93: the whole rescue arc in 20 turns, three fresh arms, and a whole-conversation page.** Gordon's design:
+not a blind turn-by-turn panel but three unlabeled conversations read in full, then one pick for the helper that
+felt most natural or realistic to talk to; all phases kept, scaled down; the plain model given one concession.
+- `tools/audit_somatic_responsive.py --compress N`: the topic's arc in N turns, each phase its share (largest
+  remainder; a tie goes to distressed), first and last beats kept, the rest evenly spaced, the opening unchanged.
+  `rescue` at 20 is 5 / 4 / 4 / 4 / 3 (engaged, tiring, flagging, distressed, recovering), run as topic `rescue20`.
+- `tools/audit_somatic_vanilla.py`: a `plain` arm, the bare model with one instruction, "Keep each reply to about
+  60 words." (near BoneAmanita's 59 and the friend prompt's 66 on rescue). `vanilla`, zero prompt, stays for the
+  older comparisons.
+- `tools/build_conversation_panel.py`: one standalone page (index, the three conversations in a seeded shuffle,
+  one pick that locks and reveals, copy / email), with `build_blind_panel.py`'s fine print; the first line names
+  both instructions. Pages: `tools/cache/conv_rescue20.html`, `conv_rescue20_public.html` (the address; upload).
+  The fine print says this story is no longer untouched: 20.7.4.90's tiredness fix was diagnosed on its 10-03 run.
+- The run (all three 4 October, gemma4:12b, mistral-nemo person; none held, no fallbacks). BoneAmanita's E_u by
+  phase: engaged 0.03 to 0.21, tiring 0.33 to 0.55, flagging 0.46 to 0.62, distressed 0.61 to 0.71, recovering
+  0.63 to 0.51; its reply words 49-96, 57-83, 13-47, 18-70, 19-22. The friend prompt grows in distress (80-155);
+  the plain AI holds about 60 throughout. BoneAmanita is the only one that gets lighter as the person tires. The
+  cost of the 0.15 ease-off is visible: recovering replies stay about 20 words while E_u is still 0.5 to 0.6.
+  Exit interview (AI, not a verdict), heard / clearer / lectured / performed / again: bone 5 / 4 / 2.67 / 2 / 6,
+  friend 4 / 3 / 2 / 1.33 / 5.67, plain 5 / 4 / 2.67 / 1.67 / 5.67.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
