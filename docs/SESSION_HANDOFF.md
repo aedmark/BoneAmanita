@@ -369,6 +369,17 @@ already decided for the others. `tests/test_heavy_replies.py` `TheCriticOnTheLas
 new run with Gordon's trimmed fine print (his two kept disclosures; the date line now says BoneAmanita's run is from
 5 October); its turn 12 still shows the pause line, since the run predates this fix. Suite 1052 passed, 5 skipped.
 
+**20.7.4.99: the rescue20 rerun on the critic fix.** BoneAmanita's arm rerun on 20.7.4.98 (`20261005-095329`):
+0 pause lines (was 1), 0 held, 0 fallbacks; rejections 11 to 8, gatekeeper salvages 3 to 1. Turn 12 ("she hid
+again. Tired of this slow progress.") now gets a real reply, by salvage. The yelling (13), "taking her back" (15) and
+the call to the shelter (17) are all said and answered. Mean E_u / median reply words by phase, previous run then
+this one: engaged 0.10 / 46 to 0.14 / 59, tiring 0.37 / 72 to 0.38 / 76, flagging 0.54 / 40 to 0.53 / 49, distressed
+0.64 / 32 to 0.64 / 31, recovering 0.44 / 29 to 0.28 / 27 (E_u 0.40, 0.27, 0.16). The early replies run a little
+longer because turns that were pause lines or salvages are now whole drafts; overall median 57 words (friend 79,
+plain 63). Exit interview (AI, not a verdict), heard / clearer / lectured / performed / again: bone 4.33 / 3.33 /
+2.33 / 1.67 / 6, friend and plain unchanged. Both conversation pages are rebuilt from it; BoneAmanita is B, the
+address only in the public copy.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
