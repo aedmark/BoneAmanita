@@ -991,16 +991,21 @@ class GeodesicOrchestrator:
                         seq, state = self.eng.store.state()
                         gate = Gate(self.eng.boundary, copy.deepcopy(state), self.eng.gate_tools, self.eng.gate_invariants)
                         gate_text, by, more = model_raw, "model", []
-                        # The keeper nominates what the person said only when the draft nominated nothing itself.
-                        if wants_keeper and not any(l.strip().startswith("NOMINATE") for l in model_raw.splitlines()):
+                        # The keeper always reads what the person said; when the draft nominated something itself,
+                        # that goes with the reply's cycle and every keeper fact in its own (it used to be skipped).
+                        if wants_keeper:
                             from engine.gate.recall import STORY, open_keys, zone, zoned
 
                             mode = getattr(getattr(self.eng, "cortex", None), "active_mode", None)
                             here = zoned(state, self.eng.store.memory_modes(), mode)["self"]["memory"]
-                            if line := keeper.propose(user_message, here, STORY if zone(mode) == "story" else "",
-                                                      open_keys=open_keys(here, self.eng.store.memory_meta())):
+                            drafted = any(l.strip().startswith("NOMINATE") for l in model_raw.splitlines())
+                            line = keeper.propose(user_message, here, STORY if zone(mode) == "story" else "",
+                                                  open_keys=open_keys(here, self.eng.store.memory_meta()))
+                            if line and drafted:
+                                more.append((line, keeper.last_open, "fact"))
+                            elif line:
                                 gate_text, by = f"{model_raw or self.HELD_RATIONALE}\n{line}", "keeper"
-                            more = [(l, o, "fact") for l, o in keeper.last_more]
+                            more += [(l, o, "fact") for l, o in keeper.last_more]
                             if keeper.last_update:
                                 more.append((keeper.last_update, keeper.last_update_open, "update"))
                             # The keeper's reading of how worn out they sounded reaches the next reply.

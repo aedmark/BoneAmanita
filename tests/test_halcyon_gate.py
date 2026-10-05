@@ -440,11 +440,13 @@ class TheMemoryKeeper(BoneTestCase):
         self.assertEqual(self.engine.store.state()[0], 0)
         self.assertEqual((self.receipt().effect, self.receipt().result_count), ("NONE", 0))
 
-    def test_a_draft_that_nominates_itself_is_left_alone(self):
+    def test_a_draft_that_nominates_itself_still_gets_the_keeper(self):
+        """The keeper was skipped when the draft nominated; what the person said that turn was lost (2026-10-05)."""
         self.respond(reply=f"{PROSE}\n{REMEMBER}")
         self.engine.process_turn(self.SISTER)
-        self.assertEqual(self.keeper_prompts, [])
-        self.assertEqual(self.engine.store.state()[1]["self"]["memory"], {"river": "runs east past the mill"})
+        self.assertEqual(len(self.keeper_prompts), 1)
+        self.assertEqual(self.engine.store.state()[1]["self"]["memory"],
+                         {"river": "runs east past the mill", "sister_name": "Odalys"})
 
     def test_it_sees_what_is_already_kept(self):
         self.respond()

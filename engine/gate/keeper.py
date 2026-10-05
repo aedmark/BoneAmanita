@@ -16,7 +16,7 @@ from engine.receipts import issue as issue_receipt
 logger = logging.getLogger("bone")
 
 PROMPT = """You keep the memory of a conversation partner. The conversation itself is forgotten between sessions; only what you keep comes back.
-Read the person's latest message. If it tells you something worth knowing later (a name, a preference, a fact about their life or work, how they are doing lately, a decision, something established in the story, or a creative idea), answer with one line for each thing worth keeping (at most three): a short name for what it is, " = ", and what to remember in a few words. For example:
+Read the person's latest message. If it tells you something worth knowing later (a name, a preference, a fact about their life or work, how they are doing lately, a decision, a plan, a small moment or win, something established in the story, or a creative idea; small things count), answer with one line for each thing worth keeping (at most three): a short name for what it is, " = ", and what to remember in a few words. For example:
 sister_name = Odalys, visiting next week
 sleep = barely sleeping this week
 Keep what the person states, never that they asked something: no name like utc_question or pandas_query, no value like "user asked whether..." or "user wants to know...". A message that only asks is NONE; one that states something and asks ("We deploy on Debian. How do I add a service?") keeps what it states (deploy_os = Debian).
@@ -93,7 +93,7 @@ class MemoryKeeper:
             if not (inner := _INNER.match(value)) or _key(inner.group(1)) in _PLACEHOLDER:
                 return None
             key, value = _key(inner.group(1)), inner.group(2)
-        if key in _NOT_KEPT:
+        if key in _NOT_KEPT or (key.startswith("tired") and value.strip().isdigit()):  # "tired_level = 2" too
             return None
         value = re.sub(r"^\s*UPDATE\s*:\s*", "", value, flags=re.I)  # "return_form = UPDATE: didn't submit the form"
         marked = bool(_OPEN_MARK.search(value))
@@ -124,14 +124,15 @@ class MemoryKeeper:
         found = self.entry_for(answer)
         return self._nominate(prefix + found[0], found[1]) if found else None
 
-    def update_for(self, answer: str, memory: dict, open_keys=(), prefix: str = "", own_key: str | None = None):
-        """The UPDATE line as (key, value, open), for an open memory it changed; None otherwise. Updates of
-        settled memories churned them (11 rewrites in 10 conversations became 57)."""
+    def update_for(self, answer: str, memory: dict, prefix: str = "", own_key: str | None = None):
+        """The UPDATE line as (key, value, open), for a memory already kept that it changed; None otherwise. An
+        UPDATE of a settled memory was ignored, and what it said with it ("trying to be calm"); with the old value
+        kept as history, a rewrite loses nothing."""
         for raw in str(answer or "").splitlines():
             if (m := _UPDATE.match(raw)) and (found := self._entry(m.group(1))):
                 key, value, marked = found
                 held = (memory or {}).get(prefix + key)
-                if prefix + key in open_keys and key != own_key and held != value:
+                if held is not None and key != own_key and held != value:
                     return key, value, marked
         return None
 
@@ -169,10 +170,10 @@ class MemoryKeeper:
         line = self._nominate(prefix + own[0], own[1]) if own else None
         self.last_open = bool(own and own[2])
         self.last_more = [(self._nominate(prefix + k, v), o) for k, v, o in facts[1:]]
-        update = self.update_for(answer, memory, open_keys, prefix, own[0] if own else None)
+        update = self.update_for(answer, memory, prefix, own[0] if own else None)
         if update and update[0] in {k for k, _, _ in facts}:
             update = None
-        if update and not said_so(update[1], message):
+        if update and rewrites(update) and not said_so(update[1], message):
             update, unsupported = None, unsupported + 1
         if update:
             self.last_update, self.last_update_open = self._nominate(prefix + update[0], update[1]), update[2]

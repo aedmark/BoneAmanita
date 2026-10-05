@@ -478,6 +478,23 @@ open, and when all else fails, ask the person.
   `test_halcyon_gate.py` retargeted to the keeper's new last line ("The person's latest message, the only one to keep
   or update from"). Suite 1089 passed, 5 skipped.
 
+**20.7.4.102: less of what was said is lost.** Three of the five losses left after 20.7.4.101 (Gordon's picks; the
+guard dropping a whole over-inferred line, and richer values, wait for the next probe).
+- **An UPDATE of a settled memory is a rewrite.** It was ignored, and what it said with it ("Fuck. I was an ass.
+  She's still under there. I'll try calm." gave `UPDATE: pet_behavior = still under the bed, trying to be calm`).
+  With the old value kept as history a rewrite loses nothing; the own-words guard still holds for open memories.
+- **Small things count.** The keeper's list of what is worth keeping gains "a plan, a small moment or win ... small
+  things count".
+- **The keeper always runs.** It was skipped when the draft nominated something itself, and what the person said
+  that turn was lost; now the draft's nomination goes with the reply's cycle and every keeper fact in its own.
+  `test_halcyon_gate.py`'s "a draft that nominates itself is left alone" is retargeted to "still gets the keeper".
+- `tired_level = 2`, the TIRED reading written as a fact, is not kept (any `tired*` key with a bare number).
+- Replays of the 10 `rescue20` conversations, 20.7.4.101's keeper against this one (both stacking): facts written
+  226 to 236, turns with nothing kept 27 to 19 (12 gained, 4 lost, sampling both ways), memories at the end 159 to
+  175, values the same length (median 5 words). Kept now where 20.7.4.101 kept nothing: "Pepper nudged owner's hand
+  for treats", "trying to be calm with her", "left her water and a treat", "Bowl down, me in the hallway".
+- `tests/test_open_memories.py` (22), each new part failing on the old code. Suite 1091 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

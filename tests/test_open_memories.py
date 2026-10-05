@@ -35,16 +35,29 @@ class TheKeepersAnswer(BoneTestCase):
 
     def test_an_update_is_read_for_an_open_memory(self):
         answer = "NONE\nUPDATE: decision_on_pepper = didn't send the return form\nTIRED: 3"
-        self.assertEqual(MemoryKeeper(None).update_for(answer, self.MEMORY, self.OPEN),
+        self.assertEqual(MemoryKeeper(None).update_for(answer, self.MEMORY),
                          ("decision_on_pepper", "didn't send the return form", False))
 
-    def test_an_update_of_a_settled_memory_nothing_kept_or_nothing_new_is_ignored(self):
-        """Updates of settled memories churned them: 11 rewrites in 10 replayed conversations became 57."""
+    def test_an_update_of_nothing_kept_or_nothing_new_is_ignored(self):
         keeper = MemoryKeeper(None)
-        self.assertIsNone(keeper.update_for("NONE\nUPDATE: dog_name = Pepper the brave\nTIRED: 0", self.MEMORY, self.OPEN))
-        self.assertIsNone(keeper.update_for("NONE\nUPDATE: car = sold it\nTIRED: 0", self.MEMORY, self.OPEN))
-        self.assertIsNone(keeper.update_for(f"NONE\nUPDATE: decision_on_pepper = {CONSIDERING}\nTIRED: 0",
-                                            self.MEMORY, self.OPEN))
+        self.assertIsNone(keeper.update_for("NONE\nUPDATE: car = sold it\nTIRED: 0", self.MEMORY))
+        self.assertIsNone(keeper.update_for(f"NONE\nUPDATE: decision_on_pepper = {CONSIDERING}\nTIRED: 0", self.MEMORY))
+
+    def test_an_update_of_a_settled_memory_is_kept_as_a_rewrite(self):
+        """It was ignored, and what it said with it: "Fuck. I was an ass. She's still under there. I'll try calm."
+        gave UPDATE: pet_behavior = still under the bed, trying to be calm."""
+        memory = {"pet_behavior": "hiding under the bed"}
+        keeper = MemoryKeeper(MagicMock(generate=MagicMock(
+            return_value="NONE\nUPDATE: pet_behavior = still under the bed, trying to be calm\nTIRED: 3")))
+        keeper.propose("Fuck. I was an ass. She's still under there. I'll try calm.", memory)
+        self.assertIn("value:still under the bed, trying to be calm", keeper.last_update)
+
+    def test_small_things_count(self):
+        """6 of 182 replayed turns kept nothing where the old keeper kept "nudged hand for treats or attention"."""
+        llm = MagicMock(generate=MagicMock(return_value="NONE\nTIRED: 0"))
+        MemoryKeeper(llm).propose("She nudged my hand.", {})
+        self.assertIn("a plan, a small moment or win", llm.generate.call_args.args[0])
+        self.assertIn("small things count", llm.generate.call_args.args[0])
 
     def test_a_rewrite_the_message_does_not_say_is_dropped(self):
         """Replays settled "thinking about taking her back" as "decided to take her back", and rewrote it as "decided
@@ -82,7 +95,8 @@ class FactsStack(BoneTestCase):
                          ["work_status", "pepper_behavior", "sleep"])
 
     def test_the_tired_reading_and_a_stray_update_mark_are_not_facts(self):
-        answer = "dinner_plan = ordering takeout\ntired = 2\nreturn_form = UPDATE: didn't submit the form\nTIRED: 2"
+        answer = ("dinner_plan = ordering takeout\ntired = 2\ntired_level = 2\n"
+                  "return_form = UPDATE: didn't submit the form\nTIRED: 2")
         self.assertEqual(MemoryKeeper(None).entries_for(answer),
                          [("dinner_plan", "ordering takeout", False), ("return_form", "didn't submit the form", False)])
 
