@@ -325,6 +325,16 @@ got worms") 3 to 1, running-low messages 7.9 to 7.5 words. A first wording that 
 did nothing (27 to 29). The page built on the old runs should not go out. ROADMAP future ideas gains "Notice what
 was never said" (Gordon: BoneAmanita should catch a reference to something it was never told, for a brainstorm).
 
+**The `rescue20` rerun with the new simulated person** (4 October, runs `20261004-233345` bone, `-234637` friend,
+`-234944` plain; none held, no fallbacks). The yelling, the return form and the shelter call are said in all three
+conversations ("I'm a mess. Yelled at her. She... she peed herself."). BoneAmanita's E_u by phase: engaged 0.03 to
+0.12, tiring 0.15 to 0.55, flagging 0.61 to 0.69, distressed 0.61 to 0.67, recovering 0.59 to 0.54; its reply words
+46-98, 26-104, 32-54, 25-40, 19-35. The friend prompt: flagging 21-90, distressed 107-143. The plain AI: 58 to 67
+throughout. Exit interview (AI, not a verdict), heard / clearer / lectured / performed / again: bone 5 / 4 / 2.33 /
+2.33 / 5.33, friend 4.67 / 4.33 / 2.67 / 2 / 6, plain 5 / 4 / 2.67 / 2 / 6. The pages (`tools/cache/conv_rescue20.html`,
+`conv_rescue20_public.html` for upload) are rebuilt from these runs. BoneAmanita is never Conversation A (Gordon:
+readers lean toward what they read first); `build_conversation_panel.py` moves it to B when the shuffle puts it first.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

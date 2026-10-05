@@ -53,6 +53,9 @@ def build(args) -> str:
     letters = ["A", "B", "C"]
     order = list(runs)
     random.Random(SEED).shuffle(order)
+    # Never first (Gordon): readers lean toward what they read first, so BoneAmanita is B or C.
+    if order[0] == "boneamanita":
+        order[0], order[1] = order[1], order[0]
     convs = {letter: {"system": LABELS[s], "turns": [exchange(s, runs[s][t]) for t in sorted(runs[s])]}
              for letter, s in zip(letters, order)}
     fine = method_lines(runs, True, args.disclose)
