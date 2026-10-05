@@ -64,6 +64,30 @@ def meaning_scores(state: dict, text: str, store, embedder, held: set | None = N
     return {k: _cosine(vectors[0], fresh[k] if k in fresh else kept[k][2]) for k in memory}
 
 
+def _exchange_text(said: str, answered: str) -> str:
+    return f"They said: {said}\nYou answered: {answered}"
+
+
+def exchange_scores(text: str, store, embedder) -> list | None:
+    """This conversation's earlier exchanges by similarity to `text`, best first, as (score, exchange). Each is
+    embedded once and kept in the store. None on the hash fallback."""
+    exchanges = store.exchanges()
+    if not exchanges or embedder is None or embedder.degraded:
+        return None if embedder is None or embedder.degraded else []
+    model = f"{embedder.backend}:{embedder.model}"
+    # nomic-embed-text is trained with these task prefixes; it ranks better with them.
+    doc, query = ("search_document: ", "search_query: ") if "nomic" in model else ("", "")
+    missing = [e for e in exchanges if not e["vector"] or e["vector"][0] != model]
+    vectors = embedder.embed_batch([query + text] + [doc + _exchange_text(e["said"], e["answered"]) for e in missing])
+    if embedder.degraded:
+        return None
+    fresh = {e["turn_id"]: v for e, v in zip(missing, vectors[1:])}
+    if fresh:
+        store.save_exchange_vectors([(t, model, v) for t, v in fresh.items()])
+    scored = [(_cosine(vectors[0], fresh.get(e["turn_id"]) or e["vector"][1]), e) for e in exchanges]
+    return sorted(scored, key=lambda se: se[0], reverse=True)
+
+
 def recall(state: dict, text: str, max_memories: int = 12, max_facts: int = 12, scores: dict | None = None) -> dict:
     """Memories ranked by meaning when `scores` are given, else by word overlap with `text`; facts by word
     overlap. Ties go to recency (later writes first)."""

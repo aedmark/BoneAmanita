@@ -1035,7 +1035,7 @@ class TheCortex:
         state = getattr(ctx, "halcyon_state", None)
         if not state:
             return None
-        from engine.gate.recall import meaning_scores, recall, zoned
+        from engine.gate.recall import exchange_scores, meaning_scores, recall, zoned
         from engine.receipts import issue as issue_receipt
 
         c_cfg = safe_get(self.cfg, "CORTEX", {})
@@ -1056,7 +1056,15 @@ class TheCortex:
         if store is not None and found["memories"]:
             meta = store.memory_meta()
             found["kept_at"] = {k: meta[k]["kept_at"] for k, _ in found["memories"] if k in meta}
+            found["earlier"] = store.memory_earlier({k for k, _ in found["memories"]})
             store.note_recalled([key for key, _ in found["memories"]])
+        if store is not None and self.active_mode != "ADVENTURE":
+            # The prompt shows the closest of these that the recent dialogue no longer holds.
+            floor = float(safe_get(c_cfg, "EXCHANGE_RECALL_FLOOR", 0.55))
+            ranked = exchange_scores(user_input, store, self._recall_embedder()) or []
+            found["exchanges"] = [{"score": round(score, 3), **{k: v for k, v in e.items() if k != "vector"}}
+                                  for score, e in ranked if score >= floor]
+            found["next_ordinal"] = max((e["ordinal"] for _, e in ranked), default=0) + 1
         held = found["held"]
         by_words = bool(held["memories"]) and found["ranked_by"] == "words"
         issue_receipt(
@@ -1064,7 +1072,7 @@ class TheCortex:
             "handed the model what it kept through the gate",
             result_count=len(found["memories"]) + len(found["facts"]),
             degraded=by_words,
-            inputs={**held, "ranked_by": found["ranked_by"]},
+            inputs={**held, "ranked_by": found["ranked_by"], "exchanges": len(found.get("exchanges") or [])},
             detail=f"memories ranked by shared words: {why}" if by_words
             else "" if held["memories"] or held["facts"] else "nothing kept yet",
         )

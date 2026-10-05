@@ -702,6 +702,8 @@ class PromptComposer:
             ("directives", system_injection),
             ("shared_reality", shared_reality_block),
             ("halcyon_recall", self._recall_block(state.get("halcyon_recall"))),
+            ("earlier", self._earlier_block(state.get("halcyon_recall"), valid_history,
+                                            int(safe_get(c_cfg, "EXCHANGE_RECALL_MAX", 3)))),
             ("dialogue", dialogue_block),
             ("somatic_budget", somatic_budget_block),
             ("mode_trigger", mode_trigger),
@@ -760,11 +762,35 @@ class PromptComposer:
                  "You chose to keep these. Use them where they bear on this turn; do not recite them."]
         # A kept state ("barely sleeping this week") read a month on as current: past a day, say when.
         kept_at, now = found.get("kept_at") or {}, time.time()
-        lines += [f"- {key.removeprefix(STORY)}: {value}{PromptComposer._kept_ago(kept_at.get(key), now)}"
+        earlier = found.get("earlier") or {}
+
+        def before(key):
+            held = [v for v, _ in earlier.get(key, [])[:3]]
+            return f" (earlier: {'; '.join(held)})" if held else ""
+
+        lines += [f"- {key.removeprefix(STORY)}: {value}{PromptComposer._kept_ago(kept_at.get(key), now)}{before(key)}"
                   for key, value in found.get("memories", [])]
         if found.get("facts"):
             lines.append("Established in the world:")
             lines += [f"- {fact}" for fact in found["facts"]]
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _earlier_block(found: Optional[dict], in_view: list, most: int = 3) -> str:
+        """The earlier exchanges closest to this turn that the recent dialogue no longer shows; empty when none."""
+        found = found or {}
+        now = int(found.get("next_ordinal") or 0)
+        shown = "\n".join(in_view) + "\n"
+        older = [e for e in found.get("exchanges") or [] if f"Traveler: {e['said']}\n" not in shown]
+        if not older or most <= 0:
+            return ""
+        lines = ["=== EARLIER IN THIS CONVERSATION ===",
+                 "From before the recent dialogue, closest to what they just said. You have said your part here; "
+                 "do not say it again. Build on it, or notice what has changed since."]
+        for e in sorted(older[:most], key=lambda e: e["ordinal"]):
+            answered = " ".join(str(e["answered"]).split())
+            answered = answered if len(answered) <= 600 else answered[:600].rsplit(" ", 1)[0] + " ..."
+            lines.append(f'- {now - e["ordinal"]} turns ago, they said: "{e["said"]}" You answered: "{answered}"')
         return "\n".join(lines) + "\n"
 
     @staticmethod

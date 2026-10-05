@@ -380,6 +380,39 @@ plain 63). Exit interview (AI, not a verdict), heard / clearer / lectured / perf
 2.33 / 1.67 / 6, friend and plain unchanged. Both conversation pages are rebuilt from it; BoneAmanita is B, the
 address only in the public copy.
 
+**20.7.4.100: what was said stays said; a memory keeps what it held.** BoneAmanita repeats itself (turn 11 said
+turn 9's sentence word for word; "It takes time for..." in 5 of the first 8 replies). Cutting the repeated sentence
+was built and dropped: Gordon called it chasing a symptom, the cause being a memory that does not insist on itself. A
+replay of the run's 20 messages showed why. The reply prompt holds the last 4096 characters of dialogue
+(`MAX_HISTORY_CHARS`, not in the presets), 7 to 11 exchanges, so by turn 15 ("I'm thinking about taking her back")
+turn 4 ("how long do you wait before you admit a dog and a person just aren't a match?") was gone; and the keeper keeps
+one fact a turn, a new value erasing the old under the same key (3 of 18: `pepper_fear_trigger` "postman" then
+"squirrel", a second trigger read as a change; `pepper_behavior` "still anxious and barks at everything" then "hid
+behind couch today" then "...again today").
+- **Exchanges are embedded** (`exchange_vectors`; `engine/gate/recall.py` `exchange_scores`, once each, with
+  nomic's `search_document:` / `search_query:` prefixes, which ranked best of three forms offline). Each turn
+  outside ADVENTURE the cortex ranks this conversation's exchanges against the message (`EXCHANGE_RECALL_FLOOR` 0.55);
+  the prompt's EARLIER IN THIS CONVERSATION shows up to `EXCHANGE_RECALL_MAX` (3) the recent dialogue no longer
+  holds, "N turns ago", with "You have said your part here; do not say it again. Build on it, or notice what has
+  changed since." The `halcyon.recall` receipt counts them. Limits seen offline: at 20 turns only turns 0 to 6 ever
+  leave the window, and nomic scores turn 4 at 0.51 for "taking her back" (topical, not inferential), so that link
+  is still missed. Probe `20261005-105838` (one run; the simulated person told a different story): reused 4-grams
+  per 100 words 3.04 to 0.19 (earlier BoneAmanita runs 0.39 to 1.19), repeated sentence openers 18/71 to 7/68,
+  rejections 8 to 5, model calls 52 to 48, median 53.5 words; the block reached the prompt on 7 of 20 turns, all from
+  turn 11. Exit interview heard / clearer / lectured / performed / again: 4.33 / 3.33 / 2.33 / 1.67 / 5.67. A miss
+  for the brainstorm: "I can't stop thinking about that damn return form." came from nowhere and got "a bureaucratic
+  hurdle", never "do you mean returning her?".
+- **A memory written again keeps what it held** (Gordon's call: the engine keeps the history, the keeper is not
+  asked to judge). `commit_cycle` puts the old value (scrubbed, with its `kept_at`) in `memory_history` when
+  `remember` or `reflect` writes a different value to a held key; `forget` drops it; WHAT YOU REMEMBER shows up to
+  3, newest first: `pepper_behavior: hid again today... (earlier: hid behind couch again today; hid behind couch
+  today; still anxious and barks at everything)`, as seen live in a second replay. Not fixed by it: a memory the
+  keeper never updates goes stale (`decision_on_pepper: considering returning her` was still held after they kept
+  her).
+- ROADMAP's "Notice what was never said" gains its other half, noticing what has already been said.
+  `tests/test_exchange_recall.py` (5) and `tests/test_memory_history.py` (4), each failing on the old code. Suite
+  1061 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

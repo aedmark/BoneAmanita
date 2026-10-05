@@ -123,6 +123,13 @@ class Store:
           key TEXT PRIMARY KEY, text_hash TEXT NOT NULL, model TEXT NOT NULL,
           vector_json TEXT NOT NULL, updated_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS memory_history (
+          key TEXT NOT NULL, value TEXT NOT NULL, kept_at REAL, replaced_at REAL NOT NULL, turn_id TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS exchange_vectors (
+          turn_id TEXT PRIMARY KEY REFERENCES turns(id), model TEXT NOT NULL,
+          vector_json TEXT NOT NULL, created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS engine_checkpoint (
           singleton INTEGER PRIMARY KEY CHECK(singleton = 1), snapshot_json TEXT NOT NULL,
           state_sequence INTEGER NOT NULL, updated_at REAL NOT NULL
@@ -277,13 +284,21 @@ class Store:
             if state_changed:
                 claim = receipt["claim"]
                 if claim["verb"] in ("remember", "reflect"):
+                    key = claim["args"]["key"]
+                    before = ((old_state.get("self") or {}).get("memory") or {}).get(key)
+                    if before is not None and before != claim["args"]["value"]:
+                        # A key written again keeps what it held: "postman" was a trigger, not a mistake.
+                        kept = db.execute("SELECT kept_at FROM memory_meta WHERE key=?", (key,)).fetchone()
+                        db.execute("INSERT INTO memory_history VALUES (?,?,?,?,?)",
+                                   (key, scrub(str(before), story), kept["kept_at"] if kept else None, now, turn_id))
                     db.execute("INSERT OR REPLACE INTO memory_meta (key, mode, turn_id, kept_at, receipt_id, kept_by, "
                                "feeling_json) VALUES (?,?,?,?,?,?,?)",
                                (claim["args"]["key"], mode, turn_id, now, receipt_id, by,
                                 json.dumps(feeling) if feeling else None))
                 elif claim["verb"] == "forget":
-                    db.executemany("DELETE FROM memory_meta WHERE key=?",
-                                   [(k,) for k in (receipt.get("result") or {}).get("forgot", [])])
+                    gone = [(k,) for k in (receipt.get("result") or {}).get("forgot", [])]
+                    db.executemany("DELETE FROM memory_meta WHERE key=?", gone)
+                    db.executemany("DELETE FROM memory_history WHERE key=?", gone)
                 db.execute(
                     "INSERT INTO mutations VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (_id("mut"), turn_id, current_sequence, next_sequence, claim["verb"],
@@ -383,6 +398,32 @@ class Store:
                 if key not in keep:
                     db.execute("DELETE FROM memory_vectors WHERE key=?", (key,))
 
+    def exchanges(self) -> list[dict]:
+        """This session's committed turns, oldest first: ordinal, turn_id, said, answered, and the stored
+        embedding as (model, vector), or None."""
+        if getattr(self, "_conversation_id", None) is None:
+            return []
+        db = self.connect()
+        try:
+            rows = db.execute(
+                "SELECT t.id turn_id, t.ordinal, u.raw_content said, a.display_content answered, v.model, v.vector_json "
+                "FROM turns t JOIN messages u ON u.turn_id=t.id AND u.role='user' "
+                "JOIN messages a ON a.turn_id=t.id AND a.role='assistant' "
+                "LEFT JOIN exchange_vectors v ON v.turn_id=t.id "
+                "WHERE t.conversation_id=? AND u.raw_content != '' ORDER BY t.ordinal", (self._conversation_id,)
+            ).fetchall()
+        finally:
+            db.close()
+        return [{"turn_id": r["turn_id"], "ordinal": r["ordinal"], "said": r["said"], "answered": r["answered"],
+                 "vector": (r["model"], json.loads(r["vector_json"])) if r["vector_json"] else None} for r in rows]
+
+    def save_exchange_vectors(self, rows: list) -> None:
+        """Upsert (turn_id, model, vector) rows."""
+        now = time.time()
+        with self.transaction(immediate=True) as db:
+            db.executemany("INSERT OR REPLACE INTO exchange_vectors VALUES (?,?,?,?)",
+                           [(t, m, json.dumps(v), now) for t, m, v in rows])
+
     def note_recalled(self, keys: list) -> None:
         """Memories handed back to the model this turn; forgetting evicts the least recalled first."""
         now = time.time()
@@ -405,6 +446,19 @@ class Store:
     def memory_modes(self) -> dict[str, str | None]:
         """{key: the mode it was kept in}; memories kept before 20.7.4.62 have no row."""
         return {k: m["mode"] for k, m in self.memory_meta().items()}
+
+    def memory_earlier(self, keys=None) -> dict[str, list[tuple[str, float | None]]]:
+        """{key: [(value, kept_at), ...]}: what each memory held before it was written again, newest first."""
+        db = self.connect()
+        try:
+            rows = db.execute("SELECT key, value, kept_at FROM memory_history ORDER BY replaced_at DESC").fetchall()
+        finally:
+            db.close()
+        earlier: dict = {}
+        for r in rows:
+            if keys is None or r["key"] in keys:
+                earlier.setdefault(r["key"], []).append((r["value"], r["kept_at"]))
+        return earlier
 
     def memory_meta(self) -> dict[str, dict]:
         """{key: mode, turn_id, kept_at, receipt_id, kept_by, feeling}: where each memory came from, and how
