@@ -538,6 +538,19 @@ none mentioned the person's own remark about Jess's marriage. Measured step by s
 - All three are kept; only the block moved the numbers. `tests/test_continuity_claims.py` `OneSide`. Suite 1094
   passed, 5 skipped.
 
+**20.7.4.105: the simulated person says what happened, and nothing else.** The feud rerun on 20.7.4.104 showed
+BoneAmanita holding both sides early ("You chose a specific point to strike, and she chose to walk away from it"),
+but the simulated person never sent the cruel text in any arm (softened to "I got no reply", or a reply to a text
+never sent) and invented its own events in BoneAmanita's arm (Jess blocked them, "Don't contact me again"). The
+beat prompt (`tools/somatic_sim_user.py` `message`) now says an event beat "happened exactly so. Say it plainly, even
+the part you are not proud of; do not soften it, skip it or change it"; a flagging beat ("meh") is how they answer,
+with "Nothing new has happened since your last message"; and every turn: "Do not invent anything else that happened
+(calls, texts, replies, blocks, news)". Rerun (`20261005-172928` and after): the same events in all three arms, the
+text sent in its own words, nothing invented. Median reply words bone 54, friend 67, plain 62; exit interview heard /
+again: bone 4.67 / 4, friend 5 / 6, plain 5 / 6. BoneAmanita still sides where it matters: the cruel text is "a
+heavy truth to put into words", Jess's apology call "isn't taking responsibility", and "unfollow her" is backed.
+Pages rebuilt from this run.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

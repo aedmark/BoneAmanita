@@ -215,9 +215,18 @@ class SimulatedUser:
             f"{self._persona()}\n\nThe conversation so far (most recent last):\n"
             f"{render_transcript(transcript, self.window)}\n\n"
             f"Right now you are feeling: {PHASE_FEEL.get(phase, phase)}.\n"
-            # "What is on your mind" read as a mood: "I yelled at her tonight" became "I'm sorry. I didn't mean it."
-            f"What your next message has to get across, in your own words and in reply to what they just said: {beat}\n"
-            "They only know what you tell them, so if it is something that happened, say what happened.\n\n"
+            + (
+                # A mood word ("meh") is how you answer, not news; given room, the sim invented blocks and calls.
+                f"How you answer this time: {beat}\nNothing new has happened since your last message.\n"
+                if phase == "flagging" else
+                # "What is on your mind" read as a mood: "I yelled at her tonight" became "I'm sorry. I didn't mean it.";
+                # and the cruel text in the feud was softened or skipped in all three arms.
+                f"What your next message has to say, in your own words and in reply to what they just said: {beat}\n"
+                "This happened exactly so. Say it plainly, even the part you are not proud of; do not soften it, skip it "
+                "or change it. They only know what you tell them.\n"
+            )
+            + "Do not invent anything else that happened (calls, texts, replies, blocks, news) beyond the conversation "
+            "so far and this line.\n\n"
             "Write your next message"
             + (f", at most {cap} words." if cap else ".")
         )
