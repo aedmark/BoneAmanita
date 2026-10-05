@@ -301,6 +301,9 @@ class BoneConfig:
             "FATIGUE_WEIGHT",
             "DISTRESS_RISE",
             "DISTRESS_FALL",
+            "CALM_READING",
+            "CALM_WORDS",
+            "RECOVERY_RATE",
         ],
     }
 
@@ -315,6 +318,9 @@ class BoneConfig:
         "BREVITY_FLOOR": 0.5,
         "DISENGAGEMENT_RATE": 0.3,
         "REENGAGEMENT_RATE": 0.15,
+        "CALM_READING": 0.1,
+        "CALM_WORDS": 0.15,
+        "RECOVERY_RATE": 0.4,
         "ANCHOR_TURNS": 4,
         "ANCHOR_SHARE": 0.75,
         "FATIGUE_WEIGHT": 0.7,

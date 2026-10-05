@@ -6,6 +6,8 @@ Run one system against a simulated person who reacts to it, then report.
     python tools/audit_somatic_responsive.py --topic toast --arm vanilla
     python tools/audit_somatic_responsive.py --topic toast --arm bone      # the full engine
     python tools/audit_somatic_responsive.py --topic toast --report
+    python tools/audit_somatic_responsive.py --topic rescue --compress 20 --arm plain   # the arc in 20 turns
+    python tools/audit_somatic_responsive.py --topic rescue --compress 20 --report
 
 One arm per invocation (the engine arm alone takes most of a background
 task's ten minutes). Each arm writes to `tools/cache/somatic_responsive.jsonl`
@@ -162,7 +164,7 @@ def main() -> int:
     parser.add_argument("--compress", type=int, default=None, help="the whole arc in this many turns (e.g. 20)")
     args = parser.parse_args()
     if args.report:
-        return report(args.topic)
+        return report(f"{args.topic}{args.compress}" if args.compress else args.topic)
     if not args.arm:
         parser.error("--arm is required unless --report")
     return run(args)

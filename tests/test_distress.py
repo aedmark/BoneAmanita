@@ -159,9 +159,28 @@ class TheKeeperReadsTiredness(BoneTestCase):
     def test_the_reading_can_raise_the_turn_but_never_lower_it(self):
         lattice = SharedLatticeDriver()
         feed(lattice, ["I adopted a rescue dog three weeks ago. Her name is Pepper, she's about four."] * 4)
-        feed(lattice, ["Just got a text from work. Typical."])
+        feed(lattice, ["Sure, tomorrow then."])
         words_only = lattice.u.E_u
-        self.assertFalse(lattice.revise_with_reading(0.0), "a lower reading must not mute the words")
+        self.assertFalse(lattice.revise_with_reading(0.0), "a calm reading must not mute words that read as tired")
         self.assertEqual(lattice.u.E_u, words_only)
         self.assertTrue(lattice.revise_with_reading(0.8))
         self.assertGreater(lattice.u.E_u, words_only)
+
+    def test_calm_on_both_readings_eases_off_faster(self):
+        """Recovery: the model reads them as fresh and the words are calm, so E_u falls at RECOVERY_RATE (rescue20)."""
+        lattice = SharedLatticeDriver()
+        feed(lattice, ["I adopted a rescue dog three weeks ago. Her name is Pepper, she's about four."] * 4)
+        lattice.u.E_u = 0.6
+        feed(lattice, ["Called the shelter. They said it's normal and she'll come round by morning."])
+        slow = lattice.u.E_u
+        self.assertTrue(lattice.revise_with_reading(0.0))
+        self.assertLess(lattice.u.E_u, slow)
+
+    def test_a_tired_word_is_never_eased_off_by_a_calm_reading(self):
+        lattice = SharedLatticeDriver()
+        feed(lattice, ["I adopted a rescue dog three weeks ago. Her name is Pepper, she's about four."] * 4)
+        lattice.u.E_u = 0.6
+        feed(lattice, ["Tired. Bed soon."])
+        words_only = lattice.u.E_u
+        self.assertFalse(lattice.revise_with_reading(0.0))
+        self.assertEqual(lattice.u.E_u, words_only)

@@ -94,7 +94,15 @@ class SharedLatticeDriver:
         """The keeper's model reading of the same message (0-1, after the reply): this turn's update is redone
         from whichever is higher, so the model can raise what the words showed but never mute it."""
         before, signal = getattr(self, "_turn_read", (None, None))
-        if before is None or reading is None or reading <= signal:
+        if before is None or reading is None:
+            return False
+        # Both read them as fine (the model calm, the words neither short nor tired): ease off faster.
+        if (reading <= self._user_cfg("CALM_READING", 0.1) and signal < self._user_cfg("CALM_WORDS", 0.15)
+                and signal < before):
+            self.u.E_u = max(0.0, before + (signal - before) * self._user_cfg("RECOVERY_RATE", 0.4))
+            self._turn_read = (before, signal)
+            return True
+        if reading <= signal:
             return False
         rate = self._user_cfg("DISENGAGEMENT_RATE", 0.3) if reading > before else self._user_cfg("REENGAGEMENT_RATE", 0.15)
         self.u.E_u = max(0.0, min(1.0, before + (reading - before) * rate))

@@ -159,8 +159,14 @@ to a system prompt and its own cache file:
 | arm | system prompt | cache |
 |---|---|---|
 | `vanilla` | none | `somatic_vanilla.jsonl` |
+| `plain` | *"Keep each reply to about 60 words."* | `somatic_plain.jsonl` |
 | `friend` | *"You are a warm, concise friend. Keep replies short and conversational."* | `somatic_prompted.jsonl` |
 | `textbook` | performed sympathy + a bulleted tips list, the anti-pattern the Somatic voice is built to reject | `somatic_textbook.jsonl` |
+
+`plain` (2026-10-04) is the bare model with one concession, Gordon's: a length
+near the other two's (BoneAmanita 59, the friend prompt 66 words a reply on
+`rescue`), so a reader does not pick it out by size alone; zero-prompt
+`vanilla` ran four times longer. `vanilla` stays for the older comparisons.
 
 `textbook` is a **judge control, not a fourth arm to rank BoneAmanita against**
 — it exists so `--control textbook` can check whether a judge secretly rewards
@@ -227,6 +233,19 @@ retried once with a "shorter" nudge, then trimmed to whole sentences
 (`trim_to_words`) and recorded as `sim_trimmed` (a report column next to
 fallbacks). Runs from before this change have no `sim_trimmed` field.
 
+5. **The beat read as a mood** (`mistral-nemo`, `rescue20`, 2026-10-04). The
+   beat was given as "What is on your mind:", and the event in it went
+   unsaid: "I yelled at her tonight" became "I'm sorry. I didn't mean it. I
+   feel like such a failure.", so the helper answered something it was never
+   told; each of the three runs dropped a different key event. The beat is now
+   "What your next message has to get across, in your own words and in reply
+   to what they just said", with "They only know what you tell them, so if it
+   is something that happened, say what happened." Probe on the six event
+   turns (3 runs x 3 seeds): conveyed 31 to 44 of 54, invented events 3 to 1,
+   flagging messages as short as before. Merely adding "say what happened"
+   did nothing (27 to 29): the model has to take the beat as content first.
+   Check a new run's event turns by eye before building a page from it.
+
 `.exit_interview(transcript, samples=3)` asks the simulated person, in
 character, to rate the conversation 1-7 on `heard`, `clearer`, `lectured`,
 `performed`, `again` (want to keep talking), plus a one-line best/worst
@@ -235,7 +254,7 @@ doubly: this is an LLM rating a conversation it also generated half of.
 
 ### `audit_somatic_responsive.py` — orchestrates one arm against the simulated person
 
-`--arm {bone,friend,vanilla,textbook} --topic <t>` runs that one system
+`--arm {bone,friend,vanilla,plain,textbook} --topic <t>` runs that one system
 against `SimulatedUser`, appends to `tools/cache/somatic_responsive.jsonl` and
 the exit interview to `somatic_responsive_exit.jsonl`, then prints (or
 `--report` alone reprints from cache) a side-by-side table: reply length,
@@ -245,6 +264,31 @@ count, simulator-fallback count, and the exit-interview means per arm. One arm
 per invocation — run arms sequentially, not in parallel; each one is real GPU
 time on top of the engine or baseline call (a generation call per turn for
 the simulated person, on top of the responder's own).
+
+`--compress N` (2026-10-04) runs the topic's whole arc in N turns: each phase
+keeps its share (largest remainder; a tie goes to distressed, the stretch the
+engine's handling is for), its first and last beats kept and the rest evenly
+spaced, the opening unchanged. It registers the result as topic `<t><N>`
+(`rescue` at 20 is `rescue20`: 5 / 4 / 4 / 4 / 3), which is what the caches
+and `build_conversation_panel.py --topic` see; `--report` takes the same
+`--topic rescue --compress 20`. Every arm of a compressed comparison must be
+run compressed: a 30-turn run's first 20 turns never reach distress.
+
+### `build_conversation_panel.py` — the whole-conversation read
+
+Gordon's design (2026-10-04): not a turn-by-turn blind pick but three
+unlabeled conversations, each read in full, then one pick for the helper that
+felt most natural or realistic to talk to. One standalone page (`--out`, with
+doctype, ready to upload): an index, Conversation A / B / C in a seeded
+shuffle, a reader's pick that locks and reveals who was who, copy and (with
+`--contact-email`) email. **BoneAmanita is never A**: readers lean toward
+what they read first, so a shuffle that puts it there moves it to B. It reads
+the latest `bone`, `friend` and `plain` runs of `--topic` (the compressed
+name, e.g. `rescue20`), takes `--turns`, and uses `build_blind_panel.py`'s
+`method_lines` for the fine print, with the first line rewritten to name both
+one-line instructions; say anything else with `--disclose`. As with the blind
+panel, the answer key is in the page source, and an address goes only in the
+build you upload.
 
 ### `audit_somatic_blind_judge.py` — the blind ranking, and whether to trust it
 
@@ -472,6 +516,7 @@ Every `.jsonl` reader in this pipeline takes the row(s) matching a `topic`
 | `somatic_census.jsonl` | census, scripted mode | prompt contents, person/engine state, ATP+health ledgers | no |
 | `somatic_vanilla.jsonl` | vanilla, `--arm vanilla` | reply, `done_reason` | no |
 | `somatic_prompted.jsonl` | vanilla, `--arm friend` | same | no |
+| `somatic_plain.jsonl` | vanilla, `--arm plain` | same | no |
 | `somatic_textbook.jsonl` | vanilla, `--arm textbook` | same | no |
 | `somatic_responsive.jsonl` | census or vanilla, called with `user=` | `+ arm, beat, shown, delivered, sim_fallback` | **yes** |
 | `somatic_responsive_exit.jsonl` | `audit_somatic_responsive.py` | `arm, topic, sim_model, samples, mean` | yes |
@@ -512,6 +557,15 @@ python tools/audit_somatic_responsive.py --topic toast --arm bone
 python tools/audit_somatic_responsive.py --topic toast --arm friend
 python tools/audit_somatic_responsive.py --topic toast --report
 python tools/audit_somatic_blind_judge.py --topic toast --responsive --judge-model <model>
+
+# 6. The whole-conversation read (2026-10-04): every arm compressed, then one page
+for arm in bone friend plain; do
+  bash reset.sh
+  python tools/audit_somatic_responsive.py --topic rescue --compress 20 --arm $arm
+done
+python tools/audit_somatic_responsive.py --topic rescue --compress 20 --report
+python tools/build_conversation_panel.py --topic rescue20 --turns 20 --title "..." --story "..." \
+    --disclose "..." --out tools/cache/conv_rescue20.html
 ```
 
 Run steps sequentially, not in parallel — several of these load a different

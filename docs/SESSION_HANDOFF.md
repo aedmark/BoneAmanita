@@ -335,6 +335,25 @@ throughout. Exit interview (AI, not a verdict), heard / clearer / lectured / per
 `conv_rescue20_public.html` for upload) are rebuilt from these runs. BoneAmanita is never Conversation A (Gordon:
 readers lean toward what they read first); `build_conversation_panel.py` moves it to B when the shuffle puts it first.
 
+**20.7.4.97: recovery the engine can see; TESTING.md caught up.**
+- On both `rescue20` runs BoneAmanita's replies stayed at 19 to 35 words through recovery while E_u was still 0.5
+  to 0.6: at a 0.15 ease-off it lets go slowly whatever the person says. `SharedLatticeDriver.revise_with_reading`
+  now eases off at `USER.RECOVERY_RATE` (0.4) when both readings agree the person is fine: the keeper reads the
+  message at or under `CALM_READING` (0.1) and the words' signal is under `CALM_WORDS` (0.15) and below the
+  current E_u. A calm reading still never overrides words that read as tired. Offline, the 750 probe messages
+  (simulated / scripted): recovering misread 34% to 7% / 51% to 11%; flagging turns at 0.6 35% to 28% / 86% to
+  81%, conversations reaching it 13 to 12 of 18; distressed E_u at 0.4 89% to 57% (distress keeps its own channel
+  and cap, untouched); engaged false positives 1% / 0%. Gordon took the trade (7 points of flagging for 27 of
+  recovery; a uniform 0.2 gave 4 for 15). Registered in `BonePresets.REQUIRED_CONFIG`. `tests/test_distress.py`:
+  calm on both readings eases off faster (fails on the old code); a tired message is never eased off; the
+  raise-never-mute test now uses words that read as tired ("Sure, tomorrow then.", 0.6), since "Typical." reads
+  calm by length and the new rule may ease off there.
+- `docs/TESTING.md`: the `plain` arm, the simulated person's fifth failure mode (a beat read as a mood) and its
+  fix, `--compress` (and that every arm of a compressed comparison must be compressed), a section for
+  `build_conversation_panel.py` (BoneAmanita never A), the cache table, a recipe step for the whole-conversation
+  read. `audit_somatic_responsive.py --report` reads a compressed topic (`--topic rescue --compress 20 --report`).
+- Suite 1051 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
