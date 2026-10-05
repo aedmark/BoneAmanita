@@ -121,3 +121,24 @@ class NotInTheirStory(BoneTestCase):
         for text in ("She said she'd see you there.", "I can't tell if she meant it.", "Have you talked to her?",
                      "I can see why that hurt."):
             self.assertIsNone(gk._find_crime(text, "CONVERSATION"), text)
+
+
+class OneSide(BoneTestCase):
+    """feud20 (2026-10-05): BoneAmanita sided with the person against Jess, praising their cruel text as "a sharp way
+    to frame it" (9 of 9 probe replies). A rule, then a line beside IDENTITY, moved little; ONE SIDE beside the input,
+    with an example from another quarrel, brought 5 of 9 to hold both sides."""
+
+    def prompt_in(self, mode):
+        self.engine.cortex.active_mode = mode
+        self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex.llm.generate = MagicMock(return_value="Okay.")
+        self.engine.process_turn("My brother never calls me back.")
+        return next(c.args[0] for c in self.engine.cortex.llm.generate.call_args_list if "PARTNER INPUT" in str(c.args[0]))
+
+    def test_conversation_is_reminded_it_has_heard_one_side(self):
+        prompt = self.prompt_in("CONVERSATION")
+        self.assertIn("=== ONE SIDE ===", prompt)
+        self.assertLess(prompt.index("=== ONE SIDE ==="), prompt.index("=== PARTNER INPUT ==="))
+
+    def test_other_modes_are_not(self):
+        self.assertNotIn("=== ONE SIDE ===", self.prompt_in("TECHNICAL"))

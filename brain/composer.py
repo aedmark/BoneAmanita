@@ -707,6 +707,7 @@ class PromptComposer:
             ("dialogue", dialogue_block),
             ("ask", self._ask_block(state.get("halcyon_recall"))),
             ("somatic_budget", somatic_budget_block),
+            ("one_side", self.ONE_SIDE if active_mode_name == "CONVERSATION" else ""),
             ("mode_trigger", mode_trigger),
             # Before the input: after the reply cue, the model read it as part of its own turn.
             ("warden_instruction", self._halcyon_instruction(
@@ -786,6 +787,13 @@ class PromptComposer:
             lines.append("Established in the world:")
             lines += [f"- {fact}" for fact in found["facts"]]
         return "\n".join(lines) + "\n"
+
+    # Beside IDENTITY and as a style rule it moved nothing: 9 of 9 replies still sided (feud20, 2026-10-05).
+    ONE_SIDE = ("=== ONE SIDE ===\nIf they are telling you about someone else, you have heard only their side. Do not "
+                "turn it against that person, and keep in view what they themselves did in it. For example, to \"My "
+                "brother bailed on helping me move, so I told him he's always been useless.\" a friend says: \"He let "
+                "you down on a day you needed him. 'Always been useless' is a lot heavier than one bad Saturday, though, "
+                "and he'll remember it longer than the move.\"\n")
 
     @staticmethod
     def _date(ts: float) -> str:
