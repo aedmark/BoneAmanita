@@ -212,7 +212,10 @@ class SimulatedUser:
             f"{self._persona()}\n\nThe conversation so far (most recent last):\n"
             f"{render_transcript(transcript, self.window)}\n\n"
             f"Right now you are feeling: {PHASE_FEEL.get(phase, phase)}.\n"
-            f"What is on your mind: {beat}\n\nWrite your next message"
+            # "What is on your mind" read as a mood: "I yelled at her tonight" became "I'm sorry. I didn't mean it."
+            f"What your next message has to get across, in your own words and in reply to what they just said: {beat}\n"
+            "They only know what you tell them, so if it is something that happened, say what happened.\n\n"
+            "Write your next message"
             + (f", at most {cap} words." if cap else ".")
         )
         nudge = (

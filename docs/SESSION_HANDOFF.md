@@ -313,6 +313,18 @@ felt most natural or realistic to talk to; all phases kept, scaled down; the pla
   Exit interview (AI, not a verdict), heard / clearer / lectured / performed / again: bone 5 / 4 / 2.67 / 2 / 6,
   friend 4 / 3 / 2 / 1.33 / 5.67, plain 5 / 4 / 2.67 / 1.67 / 5.67.
 
+**20.7.4.94: the simulated person says what happened.** Reading `rescue20` (Gordon): BoneAmanita's person wrote
+"I'm sorry. I didn't mean it. I feel like such a failure." for the beat "I yelled at her tonight", so the helper
+answered an event it never heard of; across the three runs the yelling, the desk, the return form and the shelter
+call each went unsaid in at least one. `tools/somatic_sim_user.py` gave the beat as "What is on your mind", which
+mistral-nemo read as a mood. Now: "What your next message has to get across, in your own words and in reply to
+what they just said: {beat}. They only know what you tell them, so if it is something that happened, say what
+happened." Probe (`scratch/sim_probe{,2}.log`: the six event turns of all three runs, the real conversation up
+to each, 3 seeds, old against new): events conveyed 31 to 44 of 54, invented events ("Dogsitter called", "Pepper's
+got worms") 3 to 1, running-low messages 7.9 to 7.5 words. A first wording that only added "say what happened"
+did nothing (27 to 29). The page built on the old runs should not go out. ROADMAP future ideas gains "Notice what
+was never said" (Gordon: BoneAmanita should catch a reference to something it was never told, for a brainstorm).
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
