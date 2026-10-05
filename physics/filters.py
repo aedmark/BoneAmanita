@@ -164,6 +164,7 @@ class TheGatekeeper:
         self.cfg = config_ref or BoneConfig
         self.hla = HLA_Stabilizer(config_ref=self.cfg)
         self.last_rejection = None
+        self.allowed = set()  # pattern names this turn's prompt makes true (a reflection grounds UNBACKED_CONTINUITY)
         style_crimes = (
             self.lex.get("style_crimes")
             or LoreManifest.get_instance().get("STYLE_CRIMES")
@@ -320,7 +321,7 @@ class TheGatekeeper:
             hard = hit.group(0).lower() in self._hard_phrases
             return {"kind": "phrase", "name": hit.group(0), "text": hit.group(0), "start": hit.start(), "hard": hard}
         for pat in self._rejection_patterns:
-            if mode and mode.upper() in pat.get("skip_modes", []):
+            if (mode and mode.upper() in pat.get("skip_modes", [])) or pat.get("name") in self.allowed:
                 continue
             if (regex_pattern := pat.get("regex")) and (hit := re.search(regex_pattern, text)):
                 name = pat.get("name", "BANNED_PATTERN")

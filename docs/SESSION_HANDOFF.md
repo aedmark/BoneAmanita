@@ -413,6 +413,71 @@ behind couch today" then "...again today").
   `tests/test_exchange_recall.py` (5) and `tests/test_memory_history.py` (4), each failing on the old code. Suite
   1061 passed, 5 skipped.
 
+**20.7.4.101: open memories, settled in the person's words or asked about; facts stack; it thinks only when it did.** The replay ended with
+`decision_on_pepper: considering returning her` held after "I didn't send the form. Called the shelter instead.":
+the keeper had one line and gave it to the shelter's advice. Gordon's calls: an open memory that never settles is
+followed up on; one from an earlier session never reads as current; the word list and the keeper both decide what is
+open, and when all else fails, ask the person.
+- **Open.** A memory is open when its value is worded so (`recall.is_open`: considering, thinking about, planning
+  to, deciding, unsure, waiting for, hoping, might, maybe, for now, not yet...) or the keeper ends its line `(open)`
+  ("never a feeling"), kept as `memory_meta.status`; a later write without the mark clears it. The keeper sees open
+  memories marked `(open)`, always listed, and may add `UPDATE: key = what is true of it now`, for an open memory
+  only, run in its own gate cycle (`_update_memory`, receipted `halcyon.update`); 20.7.4.100's history keeps the old
+  value. Keeper `max_tokens` 120 to 160.
+- **In their own words.** Any rewrite of an open memory (UPDATE, or the keeper's own line reusing the key) needs two
+  content words shared with the message (`keeper.said_so`), or it is dropped and the memory stays open, to be asked
+  about. Without it, replays turned "thinking about taking her back" into "decided to take her back", and into
+  "decided to keep Pepper (open)", from "I'm so angry at myself I can't think straight". The cost: a settle in
+  pronouns ("I tore it up.", "I said no.") stays open.
+- **Tried and dropped:** the previous exchange shown to the keeper, so "the form" could mean something. Placed after
+  the kept list, all 3 samples updated the Pepper decision to "taking her back" (the earlier message read as the
+  news); placed before it as background, a replay settled it as "decided to take her back". UPDATE for any kept
+  memory: 29 updates in 10 replays and rewrites 11 to 57, so it is for open memories only. A two-part example in the
+  prompt (a new fact and an UPDATE) made the Pepper case worse (1 of 3).
+- **Asking.** In CONVERSATION, the oldest open memory kept in an earlier conversation, or `FOLLOW_UP_AFTER` (8)
+  exchanges ago in this one, gets a STILL OPEN block: "Ask them about it in this reply, in one plain question of
+  your own; it is the one question this reply asks. Do not guess the answer." Never when the somatic budget says
+  distressed, flagging or effort critically low. It is offered until a reply asks a question sharing a word with the
+  memory, at most `FOLLOW_UP_OFFERS` (3) turns a session. "If it fits, ask" was skipped by the model on all three
+  turns of a fresh session; counting any question closed it on "How have things been since we last spoke?" in 2 of
+  3. Final: in 5 of 5 fresh sessions with "thinking about taking her back to the shelter" kept the session before,
+  BoneAmanita asked within two turns ("Did you end up making a decision about Pepper and the shelter?"). A same-process
+  second session asked nothing: the person model's effort carried over below 30, which forbids questions; a real new
+  session starts fresh.
+- **Not current.** WHAT YOU REMEMBER marks an open memory "(open)", or, kept in an earlier conversation, "(open as of
+  5 October; how it turned out is not known)", at render time from `memory_meta` (no sleep pass rewrites the value).
+- Exchanges are numbered by their place (`n`), so engine-built cycles (updates, charts) no longer count as turns in
+  "N turns ago".
+- **Probes** (`gemma4:12b`, direct to Ollama). Hand cases, 16 x 3: settles 18/24 (the 6 others are the two pronoun
+  cases, kept open by design), still open 9/9 ("Still no word from the doctor" stays open), unrelated 6/6, marks open
+  6/6, settled fact 3/3. The keeper alone over the 10 cached `rescue20` conversations, 20.7.4.100's against this one:
+  memories kept 157 to 135, rewrites 8 to 29 (each kept as history), 4 updates, no invented settles; `095329` ends
+  `pet_relationship: deciding whether to take her back`, open, so the next session asks.
+- **Facts stack** (Gordon: "facts should stack, not cancel each other out"). The keeper took the first fact of an
+  answer and dropped the rest (the kernel admits one nomination per cycle): 25 facts in the 10 replays before this
+  change, 53 with the new prompt, which answers in several lines twice as often. It now answers one line per thing
+  worth keeping, at most three; the first goes with the reply's gate cycle, each further one in its own
+  (`cycle._keep_more`, which also runs the UPDATE; receipted `halcyon.update` with `kind`). Replays, 20.7.4.100's
+  keeper against this one: facts written 166 to 223, dropped 22 to 2, memories at the end 158 to 164, values the same
+  length (median 5 to 6 words). Turn by turn before stacking: something kept on 164 of 182 turns against 166; the
+  smaller memory was rewrites of existing keys (kept as history), not fewer turns kept. "tired = 2" and a value
+  starting "UPDATE:" were read as facts; neither is now. Keeper `max_tokens` 200.
+- **Thinking only when it did** (Gordon: ground it, with a pattern as backstop). A fresh-session follow-up opened "I
+  have been thinking about what you mentioned before regarding Pepper."; nothing had run between the sessions.
+  BoneAmanita turns a memory over between turns only in REM (80 idle minutes, or /sleep), as a reflection recorded
+  with the memories it drew on (`store.reflections_of`, from the `reflect` mutations). WHAT YOU REMEMBER now says
+  "You remember them; you have not been thinking about them in between, except where a line says you reflected on
+  it", and marks "(you reflected on this on 6 October)" where a reflection drew on that value after it was kept; the
+  STILL OPEN block says "You remember it; you have not been thinking about it since" or quotes the reflection. Backstop:
+  `UNBACKED_CONTINUITY` ("I've been thinking/wondering about", "I keep coming back to", "has been on my mind", "has
+  stayed with me"; not ADVENTURE or CREATIVE), cut like the other style rules, and allowed on a turn whose recall
+  holds a grounding reflection (the gatekeeper's and the validator's `allowed`, set by the cortex each turn).
+- Still open: the keeper writes nothing on some turns the old one kept ("Pepper just nudged my hand", "I'll back off
+  tonight"; 6 of 182); an UPDATE of a settled memory is ignored, and what it said with it.
+- `tests/test_open_memories.py` (20) and `tests/test_continuity_claims.py` (8), each part failing on the old code;
+  `test_halcyon_gate.py` retargeted to the keeper's new last line ("The person's latest message, the only one to keep
+  or update from"). Suite 1089 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

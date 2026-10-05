@@ -117,7 +117,7 @@ class Store:
         );
         CREATE TABLE IF NOT EXISTS memory_meta (
           key TEXT PRIMARY KEY, mode TEXT, turn_id TEXT NOT NULL, kept_at REAL NOT NULL,
-          receipt_id TEXT, kept_by TEXT, feeling_json TEXT
+          receipt_id TEXT, kept_by TEXT, feeling_json TEXT, status TEXT
         );
         CREATE TABLE IF NOT EXISTS memory_vectors (
           key TEXT PRIMARY KEY, text_hash TEXT NOT NULL, model TEXT NOT NULL,
@@ -167,9 +167,10 @@ class Store:
             if "instructions_text" in {r[1] for r in db.execute("PRAGMA table_info(turn_contexts)")}:
                 db.execute("DROP TABLE turn_contexts")
             db.executescript(schema)
-            # memory_meta gained who kept each memory and its receipt (20.7.4.66), and how it felt (20.7.4.68).
+            # memory_meta gained who kept each memory and its receipt (20.7.4.66), how it felt (20.7.4.68), and
+            # whether the keeper marked it open (20.7.4.101).
             have = {r[1] for r in db.execute("PRAGMA table_info(memory_meta)")}
-            for column in ("receipt_id", "kept_by", "feeling_json"):
+            for column in ("receipt_id", "kept_by", "feeling_json", "status"):
                 if column not in have:
                     db.execute(f"ALTER TABLE memory_meta ADD COLUMN {column} TEXT")
             now = time.time()
@@ -201,13 +202,15 @@ class Store:
 
     def commit_cycle(self, trace_id: str, new_state: dict, expected_sequence: int, receipt: dict, raw: str,
                      *, user_text: str = "", display: str = "", boundary_hash: str = "", by: str = "model",
-                     context: dict | None = None, feeling: dict | None = None, mode: str | None = None) -> dict:
+                     context: dict | None = None, feeling: dict | None = None, mode: str | None = None,
+                     open_memory: bool = False) -> dict:
         """One engine turn, atomically: canonical state plus its audit trail (turn, messages, proposal,
         receipt, gate decision, mutation), in the shape Brad's `finalize` writes. Secrets are withheld from it.
         What the effect wrote carries the receipt as its source; `by` says who nominated it. `context` is what
         the model was handed for this turn's reply (turn_contexts) and its token usage (the turn's columns);
         `feeling` is the endocrine state, kept with a remembered memory; `mode` overrides the engine's (a REM
-        reflection is kept in its zone's mode, not whichever mode the engine slept in)."""
+        reflection is kept in its zone's mode, not whichever mode the engine slept in); `open_memory` marks a
+        remembered value the keeper says is not settled yet."""
         from .secrets import scrub, scrub_all
 
         story = self.in_story()
@@ -292,9 +295,9 @@ class Store:
                         db.execute("INSERT INTO memory_history VALUES (?,?,?,?,?)",
                                    (key, scrub(str(before), story), kept["kept_at"] if kept else None, now, turn_id))
                     db.execute("INSERT OR REPLACE INTO memory_meta (key, mode, turn_id, kept_at, receipt_id, kept_by, "
-                               "feeling_json) VALUES (?,?,?,?,?,?,?)",
+                               "feeling_json, status) VALUES (?,?,?,?,?,?,?,?)",
                                (claim["args"]["key"], mode, turn_id, now, receipt_id, by,
-                                json.dumps(feeling) if feeling else None))
+                                json.dumps(feeling) if feeling else None, "open" if open_memory else None))
                 elif claim["verb"] == "forget":
                     gone = [(k,) for k in (receipt.get("result") or {}).get("forgot", [])]
                     db.executemany("DELETE FROM memory_meta WHERE key=?", gone)
@@ -399,14 +402,14 @@ class Store:
                     db.execute("DELETE FROM memory_vectors WHERE key=?", (key,))
 
     def exchanges(self) -> list[dict]:
-        """This session's committed turns, oldest first: ordinal, turn_id, said, answered, and the stored
-        embedding as (model, vector), or None."""
+        """This session's exchanges, oldest first: n (its place among them; engine-built cycles are not
+        exchanges), turn_id, said, answered, at, and the stored embedding as (model, vector), or None."""
         if getattr(self, "_conversation_id", None) is None:
             return []
         db = self.connect()
         try:
             rows = db.execute(
-                "SELECT t.id turn_id, t.ordinal, u.raw_content said, a.display_content answered, v.model, v.vector_json "
+                "SELECT t.id turn_id, t.created_at, u.raw_content said, a.display_content answered, v.model, v.vector_json "
                 "FROM turns t JOIN messages u ON u.turn_id=t.id AND u.role='user' "
                 "JOIN messages a ON a.turn_id=t.id AND a.role='assistant' "
                 "LEFT JOIN exchange_vectors v ON v.turn_id=t.id "
@@ -414,8 +417,9 @@ class Store:
             ).fetchall()
         finally:
             db.close()
-        return [{"turn_id": r["turn_id"], "ordinal": r["ordinal"], "said": r["said"], "answered": r["answered"],
-                 "vector": (r["model"], json.loads(r["vector_json"])) if r["vector_json"] else None} for r in rows]
+        return [{"turn_id": r["turn_id"], "n": n, "said": r["said"], "answered": r["answered"], "at": r["created_at"],
+                 "vector": (r["model"], json.loads(r["vector_json"])) if r["vector_json"] else None}
+                for n, r in enumerate(rows, 1)]
 
     def save_exchange_vectors(self, rows: list) -> None:
         """Upsert (turn_id, model, vector) rows."""
@@ -461,15 +465,33 @@ class Store:
         return earlier
 
     def memory_meta(self) -> dict[str, dict]:
-        """{key: mode, turn_id, kept_at, receipt_id, kept_by, feeling}: where each memory came from, and how
-        the engine felt when it was kept."""
+        """{key: mode, turn_id, kept_at, receipt_id, kept_by, feeling, status, conversation_id}: where
+        each memory came from, how the engine felt when it was kept, and whether it is still open."""
         db = self.connect()
         try:
-            rows = db.execute("SELECT * FROM memory_meta").fetchall()
+            rows = db.execute("SELECT m.*, t.conversation_id FROM memory_meta m LEFT JOIN turns t ON t.id=m.turn_id").fetchall()
         finally:
             db.close()
         return {r["key"]: {**dict(r), "feeling": json.loads(r["feeling_json"]) if r["feeling_json"] else None}
                 for r in rows}
+
+    def reflections_of(self) -> dict[str, tuple[float, str]]:
+        """{memory key: (when, reflection key)} for the latest REM reflection that drew on each memory."""
+        db = self.connect()
+        try:
+            rows = db.execute("SELECT result_json, created_at FROM mutations WHERE verb='reflect' ORDER BY created_at").fetchall()
+        finally:
+            db.close()
+        found = {}
+        for r in rows:
+            result = json.loads(r["result_json"] or "{}")
+            for key in result.get("from") or []:
+                found[key] = (r["created_at"], result.get("reflected"))
+        return found
+
+    def conversation(self) -> str | None:
+        """This session's conversation, once its first turn is committed."""
+        return getattr(self, "_conversation_id", None)
 
     def provenance(self, receipt_id: str) -> dict | None:
         """The commit behind a source: when, the gate's checks, what the person said that turn, and what the

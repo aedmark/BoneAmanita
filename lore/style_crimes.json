@@ -120,6 +120,12 @@
       "error_msg": "DO NOT NARRATE THEIR STATE. Do not tell the person what they are feeling or that their feeling is valid; answer the thing they said."
     },
     {
+      "name": "UNBACKED_CONTINUITY",
+      "skip_modes": ["ADVENTURE", "CREATIVE"],
+      "regex": "(?i)\\bI(?:'ve|’ve| have) been (?:thinking|wondering|reflecting|mulling)(?: (?:a lot|a bit|more))? (?:about|on|over|whether|if)\\b|\\bI (?:kept|keep|have kept) (?:thinking|coming back to|wondering|turning (?:it|this|that) over)\\b|\\b(?:has|have) been on my mind\\b|\\b(?:has|have) stayed with me\\b|\\bI(?:'ve|’ve| have) (?:thought|wondered) about (?:it|this|that|what you|you|her|him|them)\\b",
+      "error_msg": "YOU WERE NOT THINKING ABOUT IT IN BETWEEN. You remember what they told you; nothing turned it over while they were away. Say what you remember, not that you dwelt on it."
+    },
+    {
       "name": "NEGATIVE_COMPARISON",
       "regex": "(?i)\\bnot\\s+(?:only|just|merely|simply)\\s+[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but|rather|instead)\\b|\\b(?:didn|don|doesn)['’]?t\\s+(?:just|only|merely|simply)\\s+[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but\\s+)?(?:you|it|they|we|he|she)\\b|\\bnot\\s+about\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?:but\\s+)?(?:about|it['’]?s\\s+about|it\\s+is\\s+about)\\b|(?:\\b(?:it|this|that)['’]s\\s+not|\\b(?:is|was)\\s+not|\\b(?:isn['’]?t|wasn['’]?t))\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?:it|this|that)(?:['’]s|\\s+is|\\s+was)\\b|\\b(?:are\\s+not|were\\s+not|aren['’]?t|weren['’]?t)\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)they(?:['’]re|\\s+are|\\s+were)\\b|\\b(?P<s1>you|they|we)(?:(?:['’]re|\\s+are|\\s+were)\\s+not|\\s+(?:aren['’]?t|weren['’]?t))\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?P=s1)(?:['’]re|\\s+are|\\s+were)\\b|\\bI(?:['’]m|\\s+am)\\s+not\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)I(?:['’]m|\\s+am)\\b",
       "error_msg": "DETECTED NEGATIVE COMPARISON. Don't say what it isn't. Say exactly what it is."

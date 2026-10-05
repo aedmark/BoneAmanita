@@ -28,6 +28,22 @@ def zoned(state: dict, modes: dict, mode) -> dict:
     return {**state, "self": {**(state.get("self") or {}), "memory": here}}
 
 
+# A value still being weighed, planned or waited on; the keeper can also mark one "(open)" (Gordon, 2026-10-05).
+_OPEN = re.compile(r"\b(?:consider(?:s|ing)?|thinking (?:about|of)|plan(?:s|ning)? to|deciding|undecided|unsure|not sure|"
+                   r"waiting (?:for|on|to)|hoping|might|maybe|about to|going to|for now|not yet|"
+                   r"(?:has|have)(?:n['’]t| not) (?:decided|heard|chosen))\b", re.I)
+
+
+def is_open(value) -> bool:
+    """Whether a memory's wording says it is not settled yet ("considering returning her")."""
+    return bool(_OPEN.search(str(value or "")))
+
+
+def open_keys(memory: dict, meta: dict) -> set:
+    """The memories still open: marked so by the keeper, or worded so."""
+    return {k for k, v in (memory or {}).items() if (meta.get(k) or {}).get("status") == "open" or is_open(v)}
+
+
 def _words(text) -> set:
     return {w for w in _WORD.findall(str(text or "").lower()) if len(w) > 2}
 

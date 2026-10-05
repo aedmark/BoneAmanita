@@ -45,9 +45,9 @@ class Exchanges(BoneTestCase):
 
 
 class TheEarlierBlock(BoneTestCase):
-    FOUND = {"next_ordinal": 10, "exchanges": [
-        {"ordinal": 8, "said": "In view.", "answered": "Seen.", "score": 0.9},
-        {"ordinal": 2, "said": "How long before you give up on a dog?", "answered": "There is no set time.", "score": 0.7},
+    FOUND = {"next_n": 10, "exchanges": [
+        {"n": 8, "said": "In view.", "answered": "Seen.", "score": 0.9},
+        {"n": 2, "said": "How long before you give up on a dog?", "answered": "There is no set time.", "score": 0.7},
     ]}
 
     def test_holds_only_what_the_recent_dialogue_does_not(self):
@@ -57,7 +57,7 @@ class TheEarlierBlock(BoneTestCase):
         self.assertNotIn("In view.", block)
 
     def test_is_empty_when_everything_is_in_view(self):
-        found = {"next_ordinal": 10, "exchanges": self.FOUND["exchanges"][:1]}
+        found = {"next_n": 10, "exchanges": self.FOUND["exchanges"][:1]}
         self.assertEqual(PromptComposer._earlier_block(found, ["Traveler: In view.\nSystem: Seen."]), "")
 
 

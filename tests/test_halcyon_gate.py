@@ -452,7 +452,8 @@ class TheMemoryKeeper(BoneTestCase):
         self.respond(keeps="NONE")
         self.engine.process_turn("She's staying for a week.")
         self.assertIn("\nsister_name = Odalys\n", self.keeper_prompts[-1])
-        self.assertIn('The person said: "She\'s staying for a week."', self.keeper_prompts[-1])
+        self.assertIn('The person\'s latest message, the only one to keep or update from: "She\'s staying for a week."',
+                      self.keeper_prompts[-1])
 
         # The draft is still adjudicated and audited.
         self.assertEqual(ReceiptLedger.get_instance().for_subsystem("halcyon.gate")[-1].effect, "NOOP")

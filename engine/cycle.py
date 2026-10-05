@@ -747,6 +747,28 @@ class GeodesicOrchestrator:
             record_crash(self.eng, "sleep reflection", e)
             return None
 
+    def _keep_more(self, ctx, line: str, still_open: bool, kind: str) -> None:
+        """A further fact from the keeper, or what this message changed in an open memory, in its own gate cycle (the
+        kernel admits one nomination per cycle); a changed value keeps the old one as history."""
+        from engine.gate.kernel import Gate
+
+        seq, state = self.eng.store.state()
+        why = "another thing this message said" if kind == "fact" else "what this message changed in a memory already kept"
+        text = f"(Keeper: {why}.)\n{line}"
+        gate = Gate(self.eng.boundary, state, self.eng.gate_tools, self.eng.gate_invariants)
+        receipt = gate.adjudicate(text)
+        self.eng.store.commit_cycle(
+            trace_id=f"{ctx.trace_id}:{kind}", new_state=gate.state, expected_sequence=seq, receipt=receipt,
+            raw=text, boundary_hash=getattr(self.eng, "boundary_hash", ""), by="keeper", feeling=self._feeling(),
+            open_memory=still_open,
+        )
+        applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
+        ReceiptLedger.get_instance().issue(
+            "halcyon.update", receipt["decision"], result_count=1 if applied else 0,
+            inputs={"claim": receipt.get("claim"), "open": still_open, "kind": kind},
+            detail=str(receipt["decision_basis"][-1][2]) if receipt["decision_basis"] else "",
+        )
+
     def _chart_room(self, ctx, room: dict) -> None:
         from engine.gate.cartographer import chart_args, chart_line, needs_chart
         from engine.gate.kernel import Gate
@@ -968,15 +990,19 @@ class GeodesicOrchestrator:
                     try:
                         seq, state = self.eng.store.state()
                         gate = Gate(self.eng.boundary, copy.deepcopy(state), self.eng.gate_tools, self.eng.gate_invariants)
-                        gate_text, by = model_raw, "model"
+                        gate_text, by, more = model_raw, "model", []
                         # The keeper nominates what the person said only when the draft nominated nothing itself.
                         if wants_keeper and not any(l.strip().startswith("NOMINATE") for l in model_raw.splitlines()):
-                            from engine.gate.recall import STORY, zone, zoned
+                            from engine.gate.recall import STORY, open_keys, zone, zoned
 
                             mode = getattr(getattr(self.eng, "cortex", None), "active_mode", None)
                             here = zoned(state, self.eng.store.memory_modes(), mode)["self"]["memory"]
-                            if line := keeper.propose(user_message, here, STORY if zone(mode) == "story" else ""):
+                            if line := keeper.propose(user_message, here, STORY if zone(mode) == "story" else "",
+                                                      open_keys=open_keys(here, self.eng.store.memory_meta())):
                                 gate_text, by = f"{model_raw or self.HELD_RATIONALE}\n{line}", "keeper"
+                            more = [(l, o, "fact") for l, o in keeper.last_more]
+                            if keeper.last_update:
+                                more.append((keeper.last_update, keeper.last_update_open, "update"))
                             # The keeper's reading of how worn out they sounded reaches the next reply.
                             if (lattice := getattr(self.eng, "shared_lattice", None)) is not None:
                                 lattice.revise_with_reading(keeper.last_tired)
@@ -995,6 +1021,7 @@ class GeodesicOrchestrator:
                                 by=by,
                                 context=self._turn_context(),
                                 feeling=self._feeling(),
+                                open_memory=by == "keeper" and keeper.last_open,
                             )
                             applied = any(c[0] == "execute" and c[1] == "OK" for c in receipt["decision_basis"])
                             ReceiptLedger.get_instance().issue(
@@ -1013,6 +1040,8 @@ class GeodesicOrchestrator:
                             if self.eng.last_refusal and self._shows_gate_denials():
                                 self.eng.events.log(f"Gate Denied Action: {receipt['decision_basis']}", "KERNEL")
                                 ctx.bureau_ui += f"\n[SYSTEM_LOG: {refusal_line(self.eng.last_refusal)}]"
+                        for line, still_open, kind in more:
+                            self._keep_more(ctx, line, still_open, kind)
                     except Exception as e:
                         record_crash(self.eng, "Halcyon gate", e)
 

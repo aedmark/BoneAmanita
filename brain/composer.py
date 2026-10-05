@@ -705,6 +705,7 @@ class PromptComposer:
             ("earlier", self._earlier_block(state.get("halcyon_recall"), valid_history,
                                             int(safe_get(c_cfg, "EXCHANGE_RECALL_MAX", 3)))),
             ("dialogue", dialogue_block),
+            ("ask", self._ask_block(state.get("halcyon_recall"))),
             ("somatic_budget", somatic_budget_block),
             ("mode_trigger", mode_trigger),
             # Before the input: after the reply cue, the model read it as part of its own turn.
@@ -759,16 +760,27 @@ class PromptComposer:
         if not isinstance(found, dict) or not (found.get("memories") or found.get("facts")):
             return ""
         lines = ["=== WHAT YOU REMEMBER ===",
-                 "You chose to keep these. Use them where they bear on this turn; do not recite them."]
+                 "You chose to keep these. Use them where they bear on this turn; do not recite them. You remember "
+                 "them; you have not been thinking about them in between, except where a line says you reflected on it."]
         # A kept state ("barely sleeping this week") read a month on as current: past a day, say when.
         kept_at, now = found.get("kept_at") or {}, time.time()
-        earlier = found.get("earlier") or {}
+        earlier, opened, reflected = found.get("earlier") or {}, found.get("open") or {}, found.get("reflected") or {}
 
         def before(key):
             held = [v for v, _ in earlier.get(key, [])[:3]]
             return f" (earlier: {'; '.join(held)})" if held else ""
 
-        lines += [f"- {key.removeprefix(STORY)}: {value}{PromptComposer._kept_ago(kept_at.get(key), now)}{before(key)}"
+        def when(key):
+            if key not in opened:
+                return PromptComposer._kept_ago(kept_at.get(key), now)
+            # Open from an earlier conversation says as of when, so it never reads as current.
+            since = opened[key]
+            return f" (open as of {PromptComposer._date(since)}; how it turned out is not known)" if since else " (open)"
+
+        def mulled(key):
+            return f" (you reflected on this on {PromptComposer._date(reflected[key][0])})" if key in reflected else ""
+
+        lines += [f"- {key.removeprefix(STORY)}: {value}{when(key)}{before(key)}{mulled(key)}"
                   for key, value in found.get("memories", [])]
         if found.get("facts"):
             lines.append("Established in the world:")
@@ -776,10 +788,32 @@ class PromptComposer:
         return "\n".join(lines) + "\n"
 
     @staticmethod
+    def _date(ts: float) -> str:
+        t = time.localtime(ts)
+        return f"{t.tm_mday} {time.strftime('%B', t)}"
+
+    @staticmethod
+    def _ask_block(found: Optional[dict]) -> str:
+        """One open memory to follow up on, when the cortex chose one; empty otherwise."""
+        ask = (found or {}).get("ask")
+        if not ask:
+            return ""
+        what = f'{ask["key"].removeprefix(STORY)}: "{ask["value"]}"'
+        when = (f"from {PromptComposer._date(ask['kept_at'])}: {what}. You do not know how it turned out."
+                if ask.get("earlier") else f"from earlier in this conversation: {what}. Nothing since has said how it turned out.")
+        # Said only when true: "I have been thinking about what you mentioned" came from a session where nothing ran.
+        held = (f' You reflected on it on {PromptComposer._date(ask["reflected"][0])}, while they were away: '
+                f'"{ask["reflected"][1]}".' if ask.get("reflected")
+                else " You remember it; you have not been thinking about it since.")
+        # "If it fits" let the model skip it three turns running; the somatic budget already keeps it from hard moments.
+        return (f"=== STILL OPEN ===\nStill open {when}{held} Ask them about it in this reply, in one plain question of "
+                "your own; it is the one question this reply asks. Do not guess the answer.\n")
+
+    @staticmethod
     def _earlier_block(found: Optional[dict], in_view: list, most: int = 3) -> str:
         """The earlier exchanges closest to this turn that the recent dialogue no longer shows; empty when none."""
         found = found or {}
-        now = int(found.get("next_ordinal") or 0)
+        now = int(found.get("next_n") or 0)
         shown = "\n".join(in_view) + "\n"
         older = [e for e in found.get("exchanges") or [] if f"Traveler: {e['said']}\n" not in shown]
         if not older or most <= 0:
@@ -787,10 +821,10 @@ class PromptComposer:
         lines = ["=== EARLIER IN THIS CONVERSATION ===",
                  "From before the recent dialogue, closest to what they just said. You have said your part here; "
                  "do not say it again. Build on it, or notice what has changed since."]
-        for e in sorted(older[:most], key=lambda e: e["ordinal"]):
+        for e in sorted(older[:most], key=lambda e: e["n"]):
             answered = " ".join(str(e["answered"]).split())
             answered = answered if len(answered) <= 600 else answered[:600].rsplit(" ", 1)[0] + " ..."
-            lines.append(f'- {now - e["ordinal"]} turns ago, they said: "{e["said"]}" You answered: "{answered}"')
+            lines.append(f'- {now - e["n"]} turns ago, they said: "{e["said"]}" You answered: "{answered}"')
         return "\n".join(lines) + "\n"
 
     @staticmethod
@@ -1214,9 +1248,9 @@ class ResponseValidator:
             re.DOTALL | re.IGNORECASE,
         )
 
-    @staticmethod
-    def _applies(pattern: Dict, mode: str) -> bool:
-        if str(mode).upper() in pattern.get("skip_modes", []):
+    def _applies(self, pattern: Dict, mode: str) -> bool:
+        # A pattern this turn's prompt makes true (the gatekeeper's `allowed`, set by the cortex) is not an error.
+        if str(mode).upper() in pattern.get("skip_modes", []) or pattern.get("name") in getattr(self, "allowed", ()):
             return False
         return not (mode == "TECHNICAL" and pattern.get("name") in ("META_AI_TALK", "CUSTOMER_SERVICE_GREETING", "LAZY_TRIPLET"))
 

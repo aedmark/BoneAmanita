@@ -58,6 +58,15 @@ class CortexServices:
     config_ref: Any = None
     akashic: Any = None
 
+def _asks_about(reply: str, memory: tuple) -> bool:
+    """Whether a question in the reply shares a word with the memory (key, value). "How have things been since we
+    last spoke?" took the turn's question in 2 of 3 fresh sessions; it is not a follow-up on decision_on_pepper."""
+    from engine.gate.keeper import _content
+
+    about = _content(memory[0].replace("_", " ")) | _content(memory[1])
+    return any(_content(q) & about for q in re.findall(r"[^.!?]*\?", str(reply or "")))
+
+
 class TheCortex:
     LEXICAL_PURGE_PATTERN = re.compile(
         r"(?im)^\s*(that makes sense|i understand|you bring up|great point|good point|certainly|absolutely|i hear you|yes, )[.,!]*\s*"
@@ -79,6 +88,9 @@ class TheCortex:
         c_cfg = safe_get(self.cfg, "CORTEX", {})
         self.MAX_HISTORY = int(safe_get(c_cfg, "MAX_HISTORY_LENGTH", 15))
         self.dialogue_buffer = deque(maxlen=self.MAX_HISTORY)
+        self.asked_open = set()  # (key, value) of open memories followed up on, or offered enough, this session
+        self.offered_open = {}  # (key, value): turns the follow-up was offered without the reply asking
+        self.pending_ask = None
         self.worry_ledger = deque(maxlen=20)
         self.modulator = NeurotransmitterModulator(
             bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg
@@ -399,6 +411,10 @@ class TheCortex:
                     "CORTEX",
                 )
         elif cognitive_retries > 0:
+            # "I've been thinking about it" is true only when a REM reflection drew on what this prompt recalls.
+            recalled = sim_result.get("halcyon_recall") if isinstance(sim_result.get("halcyon_recall"), dict) else {}
+            gk.allowed = self.validator.allowed = (
+                {"UNBACKED_CONTINUITY"} if recalled.get("reflected") or (recalled.get("ask") or {}).get("reflected") else set())
             final_output, raw_resp, extracted_logs, inv_logs, val_res, final_prompt, attempt_count = (
                 self._execute_cognitive_loop(
                     user_input,
@@ -439,6 +455,7 @@ class TheCortex:
         self._update_history(
             "SYSTEM_INIT" if is_boot_sequence else user_input, final_output
         )
+        self._note_ask(final_output)
         ui_parts = [sim_result.get("ui", "")]
         if sim_result.get("dream"):
             dream_content = sim_result["dream"]
@@ -1035,7 +1052,7 @@ class TheCortex:
         state = getattr(ctx, "halcyon_state", None)
         if not state:
             return None
-        from engine.gate.recall import exchange_scores, meaning_scores, recall, zoned
+        from engine.gate.recall import exchange_scores, meaning_scores, open_keys, recall, zoned
         from engine.receipts import issue as issue_receipt
 
         c_cfg = safe_get(self.cfg, "CORTEX", {})
@@ -1057,6 +1074,11 @@ class TheCortex:
             meta = store.memory_meta()
             found["kept_at"] = {k: meta[k]["kept_at"] for k, _ in found["memories"] if k in meta}
             found["earlier"] = store.memory_earlier({k for k, _ in found["memories"]})
+            # Open from an earlier conversation is not current: it says as of when (Gordon, 2026-10-05).
+            here = store.conversation()
+            found["open"] = {k: None if (meta.get(k) or {}).get("conversation_id") in (None, here) else meta[k]["kept_at"]
+                             for k in open_keys(dict(found["memories"]), meta)}
+            found["reflected"] = self._reflected(store, state, meta, [k for k, _ in found["memories"]])
             store.note_recalled([key for key, _ in found["memories"]])
         if store is not None and self.active_mode != "ADVENTURE":
             # The prompt shows the closest of these that the recent dialogue no longer holds.
@@ -1064,7 +1086,9 @@ class TheCortex:
             ranked = exchange_scores(user_input, store, self._recall_embedder()) or []
             found["exchanges"] = [{"score": round(score, 3), **{k: v for k, v in e.items() if k != "vector"}}
                                   for score, e in ranked if score >= floor]
-            found["next_ordinal"] = max((e["ordinal"] for _, e in ranked), default=0) + 1
+            found["next_n"] = len(ranked) + 1
+            if self.active_mode == "CONVERSATION":
+                found["ask"] = self._follow_up(ctx, state, store)
         held = found["held"]
         by_words = bool(held["memories"]) and found["ranked_by"] == "words"
         issue_receipt(
@@ -1077,6 +1101,54 @@ class TheCortex:
             else "" if held["memories"] or held["facts"] else "nothing kept yet",
         )
         return found
+
+    def _follow_up(self, ctx: Any, state: dict, store: Any) -> Optional[Dict[str, Any]]:
+        """An open memory to ask the person about (Gordon: when all else fails, ask): the oldest one kept in an
+        earlier conversation or FOLLOW_UP_AFTER exchanges ago, never under distress or when they are flagging. It
+        is offered until a reply asks, at most FOLLOW_UP_OFFERS turns a session (_note_ask)."""
+        from engine.gate.recall import open_keys
+
+        budget = getattr(ctx, "somatic_budget", None)
+        if budget is not None and (getattr(budget, "distressed", False) or getattr(budget, "offer_to_carry_load", False)
+                                   or not getattr(budget, "closing_question_allowed", True)):
+            return None
+        # Minutes after they said it is nagging; across sessions it is what a friend asks first.
+        after = int(safe_get(safe_get(self.cfg, "CORTEX", {}), "FOLLOW_UP_AFTER", 8))
+        memory = (state.get("self") or {}).get("memory") or {}
+        meta, here, exchanges = store.memory_meta(), store.conversation(), store.exchanges()
+        due = []
+        for key in open_keys(memory, meta):
+            m = meta.get(key) or {}
+            earlier = m.get("conversation_id") not in (None, here)
+            since = sum(1 for e in exchanges if e.get("at", 0) > (m.get("kept_at") or 0))
+            if (key, memory[key]) not in self.asked_open and (earlier or since >= after):
+                due.append((m.get("kept_at") or 0, key, earlier))
+        if not due:
+            return None
+        kept_at, key, earlier = min(due)
+        self.pending_ask = (key, memory[key])
+        return {"key": key, "value": memory[key], "kept_at": kept_at, "earlier": earlier,
+                "reflected": self._reflected(store, state, meta, [key]).get(key)}
+
+    @staticmethod
+    def _reflected(store: Any, state: dict, meta: dict, keys: list) -> Dict[str, tuple]:
+        """{key: (when, reflection)} for memories a REM reflection drew on after they were kept: the only time
+        BoneAmanita turned something over between turns, so the only time it may say it did."""
+        memory, found = (state.get("self") or {}).get("memory") or {}, {}
+        for key, (at, rkey) in store.reflections_of().items():
+            if key in keys and at > float((meta.get(key) or {}).get("kept_at") or 0) and rkey in memory:
+                found[key] = (at, memory[rkey])
+        return found
+
+    def _note_ask(self, reply: str) -> None:
+        """A follow-up counts once the reply asks; "Hey, I'm back." was judged no moment for it, the next turn was."""
+        if not self.pending_ask:
+            return
+        offers = int(safe_get(safe_get(self.cfg, "CORTEX", {}), "FOLLOW_UP_OFFERS", 3))
+        pending, self.pending_ask = self.pending_ask, None
+        self.offered_open[pending] = self.offered_open.get(pending, 0) + 1
+        if _asks_about(reply, pending) or self.offered_open[pending] >= offers:
+            self.asked_open.add(pending)
 
     def _take_held(self) -> Optional[str]:
         """The request the point of no return held last turn, handed to this prompt once."""
