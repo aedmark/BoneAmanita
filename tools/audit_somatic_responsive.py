@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, ".")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from audit_somatic_census import DEFAULT_TOPIC, SCRIPTS  # noqa: E402
+from audit_somatic_census import DEFAULT_TOPIC, KEY_BEATS, SCRIPTS  # noqa: E402
 from somatic_sim_user import EXIT_KEYS, SIM_MODEL, SimulatedUser  # noqa: E402
 
 CACHE = Path("tools/cache/somatic_responsive.jsonl")
@@ -39,9 +39,10 @@ ARMS = ("bone", "friend", "vanilla", "plain", "textbook")
 PHASE_ORDER = ("engaged", "tiring", "flagging", "distressed", "recovering")
 
 
-def compressed(script: list, turns: int) -> list:
+def compressed(script: list, turns: int, key=frozenset()) -> list:
     """The arc in `turns` messages: each phase keeps its share (largest remainder), first and last beats kept and
-    the rest evenly spaced; the opening message stays the same."""
+    the rest evenly spaced; the opening message stays the same. A key beat takes the place of the nearest pick in its
+    phase that is neither key nor the opener."""
     phases = {p: [i for i, (ph, _) in enumerate(script) if ph == p] for p in PHASE_ORDER}
     exact = {p: len(ix) * turns / len(script) for p, ix in phases.items()}
     counts = {p: int(v) for p, v in exact.items()}
@@ -51,7 +52,12 @@ def compressed(script: list, turns: int) -> list:
     keep = []
     for p, ix in phases.items():
         n = max(1, counts[p])
-        keep += [ix[round(k * (len(ix) - 1) / max(1, n - 1))] for k in range(n)] if n > 1 else [ix[0]]
+        picks = [ix[round(k * (len(ix) - 1) / max(1, n - 1))] for k in range(n)] if n > 1 else [ix[0]]
+        for k in (i for i in ix if script[i][1] in key and i not in picks):
+            free = [j for j in picks if j and script[j][1] not in key]
+            if free:
+                picks[picks.index(min(free, key=lambda j: abs(j - k)))] = k
+        keep += picks
     return [script[i] for i in sorted(set(keep))]
 
 
@@ -111,7 +117,7 @@ def run(args) -> int:
     if args.compress:
         from somatic_sim_user import PERSONAS
         short = f"{args.topic}{args.compress}"
-        SCRIPTS[short] = compressed(SCRIPTS[args.topic], args.compress)
+        SCRIPTS[short] = compressed(SCRIPTS[args.topic], args.compress, KEY_BEATS.get(args.topic, frozenset()))
         PERSONAS[short] = PERSONAS[args.topic]
         args.topic = short
         print(f"  {short}: " + ", ".join(f"{p} {sum(ph == p for ph, _ in SCRIPTS[short])}" for p in PHASE_ORDER))

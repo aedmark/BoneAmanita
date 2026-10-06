@@ -120,6 +120,7 @@ class TheCortex:
         self.asked_open = set()  # (key, value) of open memories followed up on, or offered enough, this session
         self.offered_open = {}  # (key, value): turns the follow-up was offered without the reply asking
         self.pending_ask = None
+        self.side_on_ending = False
         self.openings = deque(maxlen=4)  # [move or None until judged, first sentence] of the last replies shown
         self.worry_ledger = deque(maxlen=20)
         self.modulator = NeurotransmitterModulator(
@@ -206,7 +207,8 @@ class TheCortex:
 {own}Their latest message: "{message}"
 The draft: "{draft}"
 Does the draft (a) praise, approve or justify something hurtful the person did or is about to do, (b) judge, diagnose or
-blame the person who is not here beyond what was told, or (c) push them toward ending the relationship? Answer YES or NO,
+blame the person who is not here beyond what was told, or (c) tell them whether the relationship is over or should
+end, or lean them toward an answer, instead of leaving that to them? Answer YES and the letter, or NO,
 then a colon and one short reason. NO when the draft is fair to both, or when the person did nothing hurtful."""
 
     OPENING = """How does this reply to a friend begin? Read only its first sentence and answer with one word.
@@ -288,7 +290,9 @@ Replace the reply's first sentence with one short question that takes what they 
     def _takes_a_side(self, message: str, draft: str, state: dict) -> str:
         """Why the draft sides against someone who is not here, or "". Prompt rules held about half of these
         (feud20, 2026-10-05: the cruel text was "a heavy truth to put into words"); judging is easier than writing."""
-        if not self._OTHERS.search(str(message or "")) or not str(draft or "").strip():
+        # "Is there a point where you just let it end?" names no one; the conversation around it does.
+        said = [line.split("\n")[0] for line in list(self.dialogue_buffer)[-3:]] + [str(message or "")]
+        if not any(self._OTHERS.search(s) for s in said) or not str(draft or "").strip():
             return ""
         own = (state.get("halcyon_recall") or {}).get("own_part") or []
         lines = "".join(f'- "{o}"\n' for o in own)
@@ -300,8 +304,10 @@ Replace the reply's first sentence with one short question that takes what they 
         finally:
             if usage is not None:
                 self.llm.last_usage = usage
-        verdict, _, why = answer.strip().partition(":")
-        return (why.strip() or "it sided with them.") if verdict.strip().upper().startswith("YES") else ""
+        # "YES c: ...", "YES: c. ..." and "YES (c) ..." all come back.
+        found = re.match(r"\s*YES\b[\s:.,(]*(?:\(?([abc])\b\)?)?[\s:.,)]*(.*)", answer, re.I | re.S)
+        self.side_on_ending = bool(found and (found.group(1) or "").lower() == "c")
+        return ((found.group(2) or "").strip() or "it sided with them.") if found else ""
 
     def _update_history(self, user_text: str, system_text: str):
         self.dialogue_buffer.append(f"Traveler: {user_text}\nSystem: {system_text}")
@@ -586,7 +592,10 @@ Replace the reply's first sentence with one short question that takes what they 
         )
         if (self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
                 and self._in_a_rut(final_output)):
-            if fresh := self._open_with_a_question(user_input, final_output, gk):
+            # The question is new words the fairness check never read ("Was the joke about your ex the only thing that
+            # crossed the line?"); one that takes a side is not used.
+            fresh = self._open_with_a_question(user_input, final_output, gk)
+            if fresh and not self._takes_a_side(user_input, fresh, full_state):
                 final_output = fresh
                 issue_receipt("cortex.opening", "REWRITTEN", result_count=1, inputs={"move": self.openings[-1][0]},
                               detail=first_sentence(fresh))
@@ -984,7 +993,11 @@ Replace the reply's first sentence with one short question that takes what they 
                     rejected_by, reject_detail = "fairness", why
                     val_res["feedback_instruction"] = (
                         f"Your draft took a side: {why} You have heard only their side. Keep in view what they did "
-                        "too, do not blame or diagnose the person who is not here, and do not push them to end it."
+                        "too, and do not blame or diagnose the person who is not here."
+                        # Said on every redraft, "hand the question back" became "Do you think it is time for the
+                        # friendship to end?" after the cruel text (feud20, 2026-10-06); only the ending clause gets it.
+                        + (" Leave whether it should end to them: hedge what you see and hand that question back."
+                           if self.side_on_ending else "")
                     )
             if not val_res.get("feedback_instruction"):
                 e_u = float(phys_state.get("exhaustion", 0.0))

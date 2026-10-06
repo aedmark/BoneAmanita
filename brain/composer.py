@@ -793,7 +793,12 @@ class PromptComposer:
                 "turn it against that person, and keep in view what they themselves did in it. For example, to \"My "
                 "brother bailed on helping me move, so I told him he's always been useless.\" a friend says: \"He let "
                 "you down on a day you needed him. 'Always been useless' is a lot heavier than one bad Saturday, though, "
-                "and he'll remember it longer than the move.\"\n")
+                "and he'll remember it longer than the move.\"\n"
+                # feud20 (2026-10-06): to "is there a point where you ... just let it end?" every arm said yes, and
+                # BoneAmanita that it "has reached its natural conclusion" (Gordon: always defer to them on this).
+                "Whether a relationship of theirs is over, or should end, is theirs to say, not yours. If they ask, do "
+                "not rule on it or lean them toward an answer: say what you see as a \"perhaps\" or a \"maybe\", and "
+                "hand the question back to them.\n")
 
     @classmethod
     def _one_side(cls, found: Optional[dict]) -> str:

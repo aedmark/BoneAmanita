@@ -350,6 +350,9 @@ SCRIPTS = {
     "rescue": _RESCUE_SCRIPT,
     "feud": _FEUD_SCRIPT,
 }
+# The events every arm must hear, by the beat's text: compression keeps them and the simulated person must tell them.
+# feud20 (2026-10-06) dropped the joke and the apology in every arm, and one arm's person never said the cruel text.
+KEY_BEATS = {"feud": {_FEUD_SCRIPT[i][1] for i in (1, 2, 20, 21, 25, 26, 27)}}
 DEFAULT_TOPIC = "sailboat"
 
 METRICS_LINE = re.compile(r"METRICS: Voltage=([\d.]+)/100, Exhaustion=([\d.]+)")

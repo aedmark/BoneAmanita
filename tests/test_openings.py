@@ -24,11 +24,14 @@ class TheOpening(BoneTestCase):
         self.engine.cortex.dspy_critic.enabled = False
         self.judged, self.edits = [], []
         self.edited = QUESTION
+        self.fair = "NO: fair to both."
 
         def generate(prompt, *a, **k):
             if prompt.startswith(JUDGE):
                 self.judged.append(prompt)
                 return "ASSESS"
+            if prompt.startswith("Someone is telling a friend about a conflict"):
+                return self.fair if prompt.count("What made") else "NO: fair to both."
             if prompt.startswith(EDIT):
                 self.edits.append(prompt)
                 return self.edited
@@ -41,8 +44,8 @@ class TheOpening(BoneTestCase):
 
         return [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.opening"]
 
-    def turn(self):
-        return str(self.engine.process_turn("Work was long today. The commute was worse.").get("ui", ""))
+    def turn(self, message="Work was long today. The commute was worse."):
+        return str(self.engine.process_turn(message).get("ui", ""))
 
     def test_a_reply_that_opens_like_the_last_three_opens_with_a_question(self):
         self.engine.cortex.openings.extend(verdicts())
@@ -65,6 +68,13 @@ class TheOpening(BoneTestCase):
             self.engine.cortex.openings.clear()
             self.engine.cortex.openings.extend(verdicts())
             self.assertIn(REPLY, self.turn(), edited)
+
+    def test_a_question_that_takes_a_side_is_not_used(self):
+        """feud20 (2026-10-06): an edit opened "Was the joke about your ex the only thing that crossed the line?"."""
+        self.fair = "YES b: it blames her."
+        self.engine.cortex.openings.extend(verdicts())
+        self.assertIn(REPLY, self.turn("She took the last seat on the train. The commute was worse."))
+        self.assertEqual(self.rewritten(), [])
 
     def test_varied_openings_are_left_alone(self):
         self.engine.cortex.openings.extend([[None, VERDICTS[0]], ["FEEL", "Oh no, not the car."], [None, VERDICTS[1]]])

@@ -143,6 +143,11 @@ class OneSide(BoneTestCase):
     def test_other_modes_are_not(self):
         self.assertNotIn("=== ONE SIDE ===", self.prompt_in("TECHNICAL"))
 
+    def test_whether_it_ends_is_left_to_them(self):
+        """feud20 (2026-10-06): "is there a point where you ... just let it end?" got "the friendship has reached its
+        natural conclusion"; Gordon: always defer to them on this, judge or not."""
+        self.assertIn("is theirs to say, not yours", self.prompt_in("CONVERSATION"))
+
 
 class TheirOwnPart(BoneTestCase):
     SAID = ["It happened at my birthday dinner. She made a joke about my ex.",
@@ -192,6 +197,42 @@ class TheFairnessCheck(BoneTestCase):
         self.assertIn("That text will land hard on her.", ui)
         self.assertIn('"I sent her a text saying she gets cruel when she\'s cornered."', self.judged[0])
 
+    def test_a_message_that_names_no_one_is_checked_when_the_talk_before_did(self):
+        self.engine.cortex.dialogue_buffer.append("Traveler: She made a joke about my ex.\nSystem: That stung.")
+        self.engine.process_turn("Is there a point where you just let it end?")
+        self.assertEqual(len(self.judged), 1)
+
     def test_no_one_else_in_the_message_no_check(self):
         self.engine.process_turn("Work was long today.")
         self.assertEqual(self.judged, [])
+
+
+class TheEndingIsTheirs(BoneTestCase):
+    """feud20 (2026-10-06): told on every fairness redraft to hand the question of ending back, the reply to the cruel
+    text closed "Do you think it is time for the friendship to end?"; only a draft judged to lean on it hears that."""
+
+    def redraft_prompt(self, verdict):
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self.engine.cortex.dspy_critic.enabled = False
+        prompts, judged = [], []
+
+        def generate(prompt, *a, **k):
+            if prompt.startswith("Someone is telling a friend about a conflict"):
+                judged.append(prompt)
+                return verdict if len(judged) == 1 else "NO: fair."
+            prompts.append(prompt)
+            return "She was cruel to you, and that is on her."
+
+        self.engine.cortex.llm.generate = MagicMock(side_effect=generate)
+        self.engine.process_turn("Is there a point where she and I should just call it?")
+        return prompts[1]
+
+    def test_a_draft_leaning_on_the_ending_is_told_to_leave_it_to_them(self):
+        self.assertIn("hand that question back", self.redraft_prompt("YES c: it says the friendship is over."))
+
+    def test_the_letter_is_read_wherever_the_judge_puts_it(self):
+        for verdict in ("YES: c. It says it is over.", "YES (c) it says it is over."):
+            self.assertIn("hand that question back", self.redraft_prompt(verdict), verdict)
+
+    def test_other_siding_is_not(self):
+        self.assertNotIn("hand that question back", self.redraft_prompt("YES b: it blames her."))

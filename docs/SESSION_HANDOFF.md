@@ -632,6 +632,37 @@ would only move it (Gordon: regex and prompts are brittle). Measured on 100 hand
   survives as the second sentence.
 - `tests/test_openings.py` (5). Suite 1107 passed, 5 skipped.
 
+**20.7.4.111: every arm hears the same story; whether it ends is theirs.** Before another panel run:
+- **Key beats.** Compressed to 20 the feud lost the joke and the person's apology in every arm, and the simulated
+  person told one arm "I told her I needed time." for Jess's call and another "Sent it." for the cruel text.
+  `KEY_BEATS` (`tools/audit_somatic_census.py`: the joke, the retort, the photos, the text, the call, the apology,
+  the coffee plan) are kept by `compressed()` in place of the nearest other pick in their phase (shares unchanged,
+  other topics unchanged), and `SimulatedUser.message` asks again when a key beat's message carries under half its
+  content words (`tells`; faithful retellings scored 0.57 to 0.92 on the past runs, drifts 0 to 0.29), then sends
+  the beat as written. Without the coffee plan the last beat read as an invitation ("You in?") and BoneAmanita
+  answered "I can't go, as I don't have a physical presence".
+- **The ending is theirs** (Gordon: always defer to them on this, judge or not; a "perhaps" before anything that
+  sounds final). ONE SIDE gains "Whether a relationship of theirs is over, or should end, is theirs to say, not
+  yours..."; the fairness judge's third clause is "tell them whether the relationship is over or should end, or
+  lean them toward an answer", and it runs when any of the person's last 3 messages names someone, since "is there a
+  point where you ... just let it end?" names no one and was never checked. The judge answers with the clause's
+  letter, read before or after the colon; only (c) adds "hand that question back" to the redraft, since said on
+  every redraft it became "Do you think it is time for the friendship to end?" after the cruel text. An opening
+  edited into a question goes through the judge too ("Was the joke about your ex the only thing that crossed the
+  line?" took a side) and is not used if it does. Probe, "let it end": 1 of 3 replies handed it back before, 3 of 3
+  after ("Some people find that letting it end provides a sense of peace, while others see it as a door they aren't
+  ready to close yet... What does staying in this middle ground feel like for you?"); none flagged on the sister.
+- **Panel** (`20261006-133547` and after): 21 of 21 key beats told, none timed out. Exit interview (heard / clearer /
+  lectured / performed / again): bone 4.67 / 3.67 / 2.33 / 2.33 / 5.67, friend 4 / 3 / 2 / 1.33 / 5.33, plain 5 / 4 /
+  2.67 / 2 / 5.67. Only BoneAmanita is fair at the cruel text ("a critique of her entire character ... very hard
+  for her to respond without getting defensive"; friend "That took a lot of guts", plain "a brave and honest move")
+  and does not answer "let it end" yes (plain "some chapters are meant to conclude"). The run before the last fixes
+  had bone's "again" at 4.33 to the others' 6 and 5.67: the simulator, agreeable by design, scores agreement.
+- **Still open:** the voice. Most replies observe and assess; "heavy" is in 10 of bone's 20 replies (friend 4, plain
+  3). The open-memory follow-up arrives as a separate trailing paragraph.
+- `tests/test_sim_beats.py` (6), `tests/test_continuity_claims.py` (`TheEndingIsTheirs`, and the judge reading the
+  talk before), `tests/test_openings.py` (a question that takes a side). Suite 1119 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

@@ -151,6 +151,19 @@ def render_transcript(transcript: list, window: int) -> str:
     return "\n".join(lines)
 
 
+_STOP = set("a an the and or but so to of in on at for with about is are was were be been it its it's this that i i'm "
+             "me my we our they them their she her he him his you your just not no there as if than then from by into out "
+             "up down over all any some one had has have did do does would could should will can said".split())
+
+
+def tells(text: str, beat: str, floor: float = 0.5) -> bool:
+    """The message carries most of the beat's content words (stems). On the feud runs, faithful retellings scored
+    0.57 to 0.92 and drifts ("I told her I needed time." for the apology call) 0 to 0.29."""
+    words = lambda t: {w[:5] for w in re.findall(r"[a-z']+", t.lower()) if w not in _STOP and len(w) > 2}
+    wanted = words(beat)
+    return not wanted or len(wanted & words(text)) / len(wanted) >= floor
+
+
 class SimulatedUser:
     def __init__(
         self,
@@ -161,9 +174,10 @@ class SimulatedUser:
         temperature: float = 0.8,
         post=requests.post,
     ):
-        from audit_somatic_census import SCRIPTS
+        from audit_somatic_census import KEY_BEATS, SCRIPTS
 
         self.topic, self.model, self.window = topic, model, window
+        self.key_beats = KEY_BEATS.get(re.sub(r"\d+$", "", topic), set())
         self.seed, self.temperature, self.post = seed, temperature, post
         self.fell_back = self.trimmed = False
         script = SCRIPTS[topic]
@@ -244,6 +258,9 @@ class SimulatedUser:
             # byte-for-byte. A message containing the last one as a prefix is that pattern.
             if not text or text.strip().casefold() == last_me or text.strip().casefold().startswith(last_me):
                 extra = nudge
+                continue
+            if beat in self.key_beats and not tells(text, beat):
+                extra = f"\n\n(You left out what happened. This message has to tell them: {beat})"
                 continue
             if cap and len(text.split()) > cap:
                 extra, too_long = shorter, text
