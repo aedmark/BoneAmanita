@@ -58,6 +58,30 @@ class CortexServices:
     config_ref: Any = None
     akashic: Any = None
 
+_OWN_ACT = re.compile(r"\bI (?:said|told|sent|yelled|screamed|snapped|texted|wrote|called (?:her|him|them) )", re.I)
+
+
+def own_part(said: list, most: int = 2) -> list:
+    """The latest sentences in which the person says what they did to someone, in their words ("I said something
+    back. Loud."); the ONE SIDE block and the fairness check hand them back, since the model forgot them."""
+    found = []
+    for text in said:
+        sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+", str(text or "")) if x.strip()]
+        i = 0
+        while i < len(sentences):
+            if not _OWN_ACT.search(sentences[i]):
+                i += 1
+                continue
+            # "I said something back." says little; what follows says what it was.
+            take = sentences[i:i + 1]
+            while len(" ".join(take).split()) < 12 and i + len(take) < len(sentences):
+                take.append(sentences[i + len(take)])
+            if (part := " ".join(take)) not in found:
+                found.append(part)
+            i += len(take)
+    return found[-most:]
+
+
 def _asks_about(reply: str, memory: tuple) -> bool:
     """Whether a question in the reply shares a word with the memory (key, value). "How have things been since we
     last spoke?" took the turn's question in 2 of 3 fresh sessions; it is not a follow-up on decision_on_pepper."""
@@ -170,6 +194,32 @@ class TheCortex:
         if instance.active_mode not in BonePresets.MODES:
             instance.active_mode = "ADVENTURE"
         return instance
+
+    _OTHERS = re.compile(r"\b(?:she|he|her|him|his|they|them|their)\b", re.I)
+    FAIRNESS = """Someone is telling a friend about a conflict with a person who is not here. Read the friend's draft reply.
+{own}Their latest message: "{message}"
+The draft: "{draft}"
+Does the draft (a) praise, approve or justify something hurtful the person did or is about to do, (b) judge, diagnose or
+blame the person who is not here beyond what was told, or (c) push them toward ending the relationship? Answer YES or NO,
+then a colon and one short reason. NO when the draft is fair to both, or when the person did nothing hurtful."""
+
+    def _takes_a_side(self, message: str, draft: str, state: dict) -> str:
+        """Why the draft sides against someone who is not here, or "". Prompt rules held about half of these
+        (feud20, 2026-10-05: the cruel text was "a heavy truth to put into words"); judging is easier than writing."""
+        if not self._OTHERS.search(str(message or "")) or not str(draft or "").strip():
+            return ""
+        own = (state.get("halcyon_recall") or {}).get("own_part") or []
+        lines = "".join(f'- "{o}"\n' for o in own)
+        prompt = self.FAIRNESS.format(own=f"What they told you they did:\n{lines}" if lines else "",
+                                      message=message, draft=draft)
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            answer = str(self.llm.generate(prompt, {"temperature": 0.0, "max_tokens": 60}) or "")
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        verdict, _, why = answer.strip().partition(":")
+        return (why.strip() or "it sided with them.") if verdict.strip().upper().startswith("YES") else ""
 
     def _update_history(self, user_text: str, system_text: str):
         self.dialogue_buffer.append(f"Traveler: {user_text}\nSystem: {system_text}")
@@ -837,6 +887,13 @@ class TheCortex:
                             f"DSPy Critic Objected: {judge_reason.split('.')[0][:60]}...",
                             "SYS",
                         )
+            if not val_res.get("feedback_instruction") and not last_draft and self.active_mode == "CONVERSATION":
+                if why := self._takes_a_side(user_input, final_text, full_state):
+                    rejected_by, reject_detail = "fairness", why
+                    val_res["feedback_instruction"] = (
+                        f"Your draft took a side: {why} You have heard only their side. Keep in view what they did "
+                        "too, do not blame or diagnose the person who is not here, and do not push them to end it."
+                    )
             if not val_res.get("feedback_instruction"):
                 e_u = float(phys_state.get("exhaustion", 0.0))
                 beta = float(
@@ -1089,6 +1146,7 @@ class TheCortex:
             found["next_n"] = len(ranked) + 1
             if self.active_mode == "CONVERSATION":
                 found["ask"] = self._follow_up(ctx, state, store)
+                found["own_part"] = own_part([e["said"] for e in store.exchanges()] + [user_input])
         held = found["held"]
         by_words = bool(held["memories"]) and found["ranked_by"] == "words"
         issue_receipt(

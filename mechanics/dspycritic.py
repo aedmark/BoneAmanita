@@ -81,22 +81,20 @@ class DSPyCritic:
             )
             clean_url = raw_url.replace("/chat/completions", "")
             if provider in ("ollama", "lm_studio"):
-                self.lm = dspy.LM(
-                    model=f"openai/{model_name}",
-                    api_base=clean_url,
-                    api_key="local-model-doesnt-need-a-key",
-                )
+                model, options = f"openai/{model_name}", {"api_base": clean_url, "api_key": "local-model-doesnt-need-a-key"}
             elif provider in CLOUD_ENDPOINTS:
                 key = os.getenv(KEY_ENV[provider]) or get_cfg("api_key", "")
                 prefix = "openai" if provider == "xai" else "anthropic"
-                options = {"api_key": key, "max_tokens": 1024}
+                model, options = f"{prefix}/{model_name}", {"api_key": key, "max_tokens": 1024}
                 if provider == "xai":
                     options["api_base"] = CLOUD_ENDPOINTS[provider].removesuffix("/chat/completions")
-                self.lm = dspy.LM(model=f"{prefix}/{model_name}", **options)
             else:
-                self.lm = dspy.LM(model=model_name)
+                model, options = model_name, {}
+            self.lm = dspy.LM(model=model, **options)
             dspy.settings.configure(lm=self.lm)
+            # The judge runs inside a turn: a slow answer (71s seen) fails open instead of starving the loop.
             self.judge = dspy.ChainOfThought(AssessFaithfulness)
+            self.judge.set_lm(dspy.LM(model=model, num_retries=0, timeout=float(get_cfg("dspy_timeout", 30.0)), **options))
             self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)
             self.compressor = dspy.ChainOfThought(CompressAxioms)
             from physics.maths import NaviSADProtocol

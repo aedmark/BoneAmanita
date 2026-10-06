@@ -211,6 +211,7 @@ class BoneConfig:
     # model D7 tuned for somatic compliance. It gets its own knob so tuning
     # one never silently retunes the other.
     DSPY_MODEL = "gemma4:e4b"
+    DSPY_TIMEOUT = 30.0
     OLLAMA_FALLBACK = ""
     REQUIRED_CONFIG = {
         "CORTEX": [

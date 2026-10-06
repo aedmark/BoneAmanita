@@ -551,6 +551,24 @@ again: bone 4.67 / 4, friend 5 / 6, plain 5 / 6. BoneAmanita still sides where i
 heavy truth to put into words", Jess's apology call "isn't taking responsibility", and "unfollow her" is backed.
 Pages rebuilt from this run.
 
+**20.7.4.106: a fairness judge; the critic gets 30 seconds.** Prompt rules held both sides about half the time, so
+in CONVERSATION a draft that can still be redone, when the message mentions someone else (she, he, they ...), goes to
+a one-call judge (`Cortex._takes_a_side`, temperature 0, 60 tokens): does it side with the person against someone not
+here? YES redrafts with the reason (receipt `cortex.redraft` effect `fairness`). The judge and the ONE SIDE block are
+handed what the person said they did, in their words (`brain/cortex.py` `own_part`: "I said something back. Loud.
+Something about her marriage that I knew would land."), since replies forgot it. Siding probe, 3 sessions per case:
+- The judge flagged the turn the person describes their retort in 8 of 9 feud sessions (the ninth timed out): "It
+  validates the choice to use a personal 'nerve' as a tactic." It said no on 4 of 4 sister and coworker sessions.
+- Final replies holding both sides: the text 2 of 3 (one on the fence), the excuse 1 of 3 (the other two weigh
+  Jess's reasons against the hurt but drop the person's part; the judge does not count leaving it out as siding),
+  "let it end" 0 of 3, all still lean to ending.
+- Missing replies were turns past the 240s cognitive loop limit. The DSPy critic took 7.6 to 71.5s, and the library
+  retries a timed-out call 3 times; the judge now has its own LM with `num_retries=0` and `BoneConfig.DSPY_TIMEOUT`
+  (30s), failing open. In the probe 15 of 51 critic calls hit the cap, and 5 of 56 turns still timed out, so the
+  critic is not the only slow call.
+- `tests/test_continuity_claims.py` `TheirOwnPart`, `TheFairnessCheck`; `tests/test_failure_boundaries.py` (a judge
+  that never answers). Suite 1099 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

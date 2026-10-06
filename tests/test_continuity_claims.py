@@ -142,3 +142,56 @@ class OneSide(BoneTestCase):
 
     def test_other_modes_are_not(self):
         self.assertNotIn("=== ONE SIDE ===", self.prompt_in("TECHNICAL"))
+
+
+class TheirOwnPart(BoneTestCase):
+    SAID = ["It happened at my birthday dinner. She made a joke about my ex.",
+            "I said something back. Loud. Something about her marriage that I knew would land. She left before the cake.",
+            "I sent her a text. A long one. I said she's always needed to be the funny one."]
+
+    def test_what_they_did_is_quoted_in_their_words(self):
+        from brain.cortex import own_part
+
+        self.assertEqual(own_part(self.SAID), [
+            "I said something back. Loud. Something about her marriage that I knew would land.",
+            "I sent her a text. A long one. I said she's always needed to be the funny one."])
+        self.assertEqual(own_part(["My sister is visiting next week.", "The vet said she's fine."]), [])
+
+    def test_the_one_side_block_hands_it_back(self):
+        block = PromptComposer._one_side({"own_part": ["I said something back. Loud."]})
+        self.assertIn('They told you they did this too: "I said something back. Loud."', block)
+        self.assertNotIn("They told you", PromptComposer._one_side({}))
+
+
+class TheFairnessCheck(BoneTestCase):
+    """feud20 rerun (2026-10-05): the cruel text was "a heavy truth to put into words" and Jess's apology call "isn't
+    taking responsibility". A judge call reads drafts that can still be redone when the message is about someone else."""
+
+    def setUp(self):
+        super().setUp()
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self.engine.cortex.dspy_critic.enabled = False
+        self.judged = []
+
+        def generate(prompt, *a, **k):
+            if prompt.startswith("Someone is telling a friend about a conflict"):
+                self.judged.append(prompt)
+                return "YES: it praised the cruel text." if len(self.judged) == 1 else "NO: fair to both."
+            return "That is a heavy truth to put into words." if not self.judged else "That text will land hard on her."
+
+        self.engine.cortex.llm.generate = MagicMock(side_effect=generate)
+
+    def redrafts(self):
+        from engine.receipts import ReceiptLedger
+
+        return [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft" and r.effect == "fairness"]
+
+    def test_a_draft_that_takes_a_side_is_redone(self):
+        ui = str(self.engine.process_turn("I sent her a text saying she gets cruel when she's cornered.").get("ui", ""))
+        self.assertEqual(len(self.redrafts()), 1)
+        self.assertIn("That text will land hard on her.", ui)
+        self.assertIn('"I sent her a text saying she gets cruel when she\'s cornered."', self.judged[0])
+
+    def test_no_one_else_in_the_message_no_check(self):
+        self.engine.process_turn("Work was long today.")
+        self.assertEqual(self.judged, [])

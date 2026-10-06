@@ -707,7 +707,7 @@ class PromptComposer:
             ("dialogue", dialogue_block),
             ("ask", self._ask_block(state.get("halcyon_recall"))),
             ("somatic_budget", somatic_budget_block),
-            ("one_side", self.ONE_SIDE if active_mode_name == "CONVERSATION" else ""),
+            ("one_side", self._one_side(state.get("halcyon_recall")) if active_mode_name == "CONVERSATION" else ""),
             ("mode_trigger", mode_trigger),
             # Before the input: after the reply cue, the model read it as part of its own turn.
             ("warden_instruction", self._halcyon_instruction(
@@ -794,6 +794,12 @@ class PromptComposer:
                 "brother bailed on helping me move, so I told him he's always been useless.\" a friend says: \"He let "
                 "you down on a day you needed him. 'Always been useless' is a lot heavier than one bad Saturday, though, "
                 "and he'll remember it longer than the move.\"\n")
+
+    @classmethod
+    def _one_side(cls, found: Optional[dict]) -> str:
+        """ONE SIDE, with what they told you they did, in their words, when they did."""
+        own = (found or {}).get("own_part") or []
+        return cls.ONE_SIDE + ("They told you they did this too: " + " ".join(f'"{o}"' for o in own) + "\n" if own else "")
 
     @staticmethod
     def _date(ts: float) -> str:

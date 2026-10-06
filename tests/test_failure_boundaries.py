@@ -59,6 +59,26 @@ class TheCritic(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIn("unavailable", why)
 
+    def test_a_judge_that_never_answers_fails_open_at_the_cap(self):
+        """feud20 (2026-10-05): one judge call took 71.5s, and with retries turns ran past the 240s loop limit."""
+        import socket
+        import time
+
+        from mechanics.dspycritic import DSPyCritic
+
+        silent = socket.socket()
+        silent.bind(("127.0.0.1", 0))
+        silent.listen()
+        url = f"http://127.0.0.1:{silent.getsockname()[1]}/v1"
+        critic = DSPyCritic({"PROVIDER": "ollama", "BASE_URL": url, "DSPY_TIMEOUT": 1.0})
+        critic.navi_sad = SimpleNamespace(calculate_malignancy_factor=lambda *a, **k: 0.0)
+        start = time.monotonic()
+        ok, why = critic.audit_generation(f"q {start}", "", "a")
+        silent.close()
+        self.assertTrue(ok)
+        self.assertIn("unavailable", why)
+        self.assertLess(time.monotonic() - start, 5.0)
+
     def test_only_the_library_call_is_covered(self):
         broken = MagicMock(return_value=object())  # no .faithfulness: our parsing, not the library
         with self.assertRaises(AttributeError):

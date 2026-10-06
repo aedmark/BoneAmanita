@@ -545,6 +545,7 @@ class RandomTest(BoneTestCase):
 
         ReceiptLedger.get_instance().begin_turn()
         self.engine.cortex.dspy_critic.enabled = False
+        self.engine.cortex._takes_a_side = MagicMock(return_value="")
         self.engine.cortex.validator.validate = MagicMock(
             side_effect=lambda text, _state: {"valid": True, "content": text, "meta_logs": []}
         )
