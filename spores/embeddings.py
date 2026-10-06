@@ -24,7 +24,8 @@ _DEFAULTS: Dict[str, Any] = {
     "MODEL": "nomic-embed-text",
     "URL": "http://127.0.0.1:11434/v1/embeddings",
     "API_KEY": "ollama",
-    "TIMEOUT": 20.0,
+    # A healthy embed takes 0.01s and the boot batch ~2s; three 20s waits once cost a turn a minute.
+    "TIMEOUT": 5.0,
     "MAX_CHARS": 2048,
     "NORMALIZE": True,
     # After a fall to the hash, how often to check whether the backend is back, and how long to wait for it.

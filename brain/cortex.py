@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from archetypes.symbiosis import SymbiosisManager
 from brain.composer import LLMInterface, PromptComposer, ResponseValidator
+from engine import turn_guard
 from brain.linear_cortex import LinearCortexRouter
 from brain.mind import DreamEngine, NeurotransmitterModulator
 from engine.constants import Prisma
@@ -502,6 +503,7 @@ then a colon and one short reason. NO when the draft is fair to both, or when th
         self.svc.symbiosis.monitor_host(
             time.time() - start_time, final_output, len(final_prompt)
         )
+        turn_guard.check("before the history")
         self._update_history(
             "SYSTEM_INIT" if is_boot_sequence else user_input, final_output
         )
@@ -821,6 +823,7 @@ then a colon and one short reason. NO when the draft is fair to both, or when th
         val_res = {"valid": False}
         final_prompt = base_prompt
         for attempt in range(cognitive_retries):
+            turn_guard.check(f"draft {attempt + 1}")
             val_res = {"valid": False}
             rejected_by, reject_detail, gate_txt = "validator", "", ""
             raw_resp = self.llm.generate(final_prompt, llm_params)

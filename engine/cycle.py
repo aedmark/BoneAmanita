@@ -12,6 +12,7 @@ import numpy as np
 
 from engine.constants import Prisma
 from engine.core import CycleContext, LoreManifest, record_crash
+from engine import turn_guard
 from drivers import CongruenceValidator
 from machine import PanicRoom
 from mechanics.reporter import CycleReporter
@@ -346,6 +347,9 @@ class GeodesicOrchestrator:
         self.output_queue = queue.Queue()
         self.is_running = False
         self.daemon_thread = None
+        # Clear while a turn runs; the next one waits for a timed-out turn to stop.
+        self.idle = threading.Event()
+        self.idle.set()
         self.last_interaction_time = time.time()
         self.engine_state = "WAKE"
         self.dream_log = deque(maxlen=5)
@@ -381,8 +385,12 @@ class GeodesicOrchestrator:
             try:
                 task_data = self.input_queue.get(timeout=0.1)
                 task_acquired = True
+                self.idle.clear()
                 user_message, is_system = task_data[0], task_data[1]
                 turn_ticket = task_data[2] if len(task_data) > 2 else None
+                turn_guard.begin(turn_ticket)
+                history = getattr(getattr(self.eng, "cortex", None), "dialogue_buffer", None)
+                said_before = history[-1] if history else None
                 self.last_interaction_time = current_time
                 if self.engine_state == "REM":
                     self.engine_state = "WAKE"
@@ -402,6 +410,11 @@ class GeodesicOrchestrator:
                     self.dream_log.clear()
                 self.output_queue.put(snapshot)
                 self.last_interaction_time = time.time()
+            except turn_guard.TurnAbandoned as e:
+                # Stopped after the reply reached the history: the person never saw it.
+                if history and history[-1] is not said_before:
+                    history.pop()
+                self.eng.events.log(f"The turn that timed out stopped before writing anything ({e}).", "KERNEL", "WARN")
             except queue.Empty:
                 if not self.is_running:
                     break
@@ -444,6 +457,8 @@ class GeodesicOrchestrator:
                 time.sleep(1.0)
             finally:
                 if task_acquired:
+                    turn_guard.begin(None)
+                    self.idle.set()
                     self.input_queue.task_done()
 
     def _process_rem_tick(self):
@@ -976,6 +991,7 @@ class GeodesicOrchestrator:
             )
             ctx = self.simulator.run_simulation(ctx)
             
+            turn_guard.check("before the keeper")
             # --- Halcyon Gate Integration ---
             # The gate reads the accepted draft as the model wrote it (prose plus any NOMINATE line), not the rendered screen.
             model_raw = getattr(getattr(self.eng, "cortex", None), "last_model_raw", "")
@@ -1014,6 +1030,7 @@ class GeodesicOrchestrator:
                         if gate_text:
                             receipt = gate.adjudicate(gate_text)
 
+                            turn_guard.check("before the memory commit")
                             self.eng.store.commit_cycle(
                                 trace_id=ctx.trace_id,
                                 new_state=gate.state,

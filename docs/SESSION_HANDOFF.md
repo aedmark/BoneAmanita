@@ -580,6 +580,18 @@ probe turns took 6.5 to 12.5s (reply 1.6 to 4.8s, critic 0.7 to 3.8s, judge abou
 fairness judge flagged the retort in 4 of 4 feud sessions and none of the sister ones.
 - `tests/test_failure_boundaries.py` (the judge thinks as little as the reply model). Suite 1100 passed, 5 skipped.
 
+**20.7.4.108: a timed-out turn stops before it writes.** Past the cognitive loop limit the person was shown the
+timeout, but the turn ran on in the daemon: its unseen reply went into the dialogue history, the keeper ran and
+committed, and the next turn queued behind it. Now `main.py` marks the ticket abandoned (`engine/turn_guard.py`), and
+the turn checks before each draft, before the history, before the keeper and before the memory commit; stopped, it
+writes nothing (a reply already in the history is taken out) and logs "The turn that timed out stopped before writing
+anything". `TurnAbandoned` is a BaseException so the turn's broad crash handlers let it through to the daemon. The
+next turn waits for the daemon to go idle (at most the call in flight, `LLM_TIMEOUT`) before its own clock starts.
+The embedder's per-call `TIMEOUT` is 5s (was 20; a healthy embed takes 0.01s, the boot batch 1.7s): during the
+Ollama fault three 20s waits cost one turn a minute before it fell to the hash. The fall itself was never silent (a
+WARN, then CRIT on the third failure, re-probed every 120s).
+- `tests/test_turn_guard.py` (a timeout in the reply, and in the keeper). Suite 1102 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

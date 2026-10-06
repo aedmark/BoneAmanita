@@ -378,7 +378,7 @@ class BoneConfig:
         "MODEL": "nomic-embed-text",
         "URL": "http://127.0.0.1:11434/v1/embeddings",
         "API_KEY": "ollama",
-        "TIMEOUT": 20.0,
+        "TIMEOUT": 5.0,
         "MAX_CHARS": 2048,
     }
     _TEMPLATE_DATA = {}

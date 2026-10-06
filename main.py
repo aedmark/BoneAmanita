@@ -35,6 +35,7 @@ from engine.core import (
     record_crash,
 )
 from engine.cycle import GeodesicOrchestrator
+from engine import turn_guard
 from engine.genesis import DEPENDS_ON, VILLAGE_KEYS, BoneGenesis
 from mechanics.commands import CommandProcessor
 from mechanics.lexicon import LexiconService
@@ -669,6 +670,8 @@ class BoneAmanita:
             )
             try:
                 turn_ticket = f"TICK_{self.tick_count}_{time.time()}"
+                # A timed-out turn is still finishing its call in flight; this one's clock starts after it stops.
+                self.orchestrator.idle.wait(llm_timeout)
                 self.orchestrator.input_queue.put((user_message, is_system, turn_ticket))
                 while True:
                     snapshot = self.orchestrator.output_queue.get(timeout=timeout_val)
@@ -677,6 +680,7 @@ class BoneAmanita:
                     self.events.log("Discarded stale async snapshot [Ticket mismatch].", "DEBUG")
             except (queue.Empty, Exception) as e:
                 if isinstance(e, queue.Empty):
+                    turn_guard.abandon(turn_ticket)
                     err_msg = f"Cognitive Loop Timeout ({timeout_val}s). The engine was paralyzed by overthinking."
                 else:
                     record_crash(self, "ORCHESTRATOR COLLAPSE", e)
