@@ -83,6 +83,10 @@ def own_part(said: list, most: int = 2) -> list:
     return found[-most:]
 
 
+def first_sentence(text: str) -> str:
+    return re.split(r"(?<=[.!?])\s", str(text or "").strip(), maxsplit=1)[0].strip()
+
+
 def _asks_about(reply: str, memory: tuple) -> bool:
     """Whether a question in the reply shares a word with the memory (key, value). "How have things been since we
     last spoke?" took the turn's question in 2 of 3 fresh sessions; it is not a follow-up on decision_on_pepper."""
@@ -116,6 +120,7 @@ class TheCortex:
         self.asked_open = set()  # (key, value) of open memories followed up on, or offered enough, this session
         self.offered_open = {}  # (key, value): turns the follow-up was offered without the reply asking
         self.pending_ask = None
+        self.openings = deque(maxlen=4)  # [move or None until judged, first sentence] of the last replies shown
         self.worry_ledger = deque(maxlen=20)
         self.modulator = NeurotransmitterModulator(
             bio_ref=self.svc.bio, events_ref=self.events, config_ref=self.cfg
@@ -203,6 +208,82 @@ The draft: "{draft}"
 Does the draft (a) praise, approve or justify something hurtful the person did or is about to do, (b) judge, diagnose or
 blame the person who is not here beyond what was told, or (c) push them toward ending the relationship? Answer YES or NO,
 then a colon and one short reason. NO when the draft is fair to both, or when the person did nothing hurtful."""
+
+    OPENING = """How does this reply to a friend begin? Read only its first sentence and answer with one word.
+ASSESS: it passes a verdict on what they said, did or are going through, or states a general truth about it ("That is a big step.", "Moving is always harder than people expect.", "The waiting is the worst part.").
+FEEL: it reacts with sympathy or feeling for them ("I'm so sorry.", "Oh no, not the car.", "I can hear how tired you are.").
+ANSWER: it answers or acknowledges briefly ("Yes, it can.", "Go for it.", "Sleep well.", "I'm here.").
+ASK: it asks them something ("Did the landlord ever call back?").
+ECHO: it repeats their own words back ('"Like a stranger in my own kitchen."').
+First sentence: "{sentence}"
+Answer:"""
+    MOVES = ("ASSESS", "FEEL", "ANSWER", "ASK", "ECHO")
+    INSTEAD = {"ASK": "a plain question about what they just told you", "ECHO": "their own words, picked up",
+               "FEEL": "a few words of feeling for them", "ANSWER": "a short, direct answer",
+               "ASSESS": "what you make of it"}
+
+    def _opening_move(self, text: str) -> tuple:
+        """(move, first sentence) of a reply. feud20 (2026-10-06): 16 of 20 replies opened with a verdict on what was
+        said ("That is a heavy..."); the embedder told moves apart 73 of 100, this call 85 (46 of 52 verdicts)."""
+        sentence = first_sentence(text)
+        if not sentence:
+            return "", ""
+        if sentence.endswith("?"):
+            return "ASK", sentence
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            answer = str(self.llm.generate(self.OPENING.format(sentence=sentence), {"temperature": 0.0, "max_tokens": 5}) or "")
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        return next((m for m in self.MOVES if answer.strip().upper().startswith(m)), ""), sentence
+
+    def _in_a_rut(self, reply: str) -> bool:
+        """The reply opens as the last OPENING_RUT replies shown did. Openings are judged only now, newest first, and
+        only until two differ."""
+        rut = int(safe_get(safe_get(self.cfg, "CORTEX", {}), "OPENING_RUT", 3))
+        last = list(self.openings)[-rut:]
+        if len(last) < rut:
+            return False
+        for entry in reversed(last):
+            if entry[0] is None:
+                entry[0] = self._opening_move(entry[1])[0]
+            if not entry[0] or entry[0] != last[-1][0]:
+                return False
+        self._draft_opening = self._opening_move(reply)
+        return self._draft_opening[0] == last[-1][0]
+
+    REWRITE = """Here is a message a friend wrote back to someone, and what that person had said to them.
+{earlier}They just said: "{message}"
+The friend's reply: "{reply}"
+Replace the reply's first sentence with one short question that takes what they just said one step further: the plain question a friend would ask about the people and things in it, not about their feelings in general (never "How does that make you feel?"). Never ask what they have already told you, now or earlier, and never just turn their words into a question. Keep everything after it as it is, word for word, unless a word must change to follow on. Do not add a greeting. Answer with the whole rewritten reply and nothing else."""
+
+    def _open_with_a_question(self, message: str, reply: str, gk: Any) -> str:
+        """The reply with its first sentence made a question, or "" when the edit did not hold. A redraft kept the
+        habit 6 of 7 times (the prompt's own history pulls it back); this edit took 5 of 5 live. Shown only the latest
+        message it asked what they had just said (6 of 19) or had told it earlier."""
+        said = [line.split("\n")[0].removeprefix("Traveler: ") for line in self.dialogue_buffer][-4:]
+        earlier = "Earlier they said:\n" + "".join(f'- "{m}"\n' for m in said) if said else ""
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            out = str(self.llm.generate(self.REWRITE.format(earlier=earlier, message=message, reply=reply),
+                                        {"temperature": 0.0, "max_tokens": 400}) or "").strip().strip('"')
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        question = first_sentence(out)
+        rest = out[len(question):].split()
+        kept = reply[len(first_sentence(reply)):].split()
+        if not question.endswith("?") or len(rest) < 0.6 * len(kept) or (gk and gk._find_crime(question, self.active_mode)):
+            return ""
+        return out
+
+    def _note_opening(self, reply: str) -> None:
+        drafted = getattr(self, "_draft_opening", None)
+        self._draft_opening = None
+        if sentence := first_sentence(reply):
+            known = drafted[0] if drafted and drafted[1] == sentence else "ASK" if sentence.endswith("?") else None
+            self.openings.append([known, sentence])
 
     def _takes_a_side(self, message: str, draft: str, state: dict) -> str:
         """Why the draft sides against someone who is not here, or "". Prompt rules held about half of these
@@ -503,11 +584,19 @@ then a colon and one short reason. NO when the draft is fair to both, or when th
         self.svc.symbiosis.monitor_host(
             time.time() - start_time, final_output, len(final_prompt)
         )
+        if (self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
+                and self._in_a_rut(final_output)):
+            if fresh := self._open_with_a_question(user_input, final_output, gk):
+                final_output = fresh
+                issue_receipt("cortex.opening", "REWRITTEN", result_count=1, inputs={"move": self.openings[-1][0]},
+                              detail=first_sentence(fresh))
         turn_guard.check("before the history")
         self._update_history(
             "SYSTEM_INIT" if is_boot_sequence else user_input, final_output
         )
         self._note_ask(final_output)
+        if self.active_mode == "CONVERSATION" and not is_boot_sequence:
+            self._note_opening(final_output)
         ui_parts = [sim_result.get("ui", "")]
         if sim_result.get("dream"):
             dream_content = sim_result["dream"]

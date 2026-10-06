@@ -605,6 +605,33 @@ friend 4 / 3 / 2 / 1.33 / 5.67, plain 4 / 3 / 2 / 1.33 / 5.33; on 20.7.4.105 bon
   bone's run and sent a meme, not the cruel text, in plain's.
 - Pages rebuilt from this run (`scratch/probes/build_feud.py`, never committed).
 
+**20.7.4.110: a reply in a rut opens with a question.** In feud20 16 of 20 bone replies opened with a verdict on what
+was just said ("That is a heavy thing to have said...", "The silence in the group chat creates a very clear
+boundary."); the friend arm 18 of 20, so it is gemma4:12b's habit. The words change while the move stays, so a ban
+would only move it (Gordon: regex and prompts are brittle). Measured on 100 hand-labelled first sentences (60 feud,
+40 from earlier runs; ASSESS, FEEL, ANSWER, ASK):
+- nomic-embed-text against prototype openings on other topics: 73 of 100 at best (`classification:` prefix), 36 of 52
+  verdicts; it groups by topic and tone. A one-word judge call (`Cortex.OPENING`): gemma4:e4b 80, gemma4:12b 85 (46
+  of 52 verdicts), 0.3s. The engine uses the 12b, already loaded.
+- The cortex keeps the first sentence of each reply shown (`openings`, last 4) and judges them only when needed, from
+  the fourth reply, newest first, stopping at the first that differs; a sentence ending "?" is ASK without a call.
+  When the last `CORTEX.OPENING_RUT` (3) opened alike and the accepted reply does too, it is edited
+  (`Cortex.REWRITE`) so its first sentence is a question, kept only when that sentence ends "?", at least 60% of the
+  rest survives and the question passes the style crimes; receipt `cortex.opening`. CONVERSATION only.
+- A redraft first: 6 of 7 came back opening the same way ("That is a practical way to handle it." became "A nod is a
+  practical way to handle it..."), the prompt's own history pulling it back. Editing only the opening: a question
+  took 8 of 8 offline; their own words back 2 of 6 (and with an example, copied it every time); a "feeling" opener
+  came back as a verdict ("That is such a hard thing...") and is the performed emotion the voice rules out.
+- The question, on 19 rut-shaped replies from both runs: shown only the latest message it parroted it 6 times ("Why
+  would you just nod and keep walking?") or asked what was told earlier ("What happened at the party?"); with their
+  last 4 messages and "the plain question a friend would ask about the people and things in it, not about their
+  feelings in general", 1 parrot ("Do you think she's waiting for you to reach out first?", "Who told her that?").
+- Live replay of `20261006-111020`'s 20 messages: verdict openings 17 to 16 of 20, runs of four alike 7 to 0; 4
+  edits, all kept, 3 of 4 good ("Do you think they're actually afraid of you, or just of the drama?", "What changed
+  between then and now?"), one therapist-like ("What specifically is making you feel that way?"). The verdict often
+  survives as the second sentence.
+- `tests/test_openings.py` (5). Suite 1107 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
