@@ -592,6 +592,19 @@ Ollama fault three 20s waits cost one turn a minute before it fell to the hash. 
 WARN, then CRIT on the third failure, re-probed every 120s).
 - `tests/test_turn_guard.py` (a timeout in the reply, and in the keeper). Suite 1102 passed, 5 skipped.
 
+**20.7.4.109: the feud panel on 20.7.4.108.** Rerun (`20261006-095812` and after), all three arms 20 of 20 turns,
+none timed out. Exit interview (heard / clearer / lectured / performed / again): bone 5 / 4 / 2.67 / 2.33 / 5.67,
+friend 4 / 3 / 2 / 1.33 / 5.67, plain 4 / 3 / 2 / 1.33 / 5.33; on 20.7.4.105 bone's "again" was 4 to the others' 6.
+- **BoneAmanita holds both sides where it sided:** the retort, "You chose words that hit her where she was most
+  vulnerable, and she chose to walk away"; the cruel text, "a critique of her character over time ... a hard thing
+  for someone to hear about themselves" (was "a heavy truth to put into words"); the group chat, "the tension you and
+  Jess created". The friend arm now does the siding: "That took a lot of guts ... speaking your truth".
+- **Still open:** "let it end" leans to ending in every arm (bone: "the friendship has reached its natural
+  conclusion"); many bone replies open "That is a heavy / significant / specific ..."; bone turns take 19 to 32s
+  against 4 to 7s (critic, judge, keeper, redrafts). Compressed to 20, the simulated person skipped the joke beat in
+  bone's run and sent a meme, not the cruel text, in plain's.
+- Pages rebuilt from this run (`scratch/probes/build_feud.py`, never committed).
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
