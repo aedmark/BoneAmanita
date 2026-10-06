@@ -569,6 +569,17 @@ Something about her marriage that I knew would land."), since replies forgot it.
 - `tests/test_continuity_claims.py` `TheirOwnPart`, `TheFairnessCheck`; `tests/test_failure_boundaries.py` (a judge
   that never answers). Suite 1099 passed, 5 skipped.
 
+**20.7.4.107: a turn has two minutes; the critic does not think.** The DSPy judge ran gemma4:e4b with thinking on,
+~550 completion tokens of hidden reasoning before a two-line verdict (5 to 9s, 71.5s seen); the reply model already
+had `CORTEX.REASONING_EFFORT` "none". The judge now gets the same setting on local providers: 4 answers twice each,
+the same verdict on all 8 pairs (boilerplate still caught), 0.6 to 1.4s and 37 to 107 tokens. `LLM_TIMEOUT` is 60s
+(was 180), so the cognitive loop gives up at 120s (Gordon: no model needs two minutes for a conversation). The
+remaining timeouts were Ollama, not the engine: from 18:15 on 2026-10-05 it failed to load nomic-embed-text again and
+again ("Load failed", 20s each), stalling embeds, the critic and some replies; a reboot cleared it. After it, 20 of 20
+probe turns took 6.5 to 12.5s (reply 1.6 to 4.8s, critic 0.7 to 3.8s, judge about 1s, keeper about 1.5s); the
+fairness judge flagged the retort in 4 of 4 feud sessions and none of the sister ones.
+- `tests/test_failure_boundaries.py` (the judge thinks as little as the reply model). Suite 1100 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

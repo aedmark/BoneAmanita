@@ -79,6 +79,15 @@ class TheCritic(unittest.TestCase):
         self.assertIn("unavailable", why)
         self.assertLess(time.monotonic() - start, 5.0)
 
+    def test_the_judge_thinks_as_little_as_the_reply_model(self):
+        """gemma4:e4b thought ~550 tokens per verdict (6s) where the reply model is set not to; off, ~80 (1s)."""
+        from engine.presets import BoneConfig
+        from mechanics.dspycritic import DSPyCritic
+
+        critic = DSPyCritic(BoneConfig)
+        self.assertEqual(critic.judge.get_lm().kwargs.get("reasoning_effort"), BoneConfig.CORTEX.REASONING_EFFORT)
+        self.assertTrue(BoneConfig.CORTEX.REASONING_EFFORT)
+
     def test_only_the_library_call_is_covered(self):
         broken = MagicMock(return_value=object())  # no .faithfulness: our parsing, not the library
         with self.assertRaises(AttributeError):

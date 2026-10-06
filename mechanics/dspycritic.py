@@ -92,9 +92,13 @@ class DSPyCritic:
                 model, options = model_name, {}
             self.lm = dspy.LM(model=model, **options)
             dspy.settings.configure(lm=self.lm)
-            # The judge runs inside a turn: a slow answer (71s seen) fails open instead of starving the loop.
+            # The judge runs inside a turn: a slow answer (71s seen) fails open instead of starving the loop,
+            # and it thinks as little as the reply model does (gemma4 thinking: ~550 tokens, 6s; off: ~80, 1s).
+            judge = {"num_retries": 0, "timeout": float(get_cfg("dspy_timeout", 30.0))}
+            if provider in ("ollama", "lm_studio") and (effort := safe_get(safe_get(self.cfg, "CORTEX", {}), "REASONING_EFFORT")):
+                judge["reasoning_effort"] = effort
             self.judge = dspy.ChainOfThought(AssessFaithfulness)
-            self.judge.set_lm(dspy.LM(model=model, num_retries=0, timeout=float(get_cfg("dspy_timeout", 30.0)), **options))
+            self.judge.set_lm(dspy.LM(model=model, **judge, **options))
             self.evolver = dspy.ChainOfThought(EvolveSystemPrompt)
             self.compressor = dspy.ChainOfThought(CompressAxioms)
             from physics.maths import NaviSADProtocol
