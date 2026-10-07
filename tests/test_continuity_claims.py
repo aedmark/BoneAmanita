@@ -226,6 +226,14 @@ class TheFairnessCheck(BoneTestCase):
         self.engine.process_turn("Is there a point where you just let it end?")
         self.assertTrue(self.judged)
 
+    def test_a_text_read_once_is_not_read_again(self):
+        cortex = self.engine.cortex
+        cortex.dialogue_buffer.append("Traveler: She made a joke about my ex.\nSystem: That stung.")
+        first = cortex._takes_a_side("She said sorry.", "She called you, and that matters.", {})
+        asked = len(self.judged)
+        self.assertEqual(cortex._takes_a_side("She said sorry.", "She called you, and that matters.", {}), first)
+        self.assertEqual(len(self.judged), asked)
+
     def test_no_one_else_in_the_message_no_check(self):
         self.engine.process_turn("Work was long today.")
         self.assertEqual(self.judged, [])
@@ -377,3 +385,64 @@ class AskedWhetherToEndIt(BoneTestCase):
         self.embedder.degraded = True
         self.assertIn(self.REPLY, self.turn())
         self.assertEqual(self.asked, [])
+
+
+class FairnessChecksTheReplyShown(BoneTestCase):
+    """2026-10-07: the judge read every draft, rewrite and edit, about nine calls a turn; changed text is always new.
+    With FAIRNESS_ONCE it reads the reply shown, and a flag is repaired by an edit."""
+
+    MESSAGE = "I sent her a text saying she gets cruel when she's cornered."
+    DRAFT = "That is a heavy truth to put into words. It will land hard on her."
+    FIXED = "That will land hard on her. It is a lot for her to read."
+
+    def setUp(self):
+        super().setUp()
+        cortex = self.engine.cortex
+        cortex.active_mode = "CONVERSATION"
+        cortex.dspy_critic.enabled = False
+        cortex.fairness_once = True
+        self.read, self.repairs, self.repaired = [], [], self.FIXED
+
+        def generate(prompt, *a, **k):
+            if prompt.startswith("Here is what someone said to a friend, and the reply the friend drafted.") and "Rewrite the draft without that" in prompt:
+                self.repairs.append(prompt)
+                return self.repaired
+            answer = judge(prompt, excuse=("a heavy truth", "still a heavy truth"), acts=self.MESSAGE if self.MESSAGE in prompt else "NONE")
+            if answer is not None:
+                if "The friend replied" in prompt:
+                    self.read.append(prompt.split('The friend replied: "', 1)[1])
+                return answer
+            return self.DRAFT
+
+        cortex.llm.generate = MagicMock(side_effect=generate)
+
+    def turn(self, message=None):
+        from engine.receipts import ReceiptLedger
+
+        ui = str(self.engine.process_turn(message or self.MESSAGE).get("ui", ""))
+        return ui, [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.fairness"]
+
+    def test_a_flagged_reply_is_repaired_by_an_edit(self):
+        ui, receipts = self.turn()
+        self.assertIn(self.FIXED, ui)
+        self.assertEqual(receipts[0].effect, "REPAIRED")
+        self.assertIn('it excuses what they did: "a heavy truth"', self.repairs[0])
+
+    def test_drafts_are_not_redone_for_fairness(self):
+        from engine.receipts import ReceiptLedger
+
+        self.turn()
+        redrafts = [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft" and r.effect == "fairness"]
+        self.assertEqual(redrafts, [])
+        self.assertEqual(len(self.repairs), 1)
+
+    def test_a_repair_still_flagged_leaves_the_fewest_flags(self):
+        self.repaired = "That is still a heavy truth to put into words, and it will land hard on her."
+        ui, receipts = self.turn()
+        self.assertEqual(receipts[0].effect, "KEPT_FLAGGED")
+
+    def test_a_clean_reply_is_read_once_and_kept(self):
+        self.DRAFT = "It will land hard on her. Give it a day before you read too much into the silence."
+        ui, receipts = self.turn()
+        self.assertIn(self.DRAFT, ui)
+        self.assertEqual((receipts, self.repairs), ([], []))

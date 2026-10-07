@@ -86,6 +86,16 @@ class TheOpening(BoneTestCase):
         self.assertIn(REPLY, self.turn("She took the last seat on the train. The commute was worse."))
         self.assertEqual(self.rewritten(), [])
 
+    def test_only_the_added_question_is_judged(self):
+        self.engine.cortex.openings.extend(verdicts())
+        prompts = []
+        real = self.engine.cortex.llm.generate.side_effect
+        self.engine.cortex.llm.generate.side_effect = lambda p, *a, **k: (prompts.append(p), real(p, *a, **k))[1]
+        self.turn("She took the last seat on the train. The commute was worse.")
+        read = [p for p in prompts if "The friend replied:" in p]
+        self.assertTrue(any('The friend replied: "What made the commute so bad?"' in p for p in read))
+        self.assertFalse(any(f'The friend replied: "{QUESTION}"' in p for p in read))
+
     def test_varied_openings_are_left_alone(self):
         self.engine.cortex.openings.extend([[None, VERDICTS[0]], ["FEEL", "Oh no, not the car."], [None, VERDICTS[1]]])
         self.assertIn(REPLY, self.turn())

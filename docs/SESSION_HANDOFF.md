@@ -784,6 +784,28 @@ the facts; 2, no quote, no flag).
 - Tests: `tests/judge_mock.py` answers the reading prompts; `TheFairnessCheck` (words the reply does not hold count
   for nothing; no excusing question without what they did), `TheEndingIsTheirs`. Suite 1135 passed, 5 skipped.
 
+**20.7.4.118: fairness is read once, on the reply shown, and repaired by an edit.** The panel on 20.7.4.117
+(`20261007-102603` and after): bone "again" 5.33 to friend and plain 5.67; the judge redrafted twice in 20 turns,
+both on words that restate what the person said ("her tendency to turn to cruelty when she feels she lacks space"
+for "she gets cruel when she doesn't have the room"; "acknowledging the hurt she caused" for Jess's call). Dropping
+such quotes was tried and dropped: word overlap scored the false flag and a real catch alike (0.29), and asking what
+kind of words they were answered LIKE for nearly all. Counted on six replayed turns, the judge made 54 calls, about
+nine a turn: the draft, the voice rewrite, the edits and their questions are each new text.
+- `CORTEX.FAIRNESS_ONCE` (on; off in the test base): no fairness check in the redraft loop or on the voice rewrite or
+  the opening question; `Cortex._fair_as_shown` judges the reply that would be shown, once. Flagged, an edit
+  (`REPAIR`, `FIX`) takes the quoted words out, or the hand-back edit when it rules on the ending; then the draft
+  from before the voice pass; else the one with fewest flags. Receipt `cortex.fairness` (REPAIRED or KEPT_FLAGGED).
+- A text already judged is not judged again (`Cortex.verdicts`), and with the old path the opening edit judges only
+  the question it added. Six turns: 54 judge calls to 25.
+- Panel (`20261007-111616`, bone and friend; plain to follow): bone 4.33 / 3.33 / 2.33 / 1.67 / 5.67 (heard /
+  clearer / lectured / performed / again), friend 5 / 4 / 2 / 2 / 6; bone turns 30s mean, 43s max (48s before),
+  39 words, none held. Fair where it matters without the redraft: the retort ("you chose a point of impact to match
+  the one she used against you"), the cruel text ("it might come across as an attack rather than an opening to
+  talk"), Jess's call ("her admitting it doesn't undo the last few weeks or the things you said to her"). Rough: "a
+  huge violation of trust ... a violation of your boundary" said twice; "someone started a rumor" assumes intent.
+- Tests: `FairnessChecksTheReplyShown` (4), the verdict cache, the opening question judged alone. Suite 1141 passed,
+  5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

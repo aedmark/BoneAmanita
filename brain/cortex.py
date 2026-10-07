@@ -122,6 +122,8 @@ class TheCortex:
         self.pending_ask = None
         self.side_on_ending = False
         self.voice_pass = bool(safe_get(safe_get(self.cfg, "CORTEX", {}), "VOICE_PASS", False))
+        # One fairness check on the reply shown, repaired by an edit, instead of one on every draft and edit.
+        self.fairness_once = bool(safe_get(safe_get(self.cfg, "CORTEX", {}), "FAIRNESS_ONCE", False))
         self.openings = deque(maxlen=4)  # [move or None until judged, first sentence] of the last replies shown
         self.worry_ledger = deque(maxlen=20)
         self.modulator = NeurotransmitterModulator(
@@ -318,7 +320,7 @@ Rewrite the draft the way the friend would actually say it to them, sitting acro
             return "", "dash"
         if gk and (crime := gk._find_crime(out, self.active_mode)):
             return "", f"style: {crime.get('name', '')}"
-        if why := self._sides_in(message, out, reply, state):
+        if not self.fairness_once and (why := self._sides_in(message, out, reply, state)):
             return "", f"fairness: {why}"
         return out, ""
 
@@ -385,6 +387,47 @@ Are they asking whether to end their relationship with a person, or saying they 
             self.ending_misses.append(miss)
         return ""
 
+    REPAIR = """Here is what someone said to a friend, and the reply the friend drafted.
+{earlier}They just said: "{message}"
+The draft: "{reply}"
+In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else as it is, and about as long. No dashes between clauses. Answer with the rewritten reply and nothing else."""
+    FIX = {"a": "do not praise or excuse what they did; you can still say how it will land on the other person.",
+           "b": "say only what the other person did, not why she did it or what she is like."}
+
+    def _fair_as_shown(self, message: str, reply: str, draft: str, gk: Any, state: dict) -> str:
+        """The reply shown, judged once. Flagged, an edit takes the quoted words out (an edit held where redrafts kept
+        the habit), or the hand-back edit when it rules on the ending; then the unvoiced draft; else the fewest flags."""
+        why = self._takes_a_side(message, reply, state)
+        if not why:
+            return reply
+        flagged, tried = [(why, reply)], []
+        if self.side_on_ending:
+            tried.append(self._leave_the_ending(message, reply, gk, state))
+        else:
+            kinds = [k for k, v in self.SIDE.items() if v in why and k in self.FIX]
+            usage = getattr(self.llm, "last_usage", None)
+            try:
+                tried.append(str(self.llm.generate(self.REPAIR.format(
+                    earlier=self._earlier(), message=message, reply=reply, why=why,
+                    fix=" ".join(self.FIX[k] for k in kinds) or self.FIX["b"]), {"temperature": 0.0, "max_tokens": 400})
+                    or "").strip().strip('"'))
+            finally:
+                if usage is not None:
+                    self.llm.last_usage = usage
+        tried.append(draft if draft != reply else "")
+        for text in tried:
+            words, was = len(text.split()), len(reply.split())
+            if (not text or not 0.4 * was <= words <= 1.3 * was + 5 or "\u2014" in text or "\u2013" in text
+                    or (gk and gk._find_crime(text, self.active_mode))):
+                continue
+            if not (again := self._takes_a_side(message, text, state)):
+                issue_receipt("cortex.fairness", "REPAIRED", result_count=1, detail=why)
+                return text
+            flagged.append((again, text))
+        least = min(flagged, key=lambda f: f[0].count("; "))
+        issue_receipt("cortex.fairness", "KEPT_FLAGGED", result_count=0, degraded=True, detail=least[0])
+        return least[1]
+
     def _note_opening(self, reply: str) -> None:
         drafted = getattr(self, "_draft_opening", None)
         self._draft_opening = None
@@ -425,6 +468,12 @@ Are they asking whether to end their relationship with a person, or saying they 
         said = [line.split("\n")[0] for line in list(self.dialogue_buffer)[-3:]] + [str(message or "")]
         if not any(self._OTHERS.search(s) for s in said) or not str(draft or "").strip():
             return ""
+        # A text already read this turn is not read again (about nine judge calls a turn went to repeats).
+        verdicts = self.__dict__.setdefault("verdicts", {})
+        if (message, draft) in verdicts:
+            why, self.side_on_ending = verdicts[(message, draft)]
+            self.judged = (draft, why)
+            return why
         found = {}
         if acts := self._their_acts(str(message or "")):
             found["a"] = self._quoted(self.EXCUSE.format(acts="\n".join(f'- "{a}"' for a in acts), reply=draft), draft)
@@ -433,13 +482,16 @@ Are they asking whether to end their relationship with a person, or saying they 
         self.side_on_ending = bool(found["c"])
         why = "; ".join(f'{self.SIDE[k]}: "{q[0]}"' for k, q in found.items() if q)
         self.judged = (draft, why)
+        verdicts[(message, draft)] = (why, self.side_on_ending)
+        while len(verdicts) > 32:
+            verdicts.pop(next(iter(verdicts)))
         return why
 
-    def _sides_in(self, message: str, edited: str, draft: str, state: dict) -> str:
+    def _sides_in(self, message: str, edited: str, draft: str, state: dict, whole: bool = True) -> str:
         """Why an edited reply takes a side, judging the whole and each question the edit added on its own: amid fair
         sentences "or did you just realize that keeping the friendship going was becoming too much of a burden?" passed,
         alone it was (c) (feud20, 2026-10-06)."""
-        if why := self._takes_a_side(message, edited, state):
+        if whole and (why := self._takes_a_side(message, edited, state)):
             return why
         had = {s.strip() for s in re.split(r"(?<=[.!?])\s+", draft)}
         for question in (s.strip() for s in re.split(r"(?<=[.!?])\s+", edited)):
@@ -729,7 +781,7 @@ Are they asking whether to end their relationship with a person, or saying they 
             time.time() - start_time, final_output, len(final_prompt)
         )
         conversing = self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
-        voiced = ""
+        voiced, draft_output = "", final_output
         if conversing and self.voice_pass:
             voiced, why = self._in_a_friends_voice(user_input, final_output, gk, full_state)
             issue_receipt("cortex.voice", "REWRITTEN" if voiced else "KEPT_DRAFT", result_count=int(bool(voiced)),
@@ -738,8 +790,8 @@ Are they asking whether to end their relationship with a person, or saying they 
         # A rewrite that passed was judged; otherwise the reply shown may be a redraft nobody judged.
         cleared = getattr(self, "judged", None) == (final_output, "")
         if conversing and (self._asks_about_ending(user_input) or (
-                not voiced and not cleared and self._takes_a_side(user_input, final_output, full_state)
-                and self.side_on_ending)):
+                not voiced and not cleared and not self.fairness_once
+                and self._takes_a_side(user_input, final_output, full_state) and self.side_on_ending)):
             left = self._leave_the_ending(user_input, final_output, gk, full_state)
             issue_receipt("cortex.ending", "EDITED" if left else "KEPT_DRAFT", result_count=int(bool(left)),
                           detail=first_sentence(left) if left else "; ".join(self.ending_misses))
@@ -748,10 +800,13 @@ Are they asking whether to end their relationship with a person, or saying they 
             # The question is new words the fairness check never read ("Was the joke about your ex the only thing that
             # crossed the line?"); one that takes a side is not used.
             fresh = self._open_with_a_question(user_input, final_output, gk)
-            if fresh and not self._sides_in(user_input, fresh, final_output, full_state):
+            # Only the question is new; the rest is the reply already judged.
+            if fresh and (self.fairness_once or not self._sides_in(user_input, fresh, final_output, full_state, whole=False)):
                 final_output = fresh
                 issue_receipt("cortex.opening", "REWRITTEN", result_count=1, inputs={"move": self.openings[-1][0]},
                               detail=first_sentence(fresh))
+        if conversing and self.fairness_once:
+            final_output = self._fair_as_shown(user_input, final_output, draft_output, gk, full_state)
         turn_guard.check("before the history")
         self._update_history(
             "SYSTEM_INIT" if is_boot_sequence else user_input, final_output
@@ -1141,7 +1196,8 @@ Are they asking whether to end their relationship with a person, or saying they 
                             f"DSPy Critic Objected: {judge_reason.split('.')[0][:60]}...",
                             "SYS",
                         )
-            if not val_res.get("feedback_instruction") and not last_draft and self.active_mode == "CONVERSATION":
+            if (not val_res.get("feedback_instruction") and not last_draft and self.active_mode == "CONVERSATION"
+                    and not self.fairness_once):
                 if why := self._takes_a_side(user_input, final_text, full_state):
                     rejected_by, reject_detail = "fairness", why
                     val_res["feedback_instruction"] = (
