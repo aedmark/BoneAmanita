@@ -5,6 +5,7 @@ kept it 6 of 7 times; the engine keeps how its replies opened and, in a rut, edi
 from unittest.mock import MagicMock
 
 from tests.base import BoneTestCase
+from tests.judge_mock import judge
 
 JUDGE = "How does this reply to a friend begin?"
 EDIT = "Here is a message a friend wrote back to someone"
@@ -24,17 +25,17 @@ class TheOpening(BoneTestCase):
         self.engine.cortex.dspy_critic.enabled = False
         self.judged, self.edits = [], []
         self.edited = QUESTION
-        self.fair = "NO: fair to both."
-        self.alone_leans = False
+        self.sides = self.alone_leans = False
 
         def generate(prompt, *a, **k):
             if prompt.startswith(JUDGE):
                 self.judged.append(prompt)
                 return "ASSESS"
-            if prompt.startswith("Someone is telling a friend about a conflict"):
-                if self.alone_leans and 'The draft: "What made the commute so bad?"' in prompt:
-                    return "(c): Yes. It leans them toward ending it."
-                return self.fair if prompt.count("What made") else "NO: fair to both."
+            # The edited question is "What made the commute so bad?": siding when asked so, or only when judged alone.
+            alone = 'The friend replied: "What made the commute so bad?"' in prompt
+            mind = "What made the commute" if self.sides or (self.alone_leans and alone) else ()
+            if (answer := judge(prompt, mind=mind)) is not None:
+                return answer
             if prompt.startswith(EDIT):
                 self.edits.append(prompt)
                 return self.edited
@@ -74,7 +75,7 @@ class TheOpening(BoneTestCase):
 
     def test_a_question_that_takes_a_side_is_not_used(self):
         """feud20 (2026-10-06): an edit opened "Was the joke about your ex the only thing that crossed the line?"."""
-        self.fair = "YES b: it blames her."
+        self.sides = True
         self.engine.cortex.openings.extend(verdicts())
         self.assertIn(REPLY, self.turn("She took the last seat on the train. The commute was worse."))
         self.assertEqual(self.rewritten(), [])

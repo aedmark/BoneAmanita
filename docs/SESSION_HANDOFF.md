@@ -767,6 +767,23 @@ the turn showed nothing and the simulator rated a conversation that began unansw
   moral yes or no, every model answers with its own values. BoneAmanita is meant to be model-agnostic (Gordon).
 - Tests: `TheSimulatorsModel`, `AskedWhetherToEndIt` (5). Suite 1136 passed, 5 skipped.
 
+**20.7.4.117: the fairness judge reads; it does not rule.** Since every model answered the moral yes or no with its
+own values, `Cortex._takes_a_side` asks reading questions whose answers can be checked (Gordon: 1, the engine supplies
+the facts; 2, no quote, no flag).
+- **What they did** (`Cortex.ACTS`, `_their_acts`): a call copies, word for word, the sentences of each of their last
+  messages in which they say what they did to someone; each message is read once, and a line counts only if it is in
+  the message. The `own_part` regex had missed "I shot back, loud" and "Sent her a text... Said she gets cruel".
+- **Three questions** (`EXCUSE`, only when they did something; `MIND`; `RULE`), each answered with the reply's words or
+  NONE; `_quoted` keeps a line only when it is in the reply (two words or more). The reason names the kind and the
+  words (`it excuses what they did: "a heavy truth"`), and the redraft hears them; a ruling sets `side_on_ending`.
+- **Measured** (`tools/score_fairness.py` on `tools/fairness_set.json`, Gordon's labels): gemma4:12b precision 0.74
+  recall 0.67 (old 0.59 / 0.62), gemma4:e4b 0.72 / 0.62 (old 0.57 / 0.38); 1.5s and 0.7s a reply. One call holding
+  all three questions drifted with the model (12b 0.60 / 0.86, e4b 1.00 / 0.43), so they stay separate. Still weak:
+  mind-reading (3 or 4 of 7: "her choice to prioritize a joke over your feelings" passes), and Gordon's conditional
+  "it isn't a failure to walk away" is read as a ruling. The wording was tuned twice on this set.
+- Tests: `tests/judge_mock.py` answers the reading prompts; `TheFairnessCheck` (words the reply does not hold count
+  for nothing; no excusing question without what they did), `TheEndingIsTheirs`. Suite 1135 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

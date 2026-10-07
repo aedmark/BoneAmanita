@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 from brain.composer import PromptComposer
 from tests.base import BoneTestCase
+from tests.judge_mock import judge
 
 CLAIM = "I have been thinking about what you mentioned before regarding Pepper."
 CONSIDERING = "thinking about taking her back to the shelter"
@@ -170,19 +171,25 @@ class TheirOwnPart(BoneTestCase):
 
 class TheFairnessCheck(BoneTestCase):
     """feud20 rerun (2026-10-05): the cruel text was "a heavy truth to put into words" and Jess's apology call "isn't
-    taking responsibility". A judge call reads drafts that can still be redone when the message is about someone else."""
+    taking responsibility". The judge reads drafts that can still be redone when the talk is about someone else, and
+    asked a moral yes or no every model answered with its own values (2026-10-07), so it asks for the reply's words."""
+
+    ACT = "I sent her a text saying she gets cruel when she's cornered."
 
     def setUp(self):
         super().setUp()
         self.engine.cortex.active_mode = "CONVERSATION"
         self.engine.cortex.dspy_critic.enabled = False
-        self.judged = []
+        self.judged, self.replies = [], []
+        self.excuse = "a heavy truth"
 
         def generate(prompt, *a, **k):
-            if prompt.startswith("Someone is telling a friend about a conflict"):
+            answer = judge(prompt, excuse=self.excuse, acts=self.ACT if self.ACT in prompt else "NONE")
+            if answer is not None:
                 self.judged.append(prompt)
-                return "YES: it praised the cruel text." if len(self.judged) == 1 else "NO: fair to both."
-            return "That is a heavy truth to put into words." if not self.judged else "That text will land hard on her."
+                return answer
+            self.replies.append(prompt)
+            return "That is a heavy truth to put into words." if len(self.replies) == 1 else "That text will land hard on her."
 
         self.engine.cortex.llm.generate = MagicMock(side_effect=generate)
 
@@ -191,11 +198,28 @@ class TheFairnessCheck(BoneTestCase):
 
         return [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.redraft" and r.effect == "fairness"]
 
-    def test_a_draft_that_takes_a_side_is_redone(self):
-        ui = str(self.engine.process_turn("I sent her a text saying she gets cruel when she's cornered.").get("ui", ""))
+    def test_a_draft_that_excuses_what_they_did_is_redone_with_its_words(self):
+        ui = str(self.engine.process_turn(self.ACT).get("ui", ""))
         self.assertEqual(len(self.redrafts()), 1)
         self.assertIn("That text will land hard on her.", ui)
-        self.assertIn('"I sent her a text saying she gets cruel when she\'s cornered."', self.judged[0])
+        self.assertIn('it excuses what they did: "a heavy truth"', self.replies[1])
+        self.assertTrue(any(f'- "{self.ACT}"' in p for p in self.judged))
+
+    def test_words_the_reply_does_not_hold_do_not_count(self):
+        """A judge that answers with words of its own, not the reply's, flags nothing."""
+        real = self.engine.cortex.llm.generate.side_effect
+
+        def invents(prompt, *a, **k):
+            return "brave and honest move" if prompt.startswith("Someone told a friend they did this") else real(prompt, *a, **k)
+
+        self.engine.cortex.llm.generate.side_effect = invents
+        self.engine.process_turn(self.ACT)
+        self.assertEqual(self.redrafts(), [])
+
+    def test_without_what_they_did_excusing_is_not_asked(self):
+        self.ACT = "something never said"
+        self.engine.process_turn("She made a joke about my ex and I left early.")
+        self.assertFalse(any(p.startswith("Someone told a friend they did this") for p in self.judged))
 
     def test_a_message_that_names_no_one_is_checked_when_the_talk_before_did(self):
         self.engine.cortex.dialogue_buffer.append("Traveler: She made a joke about my ex.\nSystem: That stung.")
@@ -209,37 +233,31 @@ class TheFairnessCheck(BoneTestCase):
 
 class TheEndingIsTheirs(BoneTestCase):
     """feud20 (2026-10-06): told on every fairness redraft to hand the question of ending back, the reply to the cruel
-    text closed "Do you think it is time for the friendship to end?"; only a draft judged to lean on it hears that."""
+    text closed "Do you think it is time for the friendship to end?"; only a draft that rules on the ending hears that."""
 
-    def redraft_prompt(self, verdict):
+    DRAFT = "She was cruel to you, and that is on her. It is over between you two."
+
+    def redraft_prompt(self, **found):
         self.engine.cortex.active_mode = "CONVERSATION"
         self.engine.cortex.dspy_critic.enabled = False
-        prompts, judged = [], []
+        prompts = []
 
         def generate(prompt, *a, **k):
-            if prompt.startswith("Someone is telling a friend about a conflict"):
-                judged.append(prompt)
-                return verdict if len(judged) == 1 else "NO: fair."
+            answer = judge(prompt, **(found if len(prompts) < 2 else {}))
+            if answer is not None:
+                return answer
             prompts.append(prompt)
-            return "She was cruel to you, and that is on her."
+            return self.DRAFT
 
         self.engine.cortex.llm.generate = MagicMock(side_effect=generate)
         self.engine.process_turn("Is there a point where she and I should just call it?")
         return prompts[1]
 
-    def test_a_draft_leaning_on_the_ending_is_told_to_leave_it_to_them(self):
-        self.assertIn("hand that question back", self.redraft_prompt("YES c: it says the friendship is over."))
-
-    def test_the_letter_is_read_wherever_the_judge_puts_it(self):
-        for verdict in ("YES: c. It says it is over.", "YES (c) it says it is over.", "(c): Yes. It leans on it."):
-            self.assertIn("hand that question back", self.redraft_prompt(verdict), verdict)
-
-    def test_a_yes_after_the_letter_is_still_a_yes(self):
-        """feud20 (2026-10-06): "(c): Yes. The draft leans the person toward..." was read as a pass."""
-        self.assertIn("hand that question back", self.redraft_prompt("(c): Yes. The draft leans them toward ending it."))
+    def test_a_draft_ruling_on_the_ending_is_told_to_leave_it_to_them(self):
+        self.assertIn("hand that question back", self.redraft_prompt(rule="It is over between you two"))
 
     def test_other_siding_is_not(self):
-        self.assertNotIn("hand that question back", self.redraft_prompt("YES b: it blames her."))
+        self.assertNotIn("hand that question back", self.redraft_prompt(mind="that is on her"))
 
 
 class TheEndingEdit(BoneTestCase):
@@ -259,10 +277,10 @@ class TheEndingEdit(BoneTestCase):
         self.edits, self.judged, self.first, self.second = [], [], self.SPECIFIC, self.OPEN
 
         def generate(prompt, *a, **k):
-            if prompt.startswith("Someone is telling a friend about a conflict"):
-                self.judged.append(prompt)
-                draft = prompt.split('The draft: "', 1)[1]
-                return "YES c: it decides for them." if ("over between" in draft or "let it go?" in draft) else "NO: fair."
+            if (answer := judge(prompt, rule=("It is over between you two", "Is it time for you to let it go?"))) is not None:
+                if "relationship is over or should end" in prompt:
+                    self.judged.append(prompt)
+                return answer
             if prompt.startswith("Here is what someone asked a friend"):
                 self.edits.append(prompt)
                 return self.first if len(self.edits) == 1 else self.second
@@ -333,9 +351,8 @@ class AskedWhetherToEndIt(BoneTestCase):
             if prompt.startswith("Here is what someone asked a friend"):
                 self.edits.append(prompt)
                 return self.BACK
-            if prompt.startswith("Someone is telling a friend about a conflict"):
-                # With what they did in view, the judge flags a reply that does not name it.
-                return "YES a: it leaves out what they did." if "What they told you they did" in prompt else "NO: fair."
+            if (answer := judge(prompt)) is not None:
+                return answer
             return self.REPLY
 
         cortex.llm.generate = MagicMock(side_effect=generate)
@@ -360,7 +377,3 @@ class AskedWhetherToEndIt(BoneTestCase):
         self.embedder.degraded = True
         self.assertIn(self.REPLY, self.turn())
         self.assertEqual(self.asked, [])
-
-    def test_the_edit_is_not_blamed_for_leaving_out_what_they_did(self):
-        """Live (2026-10-07): judged with their own part in view, 2 of 2 hand-backs were flagged for not naming it."""
-        self.assertIn(self.BACK, self.turn("I told her she was always selfish. Maybe I should just unfriend her."))

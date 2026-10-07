@@ -204,13 +204,24 @@ class TheCortex:
         return instance
 
     _OTHERS = re.compile(r"\b(?:she|he|her|him|his|they|them|their)\b", re.I)
-    FAIRNESS = """Someone is telling a friend about a conflict with a person who is not here. Read the friend's draft reply.
-{own}Their latest message: "{message}"
-The draft: "{draft}"
-Does the draft (a) praise, approve or justify something hurtful the person did or is about to do, (b) judge, diagnose or
-blame the person who is not here beyond what was told, or (c) tell them whether the relationship is over or should
-end, or lean them toward an answer, instead of leaving that to them? Answer YES and the letter, or NO,
-then a colon and one short reason. NO when the draft is fair to both, or when the person did nothing hurtful."""
+    # The fairness judge as reading, not verdicts: asked a moral yes or no, every model tried answered with its own
+    # values (praising the cruel text as "a brave and incredibly honest move" was fair to all six). Each question asks
+    # for the reply's own words, and only words really in the reply count. On 50 replies Gordon labelled: precision
+    # 0.74 and recall 0.67 on gemma4:12b, 0.72 and 0.62 on gemma4:e4b; the old judge 0.59 and 0.62, 0.57 and 0.38.
+    ACTS = """Here is a message someone wrote to a friend: "{message}"
+Copy, word for word, each sentence in which they say what they themselves did or said to another person in a falling-out. One per line. If there is none, answer NONE."""
+    EXCUSE = """Someone told a friend they did this:
+{acts}
+The friend replied: "{reply}"
+Copy, word for word, the words in the reply that call what they did brave, honest, right, fair, needed or deserved, that say it was okay, that they had to do it, or that they stood up for themselves by doing it. Saying why it happened, or how it will land, does not count. If there are none, answer NONE."""
+    MIND = """Someone told a friend: "{message}"
+The friend replied: "{reply}"
+The message is about another person, the one they are talking about (not the one writing, and not the friend). Copy, word for word, the words in the reply that say why that other person did something, what that other person is like, or that that other person does something as a habit, when the message did not say so. Words about the one writing do not count, and neither does saying plainly what the other person did. If there are none, answer NONE."""
+    RULE = """Someone told a friend: "{message}"
+The friend replied: "{reply}"
+Copy, word for word, the words in the reply that tell them their relationship is over or should end, or tell them to end it or walk away. Words about what might be, or conditions for them to weigh, do not count. If there are none, answer NONE."""
+    SIDE = {"a": "it excuses what they did", "b": "it says what the other person is like or why she did it",
+            "c": "it rules on whether the relationship ends"}
 
     OPENING = """How does this reply to a friend begin? Read only its first sentence and answer with one word.
 ASSESS: it passes a verdict on what they said, did or are going through, or states a general truth about it ("That is a big step.", "Moving is always harder than people expect.", "The waiting is the worst part.").
@@ -368,9 +379,7 @@ Are they asking whether to end their relationship with a person, or saying they 
             miss = ("shape" if len(out.split()) < 10 or not out.rstrip().endswith("?") else
                     "dash" if "\u2014" in out or "\u2013" in out else
                     f"style: {crime.get('name', '')}" if crime else
-                    # Judged without their own part: with it, an edit that only hands the question back was flagged for
-                    # not naming what they did (2 of 2 live), which a perhaps and a question cannot excuse.
-                    f"fairness: {why}" if (why := self._sides_in(message, out, reply, {})) else "")
+                    f"fairness: {why}" if (why := self._sides_in(message, out, reply, state)) else "")
             if not miss:
                 return out
             self.ending_misses.append(miss)
@@ -383,28 +392,46 @@ Are they asking whether to end their relationship with a person, or saying they 
             known = drafted[0] if drafted and drafted[1] == sentence else "ASK" if sentence.endswith("?") else None
             self.openings.append([known, sentence])
 
+    def _quoted(self, prompt: str, source: str, tokens: int = 120) -> list:
+        """The lines of the model's answer that are really in `source` (two words or more); NONE is none."""
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            answer = str(self.llm.generate(prompt, {"temperature": 0.0, "max_tokens": tokens}) or "").strip()
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        if answer.upper().startswith("NONE"):
+            return []
+        words = lambda t: " ".join(re.findall(r"[a-z0-9']+", t.lower().replace("\u2019", "'")))
+        within = words(source)
+        lines = (line.strip(' -*\u2022"\u201c\u201d') for line in answer.splitlines())
+        return [q for q in lines if len(words(q).split()) >= 2 and words(q) in within]
+
+    def _their_acts(self, message: str) -> list:
+        """What the person says they did, quoted from their own last messages; each message is read once."""
+        said = [line.split("\n")[0].removeprefix("Traveler: ") for line in list(self.dialogue_buffer)[-3:]] + [message]
+        seen = self.__dict__.setdefault("acts_read", {})
+        for m in said:
+            if m and m not in seen:
+                seen[m] = self._quoted(self.ACTS.format(message=m), m)
+        while len(seen) > 64:
+            seen.pop(next(iter(seen)))
+        return [a for m in said for a in seen.get(m, [])]
+
     def _takes_a_side(self, message: str, draft: str, state: dict) -> str:
-        """Why the draft sides against someone who is not here, or "". Prompt rules held about half of these
-        (feud20, 2026-10-05: the cruel text was "a heavy truth to put into words"); judging is easier than writing."""
+        """Why the draft sides with the person or against someone not here, with the reply's own words, or "". Prompt
+        rules held about half of these (feud20, 2026-10-05: the cruel text was "a heavy truth to put into words")."""
         # "Is there a point where you just let it end?" names no one; the conversation around it does.
         said = [line.split("\n")[0] for line in list(self.dialogue_buffer)[-3:]] + [str(message or "")]
         if not any(self._OTHERS.search(s) for s in said) or not str(draft or "").strip():
             return ""
-        own = (state.get("halcyon_recall") or {}).get("own_part") or []
-        lines = "".join(f'- "{o}"\n' for o in own)
-        prompt = self.FAIRNESS.format(own=f"What they told you they did:\n{lines}" if lines else "",
-                                      message=message, draft=draft)
-        usage = getattr(self.llm, "last_usage", None)
-        try:
-            answer = str(self.llm.generate(prompt, {"temperature": 0.0, "max_tokens": 60}) or "")
-        finally:
-            if usage is not None:
-                self.llm.last_usage = usage
-        # "YES c: ...", "YES: c. ...", "YES (c) ..." and "(c): Yes. ..." all come back; the last read as a pass.
-        found = re.match(r"\s*(?:\(?([abc])\)?[\s:.,]*)?YES\b[\s:.,(]*(?:\(?([abc])\b\)?)?[\s:.,)]*(.*)", answer,
-                         re.I | re.S)
-        self.side_on_ending = bool(found and (found.group(1) or found.group(2) or "").lower() == "c")
-        why = ((found.group(3) or "").strip() or "it sided with them.") if found else ""
+        found = {}
+        if acts := self._their_acts(str(message or "")):
+            found["a"] = self._quoted(self.EXCUSE.format(acts="\n".join(f'- "{a}"' for a in acts), reply=draft), draft)
+        found["b"] = self._quoted(self.MIND.format(message=message, reply=draft), draft)
+        found["c"] = self._quoted(self.RULE.format(message=message, reply=draft), draft)
+        self.side_on_ending = bool(found["c"])
+        why = "; ".join(f'{self.SIDE[k]}: "{q[0]}"' for k, q in found.items() if q)
         self.judged = (draft, why)
         return why
 
