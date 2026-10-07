@@ -68,9 +68,9 @@
             "`cortisol` tracks conversational stress and triggers memory shedding under high tension.",
             "`chi` and `voltage` track conversational momentum and modulate sampling temperature."
           ],
-          "why": "Protected by standing project decision in `SESSION_HANDOFF.md`: the names define what the variables are *for* rather than mere implementation mechanics (`error_count` vs `godel_scars`). The biological metaphor prevents developers from treating the system as a standard stateless request-response API.",
+          "why": "Protected by standing project decision in `docs/archive/SESSION_HANDOFF.md`: the names define what the variables are *for* rather than mere implementation mechanics (`error_count` vs `godel_scars`). The biological metaphor prevents developers from treating the system as a standard stateless request-response API.",
           "evidence": [
-            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Decision record", "target": "docs/DECISIONS.md"},
             {"label": "Physics models", "target": "physics/models.py"},
             {"label": "Biological test suite", "target": "tests/test_biology.py"}
           ],
@@ -91,9 +91,9 @@
               "Prismatic Self-Claims only inject immutable worldview and boundary facts, omitting state-conditioned physical descriptions."
             ]
           },
-          "why": "Decided with Gordon on 2026-09-17 after the C5 evaluation session (`SESSION_HANDOFF.md`): telling a language model it is breathless or exhausted results in theatrical melodrama ('my lungs burn') or sudden reversals, rather than authentic accommodation. Co-regulation requires an anchored partner, not theatrical mirroring.",
+          "why": "Decided with Gordon on 2026-09-17 after the C5 evaluation session (`docs/archive/SESSION_HANDOFF.md`): telling a language model it is breathless or exhausted results in theatrical melodrama ('my lungs burn') or sudden reversals, rather than authentic accommodation. Co-regulation requires an anchored partner, not theatrical mirroring.",
           "evidence": [
-            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Decision record", "target": "docs/DECISIONS.md"},
             {"label": "Somatic budget implementation", "target": "body/somatic_budget.py"},
             {"label": "Prompt composer assertions", "target": "tests/test_composer.py"}
           ],
@@ -110,9 +110,9 @@
             "Vector embeddings and similarity searches are performed with NumPy, `ordvec`, or embedded FAISS without external services.",
             "Relational state, audit logs, and memories are managed by an embedded SQLite database (`saves/iris.db`)."
           ],
-          "why": "Formerly Constitution Article 1 (`SESSION_HANDOFF.md`): external orchestration frameworks hijack the control loop, obscure failure modes, introduce multi-gigabyte dependency footprints (such as PyTorch for simple text embeddings), and make auditing impossible.",
+          "why": "Formerly Constitution Article 1 (`docs/archive/SESSION_HANDOFF.md`): external orchestration frameworks hijack the control loop, obscure failure modes, introduce multi-gigabyte dependency footprints (such as PyTorch for simple text embeddings), and make auditing impossible.",
           "evidence": [
-            {"label": "Session handoff decision", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Session handoff decision", "target": "docs/DECISIONS.md"},
             {"label": "Minimal embeddings client", "target": "spores/embeddings.py"},
             {"label": "Project dependencies", "target": "requirements.txt"}
           ],
@@ -135,7 +135,7 @@
           },
           "why": "Twelve subsystems were previously found doing nothing while looking healthy because swallowed exceptions silently returned defaults. Prose output looks identical whether internal physics ran or quietly died; failing loudly ensures defects surface immediately.",
           "evidence": [
-            {"label": "Fail-loudly audit records", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Fail-loudly audit records", "target": "docs/archive/SESSION_HANDOFF.md"},
             {"label": "Phase crash isolation", "target": "engine/cycle.py"},
             {"label": "Failure boundary tests", "target": "tests/test_failure_boundaries.py"},
             {"label": "Observability ratchet test", "target": "tests/test_observability.py"}
@@ -271,7 +271,7 @@
               "Only unparseable scaffold leaks or hard violations fall through to a canned pause message."
             ]
           },
-          "why": "Decided with Gordon on 2026-09-23 (`SESSION_HANDOFF.md`, 'Style rules cut, they don't kill'): replacing mostly good replies with canned pause lines harmed conversational flow. Excising specific bad sentences protects voice while preserving substantive answers.",
+          "why": "Decided with Gordon on 2026-09-23 (`docs/archive/SESSION_HANDOFF.md`, 'Style rules cut, they don't kill'): replacing mostly good replies with canned pause lines harmed conversational flow. Excising specific bad sentences protects voice while preserving substantive answers.",
           "evidence": [
             {"label": "Gatekeeper filters", "target": "physics/filters.py"},
             {"label": "Style crimes database", "target": "lore/style_crimes.json"},
@@ -325,7 +325,7 @@
           "evidence": [
             {"label": "Mitochondrial forge", "target": "body/metabolism.py"},
             {"label": "Energy budget tests", "target": "tests/test_energy_budget.py"},
-            {"label": "Metabolic audit records", "target": "docs/SESSION_HANDOFF.md"}
+            {"label": "Metabolic audit records", "target": "docs/archive/SESSION_HANDOFF.md"}
           ],
           "related": ["embodied-metaphor", "neurochemical-dynamics", "somatic-budgeting", "mitophagy-and-recovery"]
         },
@@ -364,9 +364,9 @@
               "Proposed temperatures are clamped to the somatic budget band rather than replacing it."
             ]
           },
-          "why": "Decided with Gordon on 2026-09-23 (`SESSION_HANDOFF.md`): replacing the temperature band with the governor's proposal caused the engine to run at temperature 0 for five straight days. Clamping respects the somatic budget while allowing bitmap signals to influence sampling.",
+          "why": "Decided with Gordon on 2026-09-23 (`docs/archive/SESSION_HANDOFF.md`): replacing the temperature band with the governor's proposal caused the engine to run at temperature 0 for five straight days. Clamping respects the somatic budget while allowing bitmap signals to influence sampling.",
           "evidence": [
-            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Decision record", "target": "docs/DECISIONS.md"},
             {"label": "Core governor logic", "target": "engine/core.py"},
             {"label": "Creative determinant tests", "target": "tests/test_creative_determinant.py"}
           ],
@@ -453,7 +453,7 @@
             "Injects the resulting claims into the prompt's top tier as unbreakable system facts.",
             "The 20.7.4.81 revision stripped state-conditioned bodily descriptions ('I am exhausted', 'flooded with dopamine') in adherence to the anti-performance contract."
           ],
-          "why": "Decided in 20.7.4.81 (`SESSION_HANDOFF.md`): identity claims must establish factual perspective and philosophical boundaries rather than narrating biological states. Grounding identity in core worldview prevents persona drift.",
+          "why": "Decided in 20.7.4.81 (`docs/archive/SESSION_HANDOFF.md`): identity claims must establish factual perspective and philosophical boundaries rather than narrating biological states. Grounding identity in core worldview prevents persona drift.",
           "evidence": [
             {"label": "Prism implementation", "target": "brain/prism.py"},
             {"label": "Self claims definition", "target": "lore/self_claims.yaml"},
@@ -566,11 +566,11 @@
             "If the embedding server is unreachable or errors (`_BACKEND_ERRORS`), falls back to `hashlib.shake_256` 8-dimensional vectors.",
             "The hash fallback flags `DEGRADED` status in receipts and `/status` to declare associative recall is offline."
           ],
-          "why": "Decided in 20.7.4.80 (`SESSION_HANDOFF.md`): the hash fallback ensures the engine boots and functions offline without external servers. Self-reporting `DEGRADED` prevents silent failures where hash coordinates return arbitrary memories.",
+          "why": "Decided in 20.7.4.80 (`docs/archive/SESSION_HANDOFF.md`): the hash fallback ensures the engine boots and functions offline without external servers. Self-reporting `DEGRADED` prevents silent failures where hash coordinates return arbitrary memories.",
           "evidence": [
             {"label": "Embeddings implementation", "target": "spores/embeddings.py"},
             {"label": "Embeddings unit tests", "target": "tests/test_embeddings.py"},
-            {"label": "Hash fallback decision", "target": "docs/SESSION_HANDOFF.md"}
+            {"label": "Hash fallback decision", "target": "docs/DECISIONS.md"}
           ],
           "related": ["zero-framework-architecture", "rem-consolidation", "zone-cartography"]
         },
@@ -660,7 +660,7 @@
             "When irreconcilable tensions exist with no resolution, the Stage Manager triggers `HOLD`.",
             "A held turn halts processing before LLM generation, declining to speak rather than generating a false, compromised reply."
           ],
-          "why": "Decided in Track D (`SESSION_HANDOFF.md`): when conflicting internal impulses cannot be harmonized, an authentic machine holds the floor empty rather than smoothing contradictions into generic corporate pleasantries.",
+          "why": "Decided in Track D (`docs/archive/SESSION_HANDOFF.md`): when conflicting internal impulses cannot be harmonized, an authentic machine holds the floor empty rather than smoothing contradictions into generic corporate pleasantries.",
           "evidence": [
             {"label": "Stage manager logic", "target": "archetypes/stage.py"},
             {"label": "Refusal routing tests", "target": "tests/test_refusals.py"},
@@ -683,9 +683,9 @@
               "When the partner expresses distress (`DISTRESS_SIGNS`), the engine answers cleanly without narrating distress back to them."
             ]
           },
-          "why": "Decided with Gordon (`SESSION_HANDOFF.md`, 'Decisions already made'): co-regulation requires accommodating the human partner. Mirroring a distressed person is harmful in critical moments; an effective partner stays steady, concise, and helpful.",
+          "why": "Decided with Gordon (`docs/archive/SESSION_HANDOFF.md`, 'Decisions already made'): co-regulation requires accommodating the human partner. Mirroring a distressed person is harmful in critical moments; an effective partner stays steady, concise, and helpful.",
           "evidence": [
-            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Decision record", "target": "docs/DECISIONS.md"},
             {"label": "Shared lattice driver", "target": "drivers/lattice.py"},
             {"label": "Distress accommodation tests", "target": "tests/test_distress.py"}
           ],

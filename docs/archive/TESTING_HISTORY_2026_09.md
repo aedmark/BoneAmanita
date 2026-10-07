@@ -47,11 +47,11 @@
   "the coin didn't land the bad way this time," and that gap is still open.
 
 
-## Still open (see `SESSION_HANDOFF.md` for the live, dated version)
+## Still open (see `docs/archive/SESSION_HANDOFF.md` for the live, dated version)
 
 The distress shield keyed on exhaustion rather than what was said; a judge
 that clears the `mismatch` control; the goodnight ATP-floor hold; honoring
 `village_suppression` in council voice detection; multiple runs per topic to
 separate a fix from noise. This section is deliberately short — treat
-`SESSION_HANDOFF.md`'s latest entry as the source of truth for what's open
+`docs/archive/SESSION_HANDOFF.md`'s latest entry as the source of truth for what's open
 right now, since it's updated every session and this file is not.

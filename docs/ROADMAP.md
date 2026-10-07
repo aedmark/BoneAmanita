@@ -3,10 +3,10 @@
 > **Note:** Completed roadmap items and their historical implementation details have been moved to [archive/ROADMAP_HISTORY_2026_09.md](archive/ROADMAP_HISTORY_2026_09.md).
 
 Written 2026-09-15, after the embeddings work (`7e90a74`). Companion to
-`SESSION_HANDOFF.md`, which describes what *is*; this describes what's
+`docs/archive/SESSION_HANDOFF.md`, which describes what *is*; this describes what's
 next and why. This is a cumulative record of measurements, decisions, and
 implementation plans; older present-tense descriptions can be superseded.
-The September 18 status below and the latest `SESSION_HANDOFF.md` entry take
+The September 18 status below and the latest `docs/archive/SESSION_HANDOFF.md` entry take
 precedence. Recorded experiments should be rerun before treating their results
 as evidence for a newer implementation.
 
@@ -96,7 +96,7 @@ threshold (mode-gate `ROS_PURGE` for CONVERSATION, the same pattern as the
 earlier distress-refusal fixes) or at recovery (the multi-turn silence with no
 faster recovery path than an apparent REM-failure side effect). Not yet
 judged (no judge clears `mismatch`). See the
-[2026-09-21 judge-controls handoff](SESSION_HANDOFF.md#judge-controls-2026-09-21)
+[2026-09-21 judge-controls handoff](archive/SESSION_HANDOFF.md#judge-controls-2026-09-21)
 and [TESTING.md](TESTING.md) for the tooling itself.
 
 **Distressed-refusal fixes and a sixth, clean topic, 2026-09-21:** applied
@@ -110,7 +110,7 @@ drag. A sixth topic composed after the fixes (`toast`) ran clean for the engine
 the ATP floor). Two judges on both clean topics: BoneAmanita beats a bare model
 (136-83, 62%) but is not distinguishable from a one-line "warm, concise friend"
 prompt (116-103, 53%, p = 0.42); the human reads disagree with each other. See
-the [2026-09-21 handoff](SESSION_HANDOFF.md#distress-refusal-fixes-toast-2026-09-21).
+the [2026-09-21 handoff](archive/SESSION_HANDOFF.md#distress-refusal-fixes-toast-2026-09-21).
 
 **The refused distressed turns, diagnosed, 2026-09-21:** the two refusals on
 the clean `lease` run (and the friendship 27/28 and `promotion` 8 holds that
@@ -121,7 +121,7 @@ quarantine (and at one turn the ROS panic gate), and the D9 distress shield
 does not stop it because it keys on exhaustion (`sentence_cap <= 3`), not on
 what was said. Reproduced three times, traced to the line, and confirmed with a
 controlled probe. Not fixed yet; options are in the
-[handoff](SESSION_HANDOFF.md#three-way-blind-comparison-2026-09-20). This also
+[handoff](archive/SESSION_HANDOFF.md#three-way-blind-comparison-2026-09-20). This also
 corrects the 2026-09-20 note below that blamed the DSPy critic for the
 friendship turns 27/28 holds.
 
@@ -141,7 +141,7 @@ distressed turns and ended nearly out of ATP, both left open on purpose.
 Judged blind, BoneAmanita beat the bare model 66-37 (p = 0.006) and was not
 distinguishable from the one-line prompt, 56-47 (p = 0.43). Two human blind
 reads split: Gordon picked BoneAmanita 28 of 28, a friend about 7 of 28. See the
-[2026-09-20 three-way handoff](SESSION_HANDOFF.md#three-way-blind-comparison-2026-09-20).
+[2026-09-20 three-way handoff](archive/SESSION_HANDOFF.md#three-way-blind-comparison-2026-09-20).
 
 **The DSPy critic could mutate the kernel mid-crisis; gated off in
 CONVERSATION mode, 2026-09-20:** reviewing the friendship census's five
@@ -165,7 +165,7 @@ from inside `DreamEngine`, but `self.eng` there isn't the object that holds
 instead. Re-confirmed live: 29/30 turns generated (previously 26-28),
 `narrative_drag` max 6.42, `PINKER` total max 41.47 (was 5015.62). Full
 suite: 584 passed, 5 skipped, 138 subtests. See the
-[2026-09-20 handoff](SESSION_HANDOFF.md#dspy-critic-conversation-gate-2026-09-20).
+[2026-09-20 handoff](archive/SESSION_HANDOFF.md#dspy-critic-conversation-gate-2026-09-20).
 
 **A blind BoneAmanita-vs-vanilla comparison, and Ollama's silent 4096-token
 context default, 2026-09-19:** Gordon asked for a vanilla baseline (same
@@ -185,7 +185,7 @@ BoneAmanita's own side needed no change - its replies stay well under 4096
 tokens on their own. Corrected blind-judge result: **BoneAmanita 22, Vanilla
 3** (an earlier 23-2 figure, run against the truncated data and a separate
 key-presence bug in the judge script itself, should not be cited). See the
-[2026-09-19 vanilla-comparison handoff](SESSION_HANDOFF.md#vanilla-blind-comparison-2026-09-19).
+[2026-09-19 vanilla-comparison handoff](archive/SESSION_HANDOFF.md#vanilla-blind-comparison-2026-09-19).
 
 **A third census, advice-restraint, and a cursed-word false positive,
 2026-09-19:** a third scripted conversation (`--topic friendship`,
@@ -205,7 +205,7 @@ added (`tests/test_gates.py`); confirmed live that the same two messages now
 reach a real answer. The mechanism itself (checking the *person's* words for
 AI-meta-awareness language, rather than the *model's* output) is flagged as
 worth a further look, not redesigned here. See the
-[2026-09-19 handoff](SESSION_HANDOFF.md#advice-restraint-cursed-word-bug-2026-09-19).
+[2026-09-19 handoff](archive/SESSION_HANDOFF.md#advice-restraint-cursed-word-bug-2026-09-19).
 Full suite: 581 passed, 5 skipped, 138 subtests, holding green.
 
 **Firewall widening, tone fix, and a live-killing topology bug, 2026-09-19:**
@@ -226,7 +226,7 @@ count already use elsewhere in this codebase: a real minimum graph size, an
 averaged multi-draw null baseline, a noise floor, and three consecutive
 confirmations before the irreversible action. Marathon census re-run clean:
 28/30 generated, flagging 6/6. See the
-[2026-09-19 firewall/topology handoff](SESSION_HANDOFF.md#firewall-topology-second-census-2026-09-19).
+[2026-09-19 firewall/topology handoff](archive/SESSION_HANDOFF.md#firewall-topology-second-census-2026-09-19).
 Full suite: 574 passed, 5 skipped, 29 subtests, throughout.
 
 **D9/D1/D2/D2b audit and census, 2026-09-19 (earlier):** auditing D1/D2/D9 against their
@@ -241,7 +241,7 @@ measuring a mechanism D2 had already retired, plus three unrelated breakages
 that meant it could not run at all; rebuilt around real `SomaticBudget`
 objects. D2b's accommodation measures and its third ("disengaged") persona
 arm did not exist; built. See the
-[D9/D1/D2/D2b handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19) for the
+[D9/D1/D2/D2b handoff](archive/SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19) for the
 full account of each, including the specific bugs found.
 
 With those fixes in place, the live 30-turn census
@@ -267,7 +267,7 @@ focused run (54 passed, 4 subtests passed). Concrete physics fixtures now reach
 the production serialization path, and refusal tests cover nomination followed
 by Stage Manager arbitration, including reason, receipt, scar, and one ATP
 charge. Production gate thresholds and routing are unchanged. See the
-[refusal-test handoff](SESSION_HANDOFF.md#refusal-tests-2026-09-18).
+[refusal-test handoff](archive/SESSION_HANDOFF.md#refusal-tests-2026-09-18).
 The complete suite on the latest tree plus the refusal routing unification returned
 **525 passed, 5 skipped, 29 subtests passed**. All existing unit tests pass
 cleanly. This is the new full-suite baseline.
@@ -276,7 +276,7 @@ cleanly. This is the new full-suite baseline.
 and syncs a same-directory temporary file before atomic replacement. Failure
 regressions verify preservation of the previous checkpoint and cleanup of
 unpublished temporary files. The next priority is the seven refusal-test
-failures. See the [quicksave handoff](SESSION_HANDOFF.md#quicksave-repair-2026-09-18).
+failures. See the [quicksave handoff](archive/SESSION_HANDOFF.md#quicksave-repair-2026-09-18).
 The complete suite on `8069778` plus the embedding and quicksave repairs returned
 **518 passed, 7 failed, 5 skipped, 29 subtests passed**. All five new quicksave
 tests passed; the seven failures are unchanged. This is the current full-suite
@@ -287,7 +287,7 @@ are uncached, fallback receipts identify their actual source, recovery retries
 failed texts, and runtime degradation preserves the startup vector width.
 The terminal hash transition clears the semantic cache. Downstream stores are
 not automatically re-embedded; hash operation remains non-semantic. See the
-[embedding handoff](SESSION_HANDOFF.md#embedding-repair-2026-09-18).
+[embedding handoff](archive/SESSION_HANDOFF.md#embedding-repair-2026-09-18).
 The complete suite on `8069778` plus the embedding repair returned **513 passed,
 7 failed, 5 skipped, 27 subtests passed**. The seven failures are unchanged;
 all five new embedding regressions passed. The quicksave run above supersedes
@@ -299,7 +299,7 @@ engines even after a subclass setup failure. A complete suite on `8bdd960`
 plus this repair returned **508 passed, 7 failed, 5 skipped, 22 subtests passed**.
 All four new shutdown regressions passed; the seven failures are the same
 ones reproduced before the repair. Embedding fallback and quicksave defects
-were still open at that point; both are repaired in the follow-ups above. See the [latest handoff](SESSION_HANDOFF.md#stabilization-2026-09-18).
+were still open at that point; both are repaired in the follow-ups above. See the [latest handoff](archive/SESSION_HANDOFF.md#stabilization-2026-09-18).
 This follow-up supersedes the review baseline below.
 
 The review covered `b0a096e` plus existing working-tree changes. No repairs were
@@ -341,7 +341,7 @@ selection returned **129 passed, 7 failed, 4 skipped**; this is not a full-suite
 total. The initial broad run stopped at its failure cap and included four
 temporary-checkout Git-metadata failures, all resolved by correcting the review
 setup. The historical **501 passed, 5 skipped** must not be quoted as current.
-See [the September 18 handoff](SESSION_HANDOFF.md#review-2026-09-18) for exact
+See [the September 18 handoff](archive/SESSION_HANDOFF.md#review-2026-09-18) for exact
 commands, failure nodes, fault-injection reproductions, and scope limits.
 
 No live-model behavioral audit was run during this review. Before the next one,
@@ -814,7 +814,7 @@ silent:
   replies under the same key and generated nothing. It surfaced only because
   the analysis refused to print a table with no rows.
 
-The original brief, kept for the design rationale, is in `SESSION_HANDOFF.md`
+The original brief, kept for the design rationale, is in `docs/archive/SESSION_HANDOFF.md`
 under "Next session: C5". That brief covers
 the rig (smoke tested against `mistral-nemo`), the three confounds that make
 a naive A/B void, how to measure without adding a POS tagger, and sizing.
@@ -904,7 +904,7 @@ sampled at 0. Fixed in 20.7.4.15: the gate narrows the somatic band from the
 top (`gate_openness`), never below half of it, and `Z_PIVOT` is 0.2. See the
 handoff's 2026-09-23 entries.
 
-The third row also corrects `SESSION_HANDOFF.md`, which says the engine's
+The third row also corrects `docs/archive/SESSION_HANDOFF.md`, which says the engine's
 own depletion reaches the prompt only through respiration. It also reaches
 it through `cortex.py:229`, as a style directive.
 
@@ -1143,7 +1143,7 @@ all four now nominate and let the Stage Manager decide, with regression
 coverage. The 30-turn live census below confirms it: every halt carries the
 same Stage Manager reason and a matching ATP ledger entry, and the flagging
 phase (6 of 6) and most of distressed (4 of 5) were answered, not refused.
-See the [2026-09-19 handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
+See the [2026-09-19 handoff](archive/SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
 
 **September 18 status (superseded above):** nomination objects, Stage Manager
 arbitration, and refusal receipts were already present in the code, but the
@@ -1194,7 +1194,7 @@ before a one-line `[MODE: X]` tag, which sits before `=== PARTNER INPUT ===`
 Not yet done: the tool that would run decision 4's own measurement
 (`tools/audit_somatic.py`) was broken and measuring a retired mechanism; it is
 rebuilt and verified working (see the
-[2026-09-19 handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19)), but the
+[2026-09-19 handoff](archive/SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19)), but the
 statistical pass in this section's own "done when" has not been run.
 
 **September 18 status (superseded above):** partner-focused sentence caps and
@@ -1277,7 +1277,7 @@ the only combination that sets `offer_to_carry_load`), with `CONTROL`/
 "instructions given" (part of "demand on the person" below) have no
 defensible regex proxy and are left unmeasured rather than guessed at.
 Verified live in a smoke run, not yet the statistical pass below. See the
-[2026-09-19 handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
+[2026-09-19 handoff](archive/SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
 
 C5 asked whether the prose obeys an instruction. The split asks a different
 question: does the reply fit the person? That needs arms built from the
@@ -1320,7 +1320,7 @@ be measured with `reasoning_effort=none`, which is not how they would run in
 production, and in production they would be served mock prose. Fix it before
 D7's decision, so the models are judged as they would actually be deployed,
 and fix the `mock_generation` recursion alongside it, since both live on the
-same fallback path. Details in `SESSION_HANDOFF.md` Open items 8 and 9.
+same fallback path. Details in `docs/archive/SESSION_HANDOFF.md` Open items 8 and 9.
 
 ## Deliberately not in Track D
 
@@ -1384,7 +1384,7 @@ shippable and each makes the next one verifiable.
   real math belongs; the lexicon-and-thresholds layer does not need to
   become dimensionally coherent to be useful.
 - **Adopting a vector store or an agent framework.** The no-frameworks
-  decision (`SESSION_HANDOFF.md`). The embeddings work stayed at one HTTP POST for this reason
+  decision (`docs/archive/SESSION_HANDOFF.md`). The embeddings work stayed at one HTTP POST for this reason
   and the manifold work should too.
 - **Renaming the poetic variables.** The poetic-names decision. `ATP`,
   `godel_scars`, `narrative_drag` stay.

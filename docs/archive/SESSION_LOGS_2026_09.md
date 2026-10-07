@@ -686,7 +686,7 @@ actually saw was the generic "nothing is ready to be said" line. It is now
 appended to the `ui` field that reaches them
 (`tests/test_stage_manager.py::test_the_ui_text_explains_why`). **This surfaced
 a second, more serious problem, covered in the next entry
-(`SESSION_HANDOFF.md#silence-reason-tone`): several of the raw reason strings
+(`docs/archive/SESSION_HANDOFF.md#silence-reason-tone`): several of the raw reason strings
 this exposes are not fit for a person to read as-is.**
 
 ### The bug the second census found: a live-killing false positive in the topology check

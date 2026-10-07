@@ -1,7 +1,7 @@
 """tests/test_mode_failures.py
 
 The 2026-09-24 real-model runs: failures found in every mode, one test class
-per fix in the plan (SESSION_HANDOFF.md, "THE PLAN FOR THE NEXT SESSION").
+per fix in the plan (docs/archive/SESSION_HANDOFF.md, "THE PLAN FOR THE NEXT SESSION").
 """
 
 import json

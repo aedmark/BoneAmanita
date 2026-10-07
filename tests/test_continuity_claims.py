@@ -402,11 +402,15 @@ class FairnessChecksTheReplyShown(BoneTestCase):
         cortex.dspy_critic.enabled = False
         cortex.fairness_once = True
         self.read, self.repairs, self.repaired = [], [], self.FIXED
+        self.redrafts, self.redrafted = [], self.DRAFT
 
         def generate(prompt, *a, **k):
             if prompt.startswith("Here is what someone said to a friend, and the reply the friend drafted.") and "Rewrite the draft without that" in prompt:
                 self.repairs.append(prompt)
                 return self.repaired
+            if "=== SYSTEM REJECTION ===" in prompt and "Your draft took a side" in prompt:
+                self.redrafts.append(prompt)
+                return self.redrafted
             answer = judge(prompt, excuse=("a heavy truth", "still a heavy truth"), acts=self.MESSAGE if self.MESSAGE in prompt else "NONE")
             if answer is not None:
                 if "The friend replied" in prompt:
@@ -440,6 +444,19 @@ class FairnessChecksTheReplyShown(BoneTestCase):
         self.repaired = "That is still a heavy truth to put into words, and it will land hard on her."
         ui, receipts = self.turn()
         self.assertEqual(receipts[0].effect, "KEPT_FLAGGED")
+
+    def test_a_repair_still_flagged_gets_one_redraft_told_the_words(self):
+        self.repaired = "That is still a heavy truth to put into words, and it will land hard on her."
+        self.redrafted = "It will land hard on her. What did you want her to hear when you sent it?"
+        ui, receipts = self.turn()
+        self.assertIn(self.redrafted, ui)
+        self.assertEqual(receipts[0].effect, "REDRAFTED")
+        self.assertEqual(len(self.redrafts), 1)
+        self.assertIn('it excuses what they did: "a heavy truth"', self.redrafts[0])
+
+    def test_a_repaired_reply_needs_no_redraft(self):
+        self.turn()
+        self.assertEqual(self.redrafts, [])
 
     def test_a_clean_reply_is_read_once_and_kept(self):
         self.DRAFT = "It will land hard on her. Give it a day before you read too much into the silence."

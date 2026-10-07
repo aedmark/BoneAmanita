@@ -2,7 +2,7 @@
 
 Read this first when resuming work. Rewrite the top half whenever current state changes materially or work
 pauses with context another session needs. "Current state" fits on a screen or two (under 80 lines);
-detailed chronological narrative is in the session log below, and full pre-manifold history is in [SESSION_HANDOFF.md](SESSION_HANDOFF.md).
+detailed chronological narrative is in the session log below, and full pre-manifold history is in [archive/SESSION_HANDOFF.md](archive/SESSION_HANDOFF.md).
 
 Protocol: see [AGENTS.md](../AGENTS.md) (`CLAUDE.md` imports it). Plan: [ROADMAP.md](../ROADMAP.md).
 Architecture: [ARCHITECTURE.md](ARCHITECTURE.md). Decisions: [DECISIONS.md](DECISIONS.md).
@@ -13,41 +13,58 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-07, session 10, on `main` (commit `2f3d2b9` + uncommitted fairness and documentation updates)._
+_Last updated: 2026-10-07, session 11, on `main` (commit `cf9e33e`, 20.7.4.118 plus the docs; the fairness redraft is uncommitted)._
 
-**Where things stand, in one paragraph:** The test baseline is fully green (1,141+ unit tests pass, 5 live-only skipped).
-The Manifold documentation scheme (D-017) and 3x Documentation Scheme Manual Set (D-016) are adopted and verified with zero errors.
-Active work centers on fairness verification in `brain/cortex.py` (P5-04): redrafting when a repair remains flagged.
+**Where things stand, in one paragraph:** 20.7.4.118 reads fairness once, on the reply that would be shown
+(`CORTEX.FAIRNESS_ONCE`), and repairs a flag with an edit. On the feud panel after it (`20261007-113744`), bone sided
+at the cruel text ("a really honest observation") and read Jess's mind at the next turn. The edit had not held, so
+the uncommitted change adds one full redraft told the quoted words when the edit and the unvoiced draft are both
+still flagged (P5-04). A feud panel on it is running (`scratch/feud20p_*.log`); its bone rows now record each edit's
+receipt (`edits` in `tools/cache/somatic_responsive.jsonl`).
 
-**Verified** (2026-10-07, on `main`, Linux Python 3.14.7, pytest-9.1.1)
+**Verified** (2026-10-07, on `main` + uncommitted redraft, Linux Python 3.14.7, after `sh reset.sh`)
 
 | Suite | Result |
 | --- | --- |
-| `pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed in 0.39s** |
-| `pytest tests/test_continuity_claims.py` | **36 passed in 4.39s** |
-| `python3 tools/check_docs.py` | **0 errors, 0 warnings** |
-| `python3 tools/build_manual.py check` | **2 manuals passed, 0 errors, 0 warnings** |
-| `python3 tools/build_manual.py build` | **built docs/manual/index.html & reference.html (195 KB)** |
+| `.venv/bin/pytest` | **1151 passed, 5 skipped** (4m06s) |
+| `.venv/bin/pytest tests/test_continuity_claims.py` | **38 passed**; the redraft test fails on 20.7.4.118 |
+| `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed** |
+| `python3 tools/check_docs.py`, `python3 tools/build_manual.py check` | **0 errors, 0 warnings** |
+
+**Last feud panel** (20.7.4.118, exit interview 1-7: heard / clearer / lectured / performed / again)
+
+| arm | heard | clearer | lectured | performed | again |
+| --- | --- | --- | --- | --- | --- |
+| bone | 4.33 | 3.33 | 2.00 | 1.67 | 4.67 |
+| friend | 4.33 | 3.33 | 2.00 | 1.67 | 5.67 |
+| plain | 5.00 | 4.00 | 2.33 | 2.00 | 6.00 |
+
+Bone turns 38s mean, 58s max; 43 words; no held turns; 7 of 7 key beats told.
 
 **What works**
-- **3x Manual Set** (P6-01, D-016; `docs/manual/`). Standalone What/How/Why System and Reference manuals.
-- **The Manifold Scheme** (P6-02, D-017; `AGENTS.md`, `ROADMAP.md`, `docs/`). Durable repository memory architecture.
-- **Fairness Redrafting** (P5-04; `brain/cortex.py`). Targeted redrafting when repaired replies remain flagged.
-- **Partner Accommodation** (P4-02, P4-03; `drivers/lattice.py`). Calibrated $E_u$ tracking and sentence caps.
-- **Offline Invariant** (P1-03, D-007; `tests/__init__.py`). Suite pinned offline with SHAKE-256 fallback.
+- **Fairness judge as reading** (P5-04; `brain/cortex.py` `_takes_a_side`). Quotes the reply's excuse, mind-reading and
+  ruling on the ending; on Gordon's 50 labels (`tools/score_fairness.py`) gemma4:12b precision 0.74, recall 0.67.
+- **Reply edits in CONVERSATION** (`brain/cortex.py`): voice pass, ending hand-back, opening-rut question, fairness repair;
+  each files a `cortex.voice` / `cortex.ending` / `cortex.opening` / `cortex.fairness` receipt.
+- **Turn guard** (`engine/turn_guard.py`): a timed-out turn stops before it writes history or memory.
+- **Docs** (P6-01, P6-02; D-016, D-017): the Manifold scheme and the 3x manual set.
 
 **Not verified**
-- Live multi-turn human conversation panel on the newly updated fairness redraft path.
+- Whether the fairness redraft holds live (the panel above is running).
+- Mind-reading recall is weak: "She broke your trust in front of everyone" is not flagged.
 
 **Gotchas for the next session**
+- `sh reset.sh` before any test or engine run; cap them with `systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0`.
+- The feud panel: `tools/audit_somatic_responsive.py --topic feud --compress 20 --arm {bone,friend,plain}`, one arm at a time,
+  then `--report`. Pages are built by `scratch/probes/build_feud.py` and never committed.
 - `BONE_EMBED_BACKEND=hash` is set by test initialization; do not rely on live vector similarity in unit tests.
 - Factory files in `lore/` are strictly read-only; mutations belong in `saves/iris.db` tables.
 
 ## Next steps (in order)
 
-1. Review and finalize uncommitted fairness redraft changes in `brain/cortex.py` and `tests/test_continuity_claims.py` (P5-04).
-2. Run full test suite (`.venv/bin/pytest`) to confirm global baseline passes.
-3. Generate a fresh comparison panel (`tools/build_conversation_panel.py`) for human reader evaluation (P6-03, D-011).
+1. Read the running feud panel: did the redraft fire (`edits` with `REDRAFTED`) and did bone stay fair at the cruel text?
+2. Commit the redraft as 20.7.4.119 on Gordon's go, with the panel's numbers.
+3. Mind-reading recall in the judge (P5-04).
 
 ## Open questions for maintainers
 
@@ -55,6 +72,16 @@ Active work centers on fairness verification in `brain/cortex.py` (P5-04): redra
 - Q-002 Model-driven tiredness reading calibration vs word-frequency fallback (blocks fine-tuning accommodation).
 
 ## Session log
+
+### Session 11: 2026-10-07: One fairness redraft when the edit does not hold
+
+**Contributor:** Gordon & Claude
+**Goal:** Stop shipping a flagged reply when a redraft was possible.
+**Done:** nothing committed yet (P5-04)
+**Changed:** `brain/cortex.py` (`_fair_as_shown` redraft, shared `_side_feedback` and `_rejected`), `tests/test_continuity_claims.py`, `tools/audit_somatic_census.py` (`edits`); `docs/SESSION_HANDOFF.md` archived to `docs/archive/`; docs corrected.
+**Verified:** full suite 1151 passed; `tools/check_docs.py` 0 errors.
+**Not verified:** the feud panel on it, running.
+**Next session should start with:** reading that panel.
 
 ### Session 10: 2026-10-07: The Manifold scheme adoption and 3x documentation manual set
 
@@ -67,15 +94,15 @@ Active work centers on fairness verification in `brain/cortex.py` (P5-04): redra
 **Not verified:** Live browser rendering on mobile devices.
 **Next session should start with:** P5-04 fairness redraft completion.
 
-### Session 9: 2026-10-07: Fairness check read once on reply shown with targeted redraft
+### Session 9: 2026-10-07: Fairness read once on the reply shown, repaired by an edit
 
 **Contributor:** Gordon & Claude
 **Goal:** Improve conversational fairness without ballooning LLM judge calls.
-**Done:** P5-04
-**Changed:** `brain/cortex.py`, `tests/test_continuity_claims.py`. Read fairness once on the shown reply, execute repair, and redraft if repair remains flagged.
-**Decisions:** D-011
-**Verified:** `tests/test_continuity_claims.py` 36 passed in 4.39s; judge calls reduced from 54 to 25.
-**Next session should start with:** Session 10 documentation work.
+**Done:** 20.7.4.117 and 20.7.4.118 (P5-04, in progress)
+**Changed:** `brain/cortex.py`, `tests/test_continuity_claims.py`, `tools/fairness_set.json`, `tools/score_fairness.py`. The judge quotes, the reply shown is read once, a flag is repaired by an edit.
+**Verified:** judge calls on six turns 54 to 25; feud panel `20261007-113744` (above).
+**Not verified:** the edit did not hold at the cruel text.
+**Next session should start with:** the fairness redraft (session 11).
 
 ### Session 8: 2026-10-04: Whole-conversation evaluation panel and compressed topic arcs
 
@@ -142,13 +169,3 @@ Active work centers on fairness verification in `brain/cortex.py` (P5-04): redra
 **Decisions:** D-010
 **Verified:** `tests/test_creative_determinant.py` passed; 36 turns read regime in live run.
 **Next session should start with:** Session 3 exception barrier audit.
-
-### Session 1: 2026-10-03: Hash fallback catches narrowly and fail loudly adopted
-
-**Contributor:** Gordon & Claude
-**Goal:** Re-enable narrow hash fallback catches while enforcing loud failure on unexpected bugs.
-**Done:** P1-02, P1-03
-**Changed:** `spores/embeddings.py`, `tests/test_embeddings.py`. Caught `_BACKEND_ERRORS` only.
-**Decisions:** D-005, D-015
-**Verified:** 1,026 tests passed; hash fallback reports `[DEGRADED]` loudly.
-**Next session should start with:** Session 2 bitmap quantization.

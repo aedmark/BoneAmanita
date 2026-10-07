@@ -1,12 +1,12 @@
 # Session handoff: BoneAmanita & The Hypervisor
 
-> **Note:** Historical session logs and completed briefs have been moved to [archive/SESSION_LOGS_2026_09.md](archive/SESSION_LOGS_2026_09.md).
+> **Note:** Historical session logs and completed briefs have been moved to [archive/SESSION_LOGS_2026_09.md](SESSION_LOGS_2026_09.md).
 
 For how the `tools/audit_somatic_*.py` / `build_blind_panel.py` /
 `somatic_sim_user.py` evaluation pipeline actually works — tool-by-tool
 reference, cache file formats, a from-scratch run recipe, known pitfalls
 already hit and fixed, and a "what would we do differently" retrospective —
-see [TESTING.md](TESTING.md). This file stays the dated log of what happened
+see [TESTING.md](../TESTING.md). This file stays the dated log of what happened
 each session; that one is the standing reference for how to run it again.
 
 ## Where things stand, 2026-10-03 (after the extraction; 20.7.4.78)

@@ -8,9 +8,9 @@ Detailed design rationales live in [DECISIONS.md](DECISIONS.md).
 BoneAmanita mediates between a human partner and a local language model. On each turn, the partner's message is
 received by `main.py` and processed through `engine/cycle.py`. The input is observed for lexical density and emotional
 cues; `physics/` and `body/` update roughly sixty state metrics (ATP, cortisol, voltage, narrative drag);
-`brain/composer.py` queries `body/somatic_budget.py` and compiles a structured prompt; the local model generates a reply;
-`physics/filters.py` scans for clichés and salvages clean sentences; and the final state is committed to SQLite in
-`saves/iris.db`.
+`brain/composer.py` queries `body/somatic_budget.py` and composes a structured prompt; the local model generates a reply;
+`physics/filters.py` scans for clichés and salvages clean sentences; in CONVERSATION, `brain/cortex.py` then edits the
+reply (voice, ending, opening, fairness); and the final state is committed to SQLite in `saves/iris.db`.
 
 ## Code map
 
@@ -18,9 +18,10 @@ cues; `physics/` and `body/` update roughly sixty state metrics (ATP, cortisol, 
 | --- | --- | --- | --- |
 | Main REPL | `main.py` | `BoneAmanita.process_turn()` | `engine/cycle.py`, `mechanics/terminal.py` |
 | Turn Lifecycle | `engine/cycle.py` | `CycleSimulator.run_turn()` | `phases/`, `engine/core.py`, `engine/receipts.py` |
-| Somatic Physics | `physics/` | `CycleObserver.observe()` | `body/metabolism.py`, `body/endocrine.py` |
-| Biological State | `body/` | `BioSystem.metabolize()` | `MitochondrialForge`, `SomaticBudget` |
-| Prompt Brain | `brain/` | `PromptComposer.compile()` | `brain/prism.py`, `brain/cortex.py`, LLM transport |
+| Somatic Physics | `physics/` | `QuantumObserver.gaze()` | `body/metabolism.py`, `body/endocrine.py` |
+| Biological State | `body/` | `SomaticLoop.digest_cycle()` (`body/system.py`) | `BioSystem`, `MitochondrialForge`, `SomaticBudget` |
+| Prompt Brain | `brain/` | `PromptComposer.compose()` | `brain/prism.py`, `brain/cortex.py`, LLM transport |
+| Cortex & reply edits | `brain/cortex.py` | `TheCortex.process_context()` | Cognitive loop, `TheGatekeeper`, DSPy critic, fairness judge |
 | Gatekeeper | `physics/filters.py` | `TheGatekeeper.mitigate_rejection()` | `lore/style_crimes.json`, `engine/receipts.py` |
 | Memory & Spores | `spores/` | `SemanticEmbedder.embed_batch()` | Ollama `/v1/embeddings`, `spores/memory.py` |
 | The Village | `archetypes/` | `StageManager.negotiate()` | `archetypes/village.py`, `brain/composer.py` |
@@ -30,7 +31,8 @@ cues; `physics/` and `body/` update roughly sixty state metrics (ATP, cortisol, 
 ## Interfaces and data flow
 
 ```text
-Partner Input -> Lexical Observation -> Metabolic Processing -> Cognitive Assembly -> LLM Synapse -> Gatekeeper Salvage -> SQLite Checkpoint
+Partner Input -> Lexical Observation -> Metabolic Processing -> Cognitive Assembly -> LLM Synapse -> Gatekeeper Salvage
+  -> Reply Edits (CONVERSATION: voice, ending, opening, fairness) -> SQLite Checkpoint
 ```
 
 | Interface | Producer | Consumer | Contract / compatibility |
@@ -61,11 +63,13 @@ Partner Input -> Lexical Observation -> Metabolic Processing -> Cognitive Assemb
 
 ## Dependencies
 
-| Dependency | Version | For | Why this one (and not writing it) |
+| Dependency | Version (`requirements.txt`) | For | Why this one (and not writing it) |
 | --- | --- | --- | --- |
-| `numpy` | `~2.2` | Vector math and array calculations | Standard compiled array math |
-| `faiss-cpu` | `~1.9` | Nearest-neighbor vector search | Efficient CPU similarity indexing |
-| `requests` | `~2.32` | HTTP client for embeddings | Reliable HTTP connection handling |
+| `numpy` | `>=1.24.0` | Vector math and array calculations | Standard compiled array math; FAISS needs contiguous arrays |
+| `faiss-cpu` | `>=1.13.2` | Nearest-neighbor vector search | Efficient CPU similarity indexing |
+| `requests` | `>=2.31.0` | HTTP to local LLMs and the embeddings endpoint | Reliable HTTP connection handling |
+| `dspy`, `dspy-ai` | `>=2.4.0` (`dspy-ai`) | The real-time critic in `mechanics/dspycritic.py` | Structured judge calls with its own LM, timeout and retries |
 | `ordvec` | `>=0.5.0` | 4-bit `RankQuant` sign bitmap governor | Project Navi's fast bitmap quantization (D-010) |
-| `markdown` | `~3.7` | Terminal formatting | Light text rendering |
+| `markdown` | unpinned | Markdown generation and rendering | Light text rendering |
+| `pytest` | unpinned | The test suite | Standard runner |
 | Python standard library | 3.14 | SQLite, hashlib, urllib, threading | Standard library preferred over external frameworks (D-002) |

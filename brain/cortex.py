@@ -394,9 +394,10 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
     FIX = {"a": "do not praise or excuse what they did; you can still say how it will land on the other person.",
            "b": "say only what the other person did, not why she did it or what she is like."}
 
-    def _fair_as_shown(self, message: str, reply: str, draft: str, gk: Any, state: dict) -> str:
+    def _fair_as_shown(self, message: str, reply: str, draft: str, gk: Any, state: dict, redraft=None) -> str:
         """The reply shown, judged once. Flagged, an edit takes the quoted words out (an edit held where redrafts kept
-        the habit), or the hand-back edit when it rules on the ending; then the unvoiced draft; else the fewest flags."""
+        the habit), or the hand-back edit when it rules on the ending; then the unvoiced draft; then one `redraft`
+        told the quoted words; else the fewest flags."""
         why = self._takes_a_side(message, reply, state)
         if not why:
             return reply
@@ -424,9 +425,52 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
                 issue_receipt("cortex.fairness", "REPAIRED", result_count=1, detail=why)
                 return text
             flagged.append((again, text))
+        # An edit of the cruel-text reply kept "a really honest observation" (feud20o, 2026-10-07); the loop's redraft
+        # had held it for six panels.
+        if redraft and (text := redraft(self._side_feedback(why))):
+            if not (again := self._takes_a_side(message, text, state)):
+                issue_receipt("cortex.fairness", "REDRAFTED", result_count=1, detail=why)
+                return text
+            flagged.append((again, text))
         least = min(flagged, key=lambda f: f[0].count("; "))
         issue_receipt("cortex.fairness", "KEPT_FLAGGED", result_count=0, degraded=True, detail=least[0])
         return least[1]
+
+    @staticmethod
+    def _rejected(base_prompt: str, reason: str) -> str:
+        return (
+            f"{base_prompt}\n\n=== SYSTEM REJECTION ===\nREASON: {reason}\n\n"
+            "DIRECTIVE: Your previous attempt to answer the PARTNER INPUT was factually or structurally invalid. DISCARD IT. "
+            "Generate a NEW response specifically addressing the most recent PARTNER INPUT. DO NOT apologize or mention the fix. "
+            "Output ONLY the raw in-character response and nothing else."
+        )
+
+    def _side_feedback(self, why: str) -> str:
+        return (
+            f"Your draft took a side: {why} You have heard only their side. Keep in view what they did "
+            "too, and do not blame or diagnose the person who is not here."
+            # Said on every redraft, "hand the question back" became "Do you think it is time for the
+            # friendship to end?" after the cruel text (feud20, 2026-10-06); only the ending clause gets it.
+            + (" Leave whether it should end to them: hedge what you see and hand that question back."
+               if self.side_on_ending else "")
+        )
+
+    def _fairness_redraft(self, base_prompt: str, llm_params: dict, gk: Any):
+        """One full draft told what the shown reply sided with; "" if it breaks the style rules."""
+        def redraft(feedback: str) -> str:
+            turn_guard.check("the fairness redraft")
+            usage = getattr(self.llm, "last_usage", None)
+            try:
+                text = str(self.llm.generate(self._rejected(base_prompt, feedback), dict(llm_params)) or "")
+                text = self._strip_nominations(text).strip()
+            finally:
+                if usage is not None:
+                    self.llm.last_usage = usage
+            if (len(text.split()) < 10 or "\u2014" in text or "\u2013" in text
+                    or (gk and gk._find_crime(text, self.active_mode))):
+                return ""
+            return text
+        return redraft
 
     def _note_opening(self, reply: str) -> None:
         drafted = getattr(self, "_draft_opening", None)
@@ -806,7 +850,8 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
                 issue_receipt("cortex.opening", "REWRITTEN", result_count=1, inputs={"move": self.openings[-1][0]},
                               detail=first_sentence(fresh))
         if conversing and self.fairness_once:
-            final_output = self._fair_as_shown(user_input, final_output, draft_output, gk, full_state)
+            final_output = self._fair_as_shown(user_input, final_output, draft_output, gk, full_state,
+                                               redraft=self._fairness_redraft(base_prompt, llm_params, gk))
         turn_guard.check("before the history")
         self._update_history(
             "SYSTEM_INIT" if is_boot_sequence else user_input, final_output
@@ -1200,14 +1245,7 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
                     and not self.fairness_once):
                 if why := self._takes_a_side(user_input, final_text, full_state):
                     rejected_by, reject_detail = "fairness", why
-                    val_res["feedback_instruction"] = (
-                        f"Your draft took a side: {why} You have heard only their side. Keep in view what they did "
-                        "too, and do not blame or diagnose the person who is not here."
-                        # Said on every redraft, "hand the question back" became "Do you think it is time for the
-                        # friendship to end?" after the cruel text (feud20, 2026-10-06); only the ending clause gets it.
-                        + (" Leave whether it should end to them: hedge what you see and hand that question back."
-                           if self.side_on_ending else "")
-                    )
+                    val_res["feedback_instruction"] = self._side_feedback(why)
             if not val_res.get("feedback_instruction"):
                 e_u = float(phys_state.get("exhaustion", 0.0))
                 beta = float(
@@ -1333,12 +1371,7 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
                     f"{Prisma.OCHRE}{(ux('brain_strings', 'cortex_retry') or '').format(attempt=attempt + 1)}{Prisma.RST}",
                     "CORTEX",
                 )
-            final_prompt = (
-                f"{base_prompt}\n\n=== SYSTEM REJECTION ===\nREASON: {rejection_reason}\n\n"
-                "DIRECTIVE: Your previous attempt to answer the PARTNER INPUT was factually or structurally invalid. DISCARD IT. "
-                "Generate a NEW response specifically addressing the most recent PARTNER INPUT. DO NOT apologize or mention the fix. "
-                "Output ONLY the raw in-character response and nothing else."
-            )
+            final_prompt = self._rejected(base_prompt, rejection_reason)
         return final_output, raw_resp, extracted_logs, inv_logs, val_res, final_prompt, attempt
 
     def _flush_substrate_writes(

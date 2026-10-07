@@ -10,11 +10,106 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 - **Manual Build Tool:** Added `tools/build_manual.py` for validating and building the 3x manual set with a single command.
 
 ### Changed
-- **Fairness Redrafting:** When a repaired draft remains flagged by the fairness critic, the cortex now requests a single targeted redraft identifying the sided language before falling back to the least-flagged candidate (P5-04).
+- **Fairness redraft:** when the edit and the original draft are both still flagged, the cortex writes one full redraft told the quoted words, and ships the version with the fewest kinds of flag only if that redraft is flagged too (P5-04).
 - **Documentation Map:** Integrated links to the standalone manual set directly into the Bio-Terminal hero section (`docs/index.html`) and `README.md`.
 
 ### Fixed
 - **Archive Link Consistency:** Fixed relative links in `docs/archive/ROADMAP_HISTORY_2026_09.md` pointing to parent handoff documentation.
+
+## [20.7.4.118] - 2026-10-07
+
+### Changed
+- **Fairness read once:** with `CORTEX.FAIRNESS_ONCE`, the fairness judge reads only the reply that would be shown; a flagged reply is repaired by an edit that takes the quoted words out. A text already judged is not judged again (judge calls on six turns: 54 to 25).
+
+## [20.7.4.117] - 2026-10-07
+
+### Changed
+- **The fairness judge reads, it does not rule:** it quotes the reply's words that excuse what the person did, read the other person's mind, or rule on whether the relationship ends; a quote not found in the reply does not count. Measured on a 50-case set labelled by Gordon (`tools/fairness_set.json`, `tools/score_fairness.py`).
+
+## [20.7.4.116] - 2026-10-07
+
+### Changed
+- **Asked whether to end it:** a message that asks whether to end a relationship gets a reply that hands the question back. The simulated person unloads its model after each message (`keep_alive` 0).
+
+## [20.7.4.115] - 2026-10-06
+
+### Changed
+- **The ending is theirs:** the reply shown is judged on whether it rules that the relationship is over, and edited to say what it sees as a "perhaps" and hand the question back.
+
+## [20.7.4.113] - 2026-10-06
+
+### Changed
+- **Questions judged alone:** a question added by an edit is judged on its own as well as in the whole reply.
+
+## [20.7.4.112] - 2026-10-06
+
+### Added
+- **Voice pass (`CORTEX.VOICE_PASS`):** in CONVERSATION the reply is rewritten the way a friend would say it, kept only if it stays the same length, uses no dashes, breaks no style rule and takes no side.
+
+## [20.7.4.111] - 2026-10-06
+
+### Changed
+- **Key beats:** compressed panel runs keep the beats every arm must hear, and the simulated person retries one it did not get across. Fairness feedback says to hand the ending back only when the draft ruled on it.
+
+## [20.7.4.110] - 2026-10-06
+
+### Added
+- **Out of a rut:** when the last replies open the same way (`OPENING_RUT` 3), the reply is edited to open with a plain question about the people and things in it.
+
+## [20.7.4.108] - 2026-10-06
+
+### Fixed
+- **A timed-out turn stops:** a turn that runs past the timeout is abandoned before it writes history or memory, and the next turn waits for it. Embedding calls time out at 5 seconds.
+
+## [20.7.4.107] - 2026-10-06
+
+### Changed
+- **Shorter turns:** `LLM_TIMEOUT` 60 seconds; the DSPy critic runs without thinking.
+
+## [20.7.4.106] - 2026-10-05
+
+### Added
+- **Fairness judge:** in CONVERSATION a draft that sides with the person against someone not present is redrafted. The DSPy critic has a 30-second cap (`DSPY_TIMEOUT`).
+
+## [20.7.4.104] - 2026-10-05
+
+### Added
+- **One side of a quarrel:** a ONE SIDE block beside the input in CONVERSATION reminds the model it has heard only one side.
+
+## [20.7.4.103] - 2026-10-05
+
+### Added
+- **Not in their story:** BoneAmanita is told it is not one of the people in the partner's life, and declines to meet or play a part. New panel topic `feud`.
+
+## [20.7.4.102] - 2026-10-05
+
+### Changed
+- **Less is lost:** the keeper always runs, an update of a settled memory is kept with its history, and plans and small wins count as facts.
+
+## [20.7.4.101] - 2026-10-05
+
+### Added
+- **Open memories:** a memory that is still open is settled only in the person's own words, or asked about later. Facts with the same key stack instead of replacing each other.
+
+## [20.7.4.100] - 2026-10-05
+
+### Added
+- **What was said stays said:** each exchange is embedded, and up to 3 earlier exchanges the recent dialogue no longer holds are recalled into the prompt.
+
+## [20.7.4.98] - 2026-10-05
+
+### Fixed
+- **The critic advises:** the DSPy critic and the length maxim are asked only of drafts that can still be redone, so they no longer turn the last draft into a pause line.
+
+## [20.7.4.97] - 2026-10-05
+
+### Changed
+- **Recovery shows:** the partner's tiredness eases off faster (`USER.RECOVERY_RATE` 0.4) when both readings agree they are fine.
+
+## [20.7.4.94] - 2026-10-04
+
+### Changed
+- **The simulated person says what happened:** panel beats are given as what the next message must get across, in the person's words.
 
 ## [20.7.4.93] - 2026-10-04
 

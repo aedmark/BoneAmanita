@@ -5,13 +5,13 @@
 This is the reference for `tools/audit_somatic_*.py`, `tools/build_blind_panel.py`
 and `tools/somatic_sim_user.py`: what each one does, how they chain together,
 the caches they read and write, and the mistakes already made and fixed so a
-new session or a different team doesn't re-make them. `SESSION_HANDOFF.md` is
+new session or a different team doesn't re-make them. `docs/archive/SESSION_HANDOFF.md` is
 still the log of what happened and when; this is the standing reference for
 how to run it again. `ROADMAP.md` is the project's own status; this file
 assumes you've read enough of it to know what "the Somatic Contract" is.
 
 **As of 2026-09-23, verdicts come from human readers** (see
-`SESSION_HANDOFF.md`, "Decisions already made"). The AI-judge sections below
+`docs/archive/SESSION_HANDOFF.md`, "Decisions already made"). The AI-judge sections below
 document what was built and tried; the judges are not a verdict.
 
 The question this pipeline answers: **compared to a bare model, and to a bare
@@ -336,7 +336,7 @@ ranking** (its `null`/`samples` position bias is real but only shows up when
 replies are genuinely tied, which a real ranking or `mismatch` is not);
 `mistral-nemo` is controls-only from here (fast, but the rubric fix did not
 move its `mismatch` score, do not trust its ranking); `ministral-3:14b` is a
-maybe, improved but unconfirmed. Full numbers in `SESSION_HANDOFF.md` (search
+maybe, improved but unconfirmed. Full numbers in `docs/archive/SESSION_HANDOFF.md` (search
 `the three-judge blind panel` and the two updates after it) and
 `tools/cache/blind_judge_control_*_toast_*_rubric2.json`. Rerun the controls
 whenever the rubric, the judge model, or the decoy logic changes again, a
@@ -382,7 +382,7 @@ orders across the two passes, so position bias cancels exactly and the judge
 holds two replies (or conversations) at a time. Each pass reads as a
 tournament: last means losing both pairs; a cycle has no first or last and
 counts against a control's bar. It helped every judge tried on responsive
-`mismatch` (see `SESSION_HANDOFF.md`, 2026-09-23 evening). Note the bar is
+`mismatch` (see `docs/archive/SESSION_HANDOFF.md`, 2026-09-23 evening). Note the bar is
 steep in call terms: losing both pairs 90% of the time needs about 95%
 accuracy per call.
 
@@ -391,7 +391,7 @@ asked for a per-conversation `FIT X: yes|no` before the ranking. On the same
 arms it lifted `mistral-nemo` (45% to 72%) but dropped `ministral-3:14b` (82%
 to 66%) and `qwen3.5:9b` (80% to 62%): the judges followed their own yes/no
 calls exactly, and an absolute "does this fit" call proved noisier for them
-than v2's side-by-side comparison. Details in `SESSION_HANDOFF.md`, 2026-09-23.
+than v2's side-by-side comparison. Details in `docs/archive/SESSION_HANDOFF.md`, 2026-09-23.
 
 **Responsive `mismatch` history, v2 with similarity decoys, `toast`:** `qwen3.5:9b`
 91% last (51/56), **PASS by one vote**; `ministral-3:14b` 86%, FAIL.

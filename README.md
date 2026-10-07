@@ -215,8 +215,7 @@ remain inline in the code.
 
 The code is written in biological metaphor throughout: ATP, cortisol, autophagy,
 Gödel scars, the Village, the Mnemonic Arcade. This is deliberate and it is
-protected by a standing project decision (`SESSION_HANDOFF.md`, "Decisions
-already made"): the names are not decoration, they map to real variables and must not be
+protected by a standing project decision (`docs/DECISIONS.md`, D-003): the names are not decoration, they map to real variables and must not be
 renamed to `error_count` and `energy_level`.
 
 The thing to hold in your head is that the metaphor describes what the numbers
@@ -314,7 +313,7 @@ resolved the final known failures, successfully bringing all 525 unit tests to
 passing status (`525 passed, 5 skipped, 29 subtests passed` in ~4m53s). Live-model
 behavioral audits will commence next to ensure the D9 track plays correctly in production.
 
-See the [latest session handoff](docs/SESSION_HANDOFF.md#refusal-test-repair-2026-09-18)
+See the [archived session handoff](docs/archive/SESSION_HANDOFF.md#refusal-test-repair-2026-09-18)
 for the tested changes, remaining validation steps, and next-round work.
 
 Earlier audits found disconnected components, hash-based memory coordinates,
@@ -390,7 +389,7 @@ check.
 | File | What it is |
 |---|---|
 | `ROADMAP.md` | Current priorities plus dated measurements and historical implementation plans. |
-| `SESSION_HANDOFF.md` | The project's reference document: what is true right now, the decisions that bind changes, and which traps to avoid. Read before changing anything. |
+| `docs/HANDOFF.md` | Current state, next steps and gotchas: read before changing anything. Decisions that bind changes are in `docs/DECISIONS.md`; the pre-2026-10-07 log is `docs/archive/SESSION_HANDOFF.md`. |
 | `docs/README.MD` | The Hypervisor, BoneAmanita's no-math sibling for cloud models. |
 | `CREDITS.MD` | Full lineage and attribution. |
 | `license.txt` | MIT, human/computer variant. |

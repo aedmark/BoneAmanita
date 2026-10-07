@@ -107,7 +107,7 @@
             "Carries over the live dialogue buffer, user model inferences, and memories across mode switches.",
             "If switching to `ADVENTURE`, re-engages room cartography and inventory; if switching away, stores adventure state."
           ],
-          "why": "Decided with Gordon on 2026-10-04 (`SESSION_HANDOFF.md`, 'Decisions already made'): switching modes mid-conversation must preserve dialogue history, secrets included, rather than artificially siloing the conversational context.",
+          "why": "Decided with Gordon on 2026-10-04 (`docs/archive/SESSION_HANDOFF.md`, 'Decisions already made'): switching modes mid-conversation must preserve dialogue history, secrets included, rather than artificially siloing the conversational context.",
           "evidence": [
             {"label": "Mode switch command", "target": "mechanics/commands.py"},
             {"label": "Presets and mode definitions", "target": "engine/presets.py"},
@@ -303,7 +303,7 @@
           "why": "Not every interaction requires game mechanics or spatial exploration. Conversation mode allows intimate, calm dialogue free from inventory clutter and metabolic pressure.",
           "evidence": [
             {"label": "Mode configuration", "target": "engine/presets.py"},
-            {"label": "Handoff decisions", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Handoff decisions", "target": "docs/DECISIONS.md"},
             {"label": "Mode switch tests", "target": "tests/test_mode_switch.py"}
           ],
           "related": ["mode-adventure", "mode-creative", "mode-technical", "somatic-tuning-presets"]
@@ -326,7 +326,7 @@
           "why": "Language models default to lazy multi-choice menus ('Option 1... Option 2...') instead of writing the actual story. Creative mode forces the model to commit to continuous prose.",
           "evidence": [
             {"label": "Mode configuration", "target": "engine/presets.py"},
-            {"label": "Creative probe records", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Creative probe records", "target": "docs/archive/SESSION_HANDOFF.md"},
             {"label": "Creative mode tests", "target": "tests/test_mode_failures.py"}
           ],
           "related": ["mode-adventure", "mode-conversation", "mode-technical", "somatic-tuning-presets"]
@@ -346,7 +346,7 @@
           "why": "Technical tasks require precise code, inspectable receipts, and conservative resource accounting. Calibrating the token burn rate prevents premature exhaustion during long coding sessions.",
           "evidence": [
             {"label": "Mode configuration", "target": "engine/presets.py"},
-            {"label": "Technical energy accounting", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Technical energy accounting", "target": "docs/archive/SESSION_HANDOFF.md"},
             {"label": "Code generation tests", "target": "tests/test_code_in_replies.py"}
           ],
           "related": ["mode-adventure", "mode-conversation", "mode-creative", "command-substrate"]
@@ -417,9 +417,9 @@
               "Rank 4 (Lowest): Module defaults (`http://127.0.0.1:11434/v1/embeddings`, `nomic-embed-text`)."
             ]
           },
-          "why": "Decided in `SESSION_HANDOFF.md`: environment variables must strictly outrank `BoneConfig.EMBEDDINGS`. Because `BoneConfig` ships populated, lower precedence made `BONE_EMBED_URL` a silent no-op.",
+          "why": "Decided in `docs/archive/SESSION_HANDOFF.md`: environment variables must strictly outrank `BoneConfig.EMBEDDINGS`. Because `BoneConfig` ships populated, lower precedence made `BONE_EMBED_URL` a silent no-op.",
           "evidence": [
-            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Decision record", "target": "docs/DECISIONS.md"},
             {"label": "Embeddings resolver", "target": "spores/embeddings.py"},
             {"label": "Embeddings environment tests", "target": "tests/test_embeddings.py"}
           ],
@@ -484,7 +484,7 @@
           "evidence": [
             {"label": "Reset script", "target": "reset.sh"},
             {"label": "Gitignore file", "target": ".gitignore"},
-            {"label": "Handoff reset documentation", "target": "docs/SESSION_HANDOFF.md"}
+            {"label": "Handoff reset documentation", "target": "docs/archive/SESSION_HANDOFF.md"}
           ],
           "related": ["halcyon-database", "offline-testing-discipline"]
         }
@@ -530,11 +530,11 @@
             "Live server tests are guarded behind the opt-in environment variable `BONE_EMBED_LIVE_TEST=1`.",
             "Runs the complete test suite (~1,000+ tests) cleanly in `.venv/bin/pytest`."
           ],
-          "why": "Decided in `SESSION_HANDOFF.md` ('The test suite is pinned offline'): unit test passes must reflect deterministic code correctness, not local server uptime or external network latency.",
+          "why": "Decided in `docs/archive/SESSION_HANDOFF.md` ('The test suite is pinned offline'): unit test passes must reflect deterministic code correctness, not local server uptime or external network latency.",
           "evidence": [
             {"label": "Test suite initialization", "target": "tests/__init__.py"},
             {"label": "Embeddings test suite", "target": "tests/test_embeddings.py"},
-            {"label": "Session handoff requirements", "target": "docs/SESSION_HANDOFF.md"}
+            {"label": "Session handoff requirements", "target": "docs/archive/SESSION_HANDOFF.md"}
           ],
           "related": ["subsystem-receipts", "somatic-audit-pipeline"]
         },
@@ -572,9 +572,9 @@
             "Human evaluators vote on responsiveness, authenticity, and voice without knowing which arm produced each reply.",
             "Automated LLM judges are strictly excluded from deciding production verdicts."
           ],
-          "why": "Decided with Gordon on 2026-09-23 (`SESSION_HANDOFF.md`): across nine judge models and three rubrics, AI judges rewarded verbose, bulleted, sycophantic replies and failed responsive controls. What BoneAmanita is for is the opposite of what LLM judges favor.",
+          "why": "Decided with Gordon on 2026-09-23 (`docs/archive/SESSION_HANDOFF.md`): across nine judge models and three rubrics, AI judges rewarded verbose, bulleted, sycophantic replies and failed responsive controls. What BoneAmanita is for is the opposite of what LLM judges favor.",
           "evidence": [
-            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Decision record", "target": "docs/DECISIONS.md"},
             {"label": "Blind panel builder", "target": "tools/build_blind_panel.py"},
             {"label": "Judge control tests", "target": "tests/test_judge_controls.py"}
           ],
