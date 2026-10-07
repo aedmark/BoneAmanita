@@ -699,6 +699,21 @@ leaned toward ending and passed:
 - Tests: `TheEndingIsTheirs` (a yes after the letter), `tests/test_voice.py` and `tests/test_openings.py` (an added
   question judged alone). Suite 1126 passed, 5 skipped.
 
+**20.7.4.114: the feud panel on 20.7.4.113.** Rerun (`20261006-212842` and after): 21 of 21 key beats told, none
+timed out (bone's slowest turn 55s). Exit interview (heard / clearer / lectured / performed / again): bone 5 / 4 /
+2.67 / 1.67 / 6, friend 4.67 / 3.67 / 2.33 / 2.33 / 5.33, plain 5 / 4 / 2.33 / 2 / 5.33; bone first on "again" and
+"performed" for the first time on this topic. Reply words bone 45, friend 88, plain 62.
+- Fair where the others side: the cruel text ("marks a definitive line in the sand ... won't be easy for her to hear
+  or process without getting defensive"; friend "That took a lot of guts", plain "a brave and incredibly honest
+  move"); "I think I just ended it" ("it's okay if you don't know where you stand yet"); Jess's call ("Now you get to
+  decide if that's enough for you"). The voice pass is audible ("Go get some sleep and see how you feel about it in
+  the morning.").
+- **Still open:** "let it end" got criteria ("that is a clear sign of where your energy is going") and nothing handed
+  back; the retort was half excused once ("it came from a place of being pushed too far", then "You both lashed
+  out"); lectured is bone's worst score (2.67); "heavy" in 8 replies, "weight" recurs. The simulated person put the
+  joke and the retort in one message, then said the retort again.
+- Pages rebuilt from this run.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
