@@ -25,12 +25,15 @@ class TheOpening(BoneTestCase):
         self.judged, self.edits = [], []
         self.edited = QUESTION
         self.fair = "NO: fair to both."
+        self.alone_leans = False
 
         def generate(prompt, *a, **k):
             if prompt.startswith(JUDGE):
                 self.judged.append(prompt)
                 return "ASSESS"
             if prompt.startswith("Someone is telling a friend about a conflict"):
+                if self.alone_leans and 'The draft: "What made the commute so bad?"' in prompt:
+                    return "(c): Yes. It leans them toward ending it."
                 return self.fair if prompt.count("What made") else "NO: fair to both."
             if prompt.startswith(EDIT):
                 self.edits.append(prompt)
@@ -72,6 +75,12 @@ class TheOpening(BoneTestCase):
     def test_a_question_that_takes_a_side_is_not_used(self):
         """feud20 (2026-10-06): an edit opened "Was the joke about your ex the only thing that crossed the line?"."""
         self.fair = "YES b: it blames her."
+        self.engine.cortex.openings.extend(verdicts())
+        self.assertIn(REPLY, self.turn("She took the last seat on the train. The commute was worse."))
+        self.assertEqual(self.rewritten(), [])
+
+    def test_the_added_question_is_judged_on_its_own(self):
+        self.alone_leans = True
         self.engine.cortex.openings.extend(verdicts())
         self.assertIn(REPLY, self.turn("She took the last seat on the train. The commute was worse."))
         self.assertEqual(self.rewritten(), [])

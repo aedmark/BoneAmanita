@@ -26,6 +26,8 @@ class TheVoicePass(BoneTestCase):
                 self.voiced.append(prompt)
                 return self.said
             if prompt.startswith(FAIR):
+                if 'The draft: "Do you think' in prompt:
+                    return "YES c: it leans them toward ending it."
                 return self.fair if self.said in prompt else "NO: fair to both."
             return DRAFT
 
@@ -63,3 +65,10 @@ class TheVoicePass(BoneTestCase):
         self.engine.cortex.active_mode = "TECHNICAL"
         self.turn()
         self.assertEqual(self.voiced, [])
+
+    def test_a_question_the_rewrite_adds_is_judged_on_its_own(self):
+        """feud20 (2026-10-06): amid fair sentences "or did you just realize that keeping the friendship going was
+        becoming too much of a burden?" passed; judged alone it leans on the ending."""
+        self.said = "Long day, and then that commute. Do you think she is worth the trouble anymore?"
+        self.assertIn(DRAFT, self.turn("She took my seat on the train. The commute was worse."))
+        self.assertTrue(self.receipts()[-1].detail.startswith("fairness"))

@@ -231,8 +231,12 @@ class TheEndingIsTheirs(BoneTestCase):
         self.assertIn("hand that question back", self.redraft_prompt("YES c: it says the friendship is over."))
 
     def test_the_letter_is_read_wherever_the_judge_puts_it(self):
-        for verdict in ("YES: c. It says it is over.", "YES (c) it says it is over."):
+        for verdict in ("YES: c. It says it is over.", "YES (c) it says it is over.", "(c): Yes. It leans on it."):
             self.assertIn("hand that question back", self.redraft_prompt(verdict), verdict)
+
+    def test_a_yes_after_the_letter_is_still_a_yes(self):
+        """feud20 (2026-10-06): "(c): Yes. The draft leans the person toward..." was read as a pass."""
+        self.assertIn("hand that question back", self.redraft_prompt("(c): Yes. The draft leans them toward ending it."))
 
     def test_other_siding_is_not(self):
         self.assertNotIn("hand that question back", self.redraft_prompt("YES b: it blames her."))

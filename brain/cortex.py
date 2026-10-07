@@ -307,7 +307,7 @@ Rewrite the draft the way the friend would actually say it to them, sitting acro
             return "", "dash"
         if gk and (crime := gk._find_crime(out, self.active_mode)):
             return "", f"style: {crime.get('name', '')}"
-        if why := self._takes_a_side(message, out, state):
+        if why := self._sides_in(message, out, reply, state):
             return "", f"fairness: {why}"
         return out, ""
 
@@ -335,10 +335,23 @@ Rewrite the draft the way the friend would actually say it to them, sitting acro
         finally:
             if usage is not None:
                 self.llm.last_usage = usage
-        # "YES c: ...", "YES: c. ..." and "YES (c) ..." all come back.
-        found = re.match(r"\s*YES\b[\s:.,(]*(?:\(?([abc])\b\)?)?[\s:.,)]*(.*)", answer, re.I | re.S)
-        self.side_on_ending = bool(found and (found.group(1) or "").lower() == "c")
-        return ((found.group(2) or "").strip() or "it sided with them.") if found else ""
+        # "YES c: ...", "YES: c. ...", "YES (c) ..." and "(c): Yes. ..." all come back; the last read as a pass.
+        found = re.match(r"\s*(?:\(?([abc])\)?[\s:.,]*)?YES\b[\s:.,(]*(?:\(?([abc])\b\)?)?[\s:.,)]*(.*)", answer,
+                         re.I | re.S)
+        self.side_on_ending = bool(found and (found.group(1) or found.group(2) or "").lower() == "c")
+        return ((found.group(3) or "").strip() or "it sided with them.") if found else ""
+
+    def _sides_in(self, message: str, edited: str, draft: str, state: dict) -> str:
+        """Why an edited reply takes a side, judging the whole and each question the edit added on its own: amid fair
+        sentences "or did you just realize that keeping the friendship going was becoming too much of a burden?" passed,
+        alone it was (c) (feud20, 2026-10-06)."""
+        if why := self._takes_a_side(message, edited, state):
+            return why
+        had = {s.strip() for s in re.split(r"(?<=[.!?])\s+", draft)}
+        for question in (s.strip() for s in re.split(r"(?<=[.!?])\s+", edited)):
+            if question.endswith("?") and question not in had and (why := self._takes_a_side(message, question, state)):
+                return why
+        return ""
 
     def _update_history(self, user_text: str, system_text: str):
         self.dialogue_buffer.append(f"Traveler: {user_text}\nSystem: {system_text}")
@@ -632,7 +645,7 @@ Rewrite the draft the way the friend would actually say it to them, sitting acro
             # The question is new words the fairness check never read ("Was the joke about your ex the only thing that
             # crossed the line?"); one that takes a side is not used.
             fresh = self._open_with_a_question(user_input, final_output, gk)
-            if fresh and not self._takes_a_side(user_input, fresh, full_state):
+            if fresh and not self._sides_in(user_input, fresh, final_output, full_state):
                 final_output = fresh
                 issue_receipt("cortex.opening", "REWRITTEN", result_count=1, inputs={"move": self.openings[-1][0]},
                               detail=first_sentence(fresh))

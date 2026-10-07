@@ -681,6 +681,24 @@ voice is gemma4:12b's register plus its own history; the prompt does not reach i
   is brutal."); "brutal" twice, and one mild drift passed ("You shouldn't have to be the one to step up").
 - `tests/test_voice.py` (4). Suite 1123 passed, 5 skipped.
 
+**20.7.4.113: the feud panel with the voice pass; questions judged on their own.** Panel (`20261006-205740` and
+after): 21 of 21 key beats told, none timed out. Exit interview (heard / clearer / lectured / performed / again): bone
+4 / 3.67 / 2 / 2 / 5.67, friend 4 / 4.33 / 2.33 / 1.33 / 5.67, plain 5 / 4 / 2.33 / 2 / 5.67. Bone's replies 57 words
+(61 the run before; friend 74, plain 63), "heavy" in 5 (10 before), least lectured. Only bone is fair at the cruel
+text ("might be hard for her to hear as anything other than an accusation"; friend "That took a lot of courage",
+plain "a bold, honest move") and at "let it end" (plain "Yes, there is a point ... let go"). Two of bone's questions
+leaned toward ending and passed:
+- "Do you think she's actually willing to work on it, or is she just waiting for you to be the one to walk away?":
+  the judge answered "(c): Yes. The draft leans...", read as a pass because the parse wanted YES first. It now takes
+  the clause letter before or after the YES.
+- "...or did you just realize that keeping the friendship going was becoming too much of a burden?": NO amid the
+  reply's fair sentences, "YES: c" alone. `Cortex._sides_in` judges an edited reply whole and then each question the
+  voice pass or the opening edit added on its own; one that takes a side keeps the draft.
+- Probe, "let it end", 2 sessions: the judge flagged leaning in drafts and rewrites alike; both replies leave it to
+  them ("You have to decide if the version of the friendship that remains after the repair is enough for you").
+- Tests: `TheEndingIsTheirs` (a yes after the letter), `tests/test_voice.py` and `tests/test_openings.py` (an added
+  question judged alone). Suite 1126 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
