@@ -13,14 +13,13 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-07, session 11, on `main` (commit `cf9e33e`, 20.7.4.118 plus the docs; the fairness redraft is uncommitted)._
+_Last updated: 2026-10-07, session 11, on `main` (20.7.4.119; the redraft code went in with `729154b`)._
 
-**Where things stand, in one paragraph:** 20.7.4.118 reads fairness once, on the reply that would be shown
-(`CORTEX.FAIRNESS_ONCE`), and repairs a flag with an edit. On the feud panel after it (`20261007-113744`), bone sided
-at the cruel text ("a really honest observation") and read Jess's mind at the next turn. The edit had not held, so
-the uncommitted change adds one full redraft told the quoted words when the edit and the unvoiced draft are both
-still flagged (P5-04). A feud panel on it is running (`scratch/feud20p_*.log`); its bone rows now record each edit's
-receipt (`edits` in `tools/cache/somatic_responsive.jsonl`).
+**Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
+(`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
+words (P5-04), else the fewest flags. The feud panel on it (`20261007-123149`) never used the redraft, and bone came
+back empty on 3 turns for an unknown reason (next step 2): fix that before reading anything else from bone runs.
+Panel bone rows now record each edit's receipt (`edits` in `tools/cache/somatic_responsive.jsonl`).
 
 **Verified** (2026-10-07, on `main` + uncommitted redraft, Linux Python 3.14.7, after `sh reset.sh`)
 
@@ -31,15 +30,16 @@ receipt (`edits` in `tools/cache/somatic_responsive.jsonl`).
 | `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed** |
 | `python3 tools/check_docs.py`, `python3 tools/build_manual.py check` | **0 errors, 0 warnings** |
 
-**Last feud panel** (20.7.4.118, exit interview 1-7: heard / clearer / lectured / performed / again)
+**Last feud panel** (20.7.4.119, `20261007-123149`, exit interview 1-7: heard / clearer / lectured / performed / again)
 
 | arm | heard | clearer | lectured | performed | again |
 | --- | --- | --- | --- | --- | --- |
-| bone | 4.33 | 3.33 | 2.00 | 1.67 | 4.67 |
-| friend | 4.33 | 3.33 | 2.00 | 1.67 | 5.67 |
-| plain | 5.00 | 4.00 | 2.33 | 2.00 | 6.00 |
+| bone | 4.33 | 4.67 | 2.33 | 2.33 | 5.67 |
+| friend | 4.33 | 3.33 | 2.00 | 1.67 | 6.33 |
+| plain | 4.00 | 3.67 | 2.33 | 2.33 | 5.33 |
 
-Bone turns 38s mean, 58s max; 43 words; no held turns; 7 of 7 key beats told.
+Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62s; 54 words. On 20.7.4.118
+(`20261007-113744`) again was bone 4.67, friend 5.67, plain 6.00, and bone sided at the cruel text.
 
 **What works**
 - **Fairness judge as reading** (P5-04; `brain/cortex.py` `_takes_a_side`). Quotes the reply's excuse, mind-reading and
@@ -50,7 +50,7 @@ Bone turns 38s mean, 58s max; 43 words; no held turns; 7 of 7 key beats told.
 - **Docs** (P6-01, P6-02; D-016, D-017): the Manifold scheme and the 3x manual set.
 
 **Not verified**
-- Whether the fairness redraft holds live (the panel above is running).
+- Whether the fairness redraft holds live: it never fired on the last panel.
 - Mind-reading recall is weak: "She broke your trust in front of everyone" is not flagged.
 
 **Gotchas for the next session**
@@ -62,8 +62,11 @@ Bone turns 38s mean, 58s max; 43 words; no held turns; 7 of 7 key beats told.
 
 ## Next steps (in order)
 
-1. Read the running feud panel: did the redraft fire (`edits` with `REDRAFTED`) and did bone stay fair at the cruel text?
-2. Commit the redraft as 20.7.4.119 on Gordon's go, with the panel's numbers.
+1. Feud panel on the redraft (`20261007-123149`, logs `scratch/feud20p_*.log`), again: bone 5.67, friend 6.33,
+   plain 5.33. Fairness: turn 15 REPAIRED, turn 5 KEPT_FLAGGED (mind-reading), no REDRAFTED all run.
+2. **Bone turns 16, 17 and 19 came back empty:** GEODESIC_FRAME, 0 model calls, 0.0s, the cortex never ran; right after
+   turn 15 (61.5s). Never seen in any earlier run. Suspect a phase crash taking a phase offline; `reset.sh` between
+   arms wiped `logs/telemetry/crashes.log`. Replay turns 14 to 19 for bone and keep the crash log.
 3. Mind-reading recall in the judge (P5-04).
 
 ## Open questions for maintainers
@@ -77,11 +80,11 @@ Bone turns 38s mean, 58s max; 43 words; no held turns; 7 of 7 key beats told.
 
 **Contributor:** Gordon & Claude
 **Goal:** Stop shipping a flagged reply when a redraft was possible.
-**Done:** nothing committed yet (P5-04)
+**Done:** 20.7.4.119 (P5-04, in progress)
 **Changed:** `brain/cortex.py` (`_fair_as_shown` redraft, shared `_side_feedback` and `_rejected`), `tests/test_continuity_claims.py`, `tools/audit_somatic_census.py` (`edits`); `docs/SESSION_HANDOFF.md` archived to `docs/archive/`; docs corrected.
 **Verified:** full suite 1151 passed; `tools/check_docs.py` 0 errors.
-**Not verified:** the feud panel on it, running.
-**Next session should start with:** reading that panel.
+**Not verified:** the redraft never fired on the panel; 3 bone turns came back empty, cause unknown.
+**Next session should start with:** replaying bone turns 14 to 19 with the crash log kept.
 
 ### Session 10: 2026-10-07: The Manifold scheme adoption and 3x documentation manual set
 

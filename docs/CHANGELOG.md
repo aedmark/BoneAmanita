@@ -4,6 +4,8 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.119] - 2026-10-07
+
 ### Added
 - **3x Documentation Scheme Manual Set:** Two standalone, searchable HTML manuals in `docs/manual/` (`index.html` System Manual, `reference.html` Reference Manual) providing What/How/Why coverage of architecture, somatic physics, commands, modes, and receipts with zero runtime dependencies (D-016).
 - **The Manifold Documentation Scheme:** Canonical repository memory architecture adopting `AGENTS.md`, `CLAUDE.md`, `ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/HANDOFF.md`, `docs/SECURITY.md`, `docs/CONTRIBUTING.md`, `docs/CHANGELOG.md`, and automated validation via `tools/check_docs.py` (D-017).
@@ -11,6 +13,7 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ### Changed
 - **Fairness redraft:** when the edit and the original draft are both still flagged, the cortex writes one full redraft told the quoted words, and ships the version with the fewest kinds of flag only if that redraft is flagged too (P5-04).
+- **Legacy handoff archived:** `docs/SESSION_HANDOFF.md` moved to `docs/archive/`; `docs/HANDOFF.md` is current state.
 - **Documentation Map:** Integrated links to the standalone manual set directly into the Bio-Terminal hero section (`docs/index.html`) and `README.md`.
 
 ### Fixed
