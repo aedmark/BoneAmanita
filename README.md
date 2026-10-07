@@ -80,6 +80,20 @@ is kept; key, card and ID shapes are refused there too.
 `reset.sh` deletes saved memories, saves, logs, and other files listed in the
 script; it leaves the setup configuration in place.
 
+## Manual Set
+
+BoneAmanita includes a standalone, searchable What/How/Why manual set built using the 3x documentation scheme under `docs/manual/`:
+
+- **[System Manual](docs/manual/index.html)**: Internal architecture, the turn lifecycle, somatic physics, memory networks, and voice contracts.
+- **[Reference Manual](docs/manual/reference.html)**: In-session slash commands, runtime modes, tuning presets, SQLite storage, and observability receipts.
+
+To validate and rebuild the manuals:
+
+```bash
+python3 tools/build_manual.py check
+python3 tools/build_manual.py build
+```
+
 ## Using it
 
 ### Modes

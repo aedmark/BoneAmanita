@@ -845,7 +845,7 @@ through, with its own config-driven, milder tier than full ATP depletion.
 channel (temperature/sampling), and it has no natural role in word/sentence
 caps, so adding it here would be inventing a mapping the roadmap never
 specified. See the
-[2026-09-19 handoff](SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
+[2026-09-19 handoff](../SESSION_HANDOFF.md#d9-d1-d2-census-2026-09-19).
 
 **September 18 status (superseded above):** `body/somatic_budget.py:SomaticBudget`
 existed and was consumed by composition and generation controls. Its

@@ -806,6 +806,32 @@ nine a turn: the draft, the voice rewrite, the edits and their questions are eac
 - Tests: `FairnessChecksTheReplyShown` (4), the verdict cache, the opening question judged alone. Suite 1141 passed,
   5 skipped.
 
+**2026-10-07, midday: 3x Documentation Scheme adopted; two-volume standalone manual set built.** Gordon requested
+building a manual set for BoneAmanita using the template in `3x-documentation-scheme/`.
+- **System Manual** (`docs/manual/system.manual.json` -> `docs/manual/index.html`, 108 KB): 6 sections, 29 entries,
+  0 errors, 0 warnings. Documents the prompt engine contract, biological naming discipline, anti-performance and
+  body-narration prohibitions (Track D), zero orchestration frameworks, fail-loudly boundary architecture, the turn
+  lifecycle phases, somatic ATP and ROS accounting, neurochemical balances, the Creative Determinant bitmap governor,
+  somatic budgeting and pacing, mitophagy recovery, tiered prompt assembly, Prismatic Self-Claims, the lexical
+  immune filter, epigenetic scars/boons, four-tier word resolution, hippocampus working memory, associative vector
+  embeddings with SHAKE-256 fallback, sleep reflection and diamond fossilization, zone cartography, the Village personas,
+  the Stage Manager's refusal routing (`HOLD`), and partner distress modeling.
+- **Reference Manual** (`docs/manual/reference.manual.json` -> `docs/manual/reference.html`, 87 KB): 4 sections,
+  25 entries, 0 errors, 0 warnings. Complete reference for in-session slash commands (`/status`, `/diag`, `/memory`,
+  `/mode`, `/preset`, `/tune`, `/sleep`, `/idle`, `/rest`, `/zen`, `/flush`, `/save`, `/export`, `/truth`, `/hud`,
+  `/allow`, `/deny`, `/journal`, `/hallucinate`, `/shuffle`), runtime modes (`ADVENTURE`, `CONVERSATION`, `CREATIVE`,
+  `TECHNICAL`), somatic tuning presets (`lore/tuning_presets.json`), first-run `ConfigWizard` and `config.json`,
+  embedding environment variables (`BONE_EMBED_*`), the Halcyon SQLite schema in `saves/iris.db`, substrate permissions
+  in `output/` with secret withholding (`[withheld: ...]`), `reset.sh`, the 14-subsystem receipt roll call in
+  `ReceiptLedger`, offline test invariants, the somatic audit pipeline, and human blind panels.
+- **Tooling and verification:**
+  - `tools/build_manual.py`: automated checker (`check`) and builder (`build`) wrapping `3x-documentation-scheme/scripts/manual.py`.
+  - `tests/test_manuals.py`: verifies that both JSON sources validate with 0 errors and 0 warnings and build valid HTML
+    (`2 passed in 0.02s` in pytest).
+  - Schema copied to `docs/manual/manual.schema.json` for local validation.
+  - Linked from `docs/index.html` (Bio-Terminal hero section) and `README.md` (`## Manual Set`).
+  - Generated HTML files have zero runtime or network dependencies, link bidirectionally, and operate completely offline.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

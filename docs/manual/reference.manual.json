@@ -1,0 +1,586 @@
+{
+  "$schema": "./manual.schema.json",
+  "project": {
+    "name": "BoneAmanita",
+    "short_name": "BoneAmanita",
+    "version": "20.7.4.91",
+    "repository": "https://github.com/aedmark/BoneAmanita"
+  },
+  "manual": {
+    "title": "BoneAmanita Reference Manual",
+    "subtitle": "Slash commands, runtime modes, configuration keys, file formats, and diagnostic receipts",
+    "description": "Complete operational and interface reference for BoneAmanita. Return to the [System Manual](index.html) for internal architecture, somatic physics, and design rationale.",
+    "badges": [
+      "Release {{project.version}}",
+      "CLI Reference",
+      "Tuning Presets",
+      "Telemetry & Diag",
+      "Standalone HTML"
+    ],
+    "footer": "BoneAmanita {{project.version}} · Operations and Reference Manual · Built with the 3x Documentation Scheme"
+  },
+  "theme": {
+    "accent": "#a855f7",
+    "accent_secondary": "#22c55e",
+    "icon": "⌘"
+  },
+  "sections": [
+    {
+      "id": "cli-commands",
+      "title": "In-Session Slash Commands",
+      "description": "Interactive commands executed during a session via the terminal interface or headless runner.",
+      "entries": [
+        {
+          "id": "command-status",
+          "title": "status",
+          "summary": "Displays system vitals, energy pools, memory backend status, and user model inferences.",
+          "synopsis": "/status",
+          "tags": ["vitals", "inspection", "hud"],
+          "what": "Prints current health, stamina, and ATP energy bars, reports the status of the Mnemonic Arcade (nominal or degraded), and displays what the engine currently believes about the partner.",
+          "how": [
+            "Queries `CommandStateInterface.get_vitals()` to pull health, stamina, and ATP pool levels.",
+            "Renders the Mnemonic Arcade status, reporting whether the embedding backend is active (`nominal`) or operating on fallback hash coordinates (`DEGRADED`).",
+            "Renders the partner state model from `SharedLatticeDriver` (`You: steady`, `tiring`, or `flagging`), allowing the partner to see and disagree with the heuristic inference."
+          ],
+          "why": "Radical transparency is required in stateful systems. Giving the partner visibility into inferred exhaustion and backend degradation prevents the system from silently acting on mistaken assumptions.",
+          "evidence": [
+            {"label": "Status command implementation", "target": "mechanics/commands.py"},
+            {"label": "Vitals model", "target": "body/models.py"},
+            {"label": "Command routing tests", "target": "tests/test_command_routing.py"}
+          ],
+          "related": ["command-diag", "command-memory", "command-truth-hud"]
+        },
+        {
+          "id": "command-diag",
+          "title": "diag",
+          "summary": "Audits this turn's receipts, reporting nominal operations, degraded fallbacks, and silent subsystems.",
+          "synopsis": "/diag",
+          "tags": ["diagnostics", "receipts", "observability"],
+          "what": "Prints the receipt ledger for the current turn, detailing which subsystems ran, what they produced, and whether any promised reporter remained silent.",
+          "how": {
+            "lead": "The diagnostic readout formats three critical categories of observability records:",
+            "points": [
+              "Turn receipts: Each registered subsystem (`composer.compose`, `cortex.somatic`, `halcyon.gate`) records its result count and whether it ran on fallback.",
+              "Silent reporters: Subsystems expected on the core roll call that failed to file any receipt during the turn.",
+              "Chronic fallbacks: Subsystems that consistently run on degraded fallback paths across every turn.",
+              "Chronically empty: Subsystems that report execution but consistently return zero results."
+            ]
+          },
+          "why": "From the outside, broken subsystems return default values that produce plausible-looking text. The receipt ledger makes silent failures and degraded vector backends inspectable to human operators.",
+          "evidence": [
+            {"label": "Diag command implementation", "target": "mechanics/commands.py"},
+            {"label": "Receipt ledger", "target": "engine/receipts.py"},
+            {"label": "Receipt audit tests", "target": "tests/test_receipts.py"}
+          ],
+          "related": ["command-status", "subsystem-receipts"]
+        },
+        {
+          "id": "command-memory",
+          "title": "memory and memory why",
+          "summary": "Inspects indexed associative memories, world nodes, and specific gate retention decisions.",
+          "synopsis": "/memory [word] | /memory why <name>",
+          "tags": ["memory", "inspection", "gate"],
+          "what": "Lists indexed memories filtered by keyword, or traces why a specific memory or room was retained by the Gatekeeper.",
+          "how": [
+            "`/memory` without arguments lists recent memories and their access frequency.",
+            "`/memory <word>` filters memories containing or resonating with the specified keyword.",
+            "`/memory why <name>` traces a specific memory back to the partner turn that spawned it, displaying the Gatekeeper's checks and confidence scores."
+          ],
+          "why": "Associative memory should not be an inscrutable black box. Providing an audit trail from recalled memories back to the originating input allows users to verify what the engine is learning.",
+          "evidence": [
+            {"label": "Memory command handler", "target": "mechanics/commands.py"},
+            {"label": "Memory inspection report", "target": "engine/gate/report.py"},
+            {"label": "Memory command tests", "target": "tests/test_memory_command.py"}
+          ],
+          "related": ["command-status", "command-diag", "halcyon-database"]
+        },
+        {
+          "id": "command-mode",
+          "title": "mode",
+          "summary": "Switches between experience modes (Adventure, Conversation, Creative, Technical) while preserving dialogue.",
+          "synopsis": "/mode <ADVENTURE | CONVERSATION | CREATIVE | TECHNICAL>",
+          "tags": ["mode", "experience", "tuning"],
+          "what": "Changes the active operational framing and associated tuning preset without destroying conversational dialogue.",
+          "how": [
+            "Validates the target mode against `BonePresets.MODES`.",
+            "Updates engine state, adjusts village archetype suppression rules, and applies mode-specific tuning presets.",
+            "Carries over the live dialogue buffer, user model inferences, and memories across mode switches.",
+            "If switching to `ADVENTURE`, re-engages room cartography and inventory; if switching away, stores adventure state."
+          ],
+          "why": "Decided with Gordon on 2026-10-04 (`SESSION_HANDOFF.md`, 'Decisions already made'): switching modes mid-conversation must preserve dialogue history, secrets included, rather than artificially siloing the conversational context.",
+          "evidence": [
+            {"label": "Mode switch command", "target": "mechanics/commands.py"},
+            {"label": "Presets and mode definitions", "target": "engine/presets.py"},
+            {"label": "Mode switch tests", "target": "tests/test_mode_switch.py"}
+          ],
+          "related": ["command-preset", "mode-adventure", "mode-conversation", "mode-creative", "mode-technical"]
+        },
+        {
+          "id": "command-preset",
+          "title": "preset and tune",
+          "summary": "Loads somatic tuning presets or dynamically alters individual physics thresholds in-flight.",
+          "synopsis": "/preset <name> | /tune <path=value>",
+          "tags": ["tuning", "physics", "configuration"],
+          "what": "Applies named somatic presets (Zen Garden, Thunderdome, Sanctuary, Laboratory) or overrides specific configuration keys without changing the active experience mode.",
+          "how": [
+            "`/preset <name>` looks up the preset in `BonePresets` and applies physics overrides (voltage ceilings, drag floors, decay rates).",
+            "`/tune <path=value>` mutates deep nested keys in `lore/tuning_presets.json` dynamically.",
+            "Changes take effect immediately on the next turn cycle without restarting the process."
+          ],
+          "why": "Decoupling somatic tuning from experience mode allows experimenters to test varied energetic and emotional dynamics (such as high-voltage stress in conversation) without altering UI framing.",
+          "evidence": [
+            {"label": "Preset command handler", "target": "mechanics/commands.py"},
+            {"label": "Tuning presets", "target": "lore/tuning_presets.json"},
+            {"label": "Tuning tests", "target": "tests/test_tune.py"}
+          ],
+          "related": ["command-mode", "somatic-tuning-presets"]
+        },
+        {
+          "id": "command-sleep-idle",
+          "title": "sleep and idle",
+          "summary": "Triggers a restorative REM cycle, regenerating ATP and stamina while synthesizing dreams.",
+          "synopsis": "/sleep | /idle",
+          "tags": ["sleep", "rem", "regeneration"],
+          "what": "Puts the engine into a resting REM state that regenerates metabolic pools, processes working memories, and produces dream narratives.",
+          "how": [
+            "Regenerates ATP pool and stamina in `body/metabolism.py`.",
+            "Invokes `TheDreamEngine` in `brain/mind.py` to synthesize thematic dreams from unpromoted working memories.",
+            "Consolidates salient memories and forges diamond anchors via `MycelialNetwork.forge_diamond`.",
+            "Washes cerebrospinal fluid, clearing accumulated homoglyphic and invisible Unicode noise."
+          ],
+          "why": "Provides a first-class operational mechanism for recovering from conversational exhaustion and purging oxidative stress without terminating the session or resetting the database.",
+          "evidence": [
+            {"label": "Sleep command implementation", "target": "mechanics/commands.py"},
+            {"label": "REM cycle logic", "target": "engine/cycle.py"},
+            {"label": "REM reflection tests", "target": "tests/test_rem_reflection.py"}
+          ],
+          "related": ["command-rest-zen", "command-status"]
+        },
+        {
+          "id": "command-rest-zen",
+          "title": "rest, zen, and flush",
+          "summary": "Executes a hard conversational reset, severing context, zeroing narrative drag, and restoring vitals.",
+          "synopsis": "/rest | /zen | /flush",
+          "tags": ["reset", "flush", "recovery"],
+          "what": "Clears the active dialogue context buffer, purges conversational drag and trauma, and restores health and stamina to nominal baselines.",
+          "how": [
+            "Clears `TheCortex.dialogue_buffer`, severing active context window history.",
+            "Resets `narrative_drag` to zero and purges accumulated trauma markers.",
+            "Restores `atp_pool`, health, and stamina to full capacity.",
+            "Preserves long-term memories in `saves/iris.db` while clearing transient turn dynamics."
+          ],
+          "why": "When conversational context falls into unproductive loops, high drag, or hallucination traps, a hard contextual reset restores clean operating conditions without destroying persistent learnings.",
+          "evidence": [
+            {"label": "Rest command implementation", "target": "mechanics/commands.py"},
+            {"label": "Cortex context management", "target": "brain/cortex.py"},
+            {"label": "Context window tests", "target": "tests/test_context_window.py"}
+          ],
+          "related": ["command-sleep-idle", "command-save-export"]
+        },
+        {
+          "id": "command-save-export",
+          "title": "save and export",
+          "summary": "Forces an immediate transactional checkpoint to disk, or exports the adventure world in FractalOS format.",
+          "synopsis": "/save | /export [path]",
+          "tags": ["save", "export", "fractalos"],
+          "what": "Explicitly writes current session state to `saves/iris.db`, or exports charted adventure rooms into a standalone JSON file.",
+          "how": [
+            "`/save` invokes `Store.save_checkpoint`, replacing the active checkpoint row within an immediate SQLite transaction.",
+            "`/export` extracts room nodes, exits, and inventory from `TheCartographer`, formatting them as a FractalOS adventure JSON (default `saves/fractal_adventure.json`).",
+            "Sensitive credentials are automatically redacted with `[withheld: ...]`."
+          ],
+          "why": "Explicit save commands give operators control over persistence boundaries before closing sessions, while export functionality enables interoperability with external tools like FractalOS.",
+          "evidence": [
+            {"label": "Save and export handlers", "target": "mechanics/commands.py"},
+            {"label": "Store transaction manager", "target": "engine/gate/store.py"},
+            {"label": "Cartographer export tests", "target": "tests/test_cartographer.py"}
+          ],
+          "related": ["halcyon-database", "substrate-security"]
+        },
+        {
+          "id": "command-truth-hud",
+          "title": "truth and hud",
+          "summary": "Adjusts reality ambiguity levels and configures diagnostic readout verbosity.",
+          "synopsis": "/truth <0-3> | /hud <warm | lite | core | deep>",
+          "tags": ["hud", "truth", "telemetry"],
+          "what": "Modulates reality ambiguity (controlling hallucination tolerance) and sets terminal telemetry depth.",
+          "how": [
+            "`/truth <0-3>` adjusts the reality layer parameter, altering how strictly statements must match ground facts.",
+            "`/hud <depth>` configures VSL display verbosity: `warm` (minimal natural prose), `lite` (vitals summary), `core` (turn metrics), or `deep` (full receipts, embeddings, and gate decisions)."
+          ],
+          "why": "Different users require different diagnostic visibility. Technical operators need deep telemetry to trace gate decisions, while casual conversation benefits from a minimal, warm interface.",
+          "evidence": [
+            {"label": "HUD and truth commands", "target": "mechanics/commands.py"},
+            {"label": "UX string definitions", "target": "lore/ux_strings.json"},
+            {"label": "Telemetry tests", "target": "tests/test_observability.py"}
+          ],
+          "related": ["command-status", "command-diag"]
+        },
+        {
+          "id": "command-substrate",
+          "title": "allow and deny",
+          "summary": "Reviews, approves, or denies pending file modifications requested by the model under output/.",
+          "synopsis": "/allow <path> [keep] | /deny <path>",
+          "tags": ["substrate", "security", "files"],
+          "what": "Grants or revokes permission for the model to create or edit files in the `output/` directory.",
+          "how": {
+            "lead": "Substrate operations adhere to strict permission policies:",
+            "points": [
+              "In TECHNICAL mode, `<write_file>` blocks write files directly under `output/`.",
+              "If the file was created by the engine, it may edit it freely; existing pre-existing files are held pending approval.",
+              "`/allow <path>` approves a held edit; appending `keep` grants permanent permission for that file or folder.",
+              "`/deny <path>` discards the proposed change and notifies the engine of the refusal.",
+              "Decisions are recorded in `output/.substrate_ledger.json`."
+            ]
+          },
+          "why": "Prevents unauthorized file corruption or unexpected file system mutations by local models, ensuring that external modifications are always gated by explicit human consent.",
+          "evidence": [
+            {"label": "Substrate approval commands", "target": "mechanics/commands.py"},
+            {"label": "Substrate tools", "target": "mechanics/tools.py"},
+            {"label": "Substrate save directive tests", "target": "tests/test_save_file_directive.py"}
+          ],
+          "related": ["substrate-security", "mode-technical"]
+        },
+        {
+          "id": "command-narrative-tools",
+          "title": "journal, hallucinate, and shuffle",
+          "summary": "Generates narrative session diaries, unlocks thermal hallucination locks, or executes the Jester's gambit.",
+          "synopsis": "/journal | /hallucinate | /shuffle",
+          "tags": ["creative", "journal", "jester"],
+          "what": "Executes specialized narrative actions: generating session summaries, forcing lateral leaps, or breaking conversational loops.",
+          "how": [
+            "`/journal` generates a reflective narrative diary summarizing key themes and memories of the current session.",
+            "`/hallucinate` disengages thermal locks to force a high-voltage, creative paradigm shift.",
+            "`/shuffle` executes the Jester's Gambit: resets narrative drag, shifts conversational velocity, and introduces lateral randomness."
+          ],
+          "why": "Creative exploration and long-running story generation occasionally stall in conversational ruts. Dedicated narrative tools provide deliberate interventions to spark novelty.",
+          "evidence": [
+            {"label": "Creative commands handler", "target": "mechanics/commands.py"},
+            {"label": "Jester archetype logic", "target": "archetypes/village.py"},
+            {"label": "Whimsy mechanics tests", "target": "tests/test_whimsy.py"}
+          ],
+          "related": ["mode-creative", "command-preset"]
+        }
+      ]
+    },
+    {
+      "id": "runtime-modes",
+      "title": "Experience Modes and Tuning Presets",
+      "description": "The four official runtime modes and their associated somatic tuning parameters.",
+      "entries": [
+        {
+          "id": "mode-adventure",
+          "title": "ADVENTURE mode",
+          "summary": "The default exploration experience featuring parser-game framing, room cartography, and inventory.",
+          "tags": ["mode", "adventure", "cartography"],
+          "what": "A survival and exploration mode with interactive inventory, room-to-room navigation, and Sanctuary tuning.",
+          "how": [
+            "Tuned to `SANCTUARY` preset with target voltage 7.0 and drag 2.0.",
+            "Enables room cartography, item discovery, and inventory tracking (`/look`, `/use`, `/inventory`, `/map`).",
+            "Allows ATP drain and chaos taxes; gates narrative surprises behind item interactions.",
+            "World state and room maps are fully exported via `/export`."
+          ],
+          "why": "Provides an embodied spatial world where thoughts and conversation have physical anchors. Exploring rooms grounds long-term memory in tangible environments.",
+          "evidence": [
+            {"label": "Mode definition", "target": "engine/presets.py"},
+            {"label": "Adventure mode tests", "target": "tests/test_adventure.py"},
+            {"label": "Cartographer tests", "target": "tests/test_cartographer.py"}
+          ],
+          "related": ["mode-conversation", "mode-creative", "mode-technical", "somatic-tuning-presets"]
+        },
+        {
+          "id": "mode-conversation",
+          "title": "CONVERSATION mode",
+          "summary": "Pure dialogue mode tuned to Zen; disables inventory, room maps, and entropy for uninterrupted connection.",
+          "tags": ["mode", "conversation", "zen"],
+          "what": "Focuses entirely on dialogue and connection, suppressing world mechanics and inventory systems.",
+          "how": [
+            "Tuned to `ZEN` preset with low voltage ceilings (10.0) and zero baseline drag.",
+            "Suppresses spatial village archetypes (Gordon, Navigator, Cartographer, Tinkerer).",
+            "Disables ATP depletion and chaos taxes, allowing extended philosophical or emotional dialogue without energy starvation.",
+            "Carries over all dialogue and secrets when switching to or from other modes."
+          ],
+          "why": "Not every interaction requires game mechanics or spatial exploration. Conversation mode allows intimate, calm dialogue free from inventory clutter and metabolic pressure.",
+          "evidence": [
+            {"label": "Mode configuration", "target": "engine/presets.py"},
+            {"label": "Handoff decisions", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Mode switch tests", "target": "tests/test_mode_switch.py"}
+          ],
+          "related": ["mode-adventure", "mode-creative", "mode-technical", "somatic-tuning-presets"]
+        },
+        {
+          "id": "mode-creative",
+          "title": "CREATIVE mode",
+          "summary": "High-voltage writing assistance tuned to Manic; loosens constraints while strictly forbidding menus and bullets.",
+          "tags": ["mode", "creative", "writing"],
+          "what": "Writing assistant mode optimized for narrative generation, high creative tension, and bold prose.",
+          "how": {
+            "lead": "Creative mode enforces specific stylistic guidelines:",
+            "points": [
+              "Tuned to `MANIC` preset with high voltage floor override (70.0) and Crucible HOT active throughout.",
+              "Rule 3 (20.7.4.84 revision): Offers 2–3 bold directions only when the partner asks for ideas; when given a direction, writes it fully without menus.",
+              "Strictly limits bulleted lists and length, holding the narrative voice to first-person 'I'.",
+              "Disables inventory and vitals HUD to maintain full focus on narrative prose."
+            ]
+          },
+          "why": "Language models default to lazy multi-choice menus ('Option 1... Option 2...') instead of writing the actual story. Creative mode forces the model to commit to continuous prose.",
+          "evidence": [
+            {"label": "Mode configuration", "target": "engine/presets.py"},
+            {"label": "Creative probe records", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Creative mode tests", "target": "tests/test_mode_failures.py"}
+          ],
+          "related": ["mode-adventure", "mode-conversation", "mode-technical", "somatic-tuning-presets"]
+        },
+        {
+          "id": "mode-technical",
+          "title": "TECHNICAL mode",
+          "summary": "Code generation and engineering mode with tight constraints, 0.020 ATP/token, and deep telemetry.",
+          "tags": ["mode", "technical", "coding"],
+          "what": "Engineering mode designed for software development, debugging, and supervised file generation.",
+          "how": [
+            "Tuned to `DEBUG` preset with deep HUD readout by default.",
+            "Permits `<write_file>` code blocks targeting `output/`, subject to `/allow` and `/deny` approvals.",
+            "Charges 0.020 ATP per generated token (adjusted from 0.025 in 20.7.4.85 to accommodate long code replies).",
+            "Keeper prompt preserves technical assertions and architectural facts while ignoring transient conversational queries."
+          ],
+          "why": "Technical tasks require precise code, inspectable receipts, and conservative resource accounting. Calibrating the token burn rate prevents premature exhaustion during long coding sessions.",
+          "evidence": [
+            {"label": "Mode configuration", "target": "engine/presets.py"},
+            {"label": "Technical energy accounting", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Code generation tests", "target": "tests/test_code_in_replies.py"}
+          ],
+          "related": ["mode-adventure", "mode-conversation", "mode-creative", "command-substrate"]
+        },
+        {
+          "id": "somatic-tuning-presets",
+          "title": "Somatic tuning presets",
+          "summary": "Predefined configurations in lore/tuning_presets.json governing voltage, decay, and stress limits.",
+          "tags": ["presets", "tuning", "physics"],
+          "what": "Named sets of physical and biological parameters that alter engine dynamics independently of experience mode.",
+          "how": {
+            "lead": "Presets configure operational parameters across subsystems:",
+            "points": [
+              "`ZEN_GARDEN`: Voltage floor 1.0, maximum 25.0; minimal decay rate (0.02); high manic trigger (99.0).",
+              "`THUNDERDOME`: High voltage floor (8.0), maximum 30.0; elevated ATP starvation threshold (20.0); manic trigger at 12.0.",
+              "`SANCTUARY`: Balanced voltage target (7.0), drag target (2.0), truth target 0.7; metabolism rate 0.5.",
+              "`LABORATORY`: Zero biological decay rate, fixed drag floor (2.0), voltage capped at 15.0 for reproducible experiments."
+            ]
+          },
+          "why": "Grouping related physical parameters into cohesive presets makes it easy to switch the organism between tranquil reflection and high-energy stress testing without hand-editing dozens of JSON keys.",
+          "evidence": [
+            {"label": "Preset class definitions", "target": "engine/presets.py"},
+            {"label": "Tuning preset JSON", "target": "lore/tuning_presets.json"},
+            {"label": "Preset unit tests", "target": "tests/test_presets.py"}
+          ],
+          "related": ["command-preset", "mode-adventure", "mode-conversation"]
+        }
+      ]
+    },
+    {
+      "id": "configuration-and-storage",
+      "title": "Configuration, Storage, and Security",
+      "description": "Environment variables, configuration files, SQLite persistence, and credential redacting.",
+      "entries": [
+        {
+          "id": "setup-and-config",
+          "title": "Setup wizard and config.json",
+          "summary": "First-boot interactive wizard, configuration structure, and model provider selection.",
+          "synopsis": "python main.py",
+          "tags": ["setup", "config", "wizard"],
+          "what": "Guides first-time users through configuring model providers, endpoint URLs, and user names, writing `config.json`.",
+          "how": [
+            "Executed via `ConfigWizard` in `mechanics/setup.py` when `config.json` is missing.",
+            "Prompts for chat model provider (Ollama, LM Studio, OpenAI, Anthropic), model name, and embedding endpoint.",
+            "Generates `config.json` (gitignored, not tracked in repo).",
+            "Corrupt configuration files are backed up automatically and the wizard is rerun safely."
+          ],
+          "why": "An interactive first-run wizard eliminates manual JSON configuration errors while ensuring user credentials and private endpoints remain outside version control.",
+          "evidence": [
+            {"label": "Setup wizard", "target": "mechanics/setup.py"},
+            {"label": "Configuration loader", "target": "engine/presets.py"},
+            {"label": "Setup unit tests", "target": "tests/test_main.py"}
+          ],
+          "related": ["embedding-environment", "halcyon-database"]
+        },
+        {
+          "id": "embedding-environment",
+          "title": "Embedding configuration and environment variables",
+          "summary": "Environment variable precedence hierarchy for vector embedding endpoints and models.",
+          "tags": ["embeddings", "environment", "configuration"],
+          "what": "Configures embedding backends, API keys, timeouts, and reprobe intervals via environment variables.",
+          "how": {
+            "lead": "Settings resolve through a strict precedence hierarchy:",
+            "points": [
+              "Rank 1 (Highest): Environment variables (`BONE_EMBED_URL`, `BONE_EMBED_MODEL`, `BONE_EMBED_BACKEND`, `BONE_EMBED_API_KEY`).",
+              "Rank 2: Configuration entries in `config.json` (`EMBEDDINGS.URL`, `EMBEDDINGS.MODEL`).",
+              "Rank 3: Preset values in `engine/presets.py` (`BoneConfig.EMBEDDINGS`).",
+              "Rank 4 (Lowest): Module defaults (`http://127.0.0.1:11434/v1/embeddings`, `nomic-embed-text`)."
+            ]
+          },
+          "why": "Decided in `SESSION_HANDOFF.md`: environment variables must strictly outrank `BoneConfig.EMBEDDINGS`. Because `BoneConfig` ships populated, lower precedence made `BONE_EMBED_URL` a silent no-op.",
+          "evidence": [
+            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Embeddings resolver", "target": "spores/embeddings.py"},
+            {"label": "Embeddings environment tests", "target": "tests/test_embeddings.py"}
+          ],
+          "related": ["setup-and-config", "halcyon-database"]
+        },
+        {
+          "id": "halcyon-database",
+          "title": "The Halcyon SQLite store (saves/iris.db)",
+          "summary": "The single authoritative SQLite database housing learned words, memories, audit logs, and checkpoints.",
+          "tags": ["sqlite", "database", "storage"],
+          "what": "Consolidates all persistent state into a single SQLite file (`saves/iris.db`) using WAL mode and transactional safety.",
+          "how": [
+            "Manages tables: `learned_words` (dynamically acquired vocabulary), `lore_overlay` (user additions over factory lore), `memories` (associative memory vectors), `conversations`, `turns`, `user_profile`, and `checkpoint`.",
+            "All writes use explicit transactions via `Store.transaction(immediate=True)`.",
+            "Upgrades older JSON stores (`cortex_hive.json`, `legacy.json`, `quicksave.json`) automatically on boot.",
+            "Factory files in `lore/` are strictly read-only and never modified."
+          ],
+          "why": "Ported from bone-iris (20.7.4.67) to replace fragmented JSON files. A single transactional SQLite file prevents partial write corruption and provides an auditable history of all memory operations.",
+          "evidence": [
+            {"label": "Store implementation", "target": "engine/gate/store.py"},
+            {"label": "Memory database tests", "target": "tests/test_halcyon_gate.py"},
+            {"label": "Learned words tests", "target": "tests/test_learned_words.py"}
+          ],
+          "related": ["substrate-security", "environment-reset"]
+        },
+        {
+          "id": "substrate-security",
+          "title": "Substrate file management and secret withholding",
+          "summary": "Isolates model file writes to output/, tracks approvals in a ledger, and redacts sensitive credentials.",
+          "tags": ["security", "redaction", "ledger"],
+          "what": "Enforces sandboxing on file operations and prevents private credentials from persisting in memories, logs, or checkpoints.",
+          "how": {
+            "lead": "Security boundaries are enforced at two critical interfaces:",
+            "points": [
+              "File writes: Constrained to `output/`. Pre-existing files require `/allow` approval, logged in `output/.substrate_ledger.json`.",
+              "Secret withholding: `engine/gate/secrets.py` scans memories and turns for API keys, private keys, credit cards, and passwords.",
+              "Matched secrets are redacted with `[withheld: ...]` in checkpoints, crash logs, and audit records.",
+              "In ADVENTURE mode, puzzle passwords are part of the story and retained, while keys and tokens remain withheld."
+            ]
+          },
+          "why": "Local language models frequently reflect back credentials passed in conversation. Automated redaction prevents accidental credential leakage into databases, checkpoints, or telemetry traces.",
+          "evidence": [
+            {"label": "Secret redaction logic", "target": "engine/gate/secrets.py"},
+            {"label": "Substrate tools", "target": "mechanics/tools.py"},
+            {"label": "Secrets unit tests", "target": "tests/test_secrets.py"}
+          ],
+          "related": ["halcyon-database", "command-substrate"]
+        },
+        {
+          "id": "environment-reset",
+          "title": "Clean resets via reset.sh",
+          "summary": "Scripted cleanup utility that purges memories, saves, and logs while preserving setup configuration.",
+          "synopsis": "./reset.sh",
+          "tags": ["reset", "maintenance", "cleanup"],
+          "what": "Shell script that removes generated databases (`saves/iris.db`), log files, temporary dumps, and spores.",
+          "how": [
+            "Deletes `saves/`, `output/`, and `*.log` files.",
+            "Preserves `config.json` so the user does not need to re-run the setup wizard.",
+            "Kept in sync with `.gitignore` to ensure git status remains clean following resets."
+          ],
+          "why": "Provides a clean slate for running reproducible evaluation benchmarks and tests without forcing developers to reconfigure their model endpoints and keys.",
+          "evidence": [
+            {"label": "Reset script", "target": "reset.sh"},
+            {"label": "Gitignore file", "target": ".gitignore"},
+            {"label": "Handoff reset documentation", "target": "docs/SESSION_HANDOFF.md"}
+          ],
+          "related": ["halcyon-database", "offline-testing-discipline"]
+        }
+      ]
+    },
+    {
+      "id": "observability-and-testing",
+      "title": "Observability, Testing, and Auditing",
+      "description": "The receipt ledger roll call, offline test invariants, somatic audit tools, and human evaluation panels.",
+      "entries": [
+        {
+          "id": "subsystem-receipts",
+          "title": "Subsystem receipts and the core roll call",
+          "summary": "Inspectable work records issued by subsystems to expose silent failures and fallback paths.",
+          "tags": ["receipts", "telemetry", "roll call"],
+          "what": "A structured accounting system where components report what work they performed and whether they degraded.",
+          "how": {
+            "lead": "The receipt system operates under strict reporting rules:",
+            "points": [
+              "The core roll call tracks 14 primary subsystems (`composer.compose`, `cortex.somatic`, `embeddings.embed_batch`, `governor.bitmap_gate`, `halcyon.gate`, `stage.negotiate`).",
+              "Each receipt records inputs, result count, and a `degraded` flag (`ok` or `DEGRADED`).",
+              "The component doing the work fills in its own record; callers never infer receipt status from exceptions.",
+              "`/diag` compares the expected roll call against received receipts to detect silent dead code."
+            ]
+          },
+          "why": "Prose generation looks identical whether underlying physics ran or quietly returned defaults. Receipts make silent failure impossible by requiring every critical component to account for its execution.",
+          "evidence": [
+            {"label": "Receipt ledger", "target": "engine/receipts.py"},
+            {"label": "Receipt audit script", "target": "tools/audit_receipts.py"},
+            {"label": "Observability tests", "target": "tests/test_observability.py"}
+          ],
+          "related": ["command-diag", "offline-testing-discipline"]
+        },
+        {
+          "id": "offline-testing-discipline",
+          "title": "Offline test suite discipline",
+          "summary": "The test suite is strictly pinned offline using hash embeddings; live network calls are opt-in only.",
+          "tags": ["testing", "pytest", "offline"],
+          "what": "Guarantees that `pytest` runs entirely offline without requiring a reachable Ollama server or network connection.",
+          "how": [
+            "`tests/__init__.py` sets `BONE_EMBED_BACKEND=hash` before any test module is imported.",
+            "Mock transports simulate HTTP responses in `tests/test_embeddings.py`.",
+            "Live server tests are guarded behind the opt-in environment variable `BONE_EMBED_LIVE_TEST=1`.",
+            "Runs the complete test suite (~1,000+ tests) cleanly in `.venv/bin/pytest`."
+          ],
+          "why": "Decided in `SESSION_HANDOFF.md` ('The test suite is pinned offline'): unit test passes must reflect deterministic code correctness, not local server uptime or external network latency.",
+          "evidence": [
+            {"label": "Test suite initialization", "target": "tests/__init__.py"},
+            {"label": "Embeddings test suite", "target": "tests/test_embeddings.py"},
+            {"label": "Session handoff requirements", "target": "docs/SESSION_HANDOFF.md"}
+          ],
+          "related": ["subsystem-receipts", "somatic-audit-pipeline"]
+        },
+        {
+          "id": "somatic-audit-pipeline",
+          "title": "Somatic audit pipeline",
+          "summary": "Specialized audit scripts in tools/ measuring vocabulary coverage, ATP burn rates, and distress inference.",
+          "tags": ["tools", "audit", "pipeline"],
+          "what": "A collection of headless verification tools in `tools/` that measure real engine dynamics across simulated conversations.",
+          "how": {
+            "lead": "The somatic audit pipeline comprises specialized evaluation tools:",
+            "points": [
+              "`tools/audit_somatic.py`: Executes automated multi-turn conversations, auditing vitals, vocabulary resolution, and prompt compliance.",
+              "`tools/audit_somatic_census.py`: Runs standardized census topics across models without GPU judge dependencies.",
+              "`tools/audit_receipts.py`: Verifies receipt roll-call compliance without booting the full organism.",
+              "`tools/somatic_sim_user.py`: Replays simulated flagging and distressed partner dialogues to verify accommodation."
+            ]
+          },
+          "why": "Subjective prose inspection cannot detect subtle thermodynamic imbalances. Somatic audit tools derive hard numbers for vocabulary resolution, ATP burn, and sentence compliance across hundreds of turns.",
+          "evidence": [
+            {"label": "Somatic audit script", "target": "tools/audit_somatic.py"},
+            {"label": "Testing guide", "target": "docs/TESTING.md"},
+            {"label": "Audit somatic tests", "target": "tests/test_audit_somatic.py"}
+          ],
+          "related": ["offline-testing-discipline", "human-panel-evaluation"]
+        },
+        {
+          "id": "human-panel-evaluation",
+          "title": "Human panel evaluation and blind benchmarking",
+          "summary": "Verdicts come from human readers via blind panels, strictly rejecting automated LLM judges.",
+          "tags": ["evaluation", "blind panel", "benchmarking"],
+          "what": "Generates randomized, anonymized HTML comparison panels (`tools/build_blind_panel.py`) for human evaluation.",
+          "how": [
+            "`tools/build_blind_panel.py` compiles multi-arm conversational outputs into an interactive blind review page (`tools/blind_panel_template.html`).",
+            "Human evaluators vote on responsiveness, authenticity, and voice without knowing which arm produced each reply.",
+            "Automated LLM judges are strictly excluded from deciding production verdicts."
+          ],
+          "why": "Decided with Gordon on 2026-09-23 (`SESSION_HANDOFF.md`): across nine judge models and three rubrics, AI judges rewarded verbose, bulleted, sycophantic replies and failed responsive controls. What BoneAmanita is for is the opposite of what LLM judges favor.",
+          "evidence": [
+            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Blind panel builder", "target": "tools/build_blind_panel.py"},
+            {"label": "Judge control tests", "target": "tests/test_judge_controls.py"}
+          ],
+          "related": ["somatic-audit-pipeline"]
+        }
+      ]
+    }
+  ]
+}

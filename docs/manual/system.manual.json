@@ -1,0 +1,697 @@
+{
+  "$schema": "./manual.schema.json",
+  "project": {
+    "name": "BoneAmanita",
+    "short_name": "BoneAmanita",
+    "version": "20.7.4.91",
+    "repository": "https://github.com/aedmark/BoneAmanita"
+  },
+  "manual": {
+    "title": "BoneAmanita System Manual",
+    "subtitle": "Architecture, somatic physics, and prompt assembly for an embodied prompt engine",
+    "description": "The authoritative manual for BoneAmanita's architecture, turn lifecycle, somatic physics, memory network, and voice protection. See the [Commands and Reference Manual](reference.html) for slash commands, mode parameters, configuration keys, and observability receipts.",
+    "badges": [
+      "Release {{project.version}}",
+      "Python 3.14",
+      "What/How/Why",
+      "Zero Orchestration Frameworks",
+      "Offline-First",
+      "Standalone HTML"
+    ],
+    "footer": "BoneAmanita {{project.version}} · A body made of math · Built with the 3x Documentation Scheme"
+  },
+  "theme": {
+    "accent": "#22c55e",
+    "accent_secondary": "#38bdf8",
+    "icon": "✦"
+  },
+  "sections": [
+    {
+      "id": "foundations",
+      "title": "Foundations and Philosophy",
+      "description": "Core architecture principles, design contracts, and the rationale behind the embodied state machine.",
+      "entries": [
+        {
+          "id": "prompt-engine-contract",
+          "title": "The prompt engine contract",
+          "summary": "BoneAmanita is an embodied prompt builder and state machine, not a literal biological simulation.",
+          "tags": ["core", "reader contract", "architecture"],
+          "what": "Sits between a human partner and a local language model, measuring input text, maintaining persistent state variables across turns, assembling a fresh instruction sheet for each turn, and filtering output replies for corporate clichés.",
+          "how": {
+            "lead": "Every conversational exchange executes through a deterministic pipeline:",
+            "points": [
+              "Input messages are analyzed for grammatical filler, curated lexicon categories, and semantic resonance.",
+              "Mathematical heuristics in physics modules compute internal state numbers (ATP, cortisol, voltage, narrative drag).",
+              "Somatic budgets select generation targets, temperature bands, and prompt instructions based on partner and engine state.",
+              "The local model generates a reply within strict token limits.",
+              "The Gatekeeper filters the reply against style crimes, triggering sentence salvage or redrafts before checkpointing to SQLite."
+            ]
+          },
+          "why": "Large language models are inherently stateless and gravitate toward sycophantic, generic assistant prose. Giving them an embodied harness with internal resource constraints and persistent state produces grounded, authentic conversational dynamics without retraining model weights.",
+          "evidence": [
+            {"label": "Project README", "target": "README.md"},
+            {"label": "Engine entry point", "target": "main.py"},
+            {"label": "Turn cycle loop", "target": "engine/cycle.py"},
+            {"label": "Core architecture test", "target": "tests/test_core.py"}
+          ],
+          "related": ["embodied-metaphor", "anti-performance-contract", "turn-loop-orchestration"]
+        },
+        {
+          "id": "embodied-metaphor",
+          "title": "Biological naming as functional architecture",
+          "summary": "Biological variable names are load-bearing metaphors mapping to functional purposes, not decorative labels.",
+          "tags": ["philosophy", "naming conventions", "domain model"],
+          "what": "Uses biological concepts (ATP, cortisol, dopamine, autophagy, Gödel scars, mitochondria) as the official names for runtime control variables and modules.",
+          "how": [
+            "Mathematical formulas in `physics/` and `body/` transform word counts and conversational dynamics into floats.",
+            "`atp_pool` tracks an expendable budget that depletes with token generation and cognitive load.",
+            "`cortisol` tracks conversational stress and triggers memory shedding under high tension.",
+            "`chi` and `voltage` track conversational momentum and modulate sampling temperature."
+          ],
+          "why": "Protected by standing project decision in `SESSION_HANDOFF.md`: the names define what the variables are *for* rather than mere implementation mechanics (`error_count` vs `godel_scars`). The biological metaphor prevents developers from treating the system as a standard stateless request-response API.",
+          "evidence": [
+            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Physics models", "target": "physics/models.py"},
+            {"label": "Biological test suite", "target": "tests/test_biology.py"}
+          ],
+          "related": ["prompt-engine-contract", "metabolic-economy", "neurochemical-dynamics"]
+        },
+        {
+          "id": "anti-performance-contract",
+          "title": "The anti-performance contract",
+          "summary": "The model never performs a biological body; partner state shapes replies, while engine state sets budgets.",
+          "tags": ["safety", "voice", "reader contract"],
+          "what": "Explicitly prohibits the language model from narrating bodily exhaustion, claiming physical breathlessness, or pretending to experience biological sensations.",
+          "how": {
+            "lead": "The separation of concerns between human and machine is strictly enforced:",
+            "points": [
+              "The partner's state (tiredness, effort, disengagement) shapes reply length, question allowance, and pacing to accommodate them.",
+              "The engine's state (ATP, respiration, chemistry) sets what it can afford: token ceilings, retry budgets, and sampling bands.",
+              "`SomaticBudget` sets `forbid_body_narration = True` and the prompt composer explicitly instructs the model not to perform a physical body.",
+              "Prismatic Self-Claims only inject immutable worldview and boundary facts, omitting state-conditioned physical descriptions."
+            ]
+          },
+          "why": "Decided with Gordon on 2026-09-17 after the C5 evaluation session (`SESSION_HANDOFF.md`): telling a language model it is breathless or exhausted results in theatrical melodrama ('my lungs burn') or sudden reversals, rather than authentic accommodation. Co-regulation requires an anchored partner, not theatrical mirroring.",
+          "evidence": [
+            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Somatic budget implementation", "target": "body/somatic_budget.py"},
+            {"label": "Prompt composer assertions", "target": "tests/test_composer.py"}
+          ],
+          "related": ["prompt-engine-contract", "somatic-budgeting", "partner-accommodation"]
+        },
+        {
+          "id": "zero-framework-architecture",
+          "title": "Zero orchestration frameworks",
+          "summary": "Rejection of agentic libraries and heavyweight vector stores in favor of explicit standard-library control loops.",
+          "tags": ["architecture", "dependencies", "reliability"],
+          "what": "Excludes general-purpose orchestration frameworks (LangChain, LlamaIndex, Semantic Kernel) and specialized vector database packages (Chroma, LanceDB).",
+          "how": [
+            "HTTP transport is handled directly via `urllib` or minimal `requests` calls in `spores/embeddings.py` and `brain/composer.py`.",
+            "Vector embeddings and similarity searches are performed with NumPy, `ordvec`, or embedded FAISS without external services.",
+            "Relational state, audit logs, and memories are managed by an embedded SQLite database (`saves/iris.db`)."
+          ],
+          "why": "Formerly Constitution Article 1 (`SESSION_HANDOFF.md`): external orchestration frameworks hijack the control loop, obscure failure modes, introduce multi-gigabyte dependency footprints (such as PyTorch for simple text embeddings), and make auditing impossible.",
+          "evidence": [
+            {"label": "Session handoff decision", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Minimal embeddings client", "target": "spores/embeddings.py"},
+            {"label": "Project dependencies", "target": "requirements.txt"}
+          ],
+          "related": ["fail-loudly-discipline", "associative-spores"]
+        },
+        {
+          "id": "fail-loudly-discipline",
+          "title": "Fail-loudly boundary architecture",
+          "summary": "Subsystems report receipts, crash barriers isolate failures, and silent exception swallowing is strictly forbidden.",
+          "tags": ["reliability", "observability", "code quality"],
+          "what": "Replaces silent exception handling with explicit crash reporting, component offline tracking, and subsystem work receipts.",
+          "how": {
+            "lead": "Failure handling is partitioned across explicit architectural boundaries:",
+            "points": [
+              "Phase exceptions are caught by `PhaseExecutor.handle_phase_crash`, logging stack traces and taking the component offline while allowing the turn to conclude.",
+              "Slash command errors are isolated by `CommandRegistry.execute`, preventing session termination.",
+              "The 2026-09-30 codemod removed 92 broad `except Exception: pass` blocks that concealed broken subsystems.",
+              "Subsystems file receipts via `engine/receipts.py`; `/diag` audits uncalled reporters and chronic fallback usage."
+            ]
+          },
+          "why": "Twelve subsystems were previously found doing nothing while looking healthy because swallowed exceptions silently returned defaults. Prose output looks identical whether internal physics ran or quietly died; failing loudly ensures defects surface immediately.",
+          "evidence": [
+            {"label": "Fail-loudly audit records", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Phase crash isolation", "target": "engine/cycle.py"},
+            {"label": "Failure boundary tests", "target": "tests/test_failure_boundaries.py"},
+            {"label": "Observability ratchet test", "target": "tests/test_observability.py"}
+          ],
+          "related": ["turn-loop-orchestration"]
+        }
+      ]
+    },
+    {
+      "id": "turn-lifecycle",
+      "title": "The Turn Lifecycle",
+      "description": "The sequential pipeline executed during every conversational turn, from sensory observation to persistence.",
+      "entries": [
+        {
+          "id": "turn-loop-orchestration",
+          "title": "Turn loop orchestration",
+          "summary": "The master execution loop coordinating observation, metabolism, cognition, synapse generation, and persistence.",
+          "tags": ["lifecycle", "control loop", "pipeline"],
+          "what": "Coordinates the multi-phase execution pipeline in `engine/cycle.py` whenever the user sends a message.",
+          "how": [
+            "Input arrives via `CycleSimulator.run_turn` and passes through `PhaseExecutor`.",
+            "Phases execute sequentially: Observation, Metabolism, Arbitration, Cognition, and Gatekeeper inspection.",
+            "Circuit breakers monitor individual phase health; if a phase fails, its component is marked offline.",
+            "State invariant checks verify ATP and vital bounds before proceeding to checkpoint persistence."
+          ],
+          "why": "A modular phased pipeline cleanly decouples sensory linguistics from metabolic simulation and prompt compilation, allowing individual components to degrade gracefully without crashing the conversational session.",
+          "evidence": [
+            {"label": "Turn cycle pipeline", "target": "engine/cycle.py"},
+            {"label": "Phase definitions", "target": "phases/base.py"},
+            {"label": "Turn lifecycle tests", "target": "tests/test_cycle.py"}
+          ],
+          "related": ["geodesic-observation", "metabolic-processing", "cognitive-assembly", "gatekeeper-salvage"]
+        },
+        {
+          "id": "geodesic-observation",
+          "title": "Geodesic observation and word sorting",
+          "summary": "Deconstructs partner messages across four lexical tiers to calculate kinematic coordinates and emotional vectors.",
+          "tags": ["linguistics", "physics", "observation"],
+          "what": "Analyzes the text of each partner message, classifying words into lexical categories and computing conversational momentum.",
+          "how": {
+            "lead": "Lexical analysis resolves words across four prioritized tiers:",
+            "points": [
+              "Grammatical filler detection catches connective tissue (~40% of speech), measuring its density as a syntactic signal.",
+              "Curated lists in `lore/lexicon.json` categorize roots across 30+ thematic buckets (heavy, kinetic, abstract, void).",
+              "Semantic resonance compares unlisted words against category centroid embeddings using `SemanticEmbedder`.",
+              "A morphological spelling heuristic acts as a last resort on roughly 3% of words; ~16% remain unresolved on purpose."
+            ]
+          },
+          "why": "Establishes objective linguistic coordinates without requiring a slow, expensive upfront LLM call. Leaving ~16% of vocabulary unresolved reflects an honest model of English rather than forcing artificial categorizations.",
+          "evidence": [
+            {"label": "Lexicon analyzer", "target": "mechanics/lexicon.py"},
+            {"label": "Semantic resonance engine", "target": "mechanics/resonance.py"},
+            {"label": "Vocabulary classification tests", "target": "tests/test_lexicon.py"}
+          ],
+          "related": ["turn-loop-orchestration", "lexicon-resolution", "metabolic-processing"]
+        },
+        {
+          "id": "metabolic-processing",
+          "title": "Metabolic processing and homeostasis",
+          "summary": "Updates bodily energy pools, endocrine balances, and somatic stress markers prior to cognition.",
+          "tags": ["metabolism", "homeostasis", "biology"],
+          "what": "Calculates physical resource burn, endocrine shifts, and cellular stress resulting from the current conversational turn.",
+          "how": [
+            "Deducts baseline turn maintenance from `MitochondrialForge.atp_pool`.",
+            "Updates stress chemistry in `body/endocrine.py`: cortisol climbs with linguistic conflict and heavy topics; dopamine rises with creative resonance.",
+            "Accumulates reactive oxygen species (ROS) from prolonged exertion or repeated rejections.",
+            "Executes autonomic regulation routines in `body/regulation.py` to damp extreme parameter oscillations."
+          ],
+          "why": "Enforcing biological costs before cognitive prompt assembly ensures that the model's instruction sheet reflects its actual thermodynamic capacity, rather than planning actions the organism cannot support.",
+          "evidence": [
+            {"label": "Metabolic forge", "target": "body/metabolism.py"},
+            {"label": "Endocrine system", "target": "body/endocrine.py"},
+            {"label": "Biological tests", "target": "tests/test_body.py"}
+          ],
+          "related": ["turn-loop-orchestration", "metabolic-economy", "neurochemical-dynamics", "cognitive-assembly"]
+        },
+        {
+          "id": "cognitive-assembly",
+          "title": "Cognitive prompt assembly",
+          "summary": "Compiles structured prompt blocks containing system facts, persona directives, context history, and recalled memories.",
+          "tags": ["cognition", "prompt engineering", "composer"],
+          "what": "Generates the complete prompt payload delivered to the local language model for reply generation.",
+          "how": {
+            "lead": "The prompt is structured into deterministic priority tiers:",
+            "points": [
+              "Top tier: `[SYSTEM IDENTITY - UNBREAKABLE CORE FACTS]` containing immutable worldview claims.",
+              "Second tier: `[SOMATIC STATE]` with token and sentence limits, temperature instructions, and body-narration prohibitions.",
+              "Third tier: Active experience mode directives (`ADVENTURE`, `CONVERSATION`, `CREATIVE`, `TECHNICAL`).",
+              "Fourth tier: Recalled memories scoped to the active zone and dialogue buffer history.",
+              "Closing tier: The partner's latest message under `=== PARTNER INPUT ===`."
+            ]
+          },
+          "why": "Transformer models attend most strongly to the head and tail of the context window. Putting core boundaries at the top and generation limits immediately above the user prompt ensures consistent compliance across local models.",
+          "evidence": [
+            {"label": "Prompt composer", "target": "brain/composer.py"},
+            {"label": "Prismatic self-claims", "target": "brain/prism.py"},
+            {"label": "Composer prompt tests", "target": "tests/test_composer.py"}
+          ],
+          "related": ["turn-loop-orchestration", "prompt-composer", "prismatic-claims", "somatic-budgeting", "synapse-generation"]
+        },
+        {
+          "id": "synapse-generation",
+          "title": "Synapse generation and inference transport",
+          "summary": "Manages network transport to local or cloud model endpoints and enforces strict stop sequence handling.",
+          "tags": ["transport", "llm", "inference"],
+          "what": "Transmits assembled prompt payloads to Ollama or OpenAI-compatible backends and parses generated stream tokens.",
+          "how": [
+            "Connects by default to Ollama native `/api/chat` on `127.0.0.1:11434` to respect `num_ctx` configuration.",
+            "Applies stop sequences (`=== PARTNER INPUT ===`, `Traveler:`) to truncate runaway reasoning or hallucinations.",
+            "Catches transient network errors (`OSError`, `http.client.HTTPException`) and retries up to configured thresholds.",
+            "Detects empty HTTP 200 replies from reasoning models, retrying once without stop sequences before raising `EmptyReplyError`."
+          ],
+          "why": "Ollama's `/v1` compatibility endpoint forces a 4,096 context window on every model regardless of configuration; using Ollama's native endpoint preserves configured context sizes and hardware budgets.",
+          "evidence": [
+            {"label": "Synapse interface", "target": "brain/composer.py"},
+            {"label": "Provider utilities", "target": "mechanics/providers.py"},
+            {"label": "Synapse fallback tests", "target": "tests/test_synapse_fallback.py"}
+          ],
+          "related": ["cognitive-assembly", "gatekeeper-salvage"]
+        },
+        {
+          "id": "gatekeeper-salvage",
+          "title": "Gatekeeper inspection and salvage",
+          "summary": "Scans drafts for banned clichés and corporate jargon, executing sentence salvage on soft violations.",
+          "tags": ["filter", "salvage", "immune system"],
+          "what": "Inspects model output against style crimes (`lore/style_crimes.json`), discarding contaminated drafts or salvaging clean sentences.",
+          "how": {
+            "lead": "Reply inspection follows a graduated intervention ladder:",
+            "points": [
+              "Scans for RLHF masks ('as an AI', 'helpful and harmless') and corporate clichés ('rich tapestry', 'delve', 'testament to').",
+              "If violations occur and retry budget remains, the draft is rejected and the model is prompted again with a stumble tax.",
+              "On the final allowed retry, soft violations are salvaged by excising offending sentences via `TheGatekeeper.salvage`.",
+              "Only unparseable scaffold leaks or hard violations fall through to a canned pause message."
+            ]
+          },
+          "why": "Decided with Gordon on 2026-09-23 (`SESSION_HANDOFF.md`, 'Style rules cut, they don't kill'): replacing mostly good replies with canned pause lines harmed conversational flow. Excising specific bad sentences protects voice while preserving substantive answers.",
+          "evidence": [
+            {"label": "Gatekeeper filters", "target": "physics/filters.py"},
+            {"label": "Style crimes database", "target": "lore/style_crimes.json"},
+            {"label": "Last draft salvage test", "target": "tests/test_last_draft_salvage.py"}
+          ],
+          "related": ["lexical-immune-system", "checkpoint-persistence"]
+        },
+        {
+          "id": "checkpoint-persistence",
+          "title": "Transactional checkpoint persistence",
+          "summary": "Atomically persists session state, memory records, and dialogue history to SQLite in WAL mode.",
+          "tags": ["storage", "sqlite", "persistence"],
+          "what": "Writes completed turn data, vital metrics, user models, and room maps into `saves/iris.db` at turn completion.",
+          "how": [
+            "Opens an immediate transaction in `engine/gate/store.py` against SQLite configured with `PRAGMA journal_mode = WAL`.",
+            "Replaces the single active checkpoint row with the updated session state, dialogue buffer, and vitals snapshot.",
+            "Scans memories and dialogue for sensitive credentials (API keys, passwords, private keys), replacing them with `[withheld: ...]`. In ADVENTURE mode, passwords are part of the story and retained, while keys and tokens remain withheld.",
+            "On SQLite write failure, rolls back the transaction and retains the previous checkpoint untouched."
+          ],
+          "why": "Atomic single-row replacement guarantees that a sudden crash or disk failure during save preserves the previous good checkpoint rather than corrupting the database file.",
+          "evidence": [
+            {"label": "Halcyon store implementation", "target": "engine/gate/store.py"},
+            {"label": "Secret redaction engine", "target": "engine/gate/secrets.py"},
+            {"label": "Quicksave unit tests", "target": "tests/test_quicksave.py"}
+          ],
+          "related": ["turn-loop-orchestration"]
+        }
+      ]
+    },
+    {
+      "id": "somatic-physics",
+      "title": "Somatic Physics and Biochemistry",
+      "description": "The closed thermodynamic economy, neurochemical dynamics, and mathematical governors.",
+      "entries": [
+        {
+          "id": "metabolic-economy",
+          "title": "The metabolic economy and ATP accounting",
+          "summary": "A closed energy ledger tracking ATP synthesis, token generation burn, and cognitive strain.",
+          "tags": ["atp", "energy", "metabolism"],
+          "what": "Tracks the expenditure and replenishment of `atp_pool` (bounded between 0.0 and 100.0) across all turn operations.",
+          "how": {
+            "lead": "Energy drains and replenishments follow calibrated metabolic rates:",
+            "points": [
+              "Token generation burns ATP at mode-specific rates: 0.020 ATP/token in TECHNICAL, 0.025 ATP/token in other modes.",
+              "Cognitive stumbles, redrafts, and style filter rejections levy metabolic taxes.",
+              "Rest and idle cycles regenerate ATP; Emergency Vagus Nerve Support injects emergency ATP when reserves dip near collapse.",
+              "The 20.7.4.84 fix resolved a legacy bug where redrafts permanently discounted all subsequent metabolic burns to 20%."
+            ]
+          },
+          "why": "Energy expenditure provides thermodynamic grounding for conversation length and pacing. A calibrated ATP pool naturally prevents runaway verbose generation and creates tangible stakes for conversational fatigue.",
+          "evidence": [
+            {"label": "Mitochondrial forge", "target": "body/metabolism.py"},
+            {"label": "Energy budget tests", "target": "tests/test_energy_budget.py"},
+            {"label": "Metabolic audit records", "target": "docs/SESSION_HANDOFF.md"}
+          ],
+          "related": ["embodied-metaphor", "neurochemical-dynamics", "somatic-budgeting", "mitophagy-and-recovery"]
+        },
+        {
+          "id": "neurochemical-dynamics",
+          "title": "Neurochemical dynamics and endocrine states",
+          "summary": "Simulates hormone balances (Cortisol, Dopamine, Voltage, Chi) to modulate mood and memory retention.",
+          "tags": ["chemistry", "hormones", "endocrine"],
+          "what": "Maintains running endocrine state variables that influence sampling behavior, memory consolidation, and persona tone.",
+          "how": [
+            "`cortisol` rises during high linguistic conflict or cognitive dissonance, promoting defensive posture and memory forgetting.",
+            "`dopamine` spikes upon creative resonance, problem breakthroughs, and successful lexical resolution.",
+            "`voltage` tracks conversational speed and momentum, influencing prompt urgency.",
+            "`chi` represents overall spiritual equilibrium and systemic stability."
+          ],
+          "why": "Endocrine values provide continuous emotional hysteresis across turns, preventing the model from oscillating erratically between emotional extremes on single turn changes.",
+          "evidence": [
+            {"label": "Endocrine subsystem", "target": "body/endocrine.py"},
+            {"label": "Physical dynamics", "target": "physics/dynamics.py"},
+            {"label": "Homeostasis tests", "target": "tests/test_homeostasis.py"}
+          ],
+          "related": ["metabolic-economy", "prismatic-claims", "hippocampus-cache"]
+        },
+        {
+          "id": "creative-determinant",
+          "title": "Creative Determinant and bitmap governance",
+          "summary": "Scores utterance similarity against memory distribution via quantized bitmaps to govern sampling temperature.",
+          "tags": ["governor", "sampling", "ordvec"],
+          "what": "Projects utterances and memories into sign bitmaps to measure cognitive regimes and propose sampling temperature adjustments.",
+          "how": {
+            "lead": "The governor operates through Project Navi's `ordvec` quantization:",
+            "points": [
+              "Utterance embeddings are quantized into 4-bit sign bitmaps via `ordvec.RankQuant`.",
+              "Hamming distances compare the top matches against the empirical corpus distribution, corrected for corpus size.",
+              "If evidence is insufficient (fewer than 3 memories), the governor declines measurement and falls back to PID regulation.",
+              "Proposed temperatures are clamped to the somatic budget band rather than replacing it."
+            ]
+          },
+          "why": "Decided with Gordon on 2026-09-23 (`SESSION_HANDOFF.md`): replacing the temperature band with the governor's proposal caused the engine to run at temperature 0 for five straight days. Clamping respects the somatic budget while allowing bitmap signals to influence sampling.",
+          "evidence": [
+            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Core governor logic", "target": "engine/core.py"},
+            {"label": "Creative determinant tests", "target": "tests/test_creative_determinant.py"}
+          ],
+          "related": ["somatic-budgeting", "associative-spores"]
+        },
+        {
+          "id": "somatic-budgeting",
+          "title": "Somatic budgeting and generation caps",
+          "summary": "Derives strict sentence targets, token ceilings, temperature bands, and question permissions per turn.",
+          "tags": ["budget", "pacing", "limits"],
+          "what": "Evaluates partner exhaustion ($E_u$) and engine energy ($ATP$) each turn to produce a `SomaticBudget` dataclass.",
+          "how": [
+            "Default targets allow up to 10 sentences (`SENTENCE_CAP_DEFAULT`) and a temperature band of (0.6, 0.9).",
+            "When the partner is tiring ($E_u > 0.4$), the sentence target drops to 5.",
+            "When the partner is flagging ($E_u > 0.6$), sentences are capped at 3, word count is capped at 60, and closing questions are forbidden.",
+            "The budget sets `forbid_body_narration = True` and signals whether to offer to carry the cognitive load."
+          ],
+          "why": "Decided in Track D (`ROADMAP.md`): a tired partner is burdened by lengthy responses and demanding questions. Pacing accommodation shortens the engine's output to ease the partner's cognitive load without narrating their state.",
+          "evidence": [
+            {"label": "Somatic budget evaluation", "target": "body/somatic_budget.py"},
+            {"label": "Somatic metrics calculator", "target": "body/somatic_metrics.py"},
+            {"label": "Budget enforcement tests", "target": "tests/test_somatic_budget.py"}
+          ],
+          "related": ["anti-performance-contract", "partner-accommodation", "prompt-composer"]
+        },
+        {
+          "id": "mitophagy-and-recovery",
+          "title": "Mitophagy, REM sleep, and cellular recovery",
+          "summary": "Purges toxic oxidative buildup and restores ATP reserves through resting cycles and autophagy.",
+          "tags": ["recovery", "sleep", "mitophagy"],
+          "what": "Relieves accumulated metabolic strain and high ROS through sleep cycles, memory digestion, and cerebrospinal washes.",
+          "how": {
+            "lead": "Recovery cycles operate through multiple regenerative pathways:",
+            "points": [
+              "Severe exhaustion triggers mitophagy, resetting metabolic strain at the cost of a temporary ATP drop.",
+              "`/sleep` and `/idle` trigger REM cycles in `engine/cycle.py`, restoring ATP and stamina over time.",
+              "Cognitive autophagy cannabilizes low-salience memory nodes to synthesize emergency ATP.",
+              "Cerebrospinal fluid washes scrub invisible Unicode artifacts and normalize homoglyphs across buffers."
+            ]
+          },
+          "why": "Without an entropy relief mechanism, long-running stateful systems suffer parameter drift and oxidative exhaustion. Biological recovery cycles provide structured resets that sustain multi-hour conversational runs.",
+          "evidence": [
+            {"label": "Mitophagy and forge logic", "target": "body/metabolism.py"},
+            {"label": "Cerebrospinal fluid filter", "target": "physics/filters.py"},
+            {"label": "REM reflection tests", "target": "tests/test_rem_reflection.py"}
+          ],
+          "related": ["metabolic-economy", "rem-consolidation"]
+        }
+      ]
+    },
+    {
+      "id": "brain-and-voice",
+      "title": "Brain, Prompt Assembly, and Voice",
+      "description": "Techniques for shaping voice, preserving identity, and preventing model sycophancy.",
+      "entries": [
+        {
+          "id": "prompt-composer",
+          "title": "Multi-tier prompt composer",
+          "summary": "Assembles structured system, somatic, and context directives into a unified prompt payload.",
+          "tags": ["prompt", "composer", "context"],
+          "what": "Compiles the active prompt sent to the LLM backend from configuration, somatic state, and conversational history.",
+          "how": [
+            "`PromptComposer` gathers vitals, active mode directives, recalled memories, and dialogue buffer exchanges.",
+            "Formats identity claims into `[SYSTEM IDENTITY - UNBREAKABLE CORE FACTS]` at the prompt apex.",
+            "Applies somatic constraints: word ceilings, sentence limits, closing question rules, and body-narration prohibitions.",
+            "Appends recent turn history under strict stop tokens, ensuring clean dialogue delineation."
+          ],
+          "why": "Explicit structured prompt blocks prevent directive bleeding and ensure that generation constraints (such as word and sentence caps) take precedence over general conversational tendencies.",
+          "evidence": [
+            {"label": "Prompt composer implementation", "target": "brain/composer.py"},
+            {"label": "Composer unit tests", "target": "tests/test_composer.py"}
+          ],
+          "related": ["cognitive-assembly", "prismatic-claims", "lexical-immune-system"]
+        },
+        {
+          "id": "prismatic-claims",
+          "title": "Prismatic Self-Claims",
+          "summary": "Filters core identity and worldview facts through active state without performing biological sensations.",
+          "tags": ["identity", "prism", "self claims"],
+          "what": "Maintains immutable core identity facts (`lore/self_claims.yaml`) that define the engine's nature and philosophical boundaries.",
+          "how": [
+            "`SelfClaimPrism` in `brain/prism.py` loads `core_identity` and `core_worldview` from `lore/self_claims.yaml` at boot.",
+            "Filters claims against state variables (cortisol, dopamine, voltage, resonance).",
+            "Injects the resulting claims into the prompt's top tier as unbreakable system facts.",
+            "The 20.7.4.81 revision stripped state-conditioned bodily descriptions ('I am exhausted', 'flooded with dopamine') in adherence to the anti-performance contract."
+          ],
+          "why": "Decided in 20.7.4.81 (`SESSION_HANDOFF.md`): identity claims must establish factual perspective and philosophical boundaries rather than narrating biological states. Grounding identity in core worldview prevents persona drift.",
+          "evidence": [
+            {"label": "Prism implementation", "target": "brain/prism.py"},
+            {"label": "Self claims definition", "target": "lore/self_claims.yaml"},
+            {"label": "Self-claims body narration test", "target": "tests/test_composer.py"}
+          ],
+          "related": ["anti-performance-contract", "prompt-composer"]
+        },
+        {
+          "id": "lexical-immune-system",
+          "title": "The lexical immune system",
+          "summary": "Identifies sycophantic boilerplate and RLHF clichés, penalizing violations and enforcing voice standards.",
+          "tags": ["immune", "anti-rlhf", "style crimes"],
+          "what": "Scans generated drafts against banned clichés, corporate buzzwords, and assistant apologies in `lore/style_crimes.json`.",
+          "how": {
+            "lead": "Immune surveillance checks every draft across three pattern sets:",
+            "points": [
+              "`RLHF_MASKS`: Corporate assistant apologies ('as an AI', 'helpful and harmless', 'I don't have feelings').",
+              "`BANNED_CLICHES`: Literary clichés ('rich tapestry', 'dance of existence', 'dust motes', 'delve', 'juxtaposition').",
+              "`BANNED_PHRASES`: Conversational filler ('I hope this helps', 'You're absolutely right', 'Exciting times lie ahead').",
+              "Violations trigger metabolic taxes and redrafts, escalating to sentence salvage on the final draft."
+            ]
+          },
+          "why": "Modern chat models are heavily fine-tuned to emit subservient, verbose, and clichéd language. Active immune filtering breaks the model out of these training ruts to produce original, grounded prose.",
+          "evidence": [
+            {"label": "Gatekeeper filters", "target": "physics/filters.py"},
+            {"label": "Style crimes database", "target": "lore/style_crimes.json"},
+            {"label": "Immune crucible tests", "target": "tests/test_immune_crucible.py"}
+          ],
+          "related": ["gatekeeper-salvage", "metabolic-economy"]
+        },
+        {
+          "id": "epigenetic-scars",
+          "title": "Epigenetic scars and boons",
+          "summary": "Enduring conversational milestones and traumas that persist across restarts to shape persona drift.",
+          "tags": ["akashic", "epigenetics", "memory"],
+          "what": "Records significant conversational breakdowns (scars) and breakthroughs (boons) into persistent long-term storage.",
+          "how": [
+            "`TheAkashicRecord` (`brain/akashic.py`) records scars when severe paradoxes or system shocks occur.",
+            "Active scars and boons are persisted to SQLite in `saves/iris.db`.",
+            "During prompt composition, `PromptComposer` reads `EPIGENETIC_SCARS` and `EPIGENETIC_BOONS` into the persona block.",
+            "Scars subtly increase caution and defensiveness; boons enhance conversational warmth and openness."
+          ],
+          "why": "Provides genuine developmental continuity across sessions. Significant relational events leave lasting impressions on the persona, giving conversations an evolving shared history.",
+          "evidence": [
+            {"label": "Akashic record", "target": "brain/akashic.py"},
+            {"label": "Epigenetic scar tests", "target": "tests/test_scars.py"},
+            {"label": "Akashic unit tests", "target": "tests/test_akashic.py"}
+          ],
+          "related": ["prompt-composer"]
+        }
+      ]
+    },
+    {
+      "id": "memory-and-cartography",
+      "title": "Memory and Cartography",
+      "description": "Short-term caches, associative embedding retrieval, sleep consolidation, and spatial room mapping.",
+      "entries": [
+        {
+          "id": "lexicon-resolution",
+          "title": "Four-tier lexicon resolution",
+          "summary": "Hierarchical word classification balancing curated lists, semantic resonance, and intentional unknown gaps.",
+          "tags": ["lexicon", "vocabulary", "resolution"],
+          "what": "Maps natural language input words to thematic emotional and physical coordinates across four resolution tiers.",
+          "how": [
+            "Tier 1: Grammatical filler (~40% of normal speech) is measured for syntactic density.",
+            "Tier 2: Curated dictionaries in `lore/lexicon.json` map roots to thematic categories (heavy, kinetic, abstract, void).",
+            "Tier 3: Semantic resonance computes cosine similarity between novel word embeddings and category centroid embeddings.",
+            "Tier 4: A morphological spelling heuristic resolves ~3% of ambiguous words; ~16% remain unresolved."
+          ],
+          "why": "Audits report ~81% resolved through filler, curated lists, and resonance. Leaving ~16% unresolved is a deliberate design choice: language has genuine ambiguity, and an engine that pretends to know all of English produces brittle classifications.",
+          "evidence": [
+            {"label": "Vocabulary audit findings", "target": "README.md"},
+            {"label": "Lexicon resolver", "target": "mechanics/lexicon.py"},
+            {"label": "Resonance tests", "target": "tests/test_resonance.py"}
+          ],
+          "related": ["geodesic-observation", "associative-spores"]
+        },
+        {
+          "id": "hippocampus-cache",
+          "title": "Working memory and hippocampus",
+          "summary": "Short-term conversational cache with capacity limits and stress-induced memory shedding.",
+          "tags": ["memory", "hippocampus", "cache"],
+          "what": "Maintains recent significant conversational exchanges in an in-memory working cache before long-term consolidation.",
+          "how": {
+            "lead": "Working memory is dynamically managed based on emotional state:",
+            "points": [
+              "Significant dialogue turns are stored in `Hippocampus` (`spores/memory.py`).",
+              "Connects incoming moments to semantically similar recent exchanges in working memory.",
+              "Under elevated cortisol, stress-driven forgetting sheds peripheral memories (e.g. shedding 36 of 85 memories under high stress).",
+              "Surviving memories are scheduled for permanent long-term promotion during sleep cycles."
+            ]
+          },
+          "why": "Working memory is biologically finite. Modeling stress-driven forgetting reflects real cognitive constraints under pressure, keeping working memory focused on immediate conversational context.",
+          "evidence": [
+            {"label": "Hippocampus implementation", "target": "spores/memory.py"},
+            {"label": "Hippocampus tests", "target": "tests/test_hippocampus.py"},
+            {"label": "Forgetting tests", "target": "tests/test_forgetting.py"}
+          ],
+          "related": ["neurochemical-dynamics", "associative-spores", "rem-consolidation"]
+        },
+        {
+          "id": "associative-spores",
+          "title": "Associative memory and semantic embeddings",
+          "summary": "Vector embedding retrieval with HTTP-first transport and automatic fallback to SHAKE-256 hash vectors.",
+          "tags": ["embeddings", "vector", "spores"],
+          "what": "Generates 768-dimensional semantic embeddings for memories, dialogue turns, and lore retrieval using Ollama or hash fallbacks.",
+          "how": [
+            "`SemanticEmbedder` POSTs text to an OpenAI-compatible `/v1/embeddings` endpoint (`nomic-embed-text` by default).",
+            "Caches normalized vectors in an in-memory LRU cache (capacity 4,096).",
+            "If the embedding server is unreachable or errors (`_BACKEND_ERRORS`), falls back to `hashlib.shake_256` 8-dimensional vectors.",
+            "The hash fallback flags `DEGRADED` status in receipts and `/status` to declare associative recall is offline."
+          ],
+          "why": "Decided in 20.7.4.80 (`SESSION_HANDOFF.md`): the hash fallback ensures the engine boots and functions offline without external servers. Self-reporting `DEGRADED` prevents silent failures where hash coordinates return arbitrary memories.",
+          "evidence": [
+            {"label": "Embeddings implementation", "target": "spores/embeddings.py"},
+            {"label": "Embeddings unit tests", "target": "tests/test_embeddings.py"},
+            {"label": "Hash fallback decision", "target": "docs/SESSION_HANDOFF.md"}
+          ],
+          "related": ["zero-framework-architecture", "rem-consolidation", "zone-cartography"]
+        },
+        {
+          "id": "rem-consolidation",
+          "title": "Sleep reflection and diamond fossilization",
+          "summary": "Consolidates working memories into permanent storage, synthesizing dreams and forging diamond anchors.",
+          "tags": ["sleep", "rem", "diamonds"],
+          "what": "Executes background memory consolidation during `/sleep`, `/idle`, or low-activity intervals.",
+          "how": {
+            "lead": "Consolidation transitions memories through progressive refinement:",
+            "points": [
+              "Extracts unpromoted working memories from the hippocampus.",
+              "Generates associative reflections and dream synthesis using the background dreamer.",
+              "High-scoring enduring memories (> 0.8 resonance) are fossilized into diamond anchors via `MycelialNetwork.forge_diamond`.",
+              "Prunes low-salience memories to free working memory capacity."
+            ]
+          },
+          "why": "Unchecked memory growth clutters retrieval indices and degrades recall relevance. REM consolidation crystallizes significant conversational insights into durable diamonds while clearing ephemeral working state.",
+          "evidence": [
+            {"label": "Dream and mind engine", "target": "brain/mind.py"},
+            {"label": "Mycelial network", "target": "spores/network.py"},
+            {"label": "Diamond forging test", "target": "tests/test_spores.py"}
+          ],
+          "related": ["hippocampus-cache", "associative-spores", "mitophagy-and-recovery"]
+        },
+        {
+          "id": "zone-cartography",
+          "title": "Spatial memory and zone scoping",
+          "summary": "Rooms, exits, and memories are scoped to discrete spatial zones, isolating recall between environments.",
+          "tags": ["cartographer", "zones", "adventure"],
+          "what": "Maps conversational spaces into discrete rooms and zones, scoping memory retrieval to the current active zone.",
+          "how": [
+            "`TheCartographer` charts room titles, descriptions, exits, and discovered items in `ADVENTURE` mode.",
+            "Memories formed in a zone are tagged with that zone identifier (`Sanctuary`, `Laboratory`, `Underworld`).",
+            "Retrieval queries in `engine/gate/recall.py` scope associative searches to the current zone.",
+            "Crossing zone boundaries flushes the immediate working memory buffer."
+          ],
+          "why": "Zone scoping prevents cross-context contamination. Narrative events and items discovered in an adventure room do not pollute technical or philosophical exchanges in conversation mode.",
+          "evidence": [
+            {"label": "Cartographer implementation", "target": "engine/gate/cartographer.py"},
+            {"label": "Scoped recall logic", "target": "engine/gate/recall.py"},
+            {"label": "Zone isolation tests", "target": "tests/test_zones.py"}
+          ],
+          "related": ["associative-spores"]
+        }
+      ]
+    },
+    {
+      "id": "village-and-partner",
+      "title": "The Village and Partner Accommodation",
+      "description": "Multi-archetype persona management, refusal routing, and co-regulatory partner accommodation.",
+      "entries": [
+        {
+          "id": "village-archetypes",
+          "title": "The Village archetypes and personas",
+          "summary": "A council of emergent archetypal voices (Gordon, Mercy, Benedict, Jester) activated by conversation shape.",
+          "tags": ["village", "archetypes", "council"],
+          "what": "Maintains a cast of conversational personas that activate based on the emotional and physical shape of the conversation.",
+          "how": {
+            "lead": "Each villager embodies distinct conversational qualities:",
+            "points": [
+              "Gordon: The pragmatic, grounded anchor who values plain speech and code that serves humans first.",
+              "Mercy: The empathetic healer attuned to distress and emotional fatigue.",
+              "Benedict: The rigorous, skeptical scholar focused on precision and logical consistency.",
+              "The Jester: The lateral catalyst who introduces irreverence, breaks loops, and resets narrative drag.",
+              "Archetype monitors nominate voices based on current kinematic coordinates."
+            ]
+          },
+          "why": "Rather than presenting a monolithic, flat assistant personality, the Village provides organic depth. Dialogue responds to the tone of the moment without arbitrary personality flips.",
+          "evidence": [
+            {"label": "Village subsystem", "target": "archetypes/village.py"},
+            {"label": "Village council", "target": "archetypes/council.py"},
+            {"label": "Archetype tests", "target": "tests/test_archetypes.py"}
+          ],
+          "related": ["somatic-refusal", "prompt-composer"]
+        },
+        {
+          "id": "somatic-refusal",
+          "title": "The Stage Manager and somatic refusal",
+          "summary": "Negotiates archetype floor competition, merging compatible pairs or holding the floor in refusal.",
+          "tags": ["stage manager", "refusal", "arbitration"],
+          "what": "Arbitrates when multiple archetypes are nominated simultaneously, merging complementary voices or holding the floor empty.",
+          "how": [
+            "`StageManager` in `archetypes/stage.py` evaluates tensions between nominated voices.",
+            "Certain pairs have defined synergies and merge into a single blended response (`PAIR`).",
+            "When irreconcilable tensions exist with no resolution, the Stage Manager triggers `HOLD`.",
+            "A held turn halts processing before LLM generation, declining to speak rather than generating a false, compromised reply."
+          ],
+          "why": "Decided in Track D (`SESSION_HANDOFF.md`): when conflicting internal impulses cannot be harmonized, an authentic machine holds the floor empty rather than smoothing contradictions into generic corporate pleasantries.",
+          "evidence": [
+            {"label": "Stage manager logic", "target": "archetypes/stage.py"},
+            {"label": "Refusal routing tests", "target": "tests/test_refusals.py"},
+            {"label": "Stage manager tests", "target": "tests/test_stage_manager.py"}
+          ],
+          "related": ["village-archetypes", "turn-loop-orchestration"]
+        },
+        {
+          "id": "partner-accommodation",
+          "title": "Partner distress and fatigue accommodation",
+          "summary": "Tracks partner exhaustion ($E_u$) to calibrate reply brevity and pacing without mirroring distress.",
+          "tags": ["lattice", "accommodation", "user model"],
+          "what": "Infers partner fatigue, effort, and distress from interaction patterns, adjusting response length and complexity to co-regulate.",
+          "how": {
+            "lead": "User state modeling follows strict inference heuristics:",
+            "points": [
+              "`SharedLatticeDriver` (`drivers/lattice.py`) tracks message brevity, repetition, and explicit fatigue cues (`FATIGUE_SIGNS`).",
+              "Calculates partner exhaustion $E_u$ and effort $P_u$ relative to the partner's historical baseline.",
+              "When $E_u$ rises, prompts enforce tighter sentence caps and forbid closing questions to avoid taxing the partner.",
+              "When the partner expresses distress (`DISTRESS_SIGNS`), the engine answers cleanly without narrating distress back to them."
+            ]
+          },
+          "why": "Decided with Gordon (`SESSION_HANDOFF.md`, 'Decisions already made'): co-regulation requires accommodating the human partner. Mirroring a distressed person is harmful in critical moments; an effective partner stays steady, concise, and helpful.",
+          "evidence": [
+            {"label": "Decision record", "target": "docs/SESSION_HANDOFF.md"},
+            {"label": "Shared lattice driver", "target": "drivers/lattice.py"},
+            {"label": "Distress accommodation tests", "target": "tests/test_distress.py"}
+          ],
+          "related": ["anti-performance-contract", "somatic-budgeting"]
+        }
+      ]
+    }
+  ]
+}
