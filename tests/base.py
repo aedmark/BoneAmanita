@@ -123,8 +123,8 @@ class BoneTestCase(unittest.TestCase):
             "MAX_STAMINA": 100.0,
             "MAX_HEALTH": 100.0,
             "CORE": {"TELEMETRY_LOG_DIR": self.test_telemetry_dir},
-            # A keeper call would be the turn's last generate call, which many tests read as the prompt.
-            "CORTEX": {"HALCYON_KEEPER": False, "HALCYON_REFLECT": False},
+            # A keeper or voice-pass call would be the turn's last generate call, which many tests read as the prompt.
+            "CORTEX": {"HALCYON_KEEPER": False, "HALCYON_REFLECT": False, "VOICE_PASS": False},
         }
         self.oroboros_file = f"tests_isolated_legacy_{self.id().split('.')[-1]}.json"
         self.oroboros_patcher = patch(

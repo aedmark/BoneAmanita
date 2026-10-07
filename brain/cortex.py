@@ -121,6 +121,7 @@ class TheCortex:
         self.offered_open = {}  # (key, value): turns the follow-up was offered without the reply asking
         self.pending_ask = None
         self.side_on_ending = False
+        self.voice_pass = bool(safe_get(safe_get(self.cfg, "CORTEX", {}), "VOICE_PASS", False))
         self.openings = deque(maxlen=4)  # [move or None until judged, first sentence] of the last replies shown
         self.worry_ledger = deque(maxlen=20)
         self.modulator = NeurotransmitterModulator(
@@ -264,11 +265,9 @@ Replace the reply's first sentence with one short question that takes what they 
         """The reply with its first sentence made a question, or "" when the edit did not hold. A redraft kept the
         habit 6 of 7 times (the prompt's own history pulls it back); this edit took 5 of 5 live. Shown only the latest
         message it asked what they had just said (6 of 19) or had told it earlier."""
-        said = [line.split("\n")[0].removeprefix("Traveler: ") for line in self.dialogue_buffer][-4:]
-        earlier = "Earlier they said:\n" + "".join(f'- "{m}"\n' for m in said) if said else ""
         usage = getattr(self.llm, "last_usage", None)
         try:
-            out = str(self.llm.generate(self.REWRITE.format(earlier=earlier, message=message, reply=reply),
+            out = str(self.llm.generate(self.REWRITE.format(earlier=self._earlier(), message=message, reply=reply),
                                         {"temperature": 0.0, "max_tokens": 400}) or "").strip().strip('"')
         finally:
             if usage is not None:
@@ -279,6 +278,38 @@ Replace the reply's first sentence with one short question that takes what they 
         if not question.endswith("?") or len(rest) < 0.6 * len(kept) or (gk and gk._find_crime(question, self.active_mode)):
             return ""
         return out
+
+    VOICE = """Here is what someone said to a friend, and the reply the friend drafted.
+{earlier}They just said: "{message}"
+The draft: "{reply}"
+Rewrite the draft the way the friend would actually say it to them, sitting across a table: talking with them, not describing their situation back to them or explaining how things work. Plain words. React, say what you think, or ask what you want to know. Keep what the draft means, including anything it says about what they did themselves, and anything it leaves for them to decide. About as long as the draft, or shorter. No "I hear you", no "that makes sense", no stage directions, no dashes between clauses. Answer with the rewritten reply and nothing else."""
+
+    def _earlier(self) -> str:
+        said = [line.split("\n")[0].removeprefix("Traveler: ") for line in self.dialogue_buffer][-4:]
+        return "Earlier they said:\n" + "".join(f'- "{m}"\n' for m in said) if said else ""
+
+    def _in_a_friends_voice(self, message: str, reply: str, gk: Any, state: dict) -> tuple:
+        """(reply as a friend would say it, or "", why not). feud20 (2026-10-06): rules, rewritten rules and examples
+        in the prompt left 15 or 16 of 20 openings verdicts; the reply comes from the model's register and its own
+        history. Rewriting the finished draft read like a person, but freely it sided ("a huge violation of trust"),
+        ruled on the ending and used dashes, so a rewrite that fails a guard is not used."""
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            out = str(self.llm.generate(self.VOICE.format(earlier=self._earlier(), message=message, reply=reply),
+                                        {"temperature": 0.0, "max_tokens": 400}) or "").strip().strip('"')
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        words, was = len(out.split()), len(reply.split())
+        if not out or not 0.4 * was <= words <= 1.3 * was + 5:
+            return "", "length"
+        if "\u2014" in out or "\u2013" in out:
+            return "", "dash"
+        if gk and (crime := gk._find_crime(out, self.active_mode)):
+            return "", f"style: {crime.get('name', '')}"
+        if why := self._takes_a_side(message, out, state):
+            return "", f"fairness: {why}"
+        return out, ""
 
     def _note_opening(self, reply: str) -> None:
         drafted = getattr(self, "_draft_opening", None)
@@ -590,6 +621,12 @@ Replace the reply's first sentence with one short question that takes what they 
         self.svc.symbiosis.monitor_host(
             time.time() - start_time, final_output, len(final_prompt)
         )
+        if (self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
+                and self.voice_pass):
+            voiced, why = self._in_a_friends_voice(user_input, final_output, gk, full_state)
+            issue_receipt("cortex.voice", "REWRITTEN" if voiced else "KEPT_DRAFT", result_count=int(bool(voiced)),
+                          detail=why or first_sentence(voiced))
+            final_output = voiced or final_output
         if (self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
                 and self._in_a_rut(final_output)):
             # The question is new words the fairness check never read ("Was the joke about your ex the only thing that

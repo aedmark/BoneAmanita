@@ -663,6 +663,24 @@ would only move it (Gordon: regex and prompts are brittle). Measured on 100 hand
 - `tests/test_sim_beats.py` (6), `tests/test_continuity_claims.py` (`TheEndingIsTheirs`, and the judge reading the
   talk before), `tests/test_openings.py` (a question that takes a side). Suite 1119 passed, 5 skipped.
 
+**20.7.4.112: a reply said the way a friend would say it.** Gordon could tell BoneAmanita in the feud panel only by
+its subtext. Replaying `20261006-133547`'s 20 messages, verdict openings stayed at 15 or 16 of 20 whatever the
+prompt said: without the stray epigenetic boon from 20.0.0 ("'A structural truth was found.' Prioritize this
+geometry"), with the "candor over empathy" and "no questions" rules rewritten as what a friend does (only more
+questions, "heavy" in 10 replies), and with six example exchanges on other topics (not copied, no change). The
+voice is gemma4:12b's register plus its own history; the prompt does not reach it, but editing a finished draft does.
+- `CORTEX.VOICE_PASS` (on; off in the test base): after the loop, in CONVERSATION, `Cortex.VOICE` rewrites the reply
+  "the way the friend would actually say it to them, sitting across a table", with the person's last 4 messages,
+  keeping what it means, what it says they did and what it leaves to them. Used only when the length stays within
+  0.4 to 1.3 of the draft, there is no dash, the style crimes pass and the fairness judge finds no side; receipt
+  `cortex.voice` (REWRITTEN or KEPT_DRAFT with the reason). The opening-rut edit runs after it. Offline, unguarded,
+  it sided ("a huge violation of trust"), ruled on the ending ("you know it's over when") and used dashes.
+- Live replay: 14 of 20 rewritten (1 to 3s each), 6 kept (1 fairness: "a betrayal of trust"; 5 style crimes); words
+  57 to 45, replies with a question 5 to 8, verdict openings still 15 of 20. Written commentary becomes speech ("She's
+  watching, but that doesn't mean she's reaching out... It's still your call."), the stance does not ("That phrasing
+  is brutal."); "brutal" twice, and one mild drift passed ("You shouldn't have to be the one to step up").
+- `tests/test_voice.py` (4). Suite 1123 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
