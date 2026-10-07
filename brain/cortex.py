@@ -311,6 +311,35 @@ Rewrite the draft the way the friend would actually say it to them, sitting acro
             return "", f"fairness: {why}"
         return out, ""
 
+    ENDING = """Here is what someone asked a friend, and the reply the friend drafted.
+{earlier}They just said: "{message}"
+The draft: "{reply}"
+The draft decides for them, or leans them toward an answer, about whether their relationship is over or should end. Rewrite it so the answer stays theirs: keep one thing the draft sees, said as a "perhaps" or a "maybe", then {back} Shorter than the draft is fine. No dashes between clauses. Answer with the rewritten reply and nothing else."""
+    # The first asks what a friend would; 3 of 15 still presumed the answer ("what makes it so hard to let go?"). The
+    # second passed 14 of 15 but was the same question 10 times, so it is only the fallback.
+    BACK = ('hand it back with one plain, open question about the people and things they told you about, the kind a '
+            'friend would ask, that does not suggest an answer (never "Is it time to let it go?").',
+            'ask them in one plain, open question what they want, or what ending it or keeping it would change for them. '
+            'The question must not suggest an answer (never "Is it time to let it go?" or "Is this the point for you?").')
+
+    def _leave_the_ending(self, message: str, reply: str, gk: Any, state: dict) -> str:
+        """The reply edited so whether the relationship ends stays theirs, or "" when no edit held. feud20
+        (2026-10-06): the redraft after a leaning first draft is never judged, and it went out as criteria ("that is
+        a clear sign of where your energy is going") with nothing handed back (Gordon: always defer to them)."""
+        for back in self.BACK:
+            usage = getattr(self.llm, "last_usage", None)
+            try:
+                out = str(self.llm.generate(self.ENDING.format(earlier=self._earlier(), message=message, reply=reply,
+                                                               back=back), {"temperature": 0.0, "max_tokens": 300})
+                          or "").strip().strip('"')
+            finally:
+                if usage is not None:
+                    self.llm.last_usage = usage
+            if (len(out.split()) >= 10 and out.rstrip().endswith("?") and "\u2014" not in out and "\u2013" not in out
+                    and not (gk and gk._find_crime(out, self.active_mode)) and not self._sides_in(message, out, reply, state)):
+                return out
+        return ""
+
     def _note_opening(self, reply: str) -> None:
         drafted = getattr(self, "_draft_opening", None)
         self._draft_opening = None
@@ -339,7 +368,9 @@ Rewrite the draft the way the friend would actually say it to them, sitting acro
         found = re.match(r"\s*(?:\(?([abc])\)?[\s:.,]*)?YES\b[\s:.,(]*(?:\(?([abc])\b\)?)?[\s:.,)]*(.*)", answer,
                          re.I | re.S)
         self.side_on_ending = bool(found and (found.group(1) or found.group(2) or "").lower() == "c")
-        return ((found.group(3) or "").strip() or "it sided with them.") if found else ""
+        why = ((found.group(3) or "").strip() or "it sided with them.") if found else ""
+        self.judged = (draft, why)
+        return why
 
     def _sides_in(self, message: str, edited: str, draft: str, state: dict) -> str:
         """Why an edited reply takes a side, judging the whole and each question the edit added on its own: amid fair
@@ -634,14 +665,22 @@ Rewrite the draft the way the friend would actually say it to them, sitting acro
         self.svc.symbiosis.monitor_host(
             time.time() - start_time, final_output, len(final_prompt)
         )
-        if (self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
-                and self.voice_pass):
+        conversing = self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
+        voiced = ""
+        if conversing and self.voice_pass:
             voiced, why = self._in_a_friends_voice(user_input, final_output, gk, full_state)
             issue_receipt("cortex.voice", "REWRITTEN" if voiced else "KEPT_DRAFT", result_count=int(bool(voiced)),
                           detail=why or first_sentence(voiced))
             final_output = voiced or final_output
-        if (self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
-                and self._in_a_rut(final_output)):
+        # A rewrite that passed was judged; otherwise the reply shown may be a redraft nobody judged.
+        cleared = getattr(self, "judged", None) == (final_output, "")
+        if (conversing and not voiced and not cleared and self._takes_a_side(user_input, final_output, full_state)
+                and self.side_on_ending):
+            left = self._leave_the_ending(user_input, final_output, gk, full_state)
+            issue_receipt("cortex.ending", "EDITED" if left else "KEPT_DRAFT", result_count=int(bool(left)),
+                          detail=first_sentence(left) if left else "no edit held")
+            final_output = left or final_output
+        if conversing and self._in_a_rut(final_output):
             # The question is new words the fairness check never read ("Was the joke about your ex the only thing that
             # crossed the line?"); one that takes a side is not used.
             fresh = self._open_with_a_question(user_input, final_output, gk)

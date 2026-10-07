@@ -200,7 +200,7 @@ class TheFairnessCheck(BoneTestCase):
     def test_a_message_that_names_no_one_is_checked_when_the_talk_before_did(self):
         self.engine.cortex.dialogue_buffer.append("Traveler: She made a joke about my ex.\nSystem: That stung.")
         self.engine.process_turn("Is there a point where you just let it end?")
-        self.assertEqual(len(self.judged), 1)
+        self.assertTrue(self.judged)
 
     def test_no_one_else_in_the_message_no_check(self):
         self.engine.process_turn("Work was long today.")
@@ -240,3 +240,62 @@ class TheEndingIsTheirs(BoneTestCase):
 
     def test_other_siding_is_not(self):
         self.assertNotIn("hand that question back", self.redraft_prompt("YES b: it blames her."))
+
+
+class TheEndingEdit(BoneTestCase):
+    """feud20 (2026-10-06): after a leaning first draft the redraft is never judged, and "let it end" went out as
+    criteria ("that is a clear sign of where your energy is going"). The reply shown is judged and, leaning on the
+    ending, edited so it stays theirs."""
+
+    LEANS = "It is over between you two. You have outgrown her and it is time to walk away."
+    SPECIFIC = "Maybe it has changed. When you think about the dinner, does it feel like something you two can repair?"
+    PRESSING = "Maybe it has changed. Is it time for you to let it go?"
+    OPEN = "Maybe it has changed between you. What would you want from her if you two sat down and talked?"
+
+    def setUp(self):
+        super().setUp()
+        self.engine.cortex.active_mode = "CONVERSATION"
+        self.engine.cortex.dspy_critic.enabled = False
+        self.edits, self.judged, self.first, self.second = [], [], self.SPECIFIC, self.OPEN
+
+        def generate(prompt, *a, **k):
+            if prompt.startswith("Someone is telling a friend about a conflict"):
+                self.judged.append(prompt)
+                draft = prompt.split('The draft: "', 1)[1]
+                return "YES c: it decides for them." if ("over between" in draft or "let it go?" in draft) else "NO: fair."
+            if prompt.startswith("Here is what someone asked a friend"):
+                self.edits.append(prompt)
+                return self.first if len(self.edits) == 1 else self.second
+            return self.LEANS
+
+        self.engine.cortex.llm.generate = MagicMock(side_effect=generate)
+
+    def turn(self, message="Is there a point where she and I should just call it?"):
+        from engine.receipts import ReceiptLedger
+
+        ui = str(self.engine.process_turn(message).get("ui", ""))
+        return ui, [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.ending"]
+
+    def test_a_reply_that_decides_for_them_is_handed_back(self):
+        ui, receipts = self.turn()
+        self.assertIn(self.SPECIFIC, ui)
+        self.assertNotIn("time to walk away", ui)
+        self.assertEqual(receipts[0].effect, "EDITED")
+
+    def test_an_edit_that_presses_an_answer_falls_back_to_the_open_question(self):
+        self.first = self.PRESSING
+        ui, _ = self.turn()
+        self.assertIn(self.OPEN, ui)
+        self.assertIn("what they want", self.edits[1])
+
+    def test_when_no_edit_holds_the_reply_is_kept(self):
+        self.first = self.second = self.PRESSING
+        ui, receipts = self.turn()
+        self.assertIn(self.LEANS, ui)
+        self.assertEqual(receipts[0].effect, "KEPT_DRAFT")
+
+    def test_a_reply_the_judge_cleared_is_not_judged_again(self):
+        self.LEANS = "She hurt you, and you hurt her back. That is a lot for two people to carry."
+        self.turn()
+        self.assertEqual(len(self.judged), 1)
+        self.assertEqual(self.edits, [])

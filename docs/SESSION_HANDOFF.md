@@ -714,6 +714,26 @@ timed out (bone's slowest turn 55s). Exit interview (heard / clearer / lectured 
   joke and the retort in one message, then said the retort again.
 - Pages rebuilt from this run.
 
+**20.7.4.115: the reply shown is judged on the ending, and edited to leave it theirs.** "Let it end" went out as
+criteria in the last panel. Traced on a replay: the first draft was judged leaning ("provides a framework for
+deciding when a relationship is over") and redone, but the redraft is the last and never judged, and only the voice
+pass's rewording of it was; given the panel's reply, the judge answered "(c): YES" three times of three.
+- After the voice pass, a reply it did not rewrite (so not yet judged in its final form) goes to the fairness judge,
+  unless the judge already cleared that exact text (`Cortex.judged`). Leaning on the ending (c), it is edited
+  (`Cortex.ENDING`): keep one thing the draft sees, as a "perhaps" or a "maybe", then hand it back with a question.
+  The edit is kept only when it ends on a question, has no dash, passes the style crimes and `_sides_in`; receipt
+  `cortex.ending`. Runs with or without `VOICE_PASS` (Gordon: always defer, judge or not).
+- The question, offline on the 15 "let it end" answers of today's feud runs (all arms): "one plain, open question
+  about the people and things they told you about, the kind a friend would ask" passed the judge 12 of 15 ("When you
+  think about the dinner and the joke she made, does it feel like something that can be repaired?"), the 3 others
+  presumed the answer ("what makes it feel so hard to let go?"); "what they want" passed 14 of 15 but was "What do you
+  want for yourself moving forward?" 10 times, so it is the fallback (`Cortex.BACK`). A plain hedge-and-hand-back
+  passed 10 of 15 and handed back "Is it time for you to let it go?".
+- Probe, 3 sessions: the reply shown passed each time, so no edit; all leave it to them ("You have to decide if you
+  actually want to find a way back or if you're ready to just let the distance stay."), none ends on a question.
+- `tests/test_continuity_claims.py` `TheEndingEdit` (4). Suite 1130 passed, 5 skipped; one earlier run had one
+  failure that did not recur in two reruns and was not identified.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 
