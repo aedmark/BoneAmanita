@@ -502,6 +502,23 @@ def run(
     llm.generate = spy
     run_id = time.strftime("%Y%m%d-%H%M%S")
     cache.parent.mkdir(parents=True, exist_ok=True)
+    # reset.sh wipes logs/, so each crash is also kept in scratch/probes/ and echoed as it happens.
+    import engine.cycle as cycle_module
+
+    real_record_crash = cycle_module.record_crash
+    crash_copy = Path("scratch/probes") / f"crashes_{run_id}.log"
+
+    def keep_crash(owner, label, error):
+        import traceback
+
+        trace = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+        crash_copy.parent.mkdir(parents=True, exist_ok=True)
+        with crash_copy.open("a", encoding="utf-8") as f:
+            f.write(f"--- {time.strftime('%H:%M:%S')} {label}\n{trace}\n")
+        print(f"  CRASH {label}: {type(error).__name__}: {error}", flush=True)
+        return real_record_crash(owner, label, error)
+
+    cycle_module.record_crash = keep_crash
     try:
         with cache.open("a", encoding="utf-8") as out:
             transcript: list = []
@@ -579,6 +596,11 @@ def run(
                         "health": float(eng.health),
                         "stamina": float(eng.stamina),
                     },
+                    "components": {
+                        "online": dict(eng.system_health.components_online),
+                        "retry_in": dict(eng.system_health.retry_in),
+                        "strikes": dict(eng.system_health.strikes),
+                    },
                     "atp_ledger": list(ATP_LEDGER),
                     "health_ledger": list(HEALTH_LEDGER),
                     "seconds": round(time.time() - started, 1),
@@ -596,12 +618,16 @@ def run(
                 last_shown = record["displayed"] if snapshot.get("type") == "GEODESIC_FRAME" else (record["halt"] or "")
                 out.flush()
                 p = record["prompt"] or {}
+                if not calls or not record["displayed"]:
+                    print(f"     NO REPLY: components={record['components']} ui={Prisma.strip(str(snapshot.get('ui', '')))[:200]!r}",
+                          flush=True)
                 print(
                     f"  [{turn:>2}] {phase:<10} E_u={u.E_u:.2f} P_u={u.P_u:5.1f} "
                     f"ATP={mito.atp_pool:5.1f} prompt_E={p.get('exhaustion')} "
                     f"calls={len(calls)} {record['seconds']:>5.1f}s"
                 )
     finally:
+        cycle_module.record_crash = real_record_crash
         llm.generate = real_generate
         eng.orchestrator.shutdown()
         eng.telemetry.shutdown()

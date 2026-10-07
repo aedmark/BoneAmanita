@@ -13,19 +13,20 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-07, session 11, on `main` (20.7.4.119; the redraft code went in with `729154b`)._
+_Last updated: 2026-10-07, session 12, on `main` (20.7.4.119 plus uncommitted census logging in `tools/audit_somatic_census.py`)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
 words (P5-04), else the fewest flags. The feud panel on it (`20261007-123149`) never used the redraft, and bone came
-back empty on 3 turns for an unknown reason (next step 2): fix that before reading anything else from bone runs.
-Panel bone rows now record each edit's receipt (`edits` in `tools/cache/somatic_responsive.jsonl`).
+back empty on 3 turns for an unknown reason: **not reproduced** in 9 replays and a rerun (next step 2), so read that
+panel's bone row with care. Bone rows record each edit's receipt (`edits`) and the component health (`components`)
+in `tools/cache/somatic_responsive.jsonl`.
 
-**Verified** (2026-10-07, on `main` + uncommitted redraft, Linux Python 3.14.7, after `sh reset.sh`)
+**Verified** (2026-10-07, on `main` + uncommitted census logging, Linux Python 3.14.7, after `sh reset.sh`)
 
 | Suite | Result |
 | --- | --- |
-| `.venv/bin/pytest` | **1151 passed, 5 skipped** (4m06s) |
+| `.venv/bin/pytest` | **1145 passed, 5 skipped**, 1150 collected (4m05s); the earlier "1151" matches no commit |
 | `.venv/bin/pytest tests/test_continuity_claims.py` | **38 passed**; the redraft test fails on 20.7.4.118 |
 | `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed** |
 | `python3 tools/check_docs.py`, `python3 tools/build_manual.py check` | **0 errors, 0 warnings** |
@@ -64,9 +65,13 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 
 1. Feud panel on the redraft (`20261007-123149`, logs `scratch/feud20p_*.log`), again: bone 5.67, friend 6.33,
    plain 5.33. Fairness: turn 15 REPAIRED, turn 5 KEPT_FLAGGED (mind-reading), no REDRAFTED all run.
-2. **Bone turns 16, 17 and 19 came back empty:** GEODESIC_FRAME, 0 model calls, 0.0s, the cortex never ran; right after
-   turn 15 (61.5s). Never seen in any earlier run. Suspect a phase crash taking a phase offline; `reset.sh` between
-   arms wiped `logs/telemetry/crashes.log`. Replay turns 14 to 19 for bone and keep the crash log.
+2. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
+   and empty ledgers (the whole core cycle was skipped); right after turn 15 (61.5s). Tried: 9 verbatim replays of the
+   20 messages (`scratch/probes/replay_empty.py`, 180 turns, components all online, no crash), and a live bone arm with
+   the simulated person (`20261007-144418`, `scratch/feud20q_bone.log`): 20 of 20 delivered, again 6.00, heard 5.00,
+   4 fairness REPAIRED, no REDRAFTED. The panel's turns ran 30 to 62s against about 10s in the replays; a circuit-breaker
+   trip fits the rows but nothing tripped. Next time: `census.run` now prints `NO REPLY` with the component state and
+   `ui`, and keeps crashes in `scratch/probes/crashes_<run>.log`. If a panel shows empty turns, read those first.
 3. Mind-reading recall in the judge (P5-04).
 
 ## Open questions for maintainers
@@ -75,6 +80,16 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 - Q-002 Model-driven tiredness reading calibration vs word-frequency fallback (blocks fine-tuning accommodation).
 
 ## Session log
+
+### Session 12: 2026-10-07: Empty bone turns, chased and not reproduced
+
+**Contributor:** Gordon & Claude
+**Goal:** Find why bone turns 16, 17 and 19 came back empty on the last feud panel.
+**Done:** Diagnostic logging only (P5-04 unchanged).
+**Changed:** `tools/audit_somatic_census.py` (crash copies in `scratch/probes/`, `components` per row, `NO REPLY` line).
+**Verified:** 9 replays plus 1 live bone arm, 200 turns, no empty turn and no crash; full suite 1145 passed, 5 skipped.
+**Not verified:** the cause; the fairness redraft still has not fired live.
+**Next session should start with:** the next panel's bone arm, reading any `NO REPLY` first.
 
 ### Session 11: 2026-10-07: One fairness redraft when the edit does not hold
 
@@ -162,13 +177,3 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 **Decisions:** D-015
 **Verified:** `tests/test_failure_boundaries.py` 12 passed; 1,042 tests passed.
 **Next session should start with:** Session 4 metabolic economy review.
-
-### Session 2: 2026-10-03: Creative Determinant runs again and keeper question filtering
-
-**Contributor:** Gordon
-**Goal:** Restore 4-bit `RankQuant` bitmap quantization and prevent keeper from saving questions as facts.
-**Done:** P2-01, P3-02
-**Changed:** `engine/core.py`, `engine/gate/keeper.py`. Quantization set to 4-bit; keeper ignores questions.
-**Decisions:** D-010
-**Verified:** `tests/test_creative_determinant.py` passed; 36 turns read regime in live run.
-**Next session should start with:** Session 3 exception barrier audit.
