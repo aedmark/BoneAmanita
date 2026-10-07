@@ -299,3 +299,68 @@ class TheEndingEdit(BoneTestCase):
         self.turn()
         self.assertEqual(len(self.judged), 1)
         self.assertEqual(self.edits, [])
+
+
+class AskedWhetherToEndIt(BoneTestCase):
+    """feud20 (2026-10-06): the judge passed "If trying to fix it feels like it's draining you more than the friendship
+    is worth, that's usually the sign." When they ask whether to end it, the reply is left to them, judge or not."""
+
+    REPLY = "There is a point where it costs more than it gives. You two have had a rough few weeks."
+    BACK = "Maybe it has changed. When you think about the dinner, does it feel like something you two can repair?"
+
+    class Embedder:
+        model, degraded = "nomic-embed-text", False
+
+        def embed_batch(self, texts):
+            from brain.cortex import TheCortex
+
+            near = [t.removeprefix("classification: ") in TheCortex.ENDING_LIKE or "unfriend" in t for t in texts]
+            return [[1.0, 0.0] if n else [0.0, 1.0] for n in near]
+
+    def setUp(self):
+        super().setUp()
+        cortex = self.engine.cortex
+        cortex.active_mode = "CONVERSATION"
+        cortex.dspy_critic.enabled = False
+        self.embedder = self.Embedder()
+        cortex._recall_embedder = lambda: self.embedder
+        self.asked, self.edits, self.answer = [], [], "YES"
+
+        def generate(prompt, *a, **k):
+            if prompt.startswith("Someone wrote this to a friend"):
+                self.asked.append(prompt)
+                return self.answer
+            if prompt.startswith("Here is what someone asked a friend"):
+                self.edits.append(prompt)
+                return self.BACK
+            if prompt.startswith("Someone is telling a friend about a conflict"):
+                # With what they did in view, the judge flags a reply that does not name it.
+                return "YES a: it leaves out what they did." if "What they told you they did" in prompt else "NO: fair."
+            return self.REPLY
+
+        cortex.llm.generate = MagicMock(side_effect=generate)
+
+    def turn(self, message="Maybe I should just unfriend her."):
+        return str(self.engine.process_turn(message).get("ui", ""))
+
+    def test_the_reply_is_handed_back_though_the_judge_cleared_it(self):
+        self.assertIn(self.BACK, self.turn())
+        self.assertEqual(len(self.asked), 1)
+
+    def test_a_message_far_from_ending_is_not_asked_about(self):
+        self.assertIn(self.REPLY, self.turn("She texted me a picture of her new cat."))
+        self.assertEqual(self.asked + self.edits, [])
+
+    def test_the_call_decides_after_the_vectors(self):
+        self.answer = "NO"
+        self.assertIn(self.REPLY, self.turn())
+        self.assertEqual(self.edits, [])
+
+    def test_no_embeddings_no_question(self):
+        self.embedder.degraded = True
+        self.assertIn(self.REPLY, self.turn())
+        self.assertEqual(self.asked, [])
+
+    def test_the_edit_is_not_blamed_for_leaving_out_what_they_did(self):
+        """Live (2026-10-07): judged with their own part in view, 2 of 2 hand-backs were flagged for not naming it."""
+        self.assertIn(self.BACK, self.turn("I told her she was always selfish. Maybe I should just unfriend her."))

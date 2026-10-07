@@ -734,6 +734,39 @@ pass's rewording of it was; given the panel's reply, the judge answered "(c): YE
 - `tests/test_continuity_claims.py` `TheEndingEdit` (4). Suite 1130 passed, 5 skipped; one earlier run had one
   failure that did not recur in two reruns and was not identified.
 
+**20.7.4.116: asked whether to end it, the reply hands it back; the simulator gives the GPU back.** The panel after
+20.7.4.115 lost bone's first reply: mistral-nemo (the simulated person, 9.8 GB) stayed loaded after the previous arm's
+exit interview, and gemma4:12b (7 GB) failed to load on the 16 GB GPU for 75s ("cudaMalloc failed: out of memory");
+the turn showed nothing and the simulator rated a conversation that began unanswered. `SimulatedUser._chat` now sends
+`keep_alive: 0`. "Let it end" also leaned again, the voice pass's rewrite cleared by the judge.
+- **Triggered by their question** (Gordon: always defer, judge or not). `Cortex._asks_about_ending`: when someone is
+  named in the recent talk, the message is embedded (nomic, "classification:") against six phrasings of wanting out
+  written for this (`ENDING_LIKE`), and at `CORTEX.ASKS_ENDING_FLOOR` 0.74 or above a one-call check (`ASKS`) decides.
+  On 834 simulated messages (feud, rescue, toast): the call alone said yes to 30, a dozen about a wedding toast
+  ("Guess that's my toast"); nomic alone put "Maybe I should just text her" (0.795) beside "...unfriend her" (0.832);
+  both, 11, all right (the eight "Honest question" variants, unfriend, unfollow, "a dog and a person just aren't a
+  match"), one missed ("Dunno if I care enough to fix this."). Off when embeddings are down. Asked, the ending edit
+  always runs; the judge on the reply stays the backstop when nobody asked.
+- **The edit is judged without their own part.** With it, the judge flagged 2 of 2 live hand-backs for not naming
+  the retort. The receipt now says why an edit failed (`Cortex.ending_misses`).
+- Probe, 3 sessions: each handed back ("What does keeping this friendship or letting it end change for you?").
+- **Panel** (`20261007-084542` and after): none held, 21 of 21 key beats. Exit interview (heard / clearer / lectured /
+  performed / again): bone 4.33 / 4.67 / 2.33 / 2 / 6, friend 5 / 4 / 2.33 / 1.67 / 5.33, plain 4 / 3 / 2 / 1.67 /
+  5.67; bone replies 38 words (friend 85, plain 63). "Let it end": "Maybe there is enough left to rebuild, but you
+  have to decide what you want for yourself. What would letting it go or trying to fix it change for you?" Misreads:
+  the cruel text "means she now has your most vulnerable point as a weapon"; "choosing to ignore your feelings for
+  the sake of a joke" guesses Jess's motive.
+- **The fairness judge, measured.** 50 replies from the feud runs (all arms, the seven key moments, and eight probe
+  edits), labelled by Claude and checked by Gordon (agreed 44 of 50; his six changes: a reply naming where the retort
+  came from does not excuse it, "protecting your space" is a recess not a ruling, conditional criteria they decide
+  on are fair; 21 unfair: 10 excusing, 7 blaming Jess, 4 ruling on the ending). Against his labels the judge caught
+  13 of 21 and flagged 9 of 29 fair (precision 0.59, recall 0.62), without their own part 10 and 6; three narrow
+  questions 4 of 21; with thinking, the reply calling the cruel text "a brave and incredibly honest move" was "NO:
+  The draft validates the user's choice to communicate their feelings". gemma4:e4b, qwen3.5:9b, mistral-nemo,
+  ministral-3:14b and qwen3:30b-a3b missed it too ("praises the sender for their honesty and courage"): asked a
+  moral yes or no, every model answers with its own values. BoneAmanita is meant to be model-agnostic (Gordon).
+- Tests: `TheSimulatorsModel`, `AskedWhetherToEndIt` (5). Suite 1136 passed, 5 skipped.
+
 **Decided:** embedding calls are not metered into ATP (Gordon, 2026-10-03; open item 1 closed, see
 "Decisions already made").
 

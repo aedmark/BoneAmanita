@@ -314,7 +314,7 @@ Rewrite the draft the way the friend would actually say it to them, sitting acro
     ENDING = """Here is what someone asked a friend, and the reply the friend drafted.
 {earlier}They just said: "{message}"
 The draft: "{reply}"
-The draft decides for them, or leans them toward an answer, about whether their relationship is over or should end. Rewrite it so the answer stays theirs: keep one thing the draft sees, said as a "perhaps" or a "maybe", then {back} Shorter than the draft is fine. No dashes between clauses. Answer with the rewritten reply and nothing else."""
+Whether their relationship is over or should end is theirs to decide, not the friend's. Rewrite the draft so it stays theirs: keep one thing the draft sees, said as a "perhaps" or a "maybe", then {back} Shorter than the draft is fine. No dashes between clauses. Answer with the rewritten reply and nothing else."""
     # The first asks what a friend would; 3 of 15 still presumed the answer ("what makes it so hard to let go?"). The
     # second passed 14 of 15 but was the same question 10 times, so it is only the fallback.
     BACK = ('hand it back with one plain, open question about the people and things they told you about, the kind a '
@@ -322,10 +322,39 @@ The draft decides for them, or leans them toward an answer, about whether their 
             'ask them in one plain, open question what they want, or what ending it or keeping it would change for them. '
             'The question must not suggest an answer (never "Is it time to let it go?" or "Is this the point for you?").')
 
+    # Phrasings of wanting out, not from any probe. A message near one (nomic, "classification:") then goes to ASKS.
+    ENDING_LIKE = ("Should I just stop talking to him for good?", "I think it might be time to cut her off.",
+                   "Is this friendship even worth saving anymore?", "Maybe I should block him and move on.",
+                   "At what point do you give up on someone?", "I'm thinking of ending things with her.")
+    ASKS = """Someone wrote this to a friend: "{message}"
+Are they asking whether to end their relationship with a person, or saying they are thinking of ending it (cutting the person off, unfriending or unfollowing them, letting the friendship go)? Hurt, anger, missing someone, giving up on a task, or telling what happened in a fight is NO. Answer YES or NO."""
+
+    def _asks_about_ending(self, message: str) -> bool:
+        """They ask whether to end it, so the reply leaves it to them, judge or not (Gordon). On 834 simulated
+        messages the call alone said yes to 30, a dozen of them about a wedding toast; nomic alone put "Maybe I should
+        just text her" beside "Maybe I should just unfriend her"; both together, 11, all of them right."""
+        said = [line.split("\n")[0] for line in list(self.dialogue_buffer)[-3:]] + [str(message or "")]
+        embedder = self._recall_embedder()
+        if not any(self._OTHERS.search(s) for s in said) or embedder is None or embedder.degraded:
+            return False
+        floor = float(safe_get(safe_get(self.cfg, "CORTEX", {}), "ASKS_ENDING_FLOOR", 0.74))
+        prefix = "classification: " if "nomic" in str(embedder.model) else ""
+        vectors = embedder.embed_batch([prefix + t for t in (message, *self.ENDING_LIKE)])
+        if embedder.degraded or max(sum(a * b for a, b in zip(vectors[0], v)) for v in vectors[1:]) < floor:
+            return False
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            answer = str(self.llm.generate(self.ASKS.format(message=message), {"temperature": 0.0, "max_tokens": 3}) or "")
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        return answer.strip().upper().startswith("YES")
+
     def _leave_the_ending(self, message: str, reply: str, gk: Any, state: dict) -> str:
         """The reply edited so whether the relationship ends stays theirs, or "" when no edit held. feud20
         (2026-10-06): the redraft after a leaning first draft is never judged, and it went out as criteria ("that is
         a clear sign of where your energy is going") with nothing handed back (Gordon: always defer to them)."""
+        self.ending_misses = []
         for back in self.BACK:
             usage = getattr(self.llm, "last_usage", None)
             try:
@@ -335,9 +364,16 @@ The draft decides for them, or leans them toward an answer, about whether their 
             finally:
                 if usage is not None:
                     self.llm.last_usage = usage
-            if (len(out.split()) >= 10 and out.rstrip().endswith("?") and "\u2014" not in out and "\u2013" not in out
-                    and not (gk and gk._find_crime(out, self.active_mode)) and not self._sides_in(message, out, reply, state)):
+            crime = gk and gk._find_crime(out, self.active_mode)
+            miss = ("shape" if len(out.split()) < 10 or not out.rstrip().endswith("?") else
+                    "dash" if "\u2014" in out or "\u2013" in out else
+                    f"style: {crime.get('name', '')}" if crime else
+                    # Judged without their own part: with it, an edit that only hands the question back was flagged for
+                    # not naming what they did (2 of 2 live), which a perhaps and a question cannot excuse.
+                    f"fairness: {why}" if (why := self._sides_in(message, out, reply, {})) else "")
+            if not miss:
                 return out
+            self.ending_misses.append(miss)
         return ""
 
     def _note_opening(self, reply: str) -> None:
@@ -674,11 +710,12 @@ The draft decides for them, or leans them toward an answer, about whether their 
             final_output = voiced or final_output
         # A rewrite that passed was judged; otherwise the reply shown may be a redraft nobody judged.
         cleared = getattr(self, "judged", None) == (final_output, "")
-        if (conversing and not voiced and not cleared and self._takes_a_side(user_input, final_output, full_state)
-                and self.side_on_ending):
+        if conversing and (self._asks_about_ending(user_input) or (
+                not voiced and not cleared and self._takes_a_side(user_input, final_output, full_state)
+                and self.side_on_ending)):
             left = self._leave_the_ending(user_input, final_output, gk, full_state)
             issue_receipt("cortex.ending", "EDITED" if left else "KEPT_DRAFT", result_count=int(bool(left)),
-                          detail=first_sentence(left) if left else "no edit held")
+                          detail=first_sentence(left) if left else "; ".join(self.ending_misses))
             final_output = left or final_output
         if conversing and self._in_a_rut(final_output):
             # The question is new words the fairness check never read ("Was the joke about your ex the only thing that

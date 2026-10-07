@@ -192,6 +192,9 @@ class SimulatedUser:
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
             "stream": False,
             "think": False,
+            # Unloaded straight after: mistral-nemo (9.8 GB) left loaded kept gemma4:12b (7 GB) from loading on a 16 GB
+            # GPU, and bone's first turn of the feud panel (2026-10-06) went unanswered after 93s of failed loads.
+            "keep_alive": 0,
             "options": {
                 "temperature": self.temperature,
                 "top_p": 0.95,

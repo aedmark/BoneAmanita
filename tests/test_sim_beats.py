@@ -57,3 +57,10 @@ class TheSimulatedPerson(unittest.TestCase):
         self.assertTrue(tells("Sent Jess a long text. Told her she's always needed to be the funny one, gets cruel "
                               "when she doesn't have room.", FEUD[21][1]))
         self.assertFalse(tells("Sent it. Didn't think it through. Feel sick now.", FEUD[21][1]))
+
+
+class TheSimulatorsModel(unittest.TestCase):
+    def test_it_is_unloaded_after_every_message(self):
+        post = MagicMock(**{"return_value.json.return_value": {"message": {"content": "Still thinking about it."}}})
+        SimulatedUser("feud", post=post).message(5, "tiring", FEUD[11][1], [{"me": "Hi.", "friend": "Hey.", "delivered": True}])
+        self.assertEqual(post.call_args.kwargs["json"]["keep_alive"], 0)
