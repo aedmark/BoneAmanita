@@ -10,6 +10,36 @@ from tests.base import BoneTestCase
 
 
 class BiologyTests(BoneTestCase):
+    def test_the_dream_reads_the_engines_chemistry_by_its_own_names(self):
+        """The engine's state is keyed COR, DOP, SER, OXY; the dream read cortisol, dopamine... and got 0 from it
+        (2026-10-08), so its cortisol branch, its dream type and the affect it stored never saw the body."""
+        from brain.mind import DreamEngine
+
+        dreamer = DreamEngine(events=MagicMock(), lore_ref=MagicMock())
+        seen = {}
+
+        def narrate(soul, chem, cortisol, physics_state=None):
+            seen.update(chem=chem, cortisol=cortisol)
+            return "A dream.", {}
+
+        with patch.object(dreamer, "_run_biological_rem", return_value=(None, {})), \
+                patch.object(dreamer, "_generate_narrative_dream", side_effect=narrate):
+            _, shift = dreamer.enter_rem_cycle({}, {"mito": {"atp": 80.0}, "chem": {"DOP": 0.7, "COR": 0.9, "SER": 0.2, "OXY": 0.4}})
+        self.assertEqual((seen["cortisol"], seen["chem"]["dopamine"], seen["chem"]["oxytocin"]), (0.9, 0.7, 0.4))
+        self.assertEqual(shift.get("cortisol"), 0.1)
+        self.assertNotIn("dopamine", shift)
+
+    def test_the_long_chemistry_names_still_work(self):
+        from brain.mind import DreamEngine
+
+        dreamer = DreamEngine(events=MagicMock(), lore_ref=MagicMock())
+        seen = {}
+        with patch.object(dreamer, "_run_biological_rem", return_value=(None, {})), \
+                patch.object(dreamer, "_generate_narrative_dream",
+                             side_effect=lambda soul, chem, cortisol, physics_state=None: seen.update(cortisol=cortisol) or ("A dream.", {})):
+            dreamer.enter_rem_cycle({}, {"mito": {"atp": 80.0}, "chem": {"cortisol": 0.8}})
+        self.assertEqual(seen["cortisol"], 0.8)
+
     def test_fatal_fever_dream_starvation(self):
         from brain.mind import DreamEngine
 

@@ -6,6 +6,7 @@ from collections import deque
 from dataclasses import dataclass
 
 _ALPHA_RE = re.compile(r"[^a-z]")
+_CHEM_NAMES = {"DOP": "dopamine", "OXY": "oxytocin", "COR": "cortisol", "SER": "serotonin", "ADR": "adrenaline", "MEL": "melatonin"}
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -353,6 +354,9 @@ class DreamEngine:
     ) -> Tuple[str, Dict[str, float]]:
         physics_state = physics_state or {}
         chem = safe_get(bio_state, "chem", {})
+        if isinstance(chem, dict):
+            # The engine's state is keyed COR, DOP, SER, OXY; every read below used the long names and got 0.
+            chem = {_CHEM_NAMES.get(k, k): v for k, v in chem.items()}
         cortisol = float(safe_get(chem, "cortisol", 0.0))
         available_atp = float(safe_get(safe_get(bio_state, "mito", {}), "atp", 0.0))
         shift = (

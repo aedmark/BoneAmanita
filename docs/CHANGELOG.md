@@ -4,6 +4,11 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.130] - 2026-10-08
+
+### Fixed
+- **The dream reads the body:** the REM dream read the chemistry as `cortisol`, `dopamine` and so on from a state keyed `COR`, `DOP`, so every read was 0. Its cortisol branch, its dream type (nightmare, surreal or constructive) and the affect stored on dream seeds now see the real values.
+
 ## [20.7.4.129] - 2026-10-08
 
 ### Changed
