@@ -57,4 +57,10 @@ Goal: Structure repository knowledge into standalone manuals and maintainer-agen
 
 - [x] P6-01 Standalone What/How/Why Manual Set via the 3x Documentation Scheme in `docs/manual/` (D-016).
 - [x] P6-02 Adoption of the Manifold documentation scheme (`AGENTS.md`, `ROADMAP.md`, `docs/`) (D-017).
-- [ ] P6-03 Human blind panel calibration against automated LLM judge failures (D-011).
+- [-] P6-03 Human blind panel calibration against automated LLM judge failures (D-011). Dropped 2026-10-08: automated judging is a wash; verdicts are the noise floor plus Gordon's blind A/B (`docs/TESTING.md`, "Noise floor and the paired A/B").
+
+## Phase 7: Affective Memory
+
+Goal: Recall memories by how a moment felt, not by text similarity alone.
+
+- [ ] P7-01 Affective retrieval: an affective state vector stored beside each semantic embedding, queried by emotional resonance (Q-001, D-020).

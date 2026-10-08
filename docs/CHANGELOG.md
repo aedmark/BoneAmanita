@@ -4,6 +4,11 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.129] - 2026-10-08
+
+### Changed
+- **Roadmap:** P6-03 dropped (automated judging is a wash; verdicts are the noise floor plus Gordon's blind A/B). Affective retrieval queued as P7-01 (Q-001). The tiredness heuristic stays and Q-002 is closed (D-020). No code change.
+
 ## [20.7.4.128] - 2026-10-08
 
 ### Changed

@@ -156,7 +156,16 @@ Format:
 - Tune `RULE` further: rejected, four variants (R1 to R3 and the current) did not separate fair from unfair; Gordon's own labels ("close to a c, but it doesn't actually decide anything") read like the unfair ones.
 **Consequences:** Across the 116 labels, replies acted on: unfair 22 to 17 of 35 and fair 22 to 8 of 81 on 12b (precision 0.50 to 0.68, recall 0.63 to 0.49); e4b unfair 24 to 17, fair 32 to 16 (0.43 to 0.52, 0.69 to 0.49). The unfair replies given up are mostly replies to the ending question itself (#10, 18, 38, 47, 100 are c), which the ask path covers live. Revisit with a second human-labelled set of ending replies.
 
+## D-020 Q-001 queued as P7-01; Q-002 closed, the tiredness heuristic stays  (2026-10-08, status: accepted)
+**Context:** Two open questions: Q-001, affective retrieval through a parallel affective vector index; Q-002, whether the model should read the partner's tiredness instead of the word-frequency fallback, calibrated on mistral-nemo and gemma4:12b.
+**Decision:** Q-001 becomes roadmap item P7-01, queued for immediate work. Q-002 is closed without calibration: the heuristic works (P4-02: flagging conversations detected at 80%, up from 14%), and calibrating a model reading needs the same kind of labelling and automated judging that produced noise and no signal for the fairness judge (D-011, `docs/TESTING.md`). Gordon's call.
+**Alternatives:**
+- Calibrate a model-driven tiredness reading: rejected, it would be judged by the same unreliable measures.
+**Consequences:** The heuristic in `drivers/lattice.py` stays as it is. Affective memory is the next build, with `ordvec` and Project Navi's code to be read for anything reusable first.
+
 ## Open questions
 
-- **Q-001** Affective retrieval done properly via parallel affective vector index. (asked 2026-09-27, by Claude; blocks future affective recall; recommendation: store an affective state vector alongside semantic embeddings to query memories by emotional resonance rather than text similarity alone)
-- **Q-002** Model-driven tiredness reading calibration vs word-frequency fallback. (asked 2026-10-04, by Gordon; blocks refining partner accommodation; recommendation: calibrate tiredness reading on mistral-nemo and gemma4:12b across diverse conversation datasets)
+None open. Answered 2026-10-08, kept so that references resolve:
+
+- **Q-001** Affective retrieval done properly via parallel affective vector index. (asked 2026-09-27, by Claude; answered: queued as P7-01, D-020)
+- **Q-002** Model-driven tiredness reading calibration vs word-frequency fallback. (asked 2026-10-04, by Gordon; answered: closed, the heuristic stays, D-020)

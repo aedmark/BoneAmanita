@@ -13,7 +13,7 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-08, session 14, on `main` (20.7.4.128)._
+_Last updated: 2026-10-08, session 14, on `main` (20.7.4.128, plus uncommitted roadmap and decision edits for 20.7.4.129)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
@@ -90,6 +90,18 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 ## Next steps (in order)
 
+0. **P7-01 affective retrieval is next** (Gordon, 2026-10-08; Q-001, D-020). What exists: `spores/memory.py`
+   `dredge_vibe_by_vector` takes the semantic top `5k` through ordvec (`bitmap.top_m_candidates`, then
+   `quantizer.search_asymmetric_subset`) and subtracts a penalty from the distance between a 6-number `affect` vector
+   on each memory and the current one (`brain/mind.py` 558 and 627; `alpha` falls with cortisol). So affect only
+   reorders what the words already found; a memory whose words differ never surfaces. The Halcyon recall the model sees
+   (`engine/gate/recall.py`, `meaning_scores`) has no affect at all. "Properly" means an affect index queried on its own.
+   Read of ordvec and Project Navi (2026-10-08, public pages only; ordvec's source and Navi's repos were not read):
+   ordvec is a training-free rank/sign quantizer for high-dimension embeddings (docs.rs lists no metadata filtering,
+   incremental add/delete or second-vector support), so it adds nothing for a 6-number vector: a flat numpy distance
+   over a few thousand memories is exact and instant. Navi's other public projects are navi-creative-determinant
+   (already this engine's source), Lean proofs, and `navi-sanitize` (invisible characters and homoglyphs; unrelated to
+   Q-001, it would extend the `_INVISIBLE_CHARS` strip in `main.py` at the input boundary).
 1. P5-04 is done and judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE`
    stay as they are, and the ending read no longer edits (D-019).
    The redraft is proven to fire and holds in 3 of 8 forced runs (see "What works"); nothing here needs it before other
@@ -117,8 +129,7 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 ## Open questions for maintainers
 
-- Q-001 Affective retrieval done properly via parallel affective vector index (blocks future affective memory).
-- Q-002 Model-driven tiredness reading calibration vs word-frequency fallback (blocks fine-tuning accommodation).
+None open. Q-001 is queued as P7-01 (affective retrieval); Q-002 is closed, the tiredness heuristic stays (D-020).
 
 ## Session log
 
