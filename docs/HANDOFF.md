@@ -13,7 +13,7 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-08, session 14, on `main` (20.7.4.125)._
+_Last updated: 2026-10-08, session 14, on `main` (20.7.4.126)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
@@ -57,6 +57,7 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
   2 REDRAFTED (the redraft read clean and was shown), 2 KEPT_FLAGGED (once the redraft was itself flagged for mind-reading,
   "see her actions as a result of her own internal pressure"; once it was empty, rejected by the style rules). A fifth
   firing happened unforced on an earlier turn of one replay (the group chat, outcome not logged).
+  Unforced, in the noise-floor replays: 4 firings in 160 turns, 3 REDRAFTED and 1 KEPT_FLAGGED.
 - **The redraft gets the voice pass** (20.7.4.125; `_voice_a_redraft`): a redraft that read clean is rewritten by the
   same voice pass, the rewrite is read by the judge, and one that is flagged or fails a guard (length, dash, style crime) is
   discarded for the unvoiced redraft; `cortex.voice` files a receipt with detail `redraft: ...`. Forced live, 4 more runs:
@@ -69,7 +70,7 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 - **Docs** (P6-01, P6-02; D-016, D-017): the Manifold scheme and the 3x manual set.
 
 **Not verified**
-- How often the redraft holds when nothing is forced: it has fired unforced once (a replay, outcome not logged) and never on a panel.
+- How often the redraft fires on a panel: unforced it fired 4 times in 160 replayed turns (3 held), and never on a feud panel.
 - Whether the voice pass improves a shown redraft: it runs, but no voiced redraft has passed the judge live yet.
 - Precision: the judge flags 12 (12b) and 17 (e4b) of 57 fair replies, `scratch/probes/fp_by_clause.py`. By read, 12b:
   b 6 (hedged guesses about her state, "she might not know what to say"), c 5 (conditionals like "that might be your
@@ -89,8 +90,11 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 1. Judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE` stay as they are.
    The redraft is proven to fire and holds in 3 of 8 forced runs (see "What works"); nothing here needs it before other
-   work. Gordon wants a new way to quantify and judge results (the labels and simulated panels have stopped separating
-   changes): brainstorm it before the next behaviour change.
+   work. The way we judge results changed (see `docs/TESTING.md`, "Noise floor and the paired A/B"): replays of fixed
+   messages give a noise floor, and a blind paired A/B read by Gordon is the verdict. The first A/B (current against
+   20.7.4.118, 7 key moments) was 3 to 4, a wash. A second, on turns where a fairness edit, redraft or voiced redraft
+   acted, is the test this week's changes have not had (`scratch/probes/build_ab.py` needs the old version's replays:
+   `git worktree add --detach scratch/wt118 225bed2`, then `scratch/probes/old_loop.sh`).
 2. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
    and empty ledgers (the whole core cycle was skipped); right after turn 15 (61.5s). Tried: 9 verbatim replays of the
    20 messages (`scratch/probes/replay_empty.py`, 180 turns, components all online, no crash), and a live bone arm with
@@ -119,11 +123,12 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 **Contributor:** Gordon & Claude
 **Goal:** See the P5-04 redraft run on the real model.
-**Done:** 20.7.4.124 and .125 (P5-04 stays in progress)
+**Done:** 20.7.4.124 to .126 (P5-04 stays in progress)
 **Changed:** `brain/cortex.py` (`_voice_a_redraft`), `tests/test_continuity_claims.py` (4 tests); the probe `scratch/probes/fire_redraft.py` is not committed (scratch).
 **Verified:** eight forced runs on the cruel-text turn: REDRAFTED 3, KEPT_FLAGGED 5 (4 before the voice pass: 2 and 2; 4 after: 1 and 3); one unforced firing on another turn; full suite 1150 passed, 5 skipped.
-**Not verified:** how often it fires and holds on a panel; a voiced redraft being accepted live.
-**Next session should start with:** brainstorming how to quantify and judge results (next step 1), then whatever Gordon picks from `ROADMAP.md`.
+**Also:** noise floor from 8 replays of a recorded run's 20 messages (no simulator), and a blind A/B read by Gordon, current against 20.7.4.118: 3 to 4.
+**Not verified:** whether this week's changes help (the A/B cannot tell: the changes act on a few turns of 20); a voiced redraft being accepted live.
+**Next session should start with:** whatever Gordon picks from `ROADMAP.md`; judge any behaviour change against the noise floor, then a blind A/B (next step 1).
 
 ### Session 13: 2026-10-07: Mind-reading question asks about intent; 36 more labels
 

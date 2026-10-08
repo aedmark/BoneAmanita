@@ -4,6 +4,11 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.126] - 2026-10-08
+
+### Changed
+- **How results are judged:** `docs/TESTING.md` now records the noise floor (eight replays of one run's messages: fairness repairs 1 to 6 per 20 turns, wording shared about 21% between replays) and the paired blind A/B read by Gordon. The first A/B, current against 20.7.4.118 at seven key moments, was 3 to 4. No code change.
+
 ## [20.7.4.125] - 2026-10-08
 
 ### Changed

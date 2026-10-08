@@ -592,6 +592,37 @@ don't assume a `Monitor`/background wait that goes quiet under one of these
 has stalled; check `ollama ps` and the log/cache file directly before
 concluding a run is stuck.
 
+## Noise floor and the paired A/B (2026-10-08)
+
+One simulated panel per arm moves a point or more between runs of the same code, and the labelled set cannot separate
+prompt wordings one case apart, so neither settles a small change. Two cheaper instruments came out of that:
+
+**Noise floor.** Replay one recorded run's 20 messages through bone, no simulated person, 8 times
+(`scratch/probes/noise_floor.py RUN TAG`, looped by `noise_loop.sh`, summarised by `noise_report.py`; about 4 minutes a
+replay at 10 seconds a turn). On `20261007-224404`, current code (20.7.4.125), per 20 turns, mean and range:
+
+| measure | mean | range |
+| --- | --- | --- |
+| turns delivered | 20 | 20 in all 8 (0 empty in 160) |
+| fairness repairs (`cortex.fairness:REPAIRED`) | 3.2 | 1 to 6 (sd 1.8) |
+| redrafts (REDRAFTED / KEPT_FLAGGED) | 0.4 / 0.1 | 0 or 1; 4 firings in 160 turns |
+| opening rewrites | 2.2 | 1 to 4 |
+| replies ending in a question | 3.9 | 3 to 6 |
+| words per reply | 35 | 31 to 39 |
+| seconds per turn (median) | 10.8 | 10 to 12 |
+
+Reading it: a count that moves by less than its range is not a change; eight replays pin a mean to about the standard
+deviation over 3 (repairs: 0.6). Wording differs every time (the same turn's reply shares about 21% of its words between
+two replays). The judge's flag rate on the shown replies (1 of 160 now, 6 of 60 on 20.7.4.118 under today's judge) is not
+a quality measure: the engine gates on that judge.
+
+**Paired blind A/B.** Replay the same messages through two versions (the old one in a worktree:
+`git worktree add --detach scratch/wt118 <commit>`, `scratch/probes/old_loop.sh`), then `scratch/probes/build_ab.py`
+draws one reply per version per key moment from different replays, shuffles A and B, and writes the sheet and a
+separate key. Gordon picks A, B, same or neither; the key is read after. The verdict is the human's (D-011). Seven
+moments on a change that acts on a few turns of 20 cannot separate versions (the first A/B was 3 to 4); aim the pairs at
+turns where the change acted (its receipts say which).
+
 ## Known pitfalls (already hit, already fixed — don't re-discover these)
 
 1. **Ollama's OpenAI-compatible `/v1/chat/completions` shim silently ignores
