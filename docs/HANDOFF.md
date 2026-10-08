@@ -13,7 +13,7 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-08, session 14, on `main` (20.7.4.126)._
+_Last updated: 2026-10-08, session 14, on `main` (20.7.4.127)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
@@ -123,10 +123,10 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 **Contributor:** Gordon & Claude
 **Goal:** See the P5-04 redraft run on the real model.
-**Done:** 20.7.4.124 to .126 (P5-04 stays in progress)
+**Done:** 20.7.4.124 to .127 (P5-04 stays in progress; .127 is D-018, the roadmap file move)
 **Changed:** `brain/cortex.py` (`_voice_a_redraft`), `tests/test_continuity_claims.py` (4 tests); the probe `scratch/probes/fire_redraft.py` is not committed (scratch).
 **Verified:** eight forced runs on the cruel-text turn: REDRAFTED 3, KEPT_FLAGGED 5 (4 before the voice pass: 2 and 2; 4 after: 1 and 3); one unforced firing on another turn; full suite 1150 passed, 5 skipped.
-**Also:** noise floor from 8 replays of a recorded run's 20 messages (no simulator), and a blind A/B read by Gordon, current against 20.7.4.118: 3 to 4.
+**Also:** `docs/ROADMAP.md` moved to `docs/archive/ROADMAP_2026_09.md` (D-018); the root `ROADMAP.md` is the only live plan. Noise floor from 8 replays of a recorded run's 20 messages (no simulator), and a blind A/B read by Gordon, current against 20.7.4.118: 3 to 4.
 **Not verified:** whether this week's changes help (the A/B cannot tell: the changes act on a few turns of 20); a voiced redraft being accepted live.
 **Next session should start with:** whatever Gordon picks from `ROADMAP.md`; judge any behaviour change against the noise floor, then a blind A/B (next step 1).
 

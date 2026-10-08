@@ -323,7 +323,7 @@ broken internals: neither a plausible reply nor the absence of an exception is
 enough to establish that the machinery worked. The current review shows that
 failure paths still need scrutiny even when diagnostics are present.
 
-`ROADMAP.md` preserves the earlier measurements and development plan. Its dated
+`docs/archive/ROADMAP_2026_09.md` preserves the earlier measurements and development plan. Its dated
 status summary and the latest handoff take precedence over historical sections.
 
 ### Honest limits
@@ -388,7 +388,7 @@ check.
 
 | File | What it is |
 |---|---|
-| `ROADMAP.md` | Current priorities plus dated measurements and historical implementation plans. |
+| `ROADMAP.md` | Current priorities: phases with permanent item IDs. The September 2026 measurements and plans are in `docs/archive/ROADMAP_2026_09.md`. |
 | `docs/HANDOFF.md` | Current state, next steps and gotchas: read before changing anything. Decisions that bind changes are in `docs/DECISIONS.md`; the pre-2026-10-07 log is `docs/archive/SESSION_HANDOFF.md`. |
 | `docs/README.MD` | The Hypervisor, BoneAmanita's no-math sibling for cloud models. |
 | `CREDITS.MD` | Full lineage and attribution. |

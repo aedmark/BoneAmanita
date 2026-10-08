@@ -5,7 +5,7 @@ Item IDs are permanent: `P<phase>-<nn>`. Never renumber; append new items at the
 
 Historical track details and completed items from earlier sessions are preserved in
 [docs/archive/ROADMAP_HISTORY_2026_09.md](docs/archive/ROADMAP_HISTORY_2026_09.md) and
-[docs/ROADMAP.md](docs/ROADMAP.md).
+[docs/archive/ROADMAP_2026_09.md](docs/archive/ROADMAP_2026_09.md)
 
 ## Phase 1: Observability and Fail-Loudly Architecture
 

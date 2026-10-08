@@ -1,6 +1,6 @@
 """tools/audit_handlers.py
 
-Two static audits behind the numbers in ROADMAP.md Track A. Re-run these
+Two static audits behind the numbers in docs/archive/ROADMAP_2026_09.md Track A. Re-run these
 rather than trusting the figures in the document.
 
     python tools/audit_handlers.py

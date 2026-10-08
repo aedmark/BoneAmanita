@@ -3,7 +3,7 @@
 Guards for the failure mode this codebase is most prone to: a subsystem that
 stops working without saying anything. The engine's only output is prose, and
 prose looks identical whether the physics ran or returned a default, so silent
-degradation is invisible by construction. See ROADMAP.md track A.
+degradation is invisible by construction. See docs/archive/ROADMAP_2026_09.md track A.
 """
 
 import ast

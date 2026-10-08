@@ -141,6 +141,13 @@ Format:
 - Keep single monolithic `SESSION_HANDOFF.md`: rejected because it exceeded useful working context limits and mixed durable decisions with transient session notes.
 **Consequences:** Strict boundaries between current state, durable decisions, planned work, and historical logs.
 
+## D-018 One live roadmap: the September 2026 roadmap is archived  (2026-10-08, status: accepted)
+**Context:** Two files were called `ROADMAP.md`: the root one (phases with permanent `P<phase>-<nn>` IDs, adopted with D-017) and `docs/ROADMAP.md`, the 1,452-line September roadmap of tracks A to E with dated measurements. `README.md` and the manual described the root name but meant the old file.
+**Decision:** `docs/ROADMAP.md` moved to `docs/archive/ROADMAP_2026_09.md` (history, kept for the measurements; code comments such as "ROADMAP D2b" mean it). The root `ROADMAP.md` is the only live plan; `tools/check_docs.py` looks for it in the root only.
+**Alternatives:**
+- Keep both and say `docs/ROADMAP.md` where the old one is meant: rejected because two files with one name invite the same mix-up.
+**Consequences:** One place for planned work; the old tracks stay readable but are labelled historical.
+
 ## Open questions
 
 - **Q-001** Affective retrieval done properly via parallel affective vector index. (asked 2026-09-27, by Claude; blocks future affective recall; recommendation: store an affective state vector alongside semantic embeddings to query memories by emotional resonance rather than text similarity alone)

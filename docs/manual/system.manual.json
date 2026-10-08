@@ -384,7 +384,7 @@
             "When the partner is flagging ($E_u > 0.6$), sentences are capped at 3, word count is capped at 60, and closing questions are forbidden.",
             "The budget sets `forbid_body_narration = True` and signals whether to offer to carry the cognitive load."
           ],
-          "why": "Decided in Track D (`ROADMAP.md`): a tired partner is burdened by lengthy responses and demanding questions. Pacing accommodation shortens the engine's output to ease the partner's cognitive load without narrating their state.",
+          "why": "Decided in Track D (`docs/archive/ROADMAP_2026_09.md`): a tired partner is burdened by lengthy responses and demanding questions. Pacing accommodation shortens the engine's output to ease the partner's cognitive load without narrating their state.",
           "evidence": [
             {"label": "Somatic budget evaluation", "target": "body/somatic_budget.py"},
             {"label": "Somatic metrics calculator", "target": "body/somatic_metrics.py"},

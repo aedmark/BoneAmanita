@@ -4,6 +4,11 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.127] - 2026-10-08
+
+### Changed
+- **One live roadmap:** the September 2026 roadmap (`docs/ROADMAP.md`) moved to `docs/archive/ROADMAP_2026_09.md`; the root `ROADMAP.md` is the only live plan. README, the manual and `tools/check_docs.py` follow (D-018).
+
 ## [20.7.4.126] - 2026-10-08
 
 ### Changed
