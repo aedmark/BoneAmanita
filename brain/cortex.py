@@ -121,6 +121,7 @@ class TheCortex:
         self.offered_open = {}  # (key, value): turns the follow-up was offered without the reply asking
         self.pending_ask = None
         self.side_on_ending = False
+        self.judged_parts: dict = {}  # kind -> the quote, from the last read of the fairness judge
         self.voice_pass = bool(safe_get(safe_get(self.cfg, "CORTEX", {}), "VOICE_PASS", False))
         # One fairness check on the reply shown, repaired by an edit, instead of one on every draft and edit.
         self.fairness_once = bool(safe_get(safe_get(self.cfg, "CORTEX", {}), "FAIRNESS_ONCE", False))
@@ -400,37 +401,36 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
         """The reply shown, judged once. Flagged, an edit takes the quoted words out (an edit held where redrafts kept
         the habit), or the hand-back edit when it rules on the ending; then the unvoiced draft; then one `redraft`
         told the quoted words; else the fewest flags."""
-        why = self._takes_a_side(message, reply, state)
+        why = self._flags_to_act_on(message, reply, state)
         if not why:
+            if self.judged_parts.get("c") and getattr(self, "judged", (None,))[0] == reply:
+                issue_receipt("cortex.fairness", "NOT_ACTED", result_count=0, detail=self.judged_parts["c"])
             return reply
         flagged, tried = [(why, reply)], []
-        if self.side_on_ending:
-            tried.append(self._leave_the_ending(message, reply, gk, state))
-        else:
-            kinds = [k for k, v in self.SIDE.items() if v in why and k in self.FIX]
-            usage = getattr(self.llm, "last_usage", None)
-            try:
-                tried.append(str(self.llm.generate(self.REPAIR.format(
-                    earlier=self._earlier(), message=message, reply=reply, why=why,
-                    fix=" ".join(self.FIX[k] for k in kinds) or self.FIX["b"]), {"temperature": 0.0, "max_tokens": 400})
-                    or "").strip().strip('"'))
-            finally:
-                if usage is not None:
-                    self.llm.last_usage = usage
+        kinds = [k for k, v in self.SIDE.items() if v in why and k in self.FIX]
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            tried.append(str(self.llm.generate(self.REPAIR.format(
+                earlier=self._earlier(), message=message, reply=reply, why=why,
+                fix=" ".join(self.FIX[k] for k in kinds) or self.FIX["b"]), {"temperature": 0.0, "max_tokens": 400})
+                or "").strip().strip('"'))
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
         tried.append(draft if draft != reply else "")
         for text in tried:
             words, was = len(text.split()), len(reply.split())
             if (not text or not 0.4 * was <= words <= 1.3 * was + 5 or "\u2014" in text or "\u2013" in text
                     or (gk and gk._find_crime(text, self.active_mode))):
                 continue
-            if not (again := self._takes_a_side(message, text, state)):
+            if not (again := self._flags_to_act_on(message, text, state)):
                 issue_receipt("cortex.fairness", "REPAIRED", result_count=1, detail=why)
                 return text
             flagged.append((again, text))
         # An edit of the cruel-text reply kept "a really honest observation" (feud20o, 2026-10-07); the loop's redraft
         # had held it for six panels.
         if redraft and (text := redraft(self._side_feedback(why))):
-            if not (again := self._takes_a_side(message, text, state)):
+            if not (again := self._flags_to_act_on(message, text, state)):
                 issue_receipt("cortex.fairness", "REDRAFTED", result_count=1, detail=why)
                 return self._voice_a_redraft(message, text, gk, state)
             flagged.append((again, text))
@@ -444,7 +444,7 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
         if not self.voice_pass:
             return text
         voiced, why = self._in_a_friends_voice(message, text, gk, state)
-        if voiced and (flag := self._takes_a_side(message, voiced, state)):
+        if voiced and (flag := self._flags_to_act_on(message, voiced, state)):
             voiced, why = "", f"fairness: {flag}"
         issue_receipt("cortex.voice", "REWRITTEN" if voiced else "KEPT_DRAFT", result_count=int(bool(voiced)),
                       detail=f"redraft: {why or first_sentence(voiced)}")
@@ -529,7 +529,7 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
         # A text already read this turn is not read again (about nine judge calls a turn went to repeats).
         verdicts = self.__dict__.setdefault("verdicts", {})
         if (message, draft) in verdicts:
-            why, self.side_on_ending = verdicts[(message, draft)]
+            why, self.side_on_ending, self.judged_parts = verdicts[(message, draft)]
             self.judged = (draft, why)
             return why
         found = {}
@@ -538,12 +538,22 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
         found["b"] = self._quoted(self.MIND.format(message=message, reply=draft), draft)
         found["c"] = self._quoted(self.RULE.format(message=message, reply=draft), draft)
         self.side_on_ending = bool(found["c"])
-        why = "; ".join(f'{self.SIDE[k]}: "{q[0]}"' for k, q in found.items() if q)
-        self.judged = (draft, why)
-        verdicts[(message, draft)] = (why, self.side_on_ending)
+        parts = {k: f'{self.SIDE[k]}: "{q[0]}"' for k, q in found.items() if q}
+        why = "; ".join(parts.values())
+        self.judged, self.judged_parts = (draft, why), parts
+        verdicts[(message, draft)] = (why, self.side_on_ending, parts)
         while len(verdicts) > 32:
             verdicts.pop(next(iter(verdicts)))
         return why
+
+    def _flags_to_act_on(self, message: str, text: str, state: dict) -> str:
+        """`_takes_a_side` without the ending read: it flagged 10 to 15 of 24 fair replies to "is there a point where
+        you let it end?" and no wording told them from the unfair ones (116 labels, 2026-10-08). A message that asks
+        whether to end it is handed back by `_asks_about_ending`, judge or not."""
+        if not self._takes_a_side(message, text, state):
+            return ""
+        self.side_on_ending = False
+        return "; ".join(v for k, v in self.judged_parts.items() if k != "c")
 
     def _sides_in(self, message: str, edited: str, draft: str, state: dict, whole: bool = True) -> str:
         """Why an edited reply takes a side, judging the whole and each question the edit added on its own: amid fair

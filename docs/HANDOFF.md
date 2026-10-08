@@ -13,13 +13,13 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-08, session 14, on `main` (20.7.4.127)._
+_Last updated: 2026-10-08, session 14, on `main` (20.7.4.128)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
 words (P5-04), else the fewest flags. The redraft fires live (forced on one turn: 3 of 8 runs held, see "What works") and a redraft that reads clean now gets the voice pass, but no feud panel has needed it. Bone came
 back empty on 3 turns in `20261007-123149` for an unknown reason; **not reproduced** in 9 replays and two reruns, the
-latest panel (`20261007-224404`) delivered 20 of 20 (next step 2). **Judge tuning has stopped** (next step 1): the
+latest panel (`20261007-224404`) delivered 20 of 20 (next step 2). **P5-04 is done** (Gordon, 2026-10-08; D-019 drops the ending read's edits). **Judge tuning has stopped** (next step 1): the
 mind-reading question was improved, the rest is within label noise. Bone rows record each edit's receipt (`edits`) and the
 component health (`components`) in `tools/cache/somatic_responsive.jsonl`.
 
@@ -27,8 +27,8 @@ component health (`components`) in `tools/cache/somatic_responsive.jsonl`.
 
 | Suite | Result |
 | --- | --- |
-| `.venv/bin/pytest` | **1150 passed, 5 skipped** (3m57s); the 20.7.4.119 message says 1151 on an uncommitted tree, the committed one had 1145 |
-| `.venv/bin/pytest tests/test_continuity_claims.py` | **41 passed**; the redraft test fails on 20.7.4.118, the mind-reading prompt test on 20.7.4.120, three of the four redraft-voice tests on 20.7.4.124 |
+| `.venv/bin/pytest` | **1152 passed, 5 skipped** (3m58s); the 20.7.4.119 message says 1151 on an uncommitted tree, the committed one had 1145 |
+| `.venv/bin/pytest tests/test_continuity_claims.py` | **43 passed**; the redraft test fails on 20.7.4.118, the mind-reading prompt test on 20.7.4.120, three of the four redraft-voice tests on 20.7.4.124, the two ending-flag tests on 20.7.4.127 |
 | `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed** |
 | `python3 tools/check_docs.py`, `python3 tools/build_manual.py check` | **0 errors, 0 warnings** |
 
@@ -49,7 +49,9 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 - **Fairness judge as reading** (P5-04; `brain/cortex.py` `_takes_a_side`). Quotes the reply's excuse, mind-reading and
   ruling on the ending. On Gordon's 86 labels (`tools/score_fairness.py`, `tools/fairness_set.json`) precision / recall
   are gemma4:12b 0.62 / 0.69 and gemma4:e4b 0.53 / 0.66 (the set is now 116 labels, 30 of them replies to the ending
-  question; the full judge was not rescored on all 116). The mind-reading question (`MIND`) asks "why she did it, whether
+  question; the full judge was not rescored on all 116). A flag from the ending read alone no longer triggers an
+  edit and is ignored beside another (20.7.4.128, D-019; `scratch/probes/drop_ending.py`, 116 labels: fair replies acted
+  on 22 to 8 of 81 on 12b, 32 to 16 on e4b; unfair 22 to 17 and 24 to 17 of 35; the ask path still hands back). The mind-reading question (`MIND`) asks "why she did it, whether
   it was on purpose or a mistake, or what she is like"; on e4b it caught 0 of 13 before, 5 now (12b 6 to 8).
 - **Fairness redraft fires live** (`scratch/probes/fire_redraft.py <run> <turn>`, 2026-10-08, gemma4:12b): replay a bone
   run's messages and, on the cruel-text turn, force the reads of the shown reply, the edit and the unvoiced draft to flag
@@ -88,7 +90,8 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 ## Next steps (in order)
 
-1. Judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE` stay as they are.
+1. P5-04 is done and judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE`
+   stay as they are, and the ending read no longer edits (D-019).
    The redraft is proven to fire and holds in 3 of 8 forced runs (see "What works"); nothing here needs it before other
    work. The way we judge results changed (see `docs/TESTING.md`, "Noise floor and the paired A/B"): replays of fixed
    messages give a noise floor, and a blind paired A/B read by Gordon is the verdict. The first A/B (current against
@@ -123,11 +126,11 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 **Contributor:** Gordon & Claude
 **Goal:** See the P5-04 redraft run on the real model.
-**Done:** 20.7.4.124 to .127 (P5-04 stays in progress; .127 is D-018, the roadmap file move)
-**Changed:** `brain/cortex.py` (`_voice_a_redraft`), `tests/test_continuity_claims.py` (4 tests); the probe `scratch/probes/fire_redraft.py` is not committed (scratch).
+**Done:** 20.7.4.124 to .128 (P5-04 closed; .127 is D-018, the roadmap file move; .128 is D-019, the ending read's edits dropped)
+**Changed:** `brain/cortex.py` (`_voice_a_redraft`, `_flags_to_act_on`), `tests/test_continuity_claims.py` (6 tests); the probe `scratch/probes/fire_redraft.py` is not committed (scratch).
 **Verified:** eight forced runs on the cruel-text turn: REDRAFTED 3, KEPT_FLAGGED 5 (4 before the voice pass: 2 and 2; 4 after: 1 and 3); one unforced firing on another turn; full suite 1150 passed, 5 skipped.
 **Also:** `docs/ROADMAP.md` moved to `docs/archive/ROADMAP_2026_09.md` (D-018); the root `ROADMAP.md` is the only live plan. Noise floor from 8 replays of a recorded run's 20 messages (no simulator), and a blind A/B read by Gordon, current against 20.7.4.118: 3 to 4.
-**Not verified:** whether this week's changes help (the A/B cannot tell: the changes act on a few turns of 20); a voiced redraft being accepted live.
+**Not verified:** whether this week's changes help (the A/B cannot tell: the changes act on a few turns of 20); a voiced redraft being accepted live; the dropped ending edits on a human-labelled second set (D-019 says revisit).
 **Next session should start with:** whatever Gordon picks from `ROADMAP.md`; judge any behaviour change against the noise floor, then a blind A/B (next step 1).
 
 ### Session 13: 2026-10-07: Mind-reading question asks about intent; 36 more labels

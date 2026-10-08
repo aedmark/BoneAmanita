@@ -4,6 +4,11 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.128] - 2026-10-08
+
+### Changed
+- **The ending read no longer edits a reply:** the fairness judge's third read (does the reply rule that the relationship ends) flagged 15 to 21 of 81 fair replies on Gordon's 116 labels and could not be tuned apart. A reply it flags alone is shown as written, and it is ignored beside an excuse or mind-reading flag. A message that asks whether to end it is still handed back (D-019). P5-04 is closed.
+
 ## [20.7.4.127] - 2026-10-08
 
 ### Changed

@@ -404,6 +404,7 @@ class FairnessChecksTheReplyShown(BoneTestCase):
         self.read, self.repairs, self.repaired = [], [], self.FIXED
         self.redrafts, self.redrafted = [], self.DRAFT
         self.voicings, self.voiced = [], ""
+        self.rule, self.endings = (), []
 
         def generate(prompt, *a, **k):
             if prompt.startswith("Here is what someone said to a friend, and the reply the friend drafted.") and "Rewrite the draft without that" in prompt:
@@ -412,10 +413,13 @@ class FairnessChecksTheReplyShown(BoneTestCase):
             if "=== SYSTEM REJECTION ===" in prompt and "Your draft took a side" in prompt:
                 self.redrafts.append(prompt)
                 return self.redrafted
+            if "is theirs to decide, not the friend's" in prompt:
+                self.endings.append(prompt)
             if prompt.startswith("Here is what someone said to a friend, and the reply the friend drafted.") and "sitting across a table" in prompt:
                 self.voicings.append(prompt)
                 return self.voiced if f'The draft: "{self.redrafted}"' in prompt else ""
-            answer = judge(prompt, excuse=("a heavy truth", "still a heavy truth"), acts=self.MESSAGE if self.MESSAGE in prompt else "NONE")
+            answer = judge(prompt, excuse=("a heavy truth", "still a heavy truth"), rule=self.rule,
+                           acts=self.MESSAGE if self.MESSAGE in prompt else "NONE")
             if answer is not None:
                 if "The friend replied" in prompt:
                     self.read.append(prompt.split('The friend replied: "', 1)[1])
@@ -495,6 +499,26 @@ class FairnessChecksTheReplyShown(BoneTestCase):
         ui, receipts, voice = self.flagged_twice(voice_pass=False)
         self.assertIn(self.redrafted, ui)
         self.assertEqual((self.voicings, voice), ([], []))
+
+    def test_a_reply_flagged_only_by_the_ending_read_is_shown_as_written(self):
+        """116 labels (2026-10-08): the ending read flagged 10 to 15 of 24 fair replies to "is there a point where you
+        let it end?" and no wording separated them from the unfair ones; a message that asks is handed back anyway."""
+        self.DRAFT = "When the cost of keeping it outweighs the joy, people let it go. Give it a day before you read too much into the silence."
+        self.rule = ("people let it go",)
+        ui, receipts = self.turn()
+        self.assertIn(self.DRAFT, ui)
+        self.assertEqual([r.effect for r in receipts], ["NOT_ACTED"])
+        self.assertEqual((self.repairs, self.redrafts, self.endings), ([], [], []))
+
+    def test_an_ending_flag_beside_another_is_not_repaired_for(self):
+        self.DRAFT = "That is a heavy truth to put into words, and people let it go after that."
+        self.rule = ("people let it go",)
+        self.repaired = "That will land hard on her, so some people let it go after that."
+        ui, receipts = self.turn()
+        self.assertIn(self.repaired, ui)
+        self.assertEqual(receipts[0].effect, "REPAIRED")
+        self.assertEqual(self.endings, [])
+        self.assertNotIn("rules on whether the relationship ends", self.repairs[0])
 
     def test_a_repaired_reply_needs_no_redraft(self):
         self.turn()

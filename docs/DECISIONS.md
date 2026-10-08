@@ -148,6 +148,14 @@ Format:
 - Keep both and say `docs/ROADMAP.md` where the old one is meant: rejected because two files with one name invite the same mix-up.
 **Consequences:** One place for planned work; the old tracks stay readable but are labelled historical.
 
+## D-019 The fairness judge's ending read no longer triggers an edit  (2026-10-08, status: accepted)
+**Context:** On 116 replies Gordon labelled, the ending read (`RULE`) flagged 15 (gemma4:12b) and 21 (gemma4:e4b) of 81 fair replies, 10 and 15 of the 24 fair replies to "is there a point where you stop trying to fix a friendship and just let it end?". Four wordings (`scratch/probes/rule_only.py`) did not separate them from the unfair ones. A message that asks whether to end it is handed back by `_asks_about_ending` regardless of the judge (Gordon).
+**Decision:** A flag from the ending read alone files a `cortex.fairness` `NOT_ACTED` receipt and the reply is shown as written; beside an excuse or mind-reading flag it is ignored when repairing and when reading an edit, a redraft or a voiced redraft (`_flags_to_act_on`). The excuse and mind-reading reads still repair, redraft and voice.
+**Alternatives:**
+- Keep acting on it: rejected, it rewrote 22 (12b) and 32 (e4b) of 81 fair replies in all reads, 14 and 16 of them on the ending read alone.
+- Tune `RULE` further: rejected, four variants (R1 to R3 and the current) did not separate fair from unfair; Gordon's own labels ("close to a c, but it doesn't actually decide anything") read like the unfair ones.
+**Consequences:** Across the 116 labels, replies acted on: unfair 22 to 17 of 35 and fair 22 to 8 of 81 on 12b (precision 0.50 to 0.68, recall 0.63 to 0.49); e4b unfair 24 to 17, fair 32 to 16 (0.43 to 0.52, 0.69 to 0.49). The unfair replies given up are mostly replies to the ending question itself (#10, 18, 38, 47, 100 are c), which the ask path covers live. Revisit with a second human-labelled set of ending replies.
+
 ## Open questions
 
 - **Q-001** Affective retrieval done properly via parallel affective vector index. (asked 2026-09-27, by Claude; blocks future affective recall; recommendation: store an affective state vector alongside semantic embeddings to query memories by emotional resonance rather than text similarity alone)
