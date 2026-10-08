@@ -163,6 +163,14 @@ Format:
 - Calibrate a model-driven tiredness reading: rejected, it would be judged by the same unreliable measures.
 **Consequences:** The heuristic in `drivers/lattice.py` stays as it is. Affective memory is the next build, with `ordvec` and Project Navi's code to be read for anything reusable first.
 
+## D-021 P7-01 dropped: no available vector tracks mood; the dream's chemistry names fixed  (2026-10-08, status: accepted)
+**Context:** P7-01 (D-020) would store an affect vector beside each memory and query it. Measured first (`scratch/probes/affect_trace.py`, a replay of the 20-message feud run `20261007-224404`): the engine's six numbers (voltage, resonance, DOP, COR, SER, OXY) do not separate the scripted phases. Cortisol stays 0.0 to 0.11 through the "distressed" turns, dopamine is flat (0.63 to 0.77), serotonin and oxytocin drift up with conversation length. Nearest other turn (neighbours within two turns excluded) shares the phase 0 of 20 times for the six numbers, 2 for the chemistry, 4 for the person model (E_u, P_u, distress), against 3 expected by chance. Separately, the stored vectors were mostly zeros: the dream code read `cortisol`, `dopamine`, `serotonin`, `oxytocin` from a state keyed `COR`, `DOP`, `SER`, `OXY`, so every chemistry read was 0 and the affect penalty in `spores/memory.py` `dredge_vibe_by_vector` never fired.
+**Decision:** P7-01 is dropped, as the tiredness model and the judge calibration were (D-011, D-020): an index fed this signal would be noise. `DreamEngine.enter_rem_cycle` now maps the engine's short chemistry names to the long ones before any read. Gordon's calls.
+**Alternatives:**
+- Build the index on the person model (E_u, P_u, distress): rejected for now, it matched the phase 4 of 20 times (chance 3); revisit only with real multi-session data and a check offline first.
+- Leave the key mismatch: rejected, it is a plain bug (the tests fed the long names, so they never saw it).
+**Consequences:** The dream's cortisol branch, its dream type (nightmare above cortisol 0.6, surreal above dopamine 0.6, else constructive; it was always constructive) and the affect stored on dream seeds now see the body. In a conversation dopamine sits 0.63 to 0.77, so a REM cycle straight after one will mostly be surreal; at rest it is 0.5. `physics_state` is still not passed by the cycle, phase and biological callers, so voltage and resonance in a stored affect vector stay 0 there (only `/dream` passes it).
+
 ## Open questions
 
 None open. Answered 2026-10-08, kept so that references resolve:

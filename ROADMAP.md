@@ -63,4 +63,4 @@ Goal: Structure repository knowledge into standalone manuals and maintainer-agen
 
 Goal: Recall memories by how a moment felt, not by text similarity alone.
 
-- [ ] P7-01 Affective retrieval: an affective state vector stored beside each semantic embedding, queried by emotional resonance (Q-001, D-020).
+- [-] P7-01 Affective retrieval: an affective state vector stored beside each semantic embedding, queried by emotional resonance (Q-001, D-020). Dropped 2026-10-08 before any code: no available vector tracks mood (D-021).
