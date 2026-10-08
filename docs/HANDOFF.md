@@ -7,13 +7,13 @@ detailed chronological narrative is in the session log below, and full pre-manif
 Protocol: see [AGENTS.md](../AGENTS.md) (`CLAUDE.md` imports it). Plan: [ROADMAP.md](../ROADMAP.md).
 Architecture: [ARCHITECTURE.md](ARCHITECTURE.md). Decisions: [DECISIONS.md](DECISIONS.md).
 Tests: [TESTING.md](TESTING.md). Security: [SECURITY.md](SECURITY.md).
-Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index.html). Older sessions: [archive/README.md](archive/README.md).
+Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index.html). Narrative: [devlog.html](devlog.html), [bonereport.html](bonereport.html). Older sessions: [archive/README.md](archive/README.md).
 
 ---
 
 ## Current state
 
-_Last updated: 2026-10-08, session 14, on `main` (20.7.4.131)._
+_Last updated: 2026-10-08, session 15, on `main` (20.7.4.132)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
@@ -109,7 +109,7 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 2. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
    and empty ledgers (the whole core cycle was skipped); right after turn 15 (61.5s). Tried: 9 verbatim replays of the
    20 messages (`scratch/probes/replay_empty.py`, 180 turns, components all online, no crash), and a live bone arm with
-   the simulated person (`20261007-144418`, `scratch/feud20q_bone.log`): 20 of 20 delivered, again 6.00, heard 5.00,
+   the simulated person (`20261007-144418`, `scratch/runs/feud/feud20q_bone.log`): 20 of 20 delivered, again 6.00, heard 5.00,
    4 fairness REPAIRED, no REDRAFTED; the panel on 20.7.4.122 (`20261007-224404`) was 20 of 20 as well. The earlier panel's turns ran 30 to 62s against about 10s in the replays; a circuit-breaker
    trip fits the rows but nothing tripped. Next time: `census.run` now prints `NO REPLY` with the component state and
    `ui`, and keeps crashes in `scratch/probes/crashes_<run>.log`. If a panel shows empty turns, read those first.
@@ -125,9 +125,19 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 ## Open questions for maintainers
 
-None open. Q-001 (affective retrieval, P7-01) is dropped (D-021); Q-002 is closed, the tiredness heuristic stays (D-020).
+**Q-003** (2026-10-08): what a blind A/B is meant to determine. The first one (3 to 4) could not settle a change; see the proposal in `docs/TESTING.md`, "Noise floor and the paired A/B", once Gordon answers. Q-001 (affective retrieval, P7-01) is dropped (D-021); Q-002 is closed, the tiredness heuristic stays (D-020).
 
 ## Session log
+
+### Session 15: 2026-10-08: Cleanup, devlog and bone report
+
+**Contributor:** Gordon & Claude
+**Goal:** Remove debris, make `devlog.html` and `bonereport.html` part of the documentation scheme, and ask what the A/B is for.
+**Done:** No roadmap item (documentation and repository housekeeping; nothing committed yet).
+**Changed:** `protocols/folly.py` deleted (Gordon) and its export removed; `scratch/` reorganised (`runs/{feud,rescue,mode_runs,early_probes}`, `probes/results/`); `docs/devlog.html` (new entry), `docs/bonereport.html` (new feud report; the ADVENTURE rerun moved to `docs/bonereport_0926.html`); both in the documentation map, `docs/index.html`, `README.md` and `tools/check_docs.py`.
+**Verified:** `check_docs.py` 0 errors; full suite 1150 passed, 4 failed, 5 skipped. The 4 failures are `tests/test_observability.py` reading `git ls-files`, which lists `protocols/folly.py` until the deletion is staged.
+**Not verified:** the new report's exit-interview figures against raw rows (`tools/cache` was cleared; the numbers are as recorded in this file).
+**Next session should start with:** Q-003, then whatever Gordon picks.
 
 ### Session 14: 2026-10-08: The fairness redraft, fired live
 
@@ -222,12 +232,3 @@ Then the ending read on 116 labels and a feud panel (`20261007-224404`: 20 of 20
 **Changed:** `drivers/lattice.py`, `tests/test_distress.py`, `tests/test_observability.py`. Ratchet set to 10 handlers.
 **Verified:** Simulated flagging conversations correctly detected at 80% (up from 14%).
 **Next session should start with:** Session 7 creative tuning.
-
-### Session 5: 2026-10-03: Technical mode 0.020 token rate calibration
-
-**Contributor:** Gordon
-**Goal:** Prevent metabolic exhaustion during lengthy code generation.
-**Done:** P4-04
-**Changed:** `engine/presets.py`, `brain/cortex.py`. Set TECHNICAL `atp_per_token` to 0.020.
-**Verified:** 30-turn technical coding run sustained ATP min/median 20/44 without vagus nerve spikes.
-**Next session should start with:** Session 6 fatigue detection.

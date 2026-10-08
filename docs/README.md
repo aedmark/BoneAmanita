@@ -17,6 +17,8 @@ other documents link to it instead of duplicating it.
 | `SECURITY.md` | Users and developers | Sensitive assets, secret withholding, substrate sandbox | Operational incident history |
 | `CONTRIBUTING.md` | Human and agent contributors | Setup, change, review, and submission workflow | Agent-only rules |
 | `CHANGELOG.md` | Users and operators | User-visible changes and release history | Developer-facing commit logs |
+| `devlog.html` | Readers following the project | The dev diary: one dated, first-person entry per milestone worth telling | Rules, current state, or the full change list |
+| `bonereport.html` | Maintainers reading measurements | The latest measurement report of real-model runs (2026-10-08, the feud panel and the instruments); the one before it is `bonereport_0926.html` | Live state; each report is a snapshot tied to a code version |
 | `manual/index.html` | Operators and architects | Standalone What/How/Why System Manual (3x scheme) | Transient session context |
 | `manual/reference.html` | Operators and developers | Standalone What/How/Why Reference Manual (3x scheme) | Internal decision logs |
 | `archive/` | Historians and maintainers | Historical session logs, older tracks, and test notes | Normative current rules |
@@ -35,6 +37,8 @@ Update documents because a relevant fact changed, not merely because a session e
 | Work pauses with context another session needs | `HANDOFF.md` |
 | Contribution or agent workflow change | `CONTRIBUTING.md` and `../AGENTS.md` |
 | New planned work | `../ROADMAP.md`, with permanent item ID |
+| A milestone worth telling in prose | `devlog.html`: add a dated entry at the top, in Gordon's voice (agents draft, Gordon approves) |
+| A real-model run read in depth | `bonereport.html`: a new report; move the old one to `bonereport_<MMDD>.html` and link both ways; name the code version and where the data lives |
 | 3x manual content or schema | `manual/system.manual.json` and `manual/reference.manual.json` |
 
 ## Style and evidence

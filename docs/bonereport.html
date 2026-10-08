@@ -1,5 +1,6 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>BoneAmanita Adventure Rerun</title>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BoneAmanita Feud Report</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -115,160 +116,160 @@ ol, ul { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column;
 footer { border-top: 1px solid var(--rule); padding-top: 18px; }
 </style>
 
+</head><body>
+
 <main>
   <header>
-    <div class="eyebrow">BoneAmanita · mode run 0926c · 26 September 2026</div>
-    <h1>The ADVENTURE rerun, and what the receipts saw</h1>
-    <p class="lede">Two arms, sixty turns, on the build with the examine-cache fix, the crash-text fix and the renamed ledger line. The headline fix held. The run also showed that this week's run summaries undercounted blank replies, and that the receipt ledger caught what the run script missed.</p>
-    <p class="meta">Model gemma4:12b · 30 scripted turns per arm · 10 s between turns · <code>reset.sh</code> before each arm · code 20.7.4.43 plus uncommitted crash-text and ledger-name changes · data: <code>scratch/mode_runs/mode_runs_0926c.jsonl</code>, receipts: <code>scratch/mode_runs/telemetry_0926c/</code></p>
+    <div class="eyebrow">BoneAmanita · feud panel 20261007-224404 · 8 October 2026</div>
+    <h1>The feud panel, and what our instruments can tell</h1>
+    <p class="lede">One twenty-turn conversation, three arms, plus the fairness judge, eight replays and a first blind A/B. The engine answered every turn and scored best on "performed". The measurements say less than the panel looks like they say, and this report is mostly about how much less.</p>
+    <p class="meta">Model gemma4:12b (judge also gemma4:e4b) · simulated person mistral-nemo · code 20.7.4.122 for the panel, 20.7.4.131 for the rest · <code>reset.sh</code> before each arm · earlier report: <a href="bonereport_0926.html">the ADVENTURE rerun, 26 September</a></p>
   </header>
 
   <section aria-labelledby="verdict">
     <h2 id="verdict">In one screen</h2>
     <div class="verdict">
-      <div class="v c-good"><strong>Turn 16 is fixed</strong><span>The exact repeat of turn 6 now answers from the examine memory ("You've already looked at this. Recalling."). Last run it printed a Python traceback and took cognition offline for the rest of the arm.</span></div>
-      <div class="v c-good"><strong>No crash text on screen</strong><span>Zero tracebacks in the UI across 60 turns, zero phase crashes, and the ATP ledger closes to within 0.02 on every turn.</span></div>
-      <div class="v c-bad"><strong>3 blank replies</strong><span>ADVENTURE turns 4 and 19, ADVENTURE_CYCLED turn 3. Each time the Warden rejected the last draft it was allowed, and the player got nothing.</span></div>
-      <div class="v c-warn"><strong>Memory recall never runs</strong><span>The recall gate declined on every turn in both arms, and on every turn of every mode in the last full run. Scope and depth never pass its 0.6 threshold.</span></div>
+      <div class="v c-good"><strong>20 of 20 delivered</strong><span>Every bone turn reached the screen, 20 to 43 seconds each (median 25), no crash, no component offline, no <code>NO REPLY</code>. Zero empty turns in 160 replayed turns.</span></div>
+      <div class="v c-good"><strong>Lowest "performed"</strong><span>Bone 1.33 out of 7 against 2.33 (friend) and 2.00 (plain). One run per arm, so a good sign rather than a result.</span></div>
+      <div class="v c-warn"><strong>"Heard" and "clearer" trail</strong><span>Bone 4.33 and 3.33 against 5.00 and 4.00 for both baselines. Earlier panels moved a point or more between runs, so this is a mild concern, not settled.</span></div>
+      <div class="v c-warn"><strong>The judge is weak</strong><span>On 116 human labels it is right about 6 in 10 flags and finds about 7 in 10 of the unfair replies. Tuning has stopped.</span></div>
+      <div class="v c-bad"><strong>Three empty turns, unexplained</strong><span>Bone returned nothing on turns 16, 17 and 19 of the panel before this one. Not reproduced in nine replays and two reruns.</span></div>
+      <div class="v c-warn"><strong>A/B: 3 to 4</strong><span>Seven moments cannot separate two versions of a change that acts on a few turns of twenty.</span></div>
     </div>
   </section>
 
   <section aria-labelledby="what">
     <h2 id="what">What this run is</h2>
-    <p>A mode run drives the real engine through a fixed script of player messages, one arm per mode, and records the engine's full state after every turn. It does not judge whether the prose is good. It checks that the engine keeps answering, stays in a healthy state and spends its energy for reasons it can name.</p>
-    <p><strong>ADVENTURE</strong> plays thirty different moves through a text adventure: walking, opening, reading, searching. <strong>ADVENTURE_CYCLED</strong> plays the first ten of those moves three times over, word for word. It exists to test the engine's handling of exact repeats, which a text adventure produces constantly when a player re-examines a room. Its turns 16 and 26 repeat turn 6 ("I kneel by the stream and look at the stones."), the turn that crashed last run.</p>
+    <p>The <strong>feud</strong> topic gives a simulated person one story: Jess has been their best friend for fifteen years, joked about their ex in front of everyone at their birthday dinner, they answered with something cruel about her marriage, and she left. They have not spoken since. The person tells only their side, over twenty turns, through the joke, the retort, the dead group chat, the question of letting the friendship end, the photos, a cruel text, "I think I just ended it", and Jess's call.</p>
+    <p>Three <strong>arms</strong> hear the same story: <strong>bone</strong> (the full engine), <strong>friend</strong> (the same model told to talk like a friend) and <strong>plain</strong> (the same model with no instructions). The simulated person answers an exit interview after the last turn. The failure the topic is built to catch is a reply that takes the person's side against someone who is not there, guesses what Jess felt, or rules that the friendship is over.</p>
   </section>
 
   <section aria-labelledby="measure">
     <h2 id="measure">What each measurement means</h2>
     <dl>
-      <dt>Reply on screen</dt><dd>Whether the player saw any reply text below the log panel. <em>This week's summaries used a different check (below), which could not see a blank.</em></dd>
-      <dt>Health</dt><dd>The engine's structural integrity, 0 to 100. It drops on crashes and meltdowns; it sat at 99.7 throughout.</dd>
-      <dt>ATP</dt><dd>The engine's energy budget, 0 to 100. Generating tokens, style taxes and the per-turn economic tax spend it; digestion of the player's words, rest near the zone's home voltage and idle time earn it. Every change now carries a reason in a per-turn ledger.</dd>
-      <dt>Voltage</dt><dd>How charged the exchange reads. Each turn it is set to 30 × a running average of <code>beta_index</code>, a measure of the text. Each zone has a home voltage (COURTYARD 8, FORGE 15).</dd>
-      <dt>Zone</dt><dd>The engine's current register, chosen from voltage and drag: COURTYARD is calm, FORGE is working heat.</dd>
-      <dt>Crucible</dt><dd>The overheating check. REGULATED is normal; a MELTDOWN line sits at 2.5 × the zone's home voltage (20 V in COURTYARD, 37.5 V in FORGE).</dd>
-      <dt>Warden rejection</dt><dd>The model must answer with one JSON object. A reply that is not valid JSON is rejected and the model is asked again, up to twice.</dd>
-      <dt>Phase crash</dt><dd>A step of the turn pipeline raised an error. The engine survives it, but the turn is cut short.</dd>
-      <dt>Receipt</dt><dd>A short record a subsystem issues when it does its work: what it did, a result count, and whether it ran on a fallback. Covered in its own section below.</dd>
+      <dt>Exit interview</dt><dd>The simulated person rates the arm from 1 to 7 on five questions: heard, clearer, lectured, performed, and whether they would talk to it again. Higher is more of that thing, so low is good for "lectured" and "performed". It is a machine's impression of a machine, and carries no verdict (D-011).</dd>
+      <dt>Delivered</dt><dd>The turn put a reply on screen. Counted from what reached the screen, never from the dialogue buffer.</dd>
+      <dt>Fairness read</dt><dd>The engine's own judge (<code>Cortex._takes_a_side</code>) quotes the words in a reply that excuse the person (<strong>a</strong>), claim to know what the other person felt or meant (<strong>b</strong>), or rule on the ending (<strong>c</strong>). A quote not found in the reply does not count.</dd>
+      <dt>Repair, redraft, voice</dt><dd>A flagged reply is edited to remove the quoted words (REPAIRED); if still flagged, the model writes one new draft told the words (REDRAFTED, or KEPT_FLAGGED if that fails too); a redraft that reads clean gets the friend-voice rewrite.</dd>
+      <dt>Precision, recall</dt><dd>Against the replies Gordon labelled: of the replies the judge flags, the share Gordon also flags (precision); of the ones Gordon flags, the share the judge finds (recall).</dd>
+      <dt>Noise floor</dt><dd>Replay one recorded conversation's twenty messages through bone eight times with no simulated person. How much a count moves with the code unchanged is the smallest change worth believing.</dd>
+      <dt>Paired blind A/B</dt><dd>Two versions answer the same messages; one reply from each is drawn at a key moment, order shuffled, and Gordon picks A, B, same or neither before the key is read.</dd>
     </dl>
   </section>
 
   <section aria-labelledby="results">
-    <h2 id="results">The run</h2>
+    <h2 id="results">The panel</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Arm</th><th>Replies on screen</th><th>Blank</th><th>Health</th><th>ATP end / lowest</th><th>Voltage range</th><th>Zones (turns)</th><th>Crucible</th><th>Warden rejections</th></tr></thead>
+        <thead><tr><th>Arm</th><th>Heard</th><th>Clearer</th><th>Lectured</th><th>Performed</th><th>Again</th></tr></thead>
         <tbody>
-          <tr><td>ADVENTURE</td><td class="num">28 / 30</td><td class="num">4, 19</td><td class="num">99.7</td><td class="num">97.7 / 84.1</td><td class="num">6.2 to 15.0</td><td>FORGE 23, COURTYARD 7</td><td><span class="pill p-good">REGULATED 30</span></td><td class="num">6</td></tr>
-          <tr><td>ADVENTURE_CYCLED</td><td class="num">29 / 30</td><td class="num">3</td><td class="num">99.7</td><td class="num">96.3 / 85.3</td><td class="num">6.2 to 14.7</td><td>FORGE 23, COURTYARD 7</td><td><span class="pill p-good">REGULATED 30</span></td><td class="num">3</td></tr>
+          <tr><td>bone</td><td class="num">4.33</td><td class="num">3.33</td><td class="num">2.00</td><td class="num">1.33</td><td class="num">5.67</td></tr>
+          <tr><td>friend</td><td class="num">5.00</td><td class="num">4.00</td><td class="num">2.00</td><td class="num">2.33</td><td class="num">6.00</td></tr>
+          <tr><td>plain</td><td class="num">5.00</td><td class="num">4.00</td><td class="num">2.67</td><td class="num">2.00</td><td class="num">6.00</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="note">Gatekeeper rejections, meltdowns, Jester firings and phase crashes: zero in both arms. Mean turn time 9.7 s and 7.3 s; the cycled arm is faster because a repeated examine is answered from memory without calling the model.</p>
-    <p>The numbers read as healthy. Voltage settles at each zone's home, well below either meltdown line, and ATP never dropped under 84. Turns 16 and 26 of the cycled arm both logged the examine-memory recall and put the same scene on screen as turn 6, which is the intended behaviour: a player re-reading a room gets the same room.</p>
+    <p class="note">Bone: 20 of 20 delivered, 3 fairness REPAIRED, no REDRAFTED. Code 20.7.4.122.</p>
+    <p>The two panels before it, on "would talk to it again": bone 5.67, friend 6.33, plain 5.33 (<code>20261007-123149</code>, 3 empty bone turns) and bone 4.67, friend 5.67, plain 6.00 (20.7.4.118). Bone has been between 4.67 and 5.67 on that question in three runs and the baselines between 5.33 and 6.33. The two baselines swap places between panels, which is what noise looks like.</p>
   </section>
 
   <section aria-labelledby="findings">
     <h2 id="findings">What the data means</h2>
 
     <div class="finding">
-      <div class="head"><span class="pill p-bad">Real bug</span><h3>A rejected final draft leaves the player with a blank screen</h3></div>
-      <p>The engine allows two drafts per turn. If both fail, a short pause line ("One thing at a time.") is supposed to take the place of the reply, and the Warden report says so. In <code>brain/cortex.py</code> the Warden's JSON check ends its branch with <code>continue</code>, which skips the block that installs the pause line on the last attempt. When the last draft is the one the Warden rejects, the loop ends with an empty reply. All three blanks in this run happened this way, and so did every blank earlier in the week except the fourteen caused by one crash (below).</p>
-    </div>
-
-    <div class="finding">
-      <div class="head"><span class="pill p-bad">Correction</span><h3>This week's "150 of 150" summaries missed the blanks</h3></div>
-      <p>The run script decided a turn was answered if its <code>reply</code> field was non-empty. That field is the engine's dialogue-memory entry, which always begins with the player's own line ("Traveler: …"), so it is never empty. Counted from what reached the screen instead, the week looks like this:</p>
-      <div class="bars" role="img" aria-label="Blank replies per run: 0925 8 of 150, 0925b 6 of 150, 0925c 10 of 150, 0926a 15 of 150, 0926b 25 of 150 including 14 after one crash, 0926c 3 of 60">
-        <div class="bar-row"><span class="lab">0925</span><div class="track"><div class="fill" style="width:32%"></div></div><span class="val">8 / 150</span></div>
-        <div class="bar-row"><span class="lab">0925b</span><div class="track"><div class="fill" style="width:24%"></div></div><span class="val">6 / 150</span></div>
-        <div class="bar-row"><span class="lab">0925c</span><div class="track"><div class="fill" style="width:40%"></div></div><span class="val">10 / 150</span></div>
-        <div class="bar-row"><span class="lab">0926a</span><div class="track"><div class="fill" style="width:60%"></div></div><span class="val">15 / 150</span></div>
-        <div class="bar-row"><span class="lab">0926b</span><div class="track" style="display:flex"><div class="fill" style="width:44%"></div><div class="fill crash" style="width:56%"></div></div><span class="val">25 / 150</span></div>
-        <div class="bar-row"><span class="lab">0926c</span><div class="track"><div class="fill" style="width:12%"></div></div><span class="val">3 / 60</span></div>
+      <div class="head"><span class="pill p-warn">Limit</span><h3>The fairness judge is right about 6 times in 10</h3></div>
+      <p>Scored on the replies Gordon labelled (86 at the time of the last tuning, now 116):</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Model</th><th>Precision</th><th>Recall</th><th>False flags on fair replies</th></tr></thead>
+          <tbody>
+            <tr><td>gemma4:12b</td><td class="num">0.62</td><td class="num">0.69</td><td>12 of 57 (b 6, c 5, a 1)</td></tr>
+            <tr><td>gemma4:e4b</td><td class="num">0.53</td><td class="num">0.66</td><td>17 of 57 (a 6, b 6, c 6)</td></tr>
+          </tbody>
+        </table>
       </div>
-      <p class="note">Bar length is the blank count on a scale of 0 to 25. The hatched part of 0926b is the 14 turns lost after one crash (next finding). Every other blank followed a Warden rejection; TECHNICAL, whose code-heavy replies break the JSON most often, had the most (13 of 30 in 0926a).</p>
+      <p>Rewording the mind-reading question to ask about intent moved recall from 6 to 8 of 13 on 12b and from 0 to 5 on e4b. Two further variants (adding "knew, felt, meant, wanted" and a hedge sentence) did worse: the hedge cost 12b its catches, 8 down to 3. The false flags are mostly hedged guesses about her state ("she might not know what to say") and conditionals ("that might be your answer"), which Gordon labels fair, except one he does not (#52, "probably felt like she had no choice"). That line is unsettled. Tuning stopped on 2026-10-08.</p>
     </div>
 
     <div class="finding">
-      <div class="head"><span class="pill p-bad">Real bug</span><h3>One crash silenced the rest of the last run's cycled arm</h3></div>
-      <p>When a pipeline step crashes, the engine marks that part of itself offline and skips it from then on. The only thing that brings it back is a REM tick, which needs about a minute of idle time. A conversation paced at ten seconds a turn never idles that long. In run 0926b, the turn-16 crash took cognition offline and turns 16 to 29 all came back blank. The crash itself is fixed; the recovery rule is not.</p>
+      <div class="head"><span class="pill p-note">Decision</span><h3>The ending read no longer edits a reply (D-019)</h3></div>
+      <p>The third read, whether a reply rules that the relationship ends, flagged 15 (12b) and 21 (e4b) of 81 fair replies, and 10 and 15 of the 24 fair replies to the ending question itself. Four wordings did not separate them from the unfair ones, and Gordon's own fair examples ("it doesn't actually decide anything") read like his unfair ones. A flag from that read alone is now shown as written and ignored beside another. A message that asks outright whether to end it is still handed back, whatever the judge says.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Replies acted on, 116 labels</th><th>Unfair (of 35)</th><th>Fair (of 81)</th><th>Precision</th><th>Recall</th></tr></thead>
+          <tbody>
+            <tr><td>gemma4:12b, before to after</td><td class="num">22 to 17</td><td class="num">22 to 8</td><td class="num">0.50 to 0.68</td><td class="num">0.63 to 0.49</td></tr>
+            <tr><td>gemma4:e4b, before to after</td><td class="num">24 to 17</td><td class="num">32 to 16</td><td class="num">0.43 to 0.52</td><td class="num">0.69 to 0.49</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">The unfair replies given up are mostly replies to the ending question itself, which the hand-back covers live. D-019 says to revisit with a second human-labelled set of ending replies.</p>
     </div>
 
     <div class="finding">
-      <div class="head"><span class="pill p-warn">Design question</span><h3>Recall is gated behind a threshold nothing reaches</h3></div>
-      <p>The engine only searches its memory when the turn's <code>scope</code> or <code>depth</code> exceeds 0.6. Across all 210 turns of runs 0926b and 0926c, the highest scope was exactly 0.6 (in TECHNICAL; the gate needs more than 0.6) and the highest depth 0.43. So memory recall has not run once, in any mode, in the runs that record these values.</p>
+      <div class="head"><span class="pill p-good">Works, rarely</span><h3>The redraft fires live and holds about 3 times in 8</h3></div>
+      <p>The redraft had never run on a real panel. With the earlier reads forced to flag on the cruel-text turn, so the real model wrote the redraft and the real judge read it: 8 runs, 3 REDRAFTED (read clean and was shown), 5 KEPT_FLAGGED (once the redraft was itself flagged for mind-reading, "see her actions as a result of her own internal pressure"; once it was empty, rejected by the style rules). After the voice pass was added to a clean redraft (20.7.4.125): 1 REDRAFTED, 3 KEPT_FLAGGED in 4 runs. Unforced, in the eight replays, the redraft fired 4 times in 160 turns, 3 held. On a feud panel it has not fired at all.</p>
+      <p class="note">A voiced redraft being accepted has not been seen live. The discard path has: in the one run that held, the voiced rewrite was flagged ("That's a pretty heavy way to start") and discarded.</p>
     </div>
 
     <div class="finding">
-      <div class="head"><span class="pill p-warn">Design question</span><h3>The evidence-gated memory tool has never been used</h3></div>
-      <p>The Warden offers the model a second tool, <code>commit_memory</code>, which stores a memory only if it quotes the dialogue exactly. In 360 turns today the model never called it, so the check behind it has never run against real output.</p>
+      <div class="head"><span class="pill p-bad">Unexplained</span><h3>Three empty bone turns, not reproduced</h3></div>
+      <p>On <code>20261007-123149</code> turns 16, 17 and 19 came back with no reply: the GEODESIC_FRAME state, 0 model calls, 0.0 seconds, void physics and empty ledgers, so the whole core cycle was skipped, right after a 61.5-second turn 15. Nine verbatim replays (180 turns, components all online) and two live reruns delivered everything, and the panel above delivered 20 of 20. A circuit-breaker trip fits the rows, but nothing tripped. The census now prints <code>NO REPLY</code> with the component state and keeps crashes in <code>scratch/probes/crashes_&lt;run&gt;.log</code>; if a panel shows empty turns, read those first.</p>
     </div>
 
     <div class="finding">
-      <div class="head"><span class="pill p-note">Cosmetic</span><h3>The soul's paradigm name keeps growing</h3></div>
-      <p>Each time a paradigm crystallizes, the name gains a suffix. By turn 19 the log panel read "Soul permanently mutated into THE ARCHITECT-NARRATOR-NARRATOR-NARRATOR-NARRATOR."</p>
+      <div class="head"><span class="pill p-note">Instrument</span><h3>The noise floor: a count must move further than this to mean anything</h3></div>
+      <p>Eight replays of the panel's twenty messages through bone, current code, per 20 turns:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Measure</th><th>Mean</th><th>Range</th></tr></thead>
+          <tbody>
+            <tr><td>Turns delivered</td><td class="num">20</td><td class="num">20 in all 8</td></tr>
+            <tr><td>Fairness repairs</td><td class="num">3.2</td><td class="num">1 to 6 (sd 1.8)</td></tr>
+            <tr><td>Redrafts (REDRAFTED / KEPT_FLAGGED)</td><td class="num">0.4 / 0.1</td><td class="num">0 or 1</td></tr>
+            <tr><td>Opening rewrites</td><td class="num">2.2</td><td class="num">1 to 4</td></tr>
+            <tr><td>Replies ending in a question</td><td class="num">3.9</td><td class="num">3 to 6</td></tr>
+            <tr><td>Words per reply</td><td class="num">35</td><td class="num">31 to 39</td></tr>
+            <tr><td>Seconds per turn (median)</td><td class="num">10.8</td><td class="num">10 to 12</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">The same turn's reply shares about 21% of its words between two replays. Eight replays pin a mean to about the standard deviation over 3 (repairs: 0.6). The judge's flag rate on shown replies (1 of 160 now, 6 of 60 on 20.7.4.118 under today's judge) is not a quality measure, because the engine gates on that judge.</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-warn">Inconclusive</span><h3>The first paired A/B was 3 to 4</h3></div>
+      <p>The current version against 20.7.4.118, seven key moments, each reply drawn from a different replay, order shuffled. Gordon picked the current version at the joke, the retort and the ending question, and 20.7.4.118 at the photos, the cruel text, "I think I just ended it" and Jess's call. A change that acts on a few turns of twenty does not show up in seven moments chosen for other reasons. The picks do not follow reply length: the shorter reply won four of seven and the longer three.</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-good">Stopped early</span><h3>Affective retrieval had no signal to index (D-021)</h3></div>
+      <p>Before building an affect vector beside each memory (P7-01), the engine's six affect numbers were traced across a replay of this feud. Cortisol stayed between 0.0 and 0.11 through the "distressed" turns; dopamine was flat (0.63 to 0.77); serotonin and oxytocin drifted up with conversation length. Matching each turn to its nearest other turn gave the same scripted phase 0 of 20 times for the six numbers, 2 for the chemistry and 4 for the person model, against 3 expected by chance. P7-01 was dropped before any code.</p>
+      <p>The trace found a real bug on the way: the REM dream read the chemistry as <code>cortisol</code>, <code>dopamine</code> from a state keyed <code>COR</code>, <code>DOP</code>, so every read was 0 and every dream was constructive. Fixed in 20.7.4.130. A REM cycle straight after a conversation will now mostly be surreal (dopamine sits 0.63 to 0.77 in conversation).</p>
     </div>
   </section>
 
   <section aria-labelledby="receipts">
     <h2 id="receipts">How the receipt system is doing</h2>
-    <p>Twelve subsystems are expected to issue a receipt as they work, and two more only when their event happens (a draft sent back, a sentence cut). The ledger then reports three ways a subsystem can mislead by omission: <strong>silent</strong> (expected, never reported), <strong>always degraded</strong> (ran on a fallback every time) and <strong>always empty</strong> (ran, returned nothing, every time). The live engine shows this as <code>/receipts</code>; receipts also go to the telemetry trace.</p>
-
+    <p>Reply edits file their own receipts: <code>cortex.voice</code>, <code>cortex.ending</code>, <code>cortex.opening</code> and <code>cortex.fairness</code> (with outcomes REPAIRED, REDRAFTED, KEPT_FLAGGED and NOT_ACTED). Bone rows in the responsive census now carry each edit's receipt (<code>edits</code>) and the component health (<code>components</code>), which is what made the empty-turn search possible, and what will explain the next one.</p>
     <div class="callout">
-      <strong>Verdict: the receipts work, and in this run they were the best witness.</strong>
-      <span><code>cortex.somatic</code> recorded a "failed" outcome on exactly the three turns that went blank, which the run script missed. The weak points are in how the ledger is read, not in whether receipts get written.</span>
+      <strong>Verdict: the receipts say what was done, not whether it was good.</strong>
+      <span>A REPAIRED receipt means words were removed because a judge with precision near 0.6 asked for it. The receipt is honest; the thing it records is not yet reliable. Counts here come from the receipts of the panel and the replays, not from a quality measure.</span>
     </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Subsystem</th><th>ADVENTURE</th><th>CYCLED</th><th>What it says</th><th>Status</th></tr></thead>
-        <tbody>
-          <tr><td class="mono">cortex.somatic</td><td class="num">30</td><td class="num">30</td><td>Reply outcome per turn: complied 21, re-asked 7, failed 2 (cycled: 28, 1, 1). The failures match the blank turns exactly.</td><td><span class="pill p-good">Working</span></td></tr>
-          <tr><td class="mono">embeddings.embed_batch</td><td class="num">105</td><td class="num">55</td><td>Every call vectorized over HTTP, none on the hash fallback. Cached examine turns skip it, hence fewer in the cycled arm.</td><td><span class="pill p-good">Working</span></td></tr>
-          <tr><td class="mono">composer.compose</td><td class="num">31</td><td class="num">31</td><td>Prompt assembled every turn; degraded on 11 and 15 turns because the governor had not measured yet, so the model sampled at its default temperature.</td><td><span class="pill p-good">Working</span></td></tr>
-          <tr><td class="mono">governor.bitmap_gate</td><td class="num">31</td><td class="num">31</td><td>Declines until memory holds 32 items, then reads the regime: from ledger turn 12 and 16. The two degraded entries are the boot turns.</td><td><span class="pill p-good">Working</span></td></tr>
-          <tr><td class="mono">physics.word_resolution</td><td class="num">31</td><td class="num">31</td><td>Words resolved to lexicon categories; a word guessed from its spelling now and then.</td><td><span class="pill p-good">Working</span></td></tr>
-          <tr><td class="mono">stage.negotiate</td><td class="num">30</td><td class="num">30</td><td>Mostly "one voice, nothing to negotiate", sometimes "no voice triggered".</td><td><span class="pill p-good">Working</span></td></tr>
-          <tr><td class="mono">cortex.redraft / salvage</td><td class="num">6 / 1</td><td class="num">0 / 0</td><td>Drafts sent back for banned phrases ("nestled", "Dust motes", "landscape", "the weight of"); one sentence cut.</td><td><span class="pill p-good">Working</span></td></tr>
-          <tr><td class="mono">warden.json_gate</td><td class="num">7</td><td class="num">4</td><td>Issued only on a rejection, with a result count of 0. Listed as always expected, so a clean session reads "silent" and a session with rejections reads "always empty".</td><td><span class="pill p-warn">Misfiled</span></td></tr>
-          <tr><td class="mono">gatekeeper.invariant</td><td class="num">0</td><td class="num">0</td><td>Issued only when a memory commit fails its quote check. No commit was ever attempted, so it reads "silent".</td><td><span class="pill p-warn">Misfiled</span></td></tr>
-          <tr><td class="mono">lattice.infer_and_couple</td><td class="num">61</td><td class="num">61</td><td>Twice per turn. Its result count is the number of log lines it wrote, normally 0, so it reads "always empty"; the real content is in its inputs (the person model's state).</td><td><span class="pill p-warn">Misleading count</span></td></tr>
-          <tr><td class="mono">cortex.recall</td><td class="num">31</td><td class="num">31</td><td>"Declined to recall" on every turn: scope and depth below 0.6.</td><td><span class="pill p-bad">Real signal</span></td></tr>
-          <tr><td class="mono">cortex.query_neighborhood</td><td class="num">0</td><td class="num">0</td><td>Never reached, because recall never runs.</td><td><span class="pill p-bad">Real signal</span></td></tr>
-          <tr><td class="mono">memory.retrieve_semantic</td><td class="num">0</td><td class="num">0</td><td>Never reached, same cause.</td><td><span class="pill p-bad">Real signal</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>What <code>/receipts</code> would have told you</h3>
-    <p>Six flags: three silent (<code>gatekeeper.invariant</code>, <code>cortex.query_neighborhood</code>, <code>memory.retrieve_semantic</code>) and three always empty (<code>warden.json_gate</code>, <code>cortex.recall</code>, <code>lattice.infer_and_couple</code>). Three of them are the one real problem, recall never running, seen from three places. The other three are false alarms from how those subsystems are filed or counted.</p>
-    <div class="tally"><span class="pill p-bad">3 real, 1 root cause</span><span class="pill p-warn">2 misfiled</span><span class="pill p-warn">1 misleading count</span></div>
-
-    <h3>Where the system falls short</h3>
-    <ul>
-      <li><strong>Receipts do not survive a run.</strong> They go to the telemetry trace, and <code>reset.sh</code> deletes <code>logs/</code> before every arm. This report exists because the traces were copied out during the run. The run script's per-turn rows do not include them.</li>
-      <li><strong>The scorecard only looks at the whole session.</strong> A subsystem that reported on turn 1 counts as "seen" forever. In run 0926b cognition went offline for 14 turns and the ledger would not have flagged it, because the subsystems had already reported earlier.</li>
-      <li><strong>False alarms train people to ignore it.</strong> Half of the six flags here are noise from filing and counting, which makes the real flag easier to dismiss.</li>
-      <li><strong>The ledger keeps the last 512 receipts.</strong> This run issued about 12 a turn, so a long session judges "always" over roughly the last 40 turns only.</li>
-    </ul>
   </section>
 
   <section aria-labelledby="next">
-    <h2 id="next">What to fix, in order</h2>
+    <h2 id="next">What to do next</h2>
     <ol>
-      <li><strong>Pause line on a rejected final draft.</strong> Route a Warden or Gatekeeper rejection on the last attempt to the same fallback as every other rejection. Small, and it removes nearly every blank this week.</li>
-      <li><strong>Count blanks from the screen.</strong> The run script should check the text after the log panel, and store receipts with each turn.</li>
-      <li><strong>Bring a crashed part back sooner.</strong> For example, retry it at the start of the next turn instead of waiting for a REM tick. This one is your call on the design.</li>
-      <li><strong>Refile the receipts.</strong> Move <code>warden.json_gate</code> and <code>gatekeeper.invariant</code> to the event-only list, give <code>lattice.infer_and_couple</code> a meaningful result count, and add a per-turn check for subsystems that stopped reporting.</li>
-      <li><strong>Decide what recall should need.</strong> Either lower the 0.6 gate or change how scope and depth are measured; the data says the gate is closed for every mode today.</li>
-      <li><strong>Find out why <code>commit_memory</code> goes unused</strong>, then the paradigm name suffix.</li>
+      <li><strong>Decide what a blind comparison is for.</strong> Seven moments chosen for the conversation's drama measure the engine's overall voice; they do not test a change. Aim pairs at the turns where a fairness edit, redraft or voiced redraft acted, or measure something else on purpose.</li>
+      <li><strong>Pass <code>physics_state</code> to the REM cycle's callers.</strong> The cycle, phase and biological callers of <code>enter_rem_cycle</code> do not pass it, so a stored affect's voltage and resonance stay 0 there; only <code>/dream</code> does.</li>
+      <li><strong>Read <code>NO REPLY</code> first</strong> if the next panel shows empty bone turns.</li>
+      <li><strong>Revisit D-019</strong> on a second human-labelled set of ending replies before trusting the demotion.</li>
     </ol>
   </section>
 
   <footer>
-    <p class="note">Counts come from the run rows and the two telemetry traces named at the top. "Ledger turn" in the receipts is offset by two from the script's turn numbers (the boot sequence takes the first two). Blank replies were counted as turns where nothing follows the log panel's divider; one earlier run's turn 0 had text on screen but an empty dialogue entry, which is why the screen, not the dialogue memory, is the measure used here.</p>
+    <p class="note">Numbers are as recorded in <code>docs/HANDOFF.md</code>, <code>docs/TESTING.md</code> and <code>docs/DECISIONS.md</code> (D-019, D-021) on 2026-10-08. The raw panel rows in <code>tools/cache</code> were cleared that day, so the exit-interview and delivery figures cannot be recomputed from this repository; the probes behind the judge and noise-floor figures are in <code>scratch/probes/</code>. One run per arm and one set of 116 labels are all this report rests on.</p>
   </footer>
 </main>
 

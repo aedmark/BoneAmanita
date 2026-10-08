@@ -1,7 +1,6 @@
 from .bureau import TheBureau
 from .chronos import ChronosKeeper
 from .critics import TheCriticsCircle
-from .folly import TheFolly
 from .grief import GriefProtocol
 from .kintsugi import KintsugiProtocol
 from .limbo import LimboLayer
@@ -11,7 +10,6 @@ from .zen import ZenGarden
 __all__ = [
     "TheBureau",
     "TheCriticsCircle",
-    "TheFolly",
     "GriefProtocol",
     "KintsugiProtocol",
     "LimboLayer",

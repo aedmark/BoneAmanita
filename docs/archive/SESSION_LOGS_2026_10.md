@@ -40,3 +40,12 @@ Session-log entries moved out of [../HANDOFF.md](../HANDOFF.md), oldest first.
 **Changed:** `brain/cortex.py`, `body/metabolism.py`. Removed persistent `is_steering_retry` flag.
 **Verified:** `tests/test_body.py` `test_a_redraft_does_not_discount_later_burns` passed.
 **Next session should start with:** Session 5 token rate adjustment.
+
+### Session 5: 2026-10-03: Technical mode 0.020 token rate calibration
+
+**Contributor:** Gordon
+**Goal:** Prevent metabolic exhaustion during lengthy code generation.
+**Done:** P4-04
+**Changed:** `engine/presets.py`, `brain/cortex.py`. Set TECHNICAL `atp_per_token` to 0.020.
+**Verified:** 30-turn technical coding run sustained ATP min/median 20/44 without vagus nerve spikes.
+**Next session should start with:** Session 6 fatigue detection.

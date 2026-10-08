@@ -173,7 +173,9 @@ Format:
 
 ## Open questions
 
-None open. Answered 2026-10-08, kept so that references resolve:
+- **Q-003** What a blind A/B is meant to determine: a version against a version on a change, an arm against the baselines, or a property of the replies. (asked 2026-10-08, by Claude; open)
+
+Answered 2026-10-08, kept so that references resolve:
 
 - **Q-001** Affective retrieval done properly via parallel affective vector index. (asked 2026-09-27, by Claude; answered: queued as P7-01, D-020)
 - **Q-002** Model-driven tiredness reading calibration vs word-frequency fallback. (asked 2026-10-04, by Gordon; answered: closed, the heuristic stays, D-020)

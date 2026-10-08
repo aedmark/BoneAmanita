@@ -7,7 +7,7 @@ MIXED is one session across modes (`/mode` lines). Every arm ends with `/sleep` 
 dream) and a "summary" row: what is kept, where each memory came from, the reflections and the dream.
 Each arm runs in its own process after `reset.sh`. ADVENTURE_CYCLED repeats ADVENTURE's first
 ten messages three times (exact repeats from turn 10). BONE_MODEL and PACE (seconds) override
-the model and the pause between turns. Keep OUT under scratch/ (gitignored).
+the model and the pause between turns. Keep OUT under scratch/runs/ (gitignored).
 """
 import json
 import os

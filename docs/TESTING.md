@@ -468,7 +468,7 @@ is how the `BENEDICT|GORDON` +50 synergy was originally traced to its source.
 ### `mode_runs.py`: the real-model mode runs
 
 Not part of the scoring pipeline either. `python tools/mode_runs.py
-scratch/mode_runs/OUT.jsonl [ARM ...]` drives a live engine through 30 paced
+scratch/runs/mode_runs/OUT.jsonl [ARM ...]` drives a live engine through 30 paced
 turns per arm (CONVERSATION, ADVENTURE, ADVENTURE_CYCLED, TECHNICAL, CREATIVE;
 all five when none are named), each arm in a fresh process after `reset.sh`.
 One JSON row per turn: the turn type, health, ATP, voltage, Crucible state,
@@ -483,7 +483,7 @@ screen. `BONE_MODEL` and `PACE` override the model and the pause.
 
 ### `memory_probe.py`: does the model keep what it is told?
 
-Memory phase 3. `python tools/memory_probe.py scratch/OUT.jsonl [MODE ...]`
+Memory phase 3. `python tools/memory_probe.py scratch/runs/early_probes/OUT.jsonl [MODE ...]`
 (CONVERSATION, TECHNICAL, CREATIVE, ADVENTURE; each in a fresh process after
 `reset.sh`) states three facts with ordinary talk between them, purges the
 dialogue so they can only come back through memory, then asks for each. Per
@@ -661,13 +661,17 @@ turns where the change acted (its receipts say which).
    worth re-checking after any prompt change to `SIM_SYSTEM` or `_persona()`,
    since those are exactly the levers that affect how strongly the model
    anchors on the transcript it's shown.
-8. **The scratchpad directory gets wiped between sessions** (a reboot or
+8. **`scratch/` layout** (gitignored, untouched by `reset.sh`): `probes/` holds probe scripts, their input data and
+   `results/` (their stdout captures); `runs/` holds run output: `feud/` (feud panel logs), `rescue/`,
+   `mode_runs/` (`tools/mode_runs.py` output and its probes) and `early_probes/` (September memory, keeper, tiredness and
+   simulated-person probes).
+9. **The scratchpad directory gets wiped between sessions** (a reboot or
    session change, not a bug in this project). Any throwaway shell script
    meant to be invoked *later in the same reply* should be inlined into the
    `Bash` call that runs it, not written to the scratchpad and referenced by
    path in a later call — a wipe mid-session has cost a re-run of a
    multi-minute control batch at least once.
-9. **An audit module's import-time side effect leaks into every tool that
+10. **An audit module's import-time side effect leaks into every tool that
    imports it.** `audit_somatic.py` sets `BONE_EMBED_BACKEND=hash` at import
    (right for C5, which must not depend on an embedding server). From
    2026-09-19 (`a572137`) to 2026-09-23 the census imported `measure` from
@@ -678,7 +682,7 @@ turns where the change acted (its receipts say which).
    `body.somatic_metrics`, and `tests/test_audit_somatic.py` checks that
    importing the census leaves the backend unset. Before trusting a `bone`
    run, grep its log for `hash coordinates` and `falling back to PID`.
-10. **A crashed phase does not fail a turn.** `PhaseExecutor` logs it and
+11. **A crashed phase does not fail a turn.** `PhaseExecutor` logs it and
     ends the turn early. `tests/conftest.py` turns any such crash into a test
     failure; opt out only for a test that crashes a phase on purpose
     (`ALLOWS_PHASE_CRASH = True` or `@pytest.mark.allows_phase_crash`).

@@ -52,4 +52,3 @@ dummy.jsonl
 .idea/
 *.swp
 .DS_Store
-/tools/mycelium_demo.py

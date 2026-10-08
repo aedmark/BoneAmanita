@@ -4,6 +4,15 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.132] - 2026-10-08
+
+### Changed
+- **Dev diary and run report are part of the docs:** `docs/devlog.html` has a new entry (28 September to 8 October); `docs/bonereport.html` is now the feud-panel report and the ADVENTURE rerun moved to `docs/bonereport_0926.html`. Both are in the documentation map, the site and `tools/check_docs.py`.
+- **Scratch is organised:** run output in `scratch/runs/`, probe results in `scratch/probes/results/`; docs and tools point at the new paths.
+
+### Removed
+- **`protocols/folly.py` (`TheFolly`):** nothing constructed it and no test covered it.
+
 ## [20.7.4.131] - 2026-10-08
 
 ### Changed

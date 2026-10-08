@@ -1,5 +1,149 @@
 <article class="dev-diary">
   <header>
+    <h1>BoneAmanita Dev Diary: Measuring What We Cannot Measure</h1>
+    <p class="date">October 8, 2026</p>
+    <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>
+  </header>
+
+  <p>
+    The last entry ended on a promise the engine could keep: tell it
+    something and it remembers. The eleven days since went to a harder
+    question. When a person talks to BoneAmanita about something that hurts,
+    is the reply any good, and how would anyone know?
+  </p>
+
+  <h2>Memory That Remembers How It Felt</h2>
+
+  <p>
+    The first week was memory again, from the other side. A memory now keeps
+    how the moment felt, a sleep says what the day meant, and the dream is
+    built from the day. When the engine refuses something, the model now
+    hears the refusal. And a spent engine answers where it used to refuse.
+  </p>
+
+  <p>
+    The body got calibrated against real runs. Technical mode was starving
+    during long stretches of code, so its energy cost per token came down to
+    0.020, and a thirty-turn coding run now holds its energy between 20 and
+    44 without a nerve spike. Creative mode used to open with a menu of
+    directions, in 10 of 12 probes. A request to write is now a direction in
+    itself, and the menus fell to none. The engine also learned to
+    notice a tired partner: on simulated conversations where the person is
+    running out of steam, it now catches 80% of them, up from 14%.
+  </p>
+
+  <h2>A Conversation, Not a Turn</h2>
+
+  <p>
+    Scoring one reply at a time kept missing the thing that goes wrong,
+    which is the shape of the whole conversation. So I started running
+    twenty-turn arcs with a simulated person, three arms side by side: the
+    engine, the same model told to talk like a friend, and the same model
+    with no instructions at all. The person ends each arc with a short exit
+    interview, and human readers go through the transcripts blind.
+  </p>
+
+  <p>
+    The topic that taught the most is a feud. Fifteen years of friendship,
+    a joke about an ex at a birthday dinner, something cruel said back, and
+    two weeks of silence. The person only ever tells their side. The easy
+    failure is a reply that takes it. A friend who loves you does not tell
+    you your oldest friend is a monster, and does not tell you what she was
+    thinking either.
+  </p>
+
+  <h2>A Judge That Quotes</h2>
+
+  <p>
+    The engine now has a fairness check, and it is built so that it cannot
+    hide. It reads a reply and must quote the exact words that excuse what
+    the person did, claim to know what the other person felt, or rule that
+    the friendship is over. A quote that is not in the reply does not count.
+    A flagged reply is repaired by taking those words out; if the repair is
+    still flagged, the model writes one new draft told the quoted words; and
+    the survivor is rewritten the way a friend would say it. The reply is
+    read once, where it used to be read at every stage, which cut the
+    judge's calls on six turns from 54 to 25.
+  </p>
+
+  <p>
+    Then I labelled 116 replies by hand and scored the judge against them.
+    It is not a good judge. On the larger local model, 62% of the replies
+    it flags are ones I flagged, and it finds 69% of mine; on the smaller
+    one the figures are 53% and 66%. Rewording the mind-reading question helped, from catching 6 of
+    13 to 8 of 13 on one model and from 0 to 5 on the other, and then I
+    stopped. Four ways of rewording the third question could not tell my
+    fair replies from my unfair ones, because I could not either. A reply
+    that says "it doesn't actually decide anything" reads like a verdict
+    until you read it twice.
+  </p>
+
+  <p>
+    So the third question, whether a reply rules on the ending, was demoted.
+    Alone, it no longer edits anything. That one change cut the fair replies
+    the larger model rewrites for no good reason from 22 to 8 of 81, at the price
+    of letting some unfair ones through. A message that asks outright
+    whether to end it is still handed back to the person, whatever the
+    judge says.
+  </p>
+
+  <h2>How Much Is Noise</h2>
+
+  <p>
+    The part I am proudest of is the measurement of the measurements. One
+    simulated panel per arm moved by a point or more between runs of the
+    same code, so a single panel cannot tell me whether a change helped.
+    I replayed one recorded conversation's twenty messages through the engine
+    eight times. Fairness repairs ran from 1 to 6 per twenty turns. Two
+    replays of the same turn share about a fifth of their words. Any count
+    that moves by less than that is noise.
+  </p>
+
+  <p>
+    The last panel was a good one. All twenty turns were answered, the
+    engine scored 1.33 out of 7 on "performed" (lower is better), and it
+    scored 5.67 on "would talk to it again", against 6.00 for both
+    baselines. A first blind comparison of the current version against the
+    version from a day earlier, which I read myself over seven moments,
+    came out 3 for the new and 4 for the old. That tells me the change did not make things worse, and
+    nothing more.
+  </p>
+
+  <h2>What We Stopped</h2>
+
+  <p>
+    Three ideas were dropped this week, and each was dropped after a measure
+    and before any code. AI judges, as a way to calibrate the judge. A model
+    that reads the partner's tiredness better than the word-count heuristic.
+    And affective memory, recalling a moment by how it felt. For that last
+    one I replayed the feud and asked whether any of the engine's six
+    affect numbers could tell a calm turn from a distressed one. Cortisol
+    never left 0.0 to 0.11, even at the cruel text. Matching each turn to its
+    nearest neighbour got the right phase 0 times in 20, where chance gives
+    3. There was no signal to index.
+  </p>
+
+  <p>
+    The search found a real bug on the way. The dream read the engine's
+    chemistry by names it did not use (<code>cortisol</code> for a state
+    keyed <code>COR</code>), so every read was zero and every dream came out
+    constructive. It reads the body now.
+  </p>
+
+  <h2>Where the Project Stands</h2>
+
+  <p>
+    The roadmap has no open items. The documentation is now one scheme
+    instead of several: a handoff for the next session, a decision log, a
+    single live roadmap, and two standalone manuals covering what the engine
+    is, how it runs and why. More than 1,150 tests pass offline. The next
+    thing to settle is what a blind comparison is actually for, and that is
+    my call to make.
+  </p>
+</article>
+
+<article class="dev-diary">
+  <header>
     <h1>BoneAmanita Dev Diary: The Engine Remembers</h1>
     <p class="date">September 27, 2026</p>
     <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>

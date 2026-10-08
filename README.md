@@ -86,6 +86,8 @@ BoneAmanita includes a standalone, searchable What/How/Why manual set built usin
 
 - **[System Manual](docs/manual/index.html)**: Internal architecture, the turn lifecycle, somatic physics, memory networks, and voice contracts.
 - **[Reference Manual](docs/manual/reference.html)**: In-session slash commands, runtime modes, tuning presets, SQLite storage, and observability receipts.
+- **[Dev Diary](docs/devlog.html)**: The project told in dated prose, one entry per milestone.
+- **[Run Report](docs/bonereport.html)**: A measured, receipt-by-receipt reading of a real-model run.
 
 To validate and rebuild the manuals:
 

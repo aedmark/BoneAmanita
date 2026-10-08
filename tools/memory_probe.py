@@ -12,7 +12,7 @@ only come back through memory, opens a new day, then asks for each fact. Per fac
   used       the reply to the question contains it
   held       the Stage Manager held the floor, so there was no reply to use it in
 Each run resets and uses its own process per arm, like mode_runs.py. BONE_MODEL and PACE override the
-model and the pause between turns. Keep OUT under scratch/ (gitignored).
+model and the pause between turns. Keep OUT under scratch/runs/ (gitignored).
 """
 import json
 import os
