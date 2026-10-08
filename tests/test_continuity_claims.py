@@ -463,3 +463,13 @@ class FairnessChecksTheReplyShown(BoneTestCase):
         ui, receipts = self.turn()
         self.assertIn(self.DRAFT, ui)
         self.assertEqual((receipts, self.repairs), ([], []))
+
+
+class MindReadingPrompt(BoneTestCase):
+    """2026-10-07: on 86 labelled replies the question caught 6 of 13 mind-reading replies on gemma4:12b and 0 on
+    gemma4:e4b; asking about intent ("on purpose or a mistake") caught 8 and 5."""
+
+    def test_asks_about_intent_and_still_marks_the_other_person(self):
+        mind = self.engine.cortex.MIND
+        self.assertIn("whether it was on purpose or a mistake", mind)
+        self.assertIn("not the one writing, and not the friend", mind)  # tests/judge_mock.py answers by this marker

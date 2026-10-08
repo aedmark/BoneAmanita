@@ -21,3 +21,13 @@ Session-log entries moved out of [../HANDOFF.md](../HANDOFF.md), oldest first.
 **Decisions:** D-010
 **Verified:** `tests/test_creative_determinant.py` passed; 36 turns read regime in live run.
 **Next session should start with:** Session 3 exception barrier audit.
+
+### Session 3: 2026-10-03: Codemod audited and rollback handlers restored
+
+**Contributor:** Gordon & Claude
+**Goal:** Audit 92 removed exception handlers and restore necessary crash barriers.
+**Done:** P1-02, P1-04
+**Changed:** `engine/cycle.py`, `mechanics/commands.py`, `engine/gate/store.py`. Restored invariant rollback and command barriers.
+**Decisions:** D-015
+**Verified:** `tests/test_failure_boundaries.py` 12 passed; 1,042 tests passed.
+**Next session should start with:** Session 4 metabolic economy review.

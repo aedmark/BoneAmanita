@@ -4,6 +4,16 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.121] - 2026-10-07
+
+### Changed
+- **The mind-reading question asks about intent:** the fairness judge now looks for words that say why the other person did something, whether it was on purpose or a mistake, or what she is like. On Gordon's labels it caught 8 of 13 mind-reading replies on gemma4:12b (was 6) and 5 on gemma4:e4b (was 0). The set grew from 50 to 86 labelled replies; across all 86 the judge's precision and recall are 0.62 and 0.69 on 12b, 0.53 and 0.66 on e4b (P5-04).
+
+## [20.7.4.120] - 2026-10-07
+
+### Changed
+- **Panel runs say why a turn came back empty:** each crash is kept in `scratch/probes/crashes_<run>.log` and printed as it happens, every bone row records the component health, and a turn with no reply prints a `NO REPLY` line. The empty bone turns on the last feud panel did not repeat in nine replays and one rerun.
+
 ## [20.7.4.119] - 2026-10-07
 
 ### Added

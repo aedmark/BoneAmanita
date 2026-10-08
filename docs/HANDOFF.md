@@ -13,7 +13,7 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-07, session 12, on `main` (20.7.4.119 plus uncommitted census logging in `tools/audit_somatic_census.py`)._
+_Last updated: 2026-10-07, session 13, on `main` (20.7.4.121; census logging went in with `c8535cb`)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
@@ -22,12 +22,12 @@ back empty on 3 turns for an unknown reason: **not reproduced** in 9 replays and
 panel's bone row with care. Bone rows record each edit's receipt (`edits`) and the component health (`components`)
 in `tools/cache/somatic_responsive.jsonl`.
 
-**Verified** (2026-10-07, on `main` + uncommitted census logging, Linux Python 3.14.7, after `sh reset.sh`)
+**Verified** (2026-10-07, on `main` at 20.7.4.121, Linux Python 3.14.7, after `sh reset.sh`)
 
 | Suite | Result |
 | --- | --- |
-| `.venv/bin/pytest` | **1145 passed, 5 skipped**, 1150 collected (4m05s); the earlier "1151" matches no commit |
-| `.venv/bin/pytest tests/test_continuity_claims.py` | **38 passed**; the redraft test fails on 20.7.4.118 |
+| `.venv/bin/pytest` | **1146 passed, 5 skipped** (4m16s); the 20.7.4.119 message says 1151 on an uncommitted tree, the committed one had 1145 |
+| `.venv/bin/pytest tests/test_continuity_claims.py` | **37 passed**; the redraft test fails on 20.7.4.118, the mind-reading prompt test on 20.7.4.120 |
 | `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed** |
 | `python3 tools/check_docs.py`, `python3 tools/build_manual.py check` | **0 errors, 0 warnings** |
 
@@ -44,7 +44,9 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 
 **What works**
 - **Fairness judge as reading** (P5-04; `brain/cortex.py` `_takes_a_side`). Quotes the reply's excuse, mind-reading and
-  ruling on the ending; on Gordon's 50 labels (`tools/score_fairness.py`) gemma4:12b precision 0.74, recall 0.67.
+  ruling on the ending. On Gordon's 86 labels (`tools/score_fairness.py`, `tools/fairness_set.json`) precision / recall
+  are gemma4:12b 0.62 / 0.69 and gemma4:e4b 0.53 / 0.66. The mind-reading question (`MIND`) asks "why she did it, whether
+  it was on purpose or a mistake, or what she is like"; on e4b it caught 0 of 13 before, 5 now (12b 6 to 8).
 - **Reply edits in CONVERSATION** (`brain/cortex.py`): voice pass, ending hand-back, opening-rut question, fairness repair;
   each files a `cortex.voice` / `cortex.ending` / `cortex.opening` / `cortex.fairness` receipt.
 - **Turn guard** (`engine/turn_guard.py`): a timed-out turn stops before it writes history or memory.
@@ -52,7 +54,10 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 
 **Not verified**
 - Whether the fairness redraft holds live: it never fired on the last panel.
-- Mind-reading recall is weak: "She broke your trust in front of everyone" is not flagged.
+- Precision: on the 36 labels added 2026-10-07 (12 picked where the prompts disagreed) the judge flags 8 to 10 of 28
+  fair replies, mostly hedged guesses about her state ("she might not know what to say"). Gordon labels those fair, but
+  #52 ("probably felt like she had no choice") unfair; the line between them is unsettled.
+- Still missed by `MIND`: #15, #27, #49, #21 on one model or both; #49 is a question and may be a hard label.
 
 **Gotchas for the next session**
 - `sh reset.sh` before any test or engine run; cap them with `systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0`.
@@ -72,7 +77,9 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
    4 fairness REPAIRED, no REDRAFTED. The panel's turns ran 30 to 62s against about 10s in the replays; a circuit-breaker
    trip fits the rows but nothing tripped. Next time: `census.run` now prints `NO REPLY` with the component state and
    `ui`, and keeps crashes in `scratch/probes/crashes_<run>.log`. If a panel shows empty turns, read those first.
-3. Mind-reading recall in the judge (P5-04).
+3. Judge precision on hedged guesses (P5-04), measured with `scratch/probes/score_split.py` on both models: `V2` ("a
+   guess marked as a guess does not count") cost all its recall on the 50-label set, so try it on the 86. Cheaper to
+   skip the repair when only a hedged quote is flagged.
 
 ## Open questions for maintainers
 
@@ -80,6 +87,18 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 - Q-002 Model-driven tiredness reading calibration vs word-frequency fallback (blocks fine-tuning accommodation).
 
 ## Session log
+
+### Session 13: 2026-10-07: Mind-reading question asks about intent; 36 more labels
+
+**Contributor:** Gordon & Claude
+**Goal:** Raise mind-reading recall in the fairness judge (P5-04, next step 3).
+**Done:** 20.7.4.121 (P5-04, in progress)
+**Changed:** `brain/cortex.py` (`MIND`), `tests/test_continuity_claims.py`, `tools/fairness_set.json` (51 to 86, labelled by Gordon).
+**Decisions:** none; the habit clause went out of `MIND` because V3 beat it, unmeasured alone.
+**Verified:** five prompt variants on both models, scored alone and in the full judge, forward and reversed; V3 on the
+36 held-out labels; full suite 1146 passed, 5 skipped.
+**Not verified:** a live panel with it; precision is the open problem (0.62 and 0.53 on all 86).
+**Next session should start with:** next step 3, judge precision on hedged guesses.
 
 ### Session 12: 2026-10-07: Empty bone turns, chased and not reproduced
 
@@ -167,13 +186,3 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 **Changed:** `brain/cortex.py`, `body/metabolism.py`. Removed persistent `is_steering_retry` flag.
 **Verified:** `tests/test_body.py` `test_a_redraft_does_not_discount_later_burns` passed.
 **Next session should start with:** Session 5 token rate adjustment.
-
-### Session 3: 2026-10-03: Codemod audited and rollback handlers restored
-
-**Contributor:** Gordon & Claude
-**Goal:** Audit 92 removed exception handlers and restore necessary crash barriers.
-**Done:** P1-02, P1-04
-**Changed:** `engine/cycle.py`, `mechanics/commands.py`, `engine/gate/store.py`. Restored invariant rollback and command barriers.
-**Decisions:** D-015
-**Verified:** `tests/test_failure_boundaries.py` 12 passed; 1,042 tests passed.
-**Next session should start with:** Session 4 metabolic economy review.
