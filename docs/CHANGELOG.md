@@ -4,6 +4,11 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.125] - 2026-10-08
+
+### Changed
+- **A fairness redraft is put in a friend's voice:** a redraft that reads fair is rewritten by the voice pass, the rewrite is read by the fairness judge, and one that is flagged or breaks the style rules is discarded for the redraft as written (P5-04).
+
 ## [20.7.4.124] - 2026-10-08
 
 ### Changed

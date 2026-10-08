@@ -403,6 +403,7 @@ class FairnessChecksTheReplyShown(BoneTestCase):
         cortex.fairness_once = True
         self.read, self.repairs, self.repaired = [], [], self.FIXED
         self.redrafts, self.redrafted = [], self.DRAFT
+        self.voicings, self.voiced = [], ""
 
         def generate(prompt, *a, **k):
             if prompt.startswith("Here is what someone said to a friend, and the reply the friend drafted.") and "Rewrite the draft without that" in prompt:
@@ -411,6 +412,9 @@ class FairnessChecksTheReplyShown(BoneTestCase):
             if "=== SYSTEM REJECTION ===" in prompt and "Your draft took a side" in prompt:
                 self.redrafts.append(prompt)
                 return self.redrafted
+            if prompt.startswith("Here is what someone said to a friend, and the reply the friend drafted.") and "sitting across a table" in prompt:
+                self.voicings.append(prompt)
+                return self.voiced if f'The draft: "{self.redrafted}"' in prompt else ""
             answer = judge(prompt, excuse=("a heavy truth", "still a heavy truth"), acts=self.MESSAGE if self.MESSAGE in prompt else "NONE")
             if answer is not None:
                 if "The friend replied" in prompt:
@@ -453,6 +457,44 @@ class FairnessChecksTheReplyShown(BoneTestCase):
         self.assertEqual(receipts[0].effect, "REDRAFTED")
         self.assertEqual(len(self.redrafts), 1)
         self.assertIn('it excuses what they did: "a heavy truth"', self.redrafts[0])
+
+    def flagged_twice(self, voice_pass=True):
+        self.engine.cortex.voice_pass = voice_pass
+        self.repaired = "That is still a heavy truth to put into words, and it will land hard on her."
+        self.redrafted = "It will land hard on her. What did you want her to hear when you sent it?"
+        ui, receipts = self.turn()
+        from engine.receipts import ReceiptLedger
+
+        voice = [r for r in ReceiptLedger.get_instance().for_turn() if r.subsystem == "cortex.voice" and r.detail.startswith("redraft:")]
+        return ui, receipts, voice
+
+    def test_a_redraft_that_reads_clean_gets_the_voice_pass(self):
+        """fire_redraft (2026-10-08): the redraft was shown as written, three or four analytic sentences."""
+        self.voiced = "She will feel that. What did you want her to hear when you sent it?"
+        ui, receipts, voice = self.flagged_twice()
+        self.assertIn(self.voiced, ui)
+        self.assertNotIn(self.redrafted, ui)
+        self.assertEqual((receipts[0].effect, voice[0].effect), ("REDRAFTED", "REWRITTEN"))
+
+    def test_a_voiced_redraft_that_is_flagged_is_discarded(self):
+        self.voiced = "That is a heavy truth to put into words. What did you want her to hear when you sent it?"
+        ui, receipts, voice = self.flagged_twice()
+        self.assertIn(self.redrafted, ui)
+        self.assertNotIn(self.voiced, ui)
+        self.assertEqual(voice[0].effect, "KEPT_DRAFT")
+        self.assertIn("fairness", voice[0].detail)
+
+    def test_a_voiced_redraft_with_a_dash_is_discarded(self):
+        self.voiced = "She will feel that \u2014 what did you want her to hear when you sent it?"
+        ui, receipts, voice = self.flagged_twice()
+        self.assertIn(self.redrafted, ui)
+        self.assertEqual(voice[0].effect, "KEPT_DRAFT")
+
+    def test_without_the_voice_pass_a_redraft_is_shown_as_written(self):
+        self.voiced = "She will feel that. What did you want her to hear when you sent it?"
+        ui, receipts, voice = self.flagged_twice(voice_pass=False)
+        self.assertIn(self.redrafted, ui)
+        self.assertEqual((self.voicings, voice), ([], []))
 
     def test_a_repaired_reply_needs_no_redraft(self):
         self.turn()

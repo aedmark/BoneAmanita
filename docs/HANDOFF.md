@@ -13,22 +13,22 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-08, session 14, on `main` (20.7.4.124; no code change since 20.7.4.121)._
+_Last updated: 2026-10-08, session 14, on `main` (20.7.4.125)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
-words (P5-04), else the fewest flags. The redraft fires live (forced on one turn in 4 runs: 2 held, 2 did not, see "What works"), but no feud panel has needed it. Bone came
+words (P5-04), else the fewest flags. The redraft fires live (forced on one turn: 3 of 8 runs held, see "What works") and a redraft that reads clean now gets the voice pass, but no feud panel has needed it. Bone came
 back empty on 3 turns in `20261007-123149` for an unknown reason; **not reproduced** in 9 replays and two reruns, the
 latest panel (`20261007-224404`) delivered 20 of 20 (next step 2). **Judge tuning has stopped** (next step 1): the
 mind-reading question was improved, the rest is within label noise. Bone rows record each edit's receipt (`edits`) and the
 component health (`components`) in `tools/cache/somatic_responsive.jsonl`.
 
-**Verified** (2026-10-07, last code change 20.7.4.121; 20.7.4.122 and .123 touched docs, labels and `tools/score_fairness.py` only; Linux Python 3.14.7, after `sh reset.sh`)
+**Verified** (2026-10-08, on `main` at 20.7.4.125, Linux Python 3.14.7, after `sh reset.sh`)
 
 | Suite | Result |
 | --- | --- |
-| `.venv/bin/pytest` | **1146 passed, 5 skipped** (4m16s); the 20.7.4.119 message says 1151 on an uncommitted tree, the committed one had 1145 |
-| `.venv/bin/pytest tests/test_continuity_claims.py` | **37 passed**; the redraft test fails on 20.7.4.118, the mind-reading prompt test on 20.7.4.120 |
+| `.venv/bin/pytest` | **1150 passed, 5 skipped** (3m57s); the 20.7.4.119 message says 1151 on an uncommitted tree, the committed one had 1145 |
+| `.venv/bin/pytest tests/test_continuity_claims.py` | **41 passed**; the redraft test fails on 20.7.4.118, the mind-reading prompt test on 20.7.4.120, three of the four redraft-voice tests on 20.7.4.124 |
 | `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed** |
 | `python3 tools/check_docs.py`, `python3 tools/build_manual.py check` | **0 errors, 0 warnings** |
 
@@ -57,6 +57,12 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
   2 REDRAFTED (the redraft read clean and was shown), 2 KEPT_FLAGGED (once the redraft was itself flagged for mind-reading,
   "see her actions as a result of her own internal pressure"; once it was empty, rejected by the style rules). A fifth
   firing happened unforced on an earlier turn of one replay (the group chat, outcome not logged).
+- **The redraft gets the voice pass** (20.7.4.125; `_voice_a_redraft`): a redraft that read clean is rewritten by the
+  same voice pass, the rewrite is read by the judge, and one that is flagged or fails a guard (length, dash, style crime) is
+  discarded for the unvoiced redraft; `cortex.voice` files a receipt with detail `redraft: ...`. Forced live, 4 more runs:
+  REDRAFTED 1, KEPT_FLAGGED 3 (two redrafts flagged for mind-reading or "critique of who she is", one empty); in the one
+  that held, the voiced rewrite was flagged ("That's a pretty heavy way to start") and discarded. So the discard works
+  live; a voiced redraft being accepted has not been seen live.
 - **Reply edits in CONVERSATION** (`brain/cortex.py`): voice pass, ending hand-back, opening-rut question, fairness repair;
   each files a `cortex.voice` / `cortex.ending` / `cortex.opening` / `cortex.fairness` receipt.
 - **Turn guard** (`engine/turn_guard.py`): a timed-out turn stops before it writes history or memory.
@@ -64,7 +70,7 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 **Not verified**
 - How often the redraft holds when nothing is forced: it has fired unforced once (a replay, outcome not logged) and never on a panel.
-- The redraft's voice: it is shown as written, with no voice pass, and runs to three or four analytic sentences ("It puts your perspective on the record…").
+- Whether the voice pass improves a shown redraft: it runs, but no voiced redraft has passed the judge live yet.
 - Precision: the judge flags 12 (12b) and 17 (e4b) of 57 fair replies, `scratch/probes/fp_by_clause.py`. By read, 12b:
   b 6 (hedged guesses about her state, "she might not know what to say"), c 5 (conditionals like "that might be your
   answer", "there is a point where"), a 1; e4b: a 6, b 6, c 6. The e4b `EXCUSE` read fires on validation ("It's okay to
@@ -82,8 +88,9 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 ## Next steps (in order)
 
 1. Judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE` stay as they are.
-   The redraft is proven to fire and holds about half the time when forced (see "What works"); nothing here needs it
-   before other work.
+   The redraft is proven to fire and holds in 3 of 8 forced runs (see "What works"); nothing here needs it before other
+   work. Gordon wants a new way to quantify and judge results (the labels and simulated panels have stopped separating
+   changes): brainstorm it before the next behaviour change.
 2. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
    and empty ledgers (the whole core cycle was skipped); right after turn 15 (61.5s). Tried: 9 verbatim replays of the
    20 messages (`scratch/probes/replay_empty.py`, 180 turns, components all online, no crash), and a live bone arm with
@@ -112,11 +119,11 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 **Contributor:** Gordon & Claude
 **Goal:** See the P5-04 redraft run on the real model.
-**Done:** 20.7.4.124 (P5-04 stays in progress)
-**Changed:** `docs/HANDOFF.md` only; the probe `scratch/probes/fire_redraft.py` is not committed (scratch).
-**Verified:** four forced runs on the cruel-text turn: REDRAFTED 2, KEPT_FLAGGED 2; one unforced firing on another turn.
-**Not verified:** how often it fires and holds on a panel; the redraft's voice (no voice pass on it).
-**Next session should start with:** whatever Gordon picks from `ROADMAP.md`.
+**Done:** 20.7.4.124 and .125 (P5-04 stays in progress)
+**Changed:** `brain/cortex.py` (`_voice_a_redraft`), `tests/test_continuity_claims.py` (4 tests); the probe `scratch/probes/fire_redraft.py` is not committed (scratch).
+**Verified:** eight forced runs on the cruel-text turn: REDRAFTED 3, KEPT_FLAGGED 5 (4 before the voice pass: 2 and 2; 4 after: 1 and 3); one unforced firing on another turn; full suite 1150 passed, 5 skipped.
+**Not verified:** how often it fires and holds on a panel; a voiced redraft being accepted live.
+**Next session should start with:** brainstorming how to quantify and judge results (next step 1), then whatever Gordon picks from `ROADMAP.md`.
 
 ### Session 13: 2026-10-07: Mind-reading question asks about intent; 36 more labels
 

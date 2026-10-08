@@ -432,11 +432,23 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
         if redraft and (text := redraft(self._side_feedback(why))):
             if not (again := self._takes_a_side(message, text, state)):
                 issue_receipt("cortex.fairness", "REDRAFTED", result_count=1, detail=why)
-                return text
+                return self._voice_a_redraft(message, text, gk, state)
             flagged.append((again, text))
         least = min(flagged, key=lambda f: f[0].count("; "))
         issue_receipt("cortex.fairness", "KEPT_FLAGGED", result_count=0, degraded=True, detail=least[0])
         return least[1]
+
+    def _voice_a_redraft(self, message: str, text: str, gk: Any, state: dict) -> str:
+        """A redraft that read clean, in a friend's voice (it ran three or four analytic sentences, fire_redraft
+        2026-10-08). The rewrite is read too; one that is flagged or fails a guard is discarded for the redraft."""
+        if not self.voice_pass:
+            return text
+        voiced, why = self._in_a_friends_voice(message, text, gk, state)
+        if voiced and (flag := self._takes_a_side(message, voiced, state)):
+            voiced, why = "", f"fairness: {flag}"
+        issue_receipt("cortex.voice", "REWRITTEN" if voiced else "KEPT_DRAFT", result_count=int(bool(voiced)),
+                      detail=f"redraft: {why or first_sentence(voiced)}")
+        return voiced or text
 
     @staticmethod
     def _rejected(base_prompt: str, reason: str) -> str:
