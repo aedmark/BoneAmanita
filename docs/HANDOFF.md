@@ -54,9 +54,11 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 
 **Not verified**
 - Whether the fairness redraft holds live: it never fired on the last panel.
-- Precision: on the 36 labels added 2026-10-07 (12 picked where the prompts disagreed) the judge flags 8 to 10 of 28
-  fair replies, mostly hedged guesses about her state ("she might not know what to say"). Gordon labels those fair, but
-  #52 ("probably felt like she had no choice") unfair; the line between them is unsettled.
+- Precision: the judge flags 12 (12b) and 17 (e4b) of 57 fair replies, `scratch/probes/fp_by_clause.py`. By read, 12b:
+  b 6 (hedged guesses about her state, "she might not know what to say"), c 5 (conditionals like "that might be your
+  answer", "there is a point where"), a 1; e4b: a 6, b 6, c 6. The e4b `EXCUSE` read fires on validation ("It's okay to
+  feel hurt", "you can be proud of"), which its "say it was okay" clause did not intend (inference, untested).
+  Gordon labels the hedged guesses fair but #52 ("probably felt like she had no choice") unfair; that line is unsettled.
 - Still missed by `MIND`: #15, #27, #49, #21 on one model or both; #49 is a question and may be a hard label.
 
 **Gotchas for the next session**
@@ -77,9 +79,11 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
    4 fairness REPAIRED, no REDRAFTED. The panel's turns ran 30 to 62s against about 10s in the replays; a circuit-breaker
    trip fits the rows but nothing tripped. Next time: `census.run` now prints `NO REPLY` with the component state and
    `ui`, and keeps crashes in `scratch/probes/crashes_<run>.log`. If a panel shows empty turns, read those first.
-3. Judge precision on hedged guesses (P5-04), measured with `scratch/probes/score_split.py` on both models: `V2` ("a
-   guess marked as a guess does not count") cost all its recall on the 50-label set, so try it on the 86. Cheaper to
-   skip the repair when only a hedged quote is flagged.
+3. Judge precision (P5-04), measured with `scratch/probes/score_split.py <model> <variant>` on both models. Tried on
+   the 86: V2 (adds "knew, felt, meant, wanted" and a hedge sentence) 0.56 / 0.34 on 12b, 0.53 / 0.55 on e4b; V3 plus
+   the hedge sentence 0.62 / 0.45 and 0.56 / 0.66, against V3's 0.62 / 0.69 and 0.53 / 0.66: the hedge costs 12b its
+   mind-reading catches (8 to 3). So the false flags are not mostly `MIND`'s: 12b b 6, c 5, a 1; e4b a 6, b 6, c 6.
+   Next: the `RULE` read on conditionals and the `EXCUSE` read on validation, one prompt at a time, scored on both models.
 
 ## Open questions for maintainers
 
@@ -96,7 +100,8 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 **Changed:** `brain/cortex.py` (`MIND`), `tests/test_continuity_claims.py`, `tools/fairness_set.json` (51 to 86, labelled by Gordon).
 **Decisions:** none; the habit clause went out of `MIND` because V3 beat it, unmeasured alone.
 **Verified:** five prompt variants on both models, scored alone and in the full judge, forward and reversed; V3 on the
-36 held-out labels; full suite 1146 passed, 5 skipped.
+36 held-out labels; then V2 and V3 plus a hedge sentence on all 86 (both lose to V3) and false flags by read; full suite
+1146 passed, 5 skipped.
 **Not verified:** a live panel with it; precision is the open problem (0.62 and 0.53 on all 86).
 **Next session should start with:** next step 3, judge precision on hedged guesses.
 
