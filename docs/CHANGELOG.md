@@ -4,6 +4,16 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.123] - 2026-10-08
+
+### Changed
+- **Fairness labels grow to 116:** 30 more replies to the ending question, labelled by Gordon; the scoring tool counts a two-letter clause (such as `ac`) under each letter. The ending read and its variants were scored on them and left unchanged (P5-04).
+
+## [20.7.4.122] - 2026-10-07
+
+### Changed
+- **Handoff:** records where the judge's false flags come from and the prompts that did not help. No code change.
+
 ## [20.7.4.121] - 2026-10-07
 
 ### Changed

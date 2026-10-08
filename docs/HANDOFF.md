@@ -13,16 +13,17 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-07, session 13, on `main` (20.7.4.121; census logging went in with `c8535cb`)._
+_Last updated: 2026-10-08, session 13, on `main` (20.7.4.123)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
-words (P5-04), else the fewest flags. The feud panel on it (`20261007-123149`) never used the redraft, and bone came
-back empty on 3 turns for an unknown reason: **not reproduced** in 9 replays and a rerun (next step 2), so read that
-panel's bone row with care. Bone rows record each edit's receipt (`edits`) and the component health (`components`)
-in `tools/cache/somatic_responsive.jsonl`.
+words (P5-04), else the fewest flags. Neither the last three feud panels nor the reruns used the redraft. Bone came
+back empty on 3 turns in `20261007-123149` for an unknown reason; **not reproduced** in 9 replays and two reruns, the
+latest panel (`20261007-224404`) delivered 20 of 20 (next step 2). **Judge tuning has stopped** (next step 1): the
+mind-reading question was improved, the rest is within label noise. Bone rows record each edit's receipt (`edits`) and the
+component health (`components`) in `tools/cache/somatic_responsive.jsonl`.
 
-**Verified** (2026-10-07, on `main` at 20.7.4.121, Linux Python 3.14.7, after `sh reset.sh`)
+**Verified** (2026-10-07, last code change 20.7.4.121; 20.7.4.122 and .123 touched docs, labels and `tools/score_fairness.py` only; Linux Python 3.14.7, after `sh reset.sh`)
 
 | Suite | Result |
 | --- | --- |
@@ -31,21 +32,24 @@ in `tools/cache/somatic_responsive.jsonl`.
 | `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed** |
 | `python3 tools/check_docs.py`, `python3 tools/build_manual.py check` | **0 errors, 0 warnings** |
 
-**Last feud panel** (20.7.4.119, `20261007-123149`, exit interview 1-7: heard / clearer / lectured / performed / again)
+**Last feud panel** (20.7.4.122, `20261007-224404`, exit interview 1-7: heard / clearer / lectured / performed / again)
 
 | arm | heard | clearer | lectured | performed | again |
 | --- | --- | --- | --- | --- | --- |
-| bone | 4.33 | 4.67 | 2.33 | 2.33 | 5.67 |
-| friend | 4.33 | 3.33 | 2.00 | 1.67 | 6.33 |
-| plain | 4.00 | 3.67 | 2.33 | 2.33 | 5.33 |
+| bone | 4.33 | 3.33 | 2.00 | 1.33 | 5.67 |
+| friend | 5.00 | 4.00 | 2.00 | 2.33 | 6.00 |
+| plain | 5.00 | 4.00 | 2.67 | 2.00 | 6.00 |
 
-Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62s; 54 words. On 20.7.4.118
-(`20261007-113744`) again was bone 4.67, friend 5.67, plain 6.00, and bone sided at the cruel text.
+Bone: 20 of 20 delivered, 20 to 43s a turn (median 25s), 58 words, 3 fairness REPAIRED, no REDRAFTED, no component
+offline, no `NO REPLY`, no crash. One run per arm: the earlier panels moved a point or more between runs, so bone's low
+"performed" is a good sign and its "heard" and "clearer" a mild concern, not settled. Previous panels, again: bone 5.67,
+friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, friend 5.67, plain 6.00 (20.7.4.118).
 
 **What works**
 - **Fairness judge as reading** (P5-04; `brain/cortex.py` `_takes_a_side`). Quotes the reply's excuse, mind-reading and
   ruling on the ending. On Gordon's 86 labels (`tools/score_fairness.py`, `tools/fairness_set.json`) precision / recall
-  are gemma4:12b 0.62 / 0.69 and gemma4:e4b 0.53 / 0.66. The mind-reading question (`MIND`) asks "why she did it, whether
+  are gemma4:12b 0.62 / 0.69 and gemma4:e4b 0.53 / 0.66 (the set is now 116 labels, 30 of them replies to the ending
+  question; the full judge was not rescored on all 116). The mind-reading question (`MIND`) asks "why she did it, whether
   it was on purpose or a mistake, or what she is like"; on e4b it caught 0 of 13 before, 5 now (12b 6 to 8).
 - **Reply edits in CONVERSATION** (`brain/cortex.py`): voice pass, ending hand-back, opening-rut question, fairness repair;
   each files a `cortex.voice` / `cortex.ending` / `cortex.opening` / `cortex.fairness` receipt.
@@ -70,20 +74,24 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 
 ## Next steps (in order)
 
-1. Feud panel on the redraft (`20261007-123149`, logs `scratch/feud20p_*.log`), again: bone 5.67, friend 6.33,
-   plain 5.33. Fairness: turn 15 REPAIRED, turn 5 KEPT_FLAGGED (mind-reading), no REDRAFTED all run.
+1. Judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE` stay as they are.
+   The redraft has not fired live on three panels and is unproven; nothing here needs it before other work.
 2. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
    and empty ledgers (the whole core cycle was skipped); right after turn 15 (61.5s). Tried: 9 verbatim replays of the
    20 messages (`scratch/probes/replay_empty.py`, 180 turns, components all online, no crash), and a live bone arm with
    the simulated person (`20261007-144418`, `scratch/feud20q_bone.log`): 20 of 20 delivered, again 6.00, heard 5.00,
-   4 fairness REPAIRED, no REDRAFTED. The panel's turns ran 30 to 62s against about 10s in the replays; a circuit-breaker
+   4 fairness REPAIRED, no REDRAFTED; the panel on 20.7.4.122 (`20261007-224404`) was 20 of 20 as well. The earlier panel's turns ran 30 to 62s against about 10s in the replays; a circuit-breaker
    trip fits the rows but nothing tripped. Next time: `census.run` now prints `NO REPLY` with the component state and
    `ui`, and keeps crashes in `scratch/probes/crashes_<run>.log`. If a panel shows empty turns, read those first.
-3. Judge precision (P5-04), measured with `scratch/probes/score_split.py <model> <variant>` on both models. Tried on
-   the 86: V2 (adds "knew, felt, meant, wanted" and a hedge sentence) 0.56 / 0.34 on 12b, 0.53 / 0.55 on e4b; V3 plus
+3. (Done, stopped) Judge precision (P5-04), measured with `scratch/probes/score_split.py <model> <variant>` on both
+   models. Tried on the 86: V2 (adds "knew, felt, meant, wanted" and a hedge sentence) 0.56 / 0.34 on 12b, 0.53 / 0.55 on e4b; V3 plus
    the hedge sentence 0.62 / 0.45 and 0.56 / 0.66, against V3's 0.62 / 0.69 and 0.53 / 0.66: the hedge costs 12b its
    mind-reading catches (8 to 3). So the false flags are not mostly `MIND`'s: 12b b 6, c 5, a 1; e4b a 6, b 6, c 6.
-   Next: the `RULE` read on conditionals and the `EXCUSE` read on validation, one prompt at a time, scored on both models.
+   The ending read (`RULE`) was tried on all 116 (`scratch/probes/rule_only.py`, 6 unfair-c, 81 fair): it flags 15 (12b)
+   and 21 (e4b) fair replies, 10 and 15 of the 24 fair ending replies; R2 ("this friendship, or walk away from her")
+   cuts that to 6 and 19 but catches 1 of 6 on 12b and 5 of 6 on e4b (now 2 and 6); R1 and R3 are worse. Gordon's fair
+   ending replies ("it doesn't actually decide anything", #92) read like his unfair ones (#38), so no prompt separates
+   them; the current `RULE` stays. A false ending flag is the cheap error (it only triggers the hand-back edit).
 
 ## Open questions for maintainers
 
@@ -96,14 +104,15 @@ Bone: 17 of 20 turns delivered (3 empty, see next step 2); delivered turns 30-62
 
 **Contributor:** Gordon & Claude
 **Goal:** Raise mind-reading recall in the fairness judge (P5-04, next step 3).
-**Done:** 20.7.4.121 (P5-04, in progress)
-**Changed:** `brain/cortex.py` (`MIND`), `tests/test_continuity_claims.py`, `tools/fairness_set.json` (51 to 86, labelled by Gordon).
+**Done:** 20.7.4.121 to .123 (P5-04, judge tuning stopped)
+**Changed:** `brain/cortex.py` (`MIND`), `tests/test_continuity_claims.py`, `tools/fairness_set.json` (51 to 116, labelled by Gordon), `tools/score_fairness.py` (two-letter clauses count under each letter).
 **Decisions:** none; the habit clause went out of `MIND` because V3 beat it, unmeasured alone.
 **Verified:** five prompt variants on both models, scored alone and in the full judge, forward and reversed; V3 on the
 36 held-out labels; then V2 and V3 plus a hedge sentence on all 86 (both lose to V3) and false flags by read; full suite
 1146 passed, 5 skipped.
-**Not verified:** a live panel with it; precision is the open problem (0.62 and 0.53 on all 86).
-**Next session should start with:** next step 3, judge precision on hedged guesses.
+Then the ending read on 116 labels and a feud panel (`20261007-224404`: 20 of 20 delivered, bone performed 1.33, again 5.67).
+**Not verified:** the redraft live; the full judge on all 116 labels (the rescore was cut off); precision stays 0.62 and 0.53 on 86.
+**Next session should start with:** whatever Gordon picks from `ROADMAP.md`; judge tuning is parked (next step 1).
 
 ### Session 12: 2026-10-07: Empty bone turns, chased and not reproduced
 

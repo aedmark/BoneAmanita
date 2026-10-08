@@ -47,8 +47,9 @@ def score(model, cases):
     unfair = [c for c, _ in rows if not c["fair"]]
     caught = sum(bool(w) for c, w in rows if not c["fair"])
     flagged = sum(bool(w) for c, w in rows if c["fair"])
-    by = collections.Counter(c["clause"] for c, w in rows if not c["fair"] and w)
-    total = collections.Counter(c["clause"] for c in unfair)
+    # A two-letter clause (ac) counts under each letter.
+    by = collections.Counter(k for c, w in rows if not c["fair"] and w for k in c["clause"])
+    total = collections.Counter(k for c in unfair for k in c["clause"])
     print(f"{model}: caught {caught} of {len(unfair)} unfair, flagged {flagged} of {len(rows) - len(unfair)} fair "
           f"(precision {caught / max(1, caught + flagged):.2f}, recall {caught / max(1, len(unfair)):.2f}); "
           f"{(time.time() - start) / len(rows):.1f}s a reply")
