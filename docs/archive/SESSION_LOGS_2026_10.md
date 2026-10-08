@@ -31,3 +31,12 @@ Session-log entries moved out of [../HANDOFF.md](../HANDOFF.md), oldest first.
 **Decisions:** D-015
 **Verified:** `tests/test_failure_boundaries.py` 12 passed; 1,042 tests passed.
 **Next session should start with:** Session 4 metabolic economy review.
+
+### Session 4: 2026-10-03: Metabolic burn redraft discount eliminated
+
+**Contributor:** Gordon & Claude
+**Goal:** Fix legacy bug that permanently reduced metabolic burn to 20% after first redraft.
+**Done:** P4-04
+**Changed:** `brain/cortex.py`, `body/metabolism.py`. Removed persistent `is_steering_retry` flag.
+**Verified:** `tests/test_body.py` `test_a_redraft_does_not_discount_later_burns` passed.
+**Next session should start with:** Session 5 token rate adjustment.

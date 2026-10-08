@@ -13,11 +13,11 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-08, session 13, on `main` (20.7.4.123)._
+_Last updated: 2026-10-08, session 14, on `main` (20.7.4.124; no code change since 20.7.4.121)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
-words (P5-04), else the fewest flags. Neither the last three feud panels nor the reruns used the redraft. Bone came
+words (P5-04), else the fewest flags. The redraft fires live (forced on one turn in 4 runs: 2 held, 2 did not, see "What works"), but no feud panel has needed it. Bone came
 back empty on 3 turns in `20261007-123149` for an unknown reason; **not reproduced** in 9 replays and two reruns, the
 latest panel (`20261007-224404`) delivered 20 of 20 (next step 2). **Judge tuning has stopped** (next step 1): the
 mind-reading question was improved, the rest is within label noise. Bone rows record each edit's receipt (`edits`) and the
@@ -51,13 +51,20 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
   are gemma4:12b 0.62 / 0.69 and gemma4:e4b 0.53 / 0.66 (the set is now 116 labels, 30 of them replies to the ending
   question; the full judge was not rescored on all 116). The mind-reading question (`MIND`) asks "why she did it, whether
   it was on purpose or a mistake, or what she is like"; on e4b it caught 0 of 13 before, 5 now (12b 6 to 8).
+- **Fairness redraft fires live** (`scratch/probes/fire_redraft.py <run> <turn>`, 2026-10-08, gemma4:12b): replay a bone
+  run's messages and, on the cruel-text turn, force the reads of the shown reply, the edit and the unvoiced draft to flag
+  (a real quote each); the real model writes the redraft told the quoted words and the real judge reads it. Four runs:
+  2 REDRAFTED (the redraft read clean and was shown), 2 KEPT_FLAGGED (once the redraft was itself flagged for mind-reading,
+  "see her actions as a result of her own internal pressure"; once it was empty, rejected by the style rules). A fifth
+  firing happened unforced on an earlier turn of one replay (the group chat, outcome not logged).
 - **Reply edits in CONVERSATION** (`brain/cortex.py`): voice pass, ending hand-back, opening-rut question, fairness repair;
   each files a `cortex.voice` / `cortex.ending` / `cortex.opening` / `cortex.fairness` receipt.
 - **Turn guard** (`engine/turn_guard.py`): a timed-out turn stops before it writes history or memory.
 - **Docs** (P6-01, P6-02; D-016, D-017): the Manifold scheme and the 3x manual set.
 
 **Not verified**
-- Whether the fairness redraft holds live: it never fired on the last panel.
+- How often the redraft holds when nothing is forced: it has fired unforced once (a replay, outcome not logged) and never on a panel.
+- The redraft's voice: it is shown as written, with no voice pass, and runs to three or four analytic sentences ("It puts your perspective on the record…").
 - Precision: the judge flags 12 (12b) and 17 (e4b) of 57 fair replies, `scratch/probes/fp_by_clause.py`. By read, 12b:
   b 6 (hedged guesses about her state, "she might not know what to say"), c 5 (conditionals like "that might be your
   answer", "there is a point where"), a 1; e4b: a 6, b 6, c 6. The e4b `EXCUSE` read fires on validation ("It's okay to
@@ -75,7 +82,8 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 ## Next steps (in order)
 
 1. Judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE` stay as they are.
-   The redraft has not fired live on three panels and is unproven; nothing here needs it before other work.
+   The redraft is proven to fire and holds about half the time when forced (see "What works"); nothing here needs it
+   before other work.
 2. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
    and empty ledgers (the whole core cycle was skipped); right after turn 15 (61.5s). Tried: 9 verbatim replays of the
    20 messages (`scratch/probes/replay_empty.py`, 180 turns, components all online, no crash), and a live bone arm with
@@ -99,6 +107,16 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 - Q-002 Model-driven tiredness reading calibration vs word-frequency fallback (blocks fine-tuning accommodation).
 
 ## Session log
+
+### Session 14: 2026-10-08: The fairness redraft, fired live
+
+**Contributor:** Gordon & Claude
+**Goal:** See the P5-04 redraft run on the real model.
+**Done:** 20.7.4.124 (P5-04 stays in progress)
+**Changed:** `docs/HANDOFF.md` only; the probe `scratch/probes/fire_redraft.py` is not committed (scratch).
+**Verified:** four forced runs on the cruel-text turn: REDRAFTED 2, KEPT_FLAGGED 2; one unforced firing on another turn.
+**Not verified:** how often it fires and holds on a panel; the redraft's voice (no voice pass on it).
+**Next session should start with:** whatever Gordon picks from `ROADMAP.md`.
 
 ### Session 13: 2026-10-07: Mind-reading question asks about intent; 36 more labels
 
@@ -191,12 +209,3 @@ Then the ending read on 116 labels and a feud panel (`20261007-224404`: 20 of 20
 **Changed:** `engine/presets.py`, `brain/cortex.py`. Set TECHNICAL `atp_per_token` to 0.020.
 **Verified:** 30-turn technical coding run sustained ATP min/median 20/44 without vagus nerve spikes.
 **Next session should start with:** Session 6 fatigue detection.
-
-### Session 4: 2026-10-03: Metabolic burn redraft discount eliminated
-
-**Contributor:** Gordon & Claude
-**Goal:** Fix legacy bug that permanently reduced metabolic burn to 20% after first redraft.
-**Done:** P4-04
-**Changed:** `brain/cortex.py`, `body/metabolism.py`. Removed persistent `is_steering_retry` flag.
-**Verified:** `tests/test_body.py` `test_a_redraft_does_not_discount_later_burns` passed.
-**Next session should start with:** Session 5 token rate adjustment.

@@ -4,6 +4,11 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.124] - 2026-10-08
+
+### Changed
+- **The fairness redraft was fired live:** with the earlier reads forced to flag, the redraft ran on the real model and held in 2 of 4 runs (once it was itself flagged, once rejected by the style rules). No code change (P5-04).
+
 ## [20.7.4.123] - 2026-10-08
 
 ### Changed
