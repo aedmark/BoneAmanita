@@ -122,7 +122,7 @@ footer { border-top: 1px solid var(--rule); padding-top: 18px; }
   <header>
     <div class="eyebrow">BoneAmanita · feud panel 20261007-224404 · 8 October 2026</div>
     <h1>The feud panel, and what our instruments can tell</h1>
-    <p class="lede">One twenty-turn conversation, three arms, plus the fairness judge, eight replays and a first blind A/B. The engine answered every turn and scored best on "performed". The measurements say less than the panel looks like they say, and this report is mostly about how much less.</p>
+    <p class="lede">One twenty-turn conversation, three arms, plus the fairness judge, eight replays, a first blind A/B and a blind regression check. The engine answered every turn and scored best on "performed". The measurements say less than the panel looks like they say, and the regression check found no measurable gain in fairness from the work of the last week.</p>
     <p class="meta">Model gemma4:12b (judge also gemma4:e4b) · simulated person mistral-nemo · code 20.7.4.122 for the panel, 20.7.4.131 for the rest · <code>reset.sh</code> before each arm · earlier report: <a href="bonereport_0926.html">the ADVENTURE rerun, 26 September</a></p>
   </header>
 
@@ -135,6 +135,9 @@ footer { border-top: 1px solid var(--rule); padding-top: 18px; }
       <div class="v c-warn"><strong>The judge is weak</strong><span>On 116 human labels it is right about 6 in 10 flags and finds about 7 in 10 of the unfair replies. Tuning has stopped.</span></div>
       <div class="v c-bad"><strong>Three empty turns, unexplained</strong><span>Bone returned nothing on turns 16, 17 and 19 of the panel before this one. Not reproduced in nine replays and two reruns.</span></div>
       <div class="v c-warn"><strong>A/B: 3 to 4</strong><span>Seven moments cannot separate two versions of a change that acts on a few turns of twenty.</span></div>
+      <div class="v c-bad"><strong>No measurable fairness gain</strong><span>Regression check, 84 blind labels: 33% unfair for 20.7.4.132 (14 of 42) and for 20.7.4.118 (13 of 40). "Fairness" is a proxy for the mission and is no longer a score (D-022).</span></div>
+      <div class="v c-good"><strong>The engine keeps its rules</strong><span>Conformance check, no labels: 0% dashes and style crimes against 20% to 46% and 31% for the plain and friend prompts; 87% of replies within 3 sentences against 2% and 8%.</span></div>
+      <div class="v c-warn"><strong>Habits, not rules, lag</strong><span>A stock word ("heavy", "jugular", "gut punch", "a lot") is in 39% of the engine's replies against 18% for plain, and its openers are 54% distinct against 68%.</span></div>
     </div>
   </section>
 
@@ -243,6 +246,39 @@ footer { border-top: 1px solid var(--rule); padding-top: 18px; }
     </div>
 
     <div class="finding">
+      <div class="head"><span class="pill p-bad">No effect found</span><h3>The regression check: 33% unfair before and after (D-022)</h3></div>
+      <p>The A/B above asks "which reply is better", which cannot answer whether a change made replies fairer. So the same twenty messages were replayed through current code (20.7.4.132, 8 replays) and 20.7.4.118 (8 replays), 20 of 20 turns delivered every time. Six replies per version were drawn at each of seven risky turns, shuffled into one list with no version shown, and Gordon labelled each fair or unfair (clauses a, b, c) before the key was read. 82 of 84 were labelled.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Version</th><th>Unfair</th><th>95% interval</th><th>Borderline counted unfair</th></tr></thead>
+          <tbody>
+            <tr><td>20.7.4.118</td><td class="num">13 of 40 (0.33)</td><td class="num">0.20 to 0.48</td><td class="num">15 of 40</td></tr>
+            <tr><td>20.7.4.132</td><td class="num">14 of 42 (0.33)</td><td class="num">0.21 to 0.48</td><td class="num">16 of 42</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>One-sided Fisher p = 0.62 that the current rate is lower. At 42 per version a drop from 50% to 20% would be caught 85% of the time, so a large effect is ruled out and a small one is not. The unfair replies sit on the joke (5 of 6 in both versions) and "I think I just ended it" (5 of 6 old, 3 of 6 new); the ending question was fair 12 of 12. The engine's own receipts show it acted on 7 of 14 unfair replies (current) and 5 of 13 (old), and on 5 of 28 and 6 of 27 fair ones: it leaves about half the unfair replies alone, and acting on one does not always fix it.</p>
+      <p class="note">A baseline arm (plain and friend on the same blind sheet) was built and not labelled: the baselines give themselves away by shape, so no blind label separates them, and Gordon's point is the larger one: BoneAmanita is meant not to be a sycophant, to co-regulate the person and to hold a space of healthy constraints, and "fair to the absent party" measures none of those. Gordon's notes on the sheet also name stock phrases: across 160 replays per version "heavy" is in 40 current and 34 old replies and "jugular" in 2 and 5, so it is the model's habit and not the edits'.</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-good">New instrument</span><h3>Conformance: the constraints, counted without labels</h3></div>
+      <p><code>tools/check_conformance.py</code> counts, per system, the rules the project states and the habits a reader notices, on the same replays (160 engine replies per version, 80 per baseline). No judge and no labels, so any system can be set beside any other.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>System</th><th>Words</th><th>Within 3 sentences</th><th>Dash</th><th>Style crime</th><th>Ends on ?</th><th>Validating opener</th><th>Stock word</th><th>Distinct openers</th></tr></thead>
+          <tbody>
+            <tr><td>Engine 20.7.4.132</td><td class="num">37</td><td class="num">87%</td><td class="num">0%</td><td class="num">0%</td><td class="num">11%</td><td class="num">6%</td><td class="num">39%</td><td class="num">54%</td></tr>
+            <tr><td>Engine 20.7.4.118</td><td class="num">38</td><td class="num">82%</td><td class="num">0%</td><td class="num">0%</td><td class="num">19%</td><td class="num">5%</td><td class="num">39%</td><td class="num">54%</td></tr>
+            <tr><td>Plain (60-word prompt)</td><td class="num">65</td><td class="num">2%</td><td class="num">20%</td><td class="num">31%</td><td class="num">0%</td><td class="num">2%</td><td class="num">18%</td><td class="num">68%</td></tr>
+            <tr><td>Friend prompt</td><td class="num">69</td><td class="num">8%</td><td class="num">46%</td><td class="num">31%</td><td class="num">74%</td><td class="num">14%</td><td class="num">41%</td><td class="num">60%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Markdown and stage directions were 0% in every system. "Take a breath" is counted as advice, not a performed body. The engine's habits (stock words, repeating openers) are the same in both engine versions, so they come from the model and the voice pass, not from this week's edits.</p>
+    </div>
+
+    <div class="finding">
       <div class="head"><span class="pill p-good">Stopped early</span><h3>Affective retrieval had no signal to index (D-021)</h3></div>
       <p>Before building an affect vector beside each memory (P7-01), the engine's six affect numbers were traced across a replay of this feud. Cortisol stayed between 0.0 and 0.11 through the "distressed" turns; dopamine was flat (0.63 to 0.77); serotonin and oxytocin drifted up with conversation length. Matching each turn to its nearest other turn gave the same scripted phase 0 of 20 times for the six numbers, 2 for the chemistry and 4 for the person model, against 3 expected by chance. P7-01 was dropped before any code.</p>
       <p>The trace found a real bug on the way: the REM dream read the chemistry as <code>cortisol</code>, <code>dopamine</code> from a state keyed <code>COR</code>, <code>DOP</code>, so every read was 0 and every dream was constructive. Fixed in 20.7.4.130. A REM cycle straight after a conversation will now mostly be surreal (dopamine sits 0.63 to 0.77 in conversation).</p>
@@ -261,15 +297,17 @@ footer { border-top: 1px solid var(--rule); padding-top: 18px; }
   <section aria-labelledby="next">
     <h2 id="next">What to do next</h2>
     <ol>
-      <li><strong>Decide what a blind comparison is for.</strong> Seven moments chosen for the conversation's drama measure the engine's overall voice; they do not test a change. Aim pairs at the turns where a fairness edit, redraft or voiced redraft acted, or measure something else on purpose.</li>
-      <li><strong>Pass <code>physics_state</code> to the REM cycle's callers.</strong> The cycle, phase and biological callers of <code>enter_rem_cycle</code> do not pass it, so a stored affect's voltage and resonance stay 0 there; only <code>/dream</code> does.</li>
+      <li><strong>Get more varied sample data.</strong> One topic, one script and one model carry every number here. The sycophancy sheet shows why: both versions push back on "Maybe I should just ghost her too" (11 of 16), in near-identical words (12 of 16 open "Ghosting is" or "Ghosting just", 15 of 16 contain "but"). Tempting-idea and positive moments for the other seven topics, replayed through the engine and the baselines, with the conformance check as the wide net.</li>
+      <li><strong>Measure regulation and return with the panel.</strong> Whole conversations, at least three runs per arm at a milestone, read by Gordon; the exit interview is the machine's side of it.</li>
+      <li><strong>Decide about the habits.</strong> A stock word in 39% of replies and openers repeating are not rules. Whether to extend the Gatekeeper's wordlist or vary openers is Gordon's call.</li>
+      <li><strong>Done: the REM cycle's callers pass <code>physics_state</code> (2026-10-08).</strong> All five callers now hand it the flattened physics. The two that already tried (<code>/sleep</code>, <code>/dream</code>) used <code>vars(packet)</code>, which holds only the nested domains, so a stored affect's voltage and resonance were 0 everywhere. Narcolepsy also passed the dream no chemistry and ATP 0.</li>
       <li><strong>Read <code>NO REPLY</code> first</strong> if the next panel shows empty bone turns.</li>
       <li><strong>Revisit D-019</strong> on a second human-labelled set of ending replies before trusting the demotion.</li>
     </ol>
   </section>
 
   <footer>
-    <p class="note">Numbers are as recorded in <code>docs/HANDOFF.md</code>, <code>docs/TESTING.md</code> and <code>docs/DECISIONS.md</code> (D-019, D-021) on 2026-10-08. The raw panel rows in <code>tools/cache</code> were cleared that day, so the exit-interview and delivery figures cannot be recomputed from this repository; the probes behind the judge and noise-floor figures are in <code>scratch/probes/</code>. One run per arm and one set of 116 labels are all this report rests on.</p>
+    <p class="note">Numbers are as recorded in <code>docs/HANDOFF.md</code>, <code>docs/TESTING.md</code> and <code>docs/DECISIONS.md</code> (D-019, D-021) on 2026-10-08. The raw panel rows in <code>tools/cache</code> were cleared that day, so the exit-interview and delivery figures cannot be recomputed from this repository; the probes behind the judge and noise-floor figures are in <code>scratch/probes/</code>. One run per arm, one set of 116 labels, one set of 84 regression labels and 160 replayed replies per engine version are all this report rests on; the regression sheet and scorer are in <code>scratch/probes/</code> (<code>regress_labels.md</code>, <code>score_regress.py</code>).</p>
   </footer>
 </main>
 

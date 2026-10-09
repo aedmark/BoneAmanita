@@ -187,6 +187,7 @@ class ObservationPhase(SimulationPhase):
                         soul_snap,
                         bio_state=bio_packet,
                         active_mode=getattr(self.eng.cortex, "active_mode", ""),
+                        physics_state=_safe_dict(ctx.physics),
                     )
                     if dream_text:
                         ctx.log(
@@ -356,6 +357,7 @@ class SanctuaryPhase(SimulationPhase):
             soul_snapshot,
             bio_state=bio_packet,
             active_mode=getattr(self.eng.cortex, "active_mode", ""),
+            physics_state=_safe_dict(ctx.physics),
         )
         dream_text_to_archive = None
         if isinstance(dream_packet, dict):

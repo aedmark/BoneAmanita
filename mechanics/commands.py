@@ -636,7 +636,7 @@ class CommandProcessor:
                 active_mode=getattr(
                     getattr(self.interface.eng, "cortex", None), "active_mode", ""
                 ),
-                physics_state=vars(active_phys) if hasattr(active_phys, "__dict__") else {},
+                physics_state=active_phys.to_dict() if hasattr(active_phys, "to_dict") else (active_phys if isinstance(active_phys, dict) else {}),
             )
             orchestrator = getattr(self.interface.eng, "orchestrator", None)
             remembered = orchestrator.sleep_dream() if orchestrator else None

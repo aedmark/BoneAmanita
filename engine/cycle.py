@@ -1291,7 +1291,7 @@ class GeodesicOrchestrator:
                     snapshot_soul,
                     bio_state=bio_packet,
                     active_mode=getattr(self.eng.cortex, "active_mode", ""),
-                    physics_state=vars(safe_phys) if hasattr(safe_phys, "__dict__") else {},
+                    physics_state=_safe_dict(safe_phys),
                 )
                 dream_text = self.sleep_dream() or dream_text
                 if dream_text:

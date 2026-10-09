@@ -4,6 +4,12 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+### Fixed
+- **The dream sees the physics:** every caller of the REM cycle now passes the flattened physics, so a stored affect's voltage and resonance are real (the `/sleep` and `/dream` callers passed an empty-looking dict, the REM tick and retroactive sleep passed none). Narcolepsy now passes the dream the whole body instead of ATP 0 and no chemistry.
+
+### Changed
+- **Conformance check (D-022):** `tools/check_conformance.py` counts the rules and habits of replies from any system without labels (dashes, markdown, Gatekeeper style crimes, stage directions, length, questions, validating openers, stock words, repeated openers). The a/b/c "fairness" labels are no longer a quality score: 20.7.4.132 and 20.7.4.118 were both 0.33 unfair on Gordon's blind labels (14 of 42, 13 of 40). A sycophancy sheet and the whole-conversation panel cover the rest. No engine change.
+
 ## [20.7.4.132] - 2026-10-08
 
 ### Changed

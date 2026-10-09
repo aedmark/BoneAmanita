@@ -335,3 +335,78 @@ class BiologyTests(BoneTestCase):
             abs(v_shift_rich) > abs(v_shift_base),
             "[FAIL] High glimmers failed to accelerate physics regulation.",
         )
+
+
+class DreamReadsThePhysicsTests(BoneTestCase):
+    """Every caller of `enter_rem_cycle` hands it the flattened physics (voltage, resonance); `vars(packet)` holds only
+    the nested domains, so the callers that used it passed neither (2026-10-08)."""
+
+    def spy(self):
+        dreamer = self.engine.mind.dreamer
+        spy = MagicMock(return_value=("A dream.", {}))
+        patcher = patch.object(dreamer, "enter_rem_cycle", spy)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return spy
+
+    def seen(self, spy):
+        self.assertTrue(spy.called, "enter_rem_cycle was never called")
+        return spy.call_args.kwargs.get("physics_state") or {}
+
+    def packet(self, voltage):
+        packet = PhysicsPacket(voltage=voltage, narrative_drag=1.0)
+        packet.energy.resonance = 0.4
+        return packet
+
+    def test_a_sleep_command_passes_the_voltage_and_resonance(self):
+        spy = self.spy()
+        self.engine.observer.last_physics_packet = self.packet(7.0)
+        self.engine.orchestrator.run_turn("/sleep")
+        seen = self.seen(spy)
+        self.assertEqual((seen.get("voltage"), seen.get("resonance")), (7.0, 0.4))
+
+    def test_the_idle_command_passes_the_voltage_and_resonance(self):
+        spy = self.spy()
+        self.engine.observer.last_physics_packet = self.packet(6.0)
+        self.engine.cmd.interface.log = MagicMock()
+        self.engine.bio.mito.state.atp_pool = 10.0
+        self.engine.cmd.execute("/idle")
+        seen = self.seen(spy)
+        self.assertEqual((seen.get("voltage"), seen.get("resonance")), (6.0, 0.4))
+
+    def test_a_retroactive_sleep_passes_the_voltage_and_resonance(self):
+        from phases.environmental import ObservationPhase as Observation
+
+        spy = self.spy()
+        self.engine.shared_lattice = None
+        ctx = CycleContext(input_text="Hello?", physics=self.packet(5.0), is_system_event=False)
+        ctx.time_delta = 10800.0
+        ctx.limits = getattr(self.engine.config, "CYCLE", {}).__dict__
+        Observation(self.engine).run(ctx)
+        seen = self.seen(spy)
+        self.assertEqual((seen.get("voltage"), seen.get("resonance")), (5.0, 0.4))
+
+    def test_the_rem_tick_passes_the_voltage_and_resonance(self):
+        from phases.environmental import SanctuaryPhase
+
+        spy = self.spy()
+        self.engine.tick_count = 5
+        ctx = CycleContext(input_text="Hello?", physics=self.packet(4.0))
+        with patch("phases.environmental.random.random", return_value=0.0):
+            SanctuaryPhase(self.engine, MagicMock())._trigger_dream(ctx)
+        seen = self.seen(spy)
+        self.assertEqual((seen.get("voltage"), seen.get("resonance")), (4.0, 0.4))
+
+    def test_narcolepsy_passes_the_physics_and_the_whole_body(self):
+        from phases.biological import MetabolismPhase
+
+        spy = self.spy()
+        self.engine.bio.mito.state.atp_pool = 1.0
+        ctx = CycleContext(input_text="Hello?", physics=self.packet(3.0))
+        with patch.object(self.engine.mind.dreamer, "run_defragmentation", return_value=""):
+            MetabolismPhase(self.engine)._check_narcolepsy(ctx)
+        seen = self.seen(spy)
+        self.assertEqual((seen.get("voltage"), seen.get("resonance")), (3.0, 0.4))
+        bio_state = spy.call_args.kwargs["bio_state"]
+        self.assertEqual(bio_state["mito"]["atp"], 1.0)
+        self.assertIn("COR", bio_state["chem"])

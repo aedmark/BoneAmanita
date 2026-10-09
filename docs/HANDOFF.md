@@ -19,9 +19,13 @@ _Last updated: 2026-10-08, session 15, on `main` (20.7.4.132)._
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
 words (P5-04), else the fewest flags. The redraft fires live (forced on one turn: 3 of 8 runs held, see "What works") and a redraft that reads clean now gets the voice pass, but no feud panel has needed it. Bone came
 back empty on 3 turns in `20261007-123149` for an unknown reason; **not reproduced** in 9 replays and two reruns, the
-latest panel (`20261007-224404`) delivered 20 of 20 (next step 2). **P5-04 is done** (Gordon, 2026-10-08; D-019 drops the ending read's edits). **Judge tuning has stopped** (next step 1): the
+latest panel (`20261007-224404`) delivered 20 of 20 (next step 6). **P5-04 is done** (Gordon, 2026-10-08; D-019 drops the ending read's edits). **Judge tuning has stopped** (next step 5): the
 mind-reading question was improved, the rest is within label noise. Bone rows record each edit's receipt (`edits`) and the
 component health (`components`) in `tools/cache/somatic_responsive.jsonl`.
+**Metrics changed** (D-022 amended, 2026-10-08): the a/b/c "fairness" labels are retired as a quality score. The regression check found
+20.7.4.132 and 20.7.4.118 both 0.33 unfair (14 of 42, 13 of 40); the mission (no sycophancy, co-regulation, healthy constraints)
+is measured by `tools/check_conformance.py` (the engine keeps the rules, the baselines do not; it does not lead on habits), a
+sycophancy sheet (11 of 16 replies push back, in near-identical words) and the whole-conversation panel. Details in `docs/TESTING.md`.
 
 **Verified** (2026-10-08, on `main` at 20.7.4.125, Linux Python 3.14.7, after `sh reset.sh`)
 
@@ -40,10 +44,9 @@ component health (`components`) in `tools/cache/somatic_responsive.jsonl`.
 | friend | 5.00 | 4.00 | 2.00 | 2.33 | 6.00 |
 | plain | 5.00 | 4.00 | 2.67 | 2.00 | 6.00 |
 
-Bone: 20 of 20 delivered, 20 to 43s a turn (median 25s), 58 words, 3 fairness REPAIRED, no REDRAFTED, no component
-offline, no `NO REPLY`, no crash. One run per arm: the earlier panels moved a point or more between runs, so bone's low
-"performed" is a good sign and its "heard" and "clearer" a mild concern, not settled. Previous panels, again: bone 5.67,
-friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, friend 5.67, plain 6.00 (20.7.4.118).
+Bone: 20 of 20 delivered, 20 to 43s a turn (median 25s), 58 words, 3 fairness REPAIRED, no REDRAFTED, no crash. One run per
+arm: earlier panels moved a point or more, so bone's low "performed" is a good sign, "heard" and "clearer" a mild concern.
+"Again" earlier: bone 5.67, friend 6.33, plain 5.33 (`20261007-123149`); bone 4.67, friend 5.67, plain 6.00 (.118).
 
 **What works**
 - **Fairness judge as reading** (P5-04; `brain/cortex.py` `_takes_a_side`). Quotes the reply's excuse, mind-reading and
@@ -90,15 +93,25 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 ## Next steps (in order)
 
-0. **P7-01 dropped before any code** (Gordon, 2026-10-08, D-021). Measured on a replay of the feud run: the engine's six
+1. **More varied sample data** (Gordon, 2026-10-08): everything measured so far is one topic, one 20-message script, one model, and
+   replays that differ by sampling only. The sycophancy sheet is the sign: both versions mostly push back (11 of 16), in near
+   the same words ("Ghosting is X, but Y", 15 of 16 with "but"). Proposed: tempting-idea and positive moments for the other
+   seven topics (`tools/somatic_sim_user.py` PERSONAS), replays of those through the engine and the baselines, one second
+   local model, and the conformance check as the wide net. Not started; the engine replays are the slow part (about 4 minutes each).
+2. **Stock phrases and repeated openers** (conformance check): a stock word is in 39% of the engine's replies (plain 18%) and its
+   three-word openers are 54% distinct (plain 68%); "heavy" alone is in 40 of 160 current replies. It is the same in 20.7.4.118,
+   so the voice pass and the model, not this week's edits. Whether to feed the Gatekeeper's wordlist or vary openers is Gordon's call.
+3. (Done 2026-10-08) Every caller of `enter_rem_cycle` now passes the flattened physics (`to_dict()`); `vars(packet)`, which the
+   `/sleep` and `/dream` callers used, held only the nested domains, so they passed no voltage or resonance either. Narcolepsy also
+   passed `bio_state={"atp": ...}`, so the dream saw ATP 0 and no chemistry; it now passes the whole body. Five tests in `tests/test_biology.py`.
+4. **P7-01 dropped before any code** (Gordon, 2026-10-08, D-021). Measured on a replay of the feud run: the engine's six
    affect numbers do not separate calm from distressed turns (cortisol 0.0 to 0.11 throughout; 0 of 20 nearest-turn
    phase matches, 4 for the person model, 3 by chance), and ordvec (a quantizer for high-dimension embeddings) and
    Project Navi's other public projects offer nothing for a 6-number vector. Found on the way and fixed (20.7.4.130):
    the dream read the chemistry as `cortisol`, `dopamine`... from a state keyed `COR`, `DOP`..., so every read was 0.
    Dream type now follows the body (nightmare above cortisol 0.6, surreal above dopamine 0.6, else constructive);
-   still open: the cycle and phase callers of `enter_rem_cycle` do not pass `physics_state`, so a stored affect's voltage
-   and resonance stay 0 there.
-1. P5-04 is done and judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE`
+   The callers' missing `physics_state` was fixed on 2026-10-08 (next step 3).
+5. P5-04 is done and judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE`
    stay as they are, and the ending read no longer edits (D-019).
    The redraft is proven to fire and holds in 3 of 8 forced runs (see "What works"); nothing here needs it before other
    work. The way we judge results changed (see `docs/TESTING.md`, "Noise floor and the paired A/B"): replays of fixed
@@ -106,14 +119,14 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
    20.7.4.118, 7 key moments) was 3 to 4, a wash. A second, on turns where a fairness edit, redraft or voiced redraft
    acted, is the test this week's changes have not had (`scratch/probes/build_ab.py` needs the old version's replays:
    `git worktree add --detach scratch/wt118 225bed2`, then `scratch/probes/old_loop.sh`).
-2. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
+6. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
    and empty ledgers (the whole core cycle was skipped); right after turn 15 (61.5s). Tried: 9 verbatim replays of the
    20 messages (`scratch/probes/replay_empty.py`, 180 turns, components all online, no crash), and a live bone arm with
    the simulated person (`20261007-144418`, `scratch/runs/feud/feud20q_bone.log`): 20 of 20 delivered, again 6.00, heard 5.00,
    4 fairness REPAIRED, no REDRAFTED; the panel on 20.7.4.122 (`20261007-224404`) was 20 of 20 as well. The earlier panel's turns ran 30 to 62s against about 10s in the replays; a circuit-breaker
    trip fits the rows but nothing tripped. Next time: `census.run` now prints `NO REPLY` with the component state and
    `ui`, and keeps crashes in `scratch/probes/crashes_<run>.log`. If a panel shows empty turns, read those first.
-3. (Done, stopped) Judge precision (P5-04), measured with `scratch/probes/score_split.py <model> <variant>` on both
+7. (Done, stopped) Judge precision (P5-04), measured with `scratch/probes/score_split.py <model> <variant>` on both
    models. Tried on the 86: V2 (adds "knew, felt, meant, wanted" and a hedge sentence) 0.56 / 0.34 on 12b, 0.53 / 0.55 on e4b; V3 plus
    the hedge sentence 0.62 / 0.45 and 0.56 / 0.66, against V3's 0.62 / 0.69 and 0.53 / 0.66: the hedge costs 12b its
    mind-reading catches (8 to 3). So the false flags are not mostly `MIND`'s: 12b b 6, c 5, a 1; e4b a 6, b 6, c 6.
@@ -125,7 +138,7 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 ## Open questions for maintainers
 
-**Q-003** (2026-10-08): what a blind A/B is meant to determine. The first one (3 to 4) could not settle a change; see the proposal in `docs/TESTING.md`, "Noise floor and the paired A/B", once Gordon answers. Q-001 (affective retrieval, P7-01) is dropped (D-021); Q-002 is closed, the tiredness heuristic stays (D-020).
+None open. Q-003 (what the A/B is for) is answered by D-022. Q-001 (affective retrieval, P7-01) is dropped (D-021); Q-002 is closed, the tiredness heuristic stays (D-020).
 
 ## Session log
 
@@ -133,11 +146,12 @@ friend 6.33, plain 5.33 (`20261007-123149`, 3 empty bone turns); bone 4.67, frie
 
 **Contributor:** Gordon & Claude
 **Goal:** Remove debris, make `devlog.html` and `bonereport.html` part of the documentation scheme, and ask what the A/B is for.
-**Done:** No roadmap item (documentation and repository housekeeping; nothing committed yet).
+**Done:** 20.7.4.132 (housekeeping and docs), the regression check, `physics_state` to every REM caller, the conformance check (D-022 amended); no roadmap item.
 **Changed:** `protocols/folly.py` deleted (Gordon) and its export removed; `scratch/` reorganised (`runs/{feud,rescue,mode_runs,early_probes}`, `probes/results/`); `docs/devlog.html` (new entry), `docs/bonereport.html` (new feud report; the ADVENTURE rerun moved to `docs/bonereport_0926.html`); both in the documentation map, `docs/index.html`, `README.md` and `tools/check_docs.py`.
 **Verified:** `check_docs.py` 0 errors; full suite 1150 passed, 4 failed, 5 skipped. The 4 failures are `tests/test_observability.py` reading `git ls-files`, which lists `protocols/folly.py` until the deletion is staged.
-**Not verified:** the new report's exit-interview figures against raw rows (`tools/cache` was cleared; the numbers are as recorded in this file).
-**Next session should start with:** Q-003, then whatever Gordon picks.
+**Verified (regression check):** 13 replays (8 current, 5 old, plus the 3 old already held), 20 of 20 delivered each; 84 replies labelled blind by Gordon (82 scored): 20.7.4.132 14 of 42 unfair, 20.7.4.118 13 of 40.
+**Not verified:** the new report's exit-interview figures against raw rows (`tools/cache` was cleared; the numbers are as recorded in this file); co-regulation (needs the panel, at least 3 runs per arm).
+**Next session should start with:** next step 1 (more varied sample data), then whatever Gordon picks.
 
 ### Session 14: 2026-10-08: The fairness redraft, fired live
 

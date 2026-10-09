@@ -175,8 +175,12 @@ class MetabolismPhase(SimulationPhase):
             soul_snap = _safe_dict(self.eng.soul)
             self.eng.mind.dreamer.enter_rem_cycle(
                 soul_snap,
-                bio_state={"atp": atp},
+                bio_state={
+                    "chem": self.eng.bio.endo.get_state(),
+                    "mito": {"atp": atp, "ros": self.eng.bio.mito.state.ros_buildup},
+                },
                 active_mode=getattr(self.eng.cortex, "active_mode", ""),
+                physics_state=_safe_dict(ctx.physics),
             )
             defrag_msg = self.eng.mind.dreamer.run_defragmentation(self.eng.mind.mem)
             if defrag_msg:
