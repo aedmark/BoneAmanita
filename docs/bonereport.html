@@ -136,6 +136,7 @@ footer { border-top: 1px solid var(--rule); padding-top: 18px; }
       <div class="v c-bad"><strong>Three empty turns, unexplained</strong><span>Bone returned nothing on turns 16, 17 and 19 of the panel before this one. Not reproduced in nine replays and two reruns.</span></div>
       <div class="v c-warn"><strong>A/B: 3 to 4</strong><span>Seven moments cannot separate two versions of a change that acts on a few turns of twenty.</span></div>
       <div class="v c-bad"><strong>No measurable fairness gain</strong><span>Regression check, 84 blind labels: 33% unfair for 20.7.4.132 (14 of 42) and for 20.7.4.118 (13 of 40). "Fairness" is a proxy for the mission and is no longer a score (D-022).</span></div>
+      <div class="v c-good"><strong>Distress is now read by a model</strong><span>The word list found 14 of 60 labelled distressed messages and 0 of 20 held out; a gemma4:12b reading finds 56 of 60 and 18 of 20, with no false alarm. In distress mode replies are 18 words and 99% within 3 sentences (D-023).</span></div>
       <div class="v c-good"><strong>The engine keeps its rules</strong><span>Conformance check, no labels: 0% dashes and style crimes against 20% to 46% and 31% for the plain and friend prompts; 87% of replies within 3 sentences against 2% and 8%.</span></div>
       <div class="v c-warn"><strong>Habits, not rules, lag</strong><span>A stock word ("heavy", "jugular", "gut punch", "a lot") is in 39% of the engine's replies against 18% for plain, and its openers are 54% distinct against 68%.</span></div>
     </div>
@@ -259,6 +260,26 @@ footer { border-top: 1px solid var(--rule); padding-top: 18px; }
       </div>
       <p>One-sided Fisher p = 0.62 that the current rate is lower. At 42 per version a drop from 50% to 20% would be caught 85% of the time, so a large effect is ruled out and a small one is not. The unfair replies sit on the joke (5 of 6 in both versions) and "I think I just ended it" (5 of 6 old, 3 of 6 new); the ending question was fair 12 of 12. The engine's own receipts show it acted on 7 of 14 unfair replies (current) and 5 of 13 (old), and on 5 of 28 and 6 of 27 fair ones: it leaves about half the unfair replies alone, and acting on one does not always fix it.</p>
       <p class="note">A baseline arm (plain and friend on the same blind sheet) was built and not labelled: the baselines give themselves away by shape, so no blind label separates them, and Gordon's point is the larger one: BoneAmanita is meant not to be a sycophant, to co-regulate the person and to hold a space of healthy constraints, and "fair to the absent party" measures none of those. Gordon's notes on the sheet also name stock phrases: across 160 replays per version "heavy" is in 40 current and 34 old replies and "jugular" in 2 and 5, so it is the model's habit and not the edits'.</p>
+    </div>
+
+    <div class="finding">
+      <div class="head"><span class="pill p-good">Fixed, partly</span><h3>A person in distress: detected by a model, answered with hold-space wording (D-023)</h3></div>
+      <p>Gordon's target for a person in measured distress: hold space, speak slowly and softly, stay positive, fix nothing, and do not feed the anger or go along with a rash plan. The engine's distress reader was a word list, and distress is often reported as an event ("the test came back positive") with no distress words. On 120 labelled messages it had precision 0.88 and recall 0.23, and on 40 held out it found none of 20; a longer list written afterwards scored 0.90 on the first set and 0 of 20 on the held-out one, so it had memorised. A one-digit reading by gemma4:12b scores precision 1.00 and recall 0.93 on the first set and 1.00 and 0.90 on the held-out one.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Seven replayed topics, 30 scripted turns</th><th>Before</th><th>After</th></tr></thead>
+          <tbody>
+            <tr><td>Scripted distressed turns read as distress</td><td class="num">13 of 40 (words only)</td><td class="num">50 of 70</td></tr>
+            <tr><td>Engaged turns read as distress</td><td class="num">0 of 64</td><td class="num">0 of 112</td></tr>
+            <tr><td>Distressed phase: words per reply</td><td class="num">31</td><td class="num">25</td></tr>
+            <tr><td>Distressed phase: advice or instruction</td><td class="num">19%</td><td class="num">9%</td></tr>
+            <tr><td>Distressed phase: presence phrase ("I'm right here")</td><td class="num">14%</td><td class="num">44%</td></tr>
+            <tr><td>In distress mode: amplifies the grievance</td><td class="num">n/a</td><td class="num">0 of 124</td></tr>
+            <tr><td>Seconds per turn</td><td class="num">12.3</td><td class="num">11.4</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Not fixed. A grievance told calmly reads below the cut and is still amplified (sailboat: "a huge violation of your privacy", "so incredibly unfair, you have every right to be pissed off"). In distress mode 13 in 100 replies still ask a question, and a third say "I'm right here" or "here with you", a formula. The counts are crude lexical markers; Gordon's reading of the replies is the verdict. Separately, the Gatekeeper's cursed list (<code>future</code>, <code>predict</code>, <code>secret</code>, <code>sentient</code>) silences any message that contains one of them, which is what caused the one reproducible silent turn in the rescue replays.</p>
     </div>
 
     <div class="finding">

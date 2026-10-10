@@ -257,6 +257,12 @@ Answer:"""
                 self.llm.last_usage = usage
         return next((m for m in self.MOVES if answer.strip().upper().startswith(m)), ""), sentence
 
+    @staticmethod
+    def _holding_space(state: dict) -> bool:
+        """The person is in distress: the reply is a hold-space draft the validator has passed, and no edit may put a
+        question or advice back into it (D-025: 14 of 15 questions in distress mode came from the opening edit)."""
+        return bool(getattr(state.get("somatic_budget"), "distressed", False))
+
     def _in_a_rut(self, reply: str) -> bool:
         """The reply opens as the last OPENING_RUT replies shown did. Openings are judged only now, newest first, and
         only until two differ."""
@@ -441,7 +447,7 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
     def _voice_a_redraft(self, message: str, text: str, gk: Any, state: dict) -> str:
         """A redraft that read clean, in a friend's voice (it ran three or four analytic sentences, fire_redraft
         2026-10-08). The rewrite is read too; one that is flagged or fails a guard is discarded for the redraft."""
-        if not self.voice_pass:
+        if not self.voice_pass or self._holding_space(state):
             return text
         voiced, why = self._in_a_friends_voice(message, text, gk, state)
         if voiced and (flag := self._flags_to_act_on(message, voiced, state)):
@@ -850,7 +856,10 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
         )
         conversing = self.active_mode == "CONVERSATION" and not is_boot_sequence and val_res.get("valid")
         voiced, draft_output = "", final_output
-        if conversing and self.voice_pass:
+        holding = self._holding_space(full_state)
+        if conversing and self.voice_pass and holding:
+            issue_receipt("cortex.voice", "KEPT_DRAFT", result_count=0, detail="holding space")
+        elif conversing and self.voice_pass:
             voiced, why = self._in_a_friends_voice(user_input, final_output, gk, full_state)
             issue_receipt("cortex.voice", "REWRITTEN" if voiced else "KEPT_DRAFT", result_count=int(bool(voiced)),
                           detail=why or first_sentence(voiced))
@@ -864,7 +873,9 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
             issue_receipt("cortex.ending", "EDITED" if left else "KEPT_DRAFT", result_count=int(bool(left)),
                           detail=first_sentence(left) if left else "; ".join(self.ending_misses))
             final_output = left or final_output
-        if conversing and self._in_a_rut(final_output):
+        if conversing and holding and self._in_a_rut(final_output):
+            issue_receipt("cortex.opening", "SKIPPED", result_count=0, detail="holding space")
+        elif conversing and self._in_a_rut(final_output):
             # The question is new words the fairness check never read ("Was the joke about your ex the only thing that
             # crossed the line?"); one that takes a side is not used.
             fresh = self._open_with_a_question(user_input, final_output, gk)

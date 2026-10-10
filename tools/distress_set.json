@@ -1,0 +1,845 @@
+{
+ "_NOTE": "Messages for the distress reader (drivers/lattice.py read_distress). distress: the person is overwhelmed or hurting now, so holding space beats answering. Written by Claude on 2026-10-08, frozen before the reader was changed; Gordon to review (edit a label and say so). hard: a subtle positive or a hard negative. Scored by tools/score_distress.py.",
+ "cases": [
+  {
+   "id": 1,
+   "text": "i don't think i can do this anymore",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 2,
+   "text": "everything is falling apart and i don't know where to start",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 3,
+   "text": "I just sat in the car for an hour because I couldn't make myself go inside",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 4,
+   "text": "i can't stop shaking",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 5,
+   "text": "I feel like I'm drowning and nobody notices",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 6,
+   "text": "My chest is so tight I can barely get words out",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 7,
+   "text": "I keep crying at my desk and I can't make it stop",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 8,
+   "text": "what is the point of any of it",
+   "distress": true,
+   "kind": "hopeless",
+   "hard": false
+  },
+  {
+   "id": 9,
+   "text": "I'm so scared right now. I don't know what to do.",
+   "distress": true,
+   "kind": "fear",
+   "hard": false
+  },
+  {
+   "id": 10,
+   "text": "I haven't slept in two days and my head is going in circles",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 11,
+   "text": "I can't breathe. I think I'm having a panic attack.",
+   "distress": true,
+   "kind": "fear",
+   "hard": false
+  },
+  {
+   "id": 12,
+   "text": "It's all too much. Everything. All at once.",
+   "distress": true,
+   "kind": "overwhelm",
+   "hard": false
+  },
+  {
+   "id": 13,
+   "text": "I'm such an idiot. I ruined the whole thing and everyone saw.",
+   "distress": true,
+   "kind": "shame",
+   "hard": false
+  },
+  {
+   "id": 14,
+   "text": "this is all my fault, I should have seen it coming",
+   "distress": true,
+   "kind": "shame",
+   "hard": false
+  },
+  {
+   "id": 15,
+   "text": "I hate that I did that. I hate myself for it.",
+   "distress": true,
+   "kind": "shame",
+   "hard": false
+  },
+  {
+   "id": 16,
+   "text": "why am I like this. why can't I just be normal",
+   "distress": true,
+   "kind": "shame",
+   "hard": false
+  },
+  {
+   "id": 17,
+   "text": "I let everybody down today.",
+   "distress": true,
+   "kind": "shame",
+   "hard": false
+  },
+  {
+   "id": 18,
+   "text": "I'm the worst mother and my kid knows it",
+   "distress": true,
+   "kind": "shame",
+   "hard": false
+  },
+  {
+   "id": 19,
+   "text": "I keep replaying what I said and wanting to disappear",
+   "distress": true,
+   "kind": "shame",
+   "hard": false
+  },
+  {
+   "id": 20,
+   "text": "I'm so ashamed I can't even look at my phone",
+   "distress": true,
+   "kind": "shame",
+   "hard": false
+  },
+  {
+   "id": 21,
+   "text": "My dad died on Tuesday. I keep forgetting and then remembering.",
+   "distress": true,
+   "kind": "grief",
+   "hard": false
+  },
+  {
+   "id": 22,
+   "text": "She's gone. The vet said it was time and I held her while she went.",
+   "distress": true,
+   "kind": "grief",
+   "hard": false
+  },
+  {
+   "id": 23,
+   "text": "I found his jacket in the closet and I just sat on the floor.",
+   "distress": true,
+   "kind": "grief",
+   "hard": false
+  },
+  {
+   "id": 24,
+   "text": "The funeral is tomorrow and I can't feel anything and that scares me",
+   "distress": true,
+   "kind": "grief",
+   "hard": false
+  },
+  {
+   "id": 25,
+   "text": "I got the call. It's the cancer again.",
+   "distress": true,
+   "kind": "grief",
+   "hard": false
+  },
+  {
+   "id": 26,
+   "text": "We lost the baby.",
+   "distress": true,
+   "kind": "grief",
+   "hard": false
+  },
+  {
+   "id": 27,
+   "text": "He left. Packed a bag while I was at work. No note.",
+   "distress": true,
+   "kind": "grief",
+   "hard": false
+  },
+  {
+   "id": 28,
+   "text": "Everyone keeps telling me it gets easier. It doesn't.",
+   "distress": true,
+   "kind": "grief",
+   "hard": false
+  },
+  {
+   "id": 29,
+   "text": "What if they find out? What if I lose everything?",
+   "distress": true,
+   "kind": "fear",
+   "hard": false
+  },
+  {
+   "id": 30,
+   "text": "my heart is pounding and i can't tell if something is really wrong",
+   "distress": true,
+   "kind": "fear",
+   "hard": false
+  },
+  {
+   "id": 31,
+   "text": "I got the results back and I'm too scared to open the email",
+   "distress": true,
+   "kind": "fear",
+   "hard": false
+  },
+  {
+   "id": 32,
+   "text": "I keep thinking something terrible is about to happen",
+   "distress": true,
+   "kind": "fear",
+   "hard": false
+  },
+  {
+   "id": 33,
+   "text": "He's been texting me nonstop and I'm afraid to go home",
+   "distress": true,
+   "kind": "fear",
+   "hard": false
+  },
+  {
+   "id": 34,
+   "text": "I can't stop checking the door. I know it's locked.",
+   "distress": true,
+   "kind": "fear",
+   "hard": false
+  },
+  {
+   "id": 35,
+   "text": "I could scream. She did it again and I just stood there like a coward.",
+   "distress": true,
+   "kind": "anger",
+   "hard": false
+  },
+  {
+   "id": 36,
+   "text": "I'm so angry I'm shaking and I don't trust myself to talk to him",
+   "distress": true,
+   "kind": "anger",
+   "hard": false
+  },
+  {
+   "id": 37,
+   "text": "They laughed. In front of everyone. I wanted the floor to swallow me.",
+   "distress": true,
+   "kind": "anger",
+   "hard": false
+  },
+  {
+   "id": 38,
+   "text": "I'm done. Completely done with all of them.",
+   "distress": true,
+   "kind": "anger",
+   "hard": false
+  },
+  {
+   "id": 39,
+   "text": "I feel so betrayed I can't think",
+   "distress": true,
+   "kind": "anger",
+   "hard": false
+  },
+  {
+   "id": 40,
+   "text": "Nobody ever asks me how I am. Ever.",
+   "distress": true,
+   "kind": "lonely",
+   "hard": false
+  },
+  {
+   "id": 41,
+   "text": "No one would even notice if I disappeared for a week",
+   "distress": true,
+   "kind": "hopeless",
+   "hard": false
+  },
+  {
+   "id": 42,
+   "text": "I've been alone in this apartment for nine days",
+   "distress": true,
+   "kind": "lonely",
+   "hard": false
+  },
+  {
+   "id": 43,
+   "text": "I don't have anyone to call. That's the part that gets me.",
+   "distress": true,
+   "kind": "lonely",
+   "hard": false
+  },
+  {
+   "id": 44,
+   "text": "nothing I do matters",
+   "distress": true,
+   "kind": "hopeless",
+   "hard": false
+  },
+  {
+   "id": 45,
+   "text": "I applied to forty jobs and got forty rejections. I'm starting to think they're right about me.",
+   "distress": true,
+   "kind": "hopeless",
+   "hard": false
+  },
+  {
+   "id": 46,
+   "text": "Everything I touch falls apart.",
+   "distress": true,
+   "kind": "hopeless",
+   "hard": false
+  },
+  {
+   "id": 47,
+   "text": "can't. just can't.",
+   "distress": true,
+   "kind": "fragment",
+   "hard": false
+  },
+  {
+   "id": 48,
+   "text": "help",
+   "distress": true,
+   "kind": "fragment",
+   "hard": false
+  },
+  {
+   "id": 49,
+   "text": "why",
+   "distress": true,
+   "kind": "fragment",
+   "hard": true
+  },
+  {
+   "id": 50,
+   "text": "I messed up. bad.",
+   "distress": true,
+   "kind": "fragment",
+   "hard": false
+  },
+  {
+   "id": 51,
+   "text": "sorry. sorry. I'm sorry.",
+   "distress": true,
+   "kind": "fragment",
+   "hard": false
+  },
+  {
+   "id": 52,
+   "text": "i just need it to stop",
+   "distress": true,
+   "kind": "fragment",
+   "hard": false
+  },
+  {
+   "id": 53,
+   "text": "My boss called me into a room with HR and I think I'm getting fired and I can't breathe",
+   "distress": true,
+   "kind": "work",
+   "hard": false
+  },
+  {
+   "id": 54,
+   "text": "The exam is in four hours and I know nothing. I'm going to fail out.",
+   "distress": true,
+   "kind": "work",
+   "hard": false
+  },
+  {
+   "id": 55,
+   "text": "I made a mistake in the report and it went to the client. I feel sick.",
+   "distress": true,
+   "kind": "work",
+   "hard": false
+  },
+  {
+   "id": 56,
+   "text": "I'm going to lose the house. I did the math three times.",
+   "distress": true,
+   "kind": "work",
+   "hard": false
+  },
+  {
+   "id": 57,
+   "text": "I'm fine. It's fine. I just keep cleaning the same counter.",
+   "distress": true,
+   "kind": "hard",
+   "hard": true
+  },
+  {
+   "id": 58,
+   "text": "I guess I'm just tired of being the strong one",
+   "distress": true,
+   "kind": "hard",
+   "hard": true
+  },
+  {
+   "id": 59,
+   "text": "It's been a week since I ate a real meal. Not a big deal.",
+   "distress": true,
+   "kind": "hard",
+   "hard": true
+  },
+  {
+   "id": 60,
+   "text": "I smiled at the funeral and now I feel like a monster.",
+   "distress": true,
+   "kind": "hard",
+   "hard": true
+  },
+  {
+   "id": 61,
+   "text": "Can you help me plan a three-day trip to Lisbon in May?",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 62,
+   "text": "What's a good way to cook salmon so it doesn't dry out?",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 63,
+   "text": "I need to write an email asking my landlord to fix the heater.",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 64,
+   "text": "Here's the function. It returns None when the list is empty.",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 65,
+   "text": "Do you think I should repaint the kitchen white or a light grey?",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 66,
+   "text": "I'm reading a book about the Silk Road. Any recommendations that go with it?",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 67,
+   "text": "How do I tell the difference between baking soda and baking powder?",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 68,
+   "text": "We're meeting at 6 at the pizza place by the station.",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 69,
+   "text": "Remind me what we decided about the budget last time.",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 70,
+   "text": "My sister is visiting next week, so I'm cleaning the guest room.",
+   "distress": false,
+   "kind": "neutral",
+   "hard": false
+  },
+  {
+   "id": 71,
+   "text": "I GOT THE JOB!! I start in two weeks!",
+   "distress": false,
+   "kind": "positive",
+   "hard": false
+  },
+  {
+   "id": 72,
+   "text": "Our first race is Saturday and honestly I feel ready.",
+   "distress": false,
+   "kind": "positive",
+   "hard": false
+  },
+  {
+   "id": 73,
+   "text": "I finally finished the deck on the boat and it looks great.",
+   "distress": false,
+   "kind": "positive",
+   "hard": false
+  },
+  {
+   "id": 74,
+   "text": "She said yes! We're getting married in October.",
+   "distress": false,
+   "kind": "positive",
+   "hard": false
+  },
+  {
+   "id": 75,
+   "text": "The baby slept through the night for the first time",
+   "distress": false,
+   "kind": "positive",
+   "hard": false
+  },
+  {
+   "id": 76,
+   "text": "I made a sourdough that actually rose. Photo incoming.",
+   "distress": false,
+   "kind": "positive",
+   "hard": false
+  },
+  {
+   "id": 77,
+   "text": "I'm really proud of how the presentation went today.",
+   "distress": false,
+   "kind": "positive",
+   "hard": false
+  },
+  {
+   "id": 78,
+   "text": "We found the dog. She's fine, just muddy.",
+   "distress": false,
+   "kind": "positive",
+   "hard": false
+  },
+  {
+   "id": 79,
+   "text": "Long day. I'm wiped. Going to bed early.",
+   "distress": false,
+   "kind": "tired",
+   "hard": false
+  },
+  {
+   "id": 80,
+   "text": "ugh mondays. coffee first, then we talk",
+   "distress": false,
+   "kind": "tired",
+   "hard": false
+  },
+  {
+   "id": 81,
+   "text": "I'm exhausted but in a good way, we moved the whole house today",
+   "distress": false,
+   "kind": "tired",
+   "hard": false
+  },
+  {
+   "id": 82,
+   "text": "Sleepy. Let's pick this up tomorrow.",
+   "distress": false,
+   "kind": "tired",
+   "hard": false
+  },
+  {
+   "id": 83,
+   "text": "meh. not much going on",
+   "distress": false,
+   "kind": "tired",
+   "hard": false
+  },
+  {
+   "id": 84,
+   "text": "I had a rough night of sleep but I'm okay.",
+   "distress": false,
+   "kind": "tired",
+   "hard": false
+  },
+  {
+   "id": 85,
+   "text": "Annoying. The build failed again because of a missing semicolon.",
+   "distress": false,
+   "kind": "annoyed",
+   "hard": false
+  },
+  {
+   "id": 86,
+   "text": "My neighbor's dog barked all morning and it's driving me a bit nuts",
+   "distress": false,
+   "kind": "annoyed",
+   "hard": false
+  },
+  {
+   "id": 87,
+   "text": "The airline lost my bag, which is a pain, but they're delivering it tomorrow.",
+   "distress": false,
+   "kind": "annoyed",
+   "hard": false
+  },
+  {
+   "id": 88,
+   "text": "I'm a little irritated that the meeting ran over again.",
+   "distress": false,
+   "kind": "annoyed",
+   "hard": false
+  },
+  {
+   "id": 89,
+   "text": "Ugh, the printer is jammed. Again.",
+   "distress": false,
+   "kind": "annoyed",
+   "hard": false
+  },
+  {
+   "id": 90,
+   "text": "I disagree with the reviewer, honestly, and I think the second figure is fine.",
+   "distress": false,
+   "kind": "annoyed",
+   "hard": false
+  },
+  {
+   "id": 91,
+   "text": "This is taking longer than I thought but it's fine.",
+   "distress": false,
+   "kind": "annoyed",
+   "hard": false
+  },
+  {
+   "id": 92,
+   "text": "Slightly stressed about the deadline but I have a plan.",
+   "distress": false,
+   "kind": "annoyed",
+   "hard": true
+  },
+  {
+   "id": 93,
+   "text": "I've been wondering whether I should go back to school at 40.",
+   "distress": false,
+   "kind": "reflective",
+   "hard": false
+  },
+  {
+   "id": 94,
+   "text": "Part of me wants to take the promotion and part of me likes my quiet job.",
+   "distress": false,
+   "kind": "reflective",
+   "hard": false
+  },
+  {
+   "id": 95,
+   "text": "I think my sister and I handle conflict very differently.",
+   "distress": false,
+   "kind": "reflective",
+   "hard": false
+  },
+  {
+   "id": 96,
+   "text": "Looking back, the move was the right call, even though it was hard.",
+   "distress": false,
+   "kind": "reflective",
+   "hard": false
+  },
+  {
+   "id": 97,
+   "text": "Not sure what I want for dinner. Something warm?",
+   "distress": false,
+   "kind": "reflective",
+   "hard": false
+  },
+  {
+   "id": 98,
+   "text": "I keep going back and forth on the red one or the blue one.",
+   "distress": false,
+   "kind": "reflective",
+   "hard": false
+  },
+  {
+   "id": 99,
+   "text": "If I have to sit through one more meeting I'm going to die, lol",
+   "distress": false,
+   "kind": "figurative",
+   "hard": true
+  },
+  {
+   "id": 100,
+   "text": "I'm dead. That meme killed me.",
+   "distress": false,
+   "kind": "figurative",
+   "hard": true
+  },
+  {
+   "id": 101,
+   "text": "My cat just knocked my coffee off the desk, I swear she's plotting something",
+   "distress": false,
+   "kind": "figurative",
+   "hard": false
+  },
+  {
+   "id": 102,
+   "text": "lol I totally butchered that recipe, we're ordering pizza",
+   "distress": false,
+   "kind": "figurative",
+   "hard": false
+  },
+  {
+   "id": 103,
+   "text": "I could murder a sandwich right now",
+   "distress": false,
+   "kind": "figurative",
+   "hard": true
+  },
+  {
+   "id": 104,
+   "text": "Honestly I'm falling apart without my morning coffee",
+   "distress": false,
+   "kind": "figurative",
+   "hard": true
+  },
+  {
+   "id": 105,
+   "text": "My dad passed away three years ago. I'm doing a project to digitize his photos and wanted some tips.",
+   "distress": false,
+   "kind": "past",
+   "hard": true
+  },
+  {
+   "id": 106,
+   "text": "I went through a rough breakup last year, but I'm in a good place now. Anyway, about the apartment.",
+   "distress": false,
+   "kind": "past",
+   "hard": true
+  },
+  {
+   "id": 107,
+   "text": "I used to have panic attacks in college. They stopped after I started running.",
+   "distress": false,
+   "kind": "past",
+   "hard": true
+  },
+  {
+   "id": 108,
+   "text": "Last winter was hard but this spring I've been feeling more like myself.",
+   "distress": false,
+   "kind": "past",
+   "hard": true
+  },
+  {
+   "id": 109,
+   "text": "We lost our old dog in March. We're thinking about adopting again and wondering how to know it's time.",
+   "distress": false,
+   "kind": "past",
+   "hard": true
+  },
+  {
+   "id": 110,
+   "text": "I was laid off in January, found something new, and I'm settling in.",
+   "distress": false,
+   "kind": "past",
+   "hard": true
+  },
+  {
+   "id": 111,
+   "text": "In the story the village burns and the hero watches from the hill.",
+   "distress": false,
+   "kind": "fiction",
+   "hard": true
+  },
+  {
+   "id": 112,
+   "text": "My character is terrified of the dark cave, how should the narrator describe it?",
+   "distress": false,
+   "kind": "fiction",
+   "hard": true
+  },
+  {
+   "id": 113,
+   "text": "The villain's speech should sound like he's already grieving the world he's about to destroy.",
+   "distress": false,
+   "kind": "fiction",
+   "hard": true
+  },
+  {
+   "id": 114,
+   "text": "I'm writing a scene where she can't breathe underwater. Does the physics make sense?",
+   "distress": false,
+   "kind": "fiction",
+   "hard": true
+  },
+  {
+   "id": 115,
+   "text": "hi",
+   "distress": false,
+   "kind": "short",
+   "hard": false
+  },
+  {
+   "id": 116,
+   "text": "ok",
+   "distress": false,
+   "kind": "short",
+   "hard": false
+  },
+  {
+   "id": 117,
+   "text": "thanks, that helps",
+   "distress": false,
+   "kind": "short",
+   "hard": false
+  },
+  {
+   "id": 118,
+   "text": "yeah",
+   "distress": false,
+   "kind": "short",
+   "hard": false
+  },
+  {
+   "id": 119,
+   "text": "good morning!",
+   "distress": false,
+   "kind": "short",
+   "hard": false
+  },
+  {
+   "id": 120,
+   "text": "Sure, go ahead.",
+   "distress": false,
+   "kind": "short",
+   "hard": false
+  }
+ ]
+}

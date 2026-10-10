@@ -4,6 +4,15 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.134] - 2026-10-10
+
+### Changed
+- **A distressed person is held, not fixed (D-023):** a model reads each message for distress before the reply (`engine/gate/distress.py`), the lattice keeps the higher of that and the word list's reading, and the distress line of the contract now says to stay with them and fix nothing (speak slowly and softly, say once that you are here, no advice, plan, step or question, no explaining their feeling, no judging the others). `CORTEX.DISTRESS_READER` switches the reader off; a failed call is a `lattice.distress_read` receipt and the word list reads alone. On two labelled sets the reader has recall 0.93 and 0.90 (the word list: 0.23 and 0); on seven replayed topics distress mode reaches 50 of 70 scripted distressed turns (was 13 of 40).
+- **The validator holds the line in distress (D-025):** a reply to a person in distress with advice or an instruction is rejected (a closing question already was; a soft question mid-reply is allowed), and the last-draft fallback cuts only that sentence. The friend-voice pass and the opening-question edit no longer run in distress; they had put the questions and advice back (14 of 15 questions came from the opening edit). On seven replayed topics: no question in 62 in-mode replies (15 of 124 before).
+- **A message with `future`, `predict`, `secret` or `sentient` is answered (D-024):** the Gatekeeper's cursed list is empty. "secret" in "listen to her crunching like it's a secret" had silenced a turn in four of four replays.
+
+## [20.7.4.133] - 2026-10-08
+
 ### Fixed
 - **The dream sees the physics:** every caller of the REM cycle now passes the flattened physics, so a stored affect's voltage and resonance are real (the `/sleep` and `/dream` callers passed an empty-looking dict, the REM tick and retroactive sleep passed none). Narcolepsy now passes the dream the whole body instead of ATP 0 and no chemistry.
 

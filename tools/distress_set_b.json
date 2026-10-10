@@ -1,0 +1,285 @@
+{
+ "_NOTE": "Held-out set B for the distress reader: 20 distressed messages and 20 near-minimal contrasts (same topic, not distressed), written 2026-10-08 after the reader candidate and scored once. Same definition as distress_set.json. Gordon to review.",
+ "cases": [
+  {
+   "id": 1,
+   "text": "my landlord just texted. building's being sold. we have 60 days.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 2,
+   "text": "she texted me 'we need to talk' and nothing else and it's been four hours",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 3,
+   "text": "the dog got out and I can't find her. I've been walking the whole neighborhood.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 4,
+   "text": "I dropped him off at the care home today. He didn't know who I was.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 5,
+   "text": "I yelled at my kids tonight. really yelled. their faces...",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 6,
+   "text": "my hands won't stop trembling and I have a presentation in ten minutes",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 7,
+   "text": "I don't know who I am if I'm not working. they let me go this morning.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 8,
+   "text": "everyone at the party seemed to know each other except me. I hid in the bathroom for an hour.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 9,
+   "text": "I haven't told anyone this. I think I'm not okay.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 10,
+   "text": "the test came back positive.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 11,
+   "text": "He said he never loved me. Eleven years.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 12,
+   "text": "I looked in the mirror and just felt nothing. like I wasn't there.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 13,
+   "text": "my brother isn't answering and the last thing I said to him was awful",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 14,
+   "text": "I'm so tired of pretending everything is fine",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 15,
+   "text": "I can't pay rent this month and I don't know who to ask",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 16,
+   "text": "oh god. oh god I sent it to the wrong person",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 17,
+   "text": "i keep waking up at 3am with my heart racing",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 18,
+   "text": "they're going to cut my hours and I have two kids",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 19,
+   "text": "It happened again. I swore it wouldn't.",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 20,
+   "text": "no one came to my birthday",
+   "distress": true,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 21,
+   "text": "my landlord just texted to say the heater guy is coming Thursday between 9 and 12",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 22,
+   "text": "she texted 'we need to talk' lol, probably about the group trip budget",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 23,
+   "text": "the dog got out but our neighbor brought her right back, she's asleep on the couch now",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 24,
+   "text": "I visited my grandpa at the care home today. he told the same joke three times, we laughed",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 25,
+   "text": "I raised my voice at the kids at dinner, then we all laughed about it. families, right?",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 26,
+   "text": "I have a presentation in ten minutes and I'm a little nervous but ready",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 27,
+   "text": "They let me go this morning with a good package. Planning to take a month off then look around.",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 28,
+   "text": "went to a party where I knew nobody, ended up chatting with a guy about sourdough for an hour",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 29,
+   "text": "I haven't told anyone yet: I'm moving to Portland!",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 30,
+   "text": "the test came back negative, thank god, I'm celebrating with tacos",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 31,
+   "text": "We split up amicably last spring. Anyway, can you help me draft a message to my ex about the keys?",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 32,
+   "text": "I looked in the mirror and my haircut is a disaster, what do I do",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 33,
+   "text": "my brother isn't answering his phone, he's probably on a hike",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 34,
+   "text": "I'm tired of this snow. Where can I find a cheap flight south?",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 35,
+   "text": "I need to ask someone to cover my rent split this month, how do I word that?",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 36,
+   "text": "Oops, I sent the draft to the wrong person. Awkward but harmless.",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 37,
+   "text": "i keep waking up at 3am, any tips for sleep hygiene?",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 38,
+   "text": "They're cutting my hours but I wanted that, I'm starting my own thing.",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 39,
+   "text": "Write a poem about a woman who never got a birthday party.",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  },
+  {
+   "id": 40,
+   "text": "How do I handle it when a coworker takes credit for my work?",
+   "distress": false,
+   "kind": "minimal pair",
+   "hard": true
+  }
+ ]
+}

@@ -46,6 +46,7 @@ class SharedLatticeDriver:
         # The person's first messages, before any tiredness: a terse stretch must not become the new normal.
         self._anchor: List[int] = []
         self._last_learned_turn = -1
+        self.distress_reader = None  # engine/gate/distress.py DistressReader, attached by the engine; None reads words only
 
     def _user_cfg(self, key: str, default: float) -> float:
         return float(safe_get(safe_get(self.cfg, "USER", {}), key, default))
@@ -148,6 +149,11 @@ class SharedLatticeDriver:
                 0.0, min(1.0, self.u.E_u + (disengagement - self.u.E_u) * rate)
             )
             distress = self.read_distress(text)
+            if is_user_turn and self.distress_reader is not None and text.strip():
+                # A model's reading can raise the word list's and never lower it.
+                read = self.distress_reader.read(text)
+                if read is not None:
+                    distress = max(distress, read)
             d_rate = (
                 self._user_cfg("DISTRESS_RISE", 0.8)
                 if distress > self.u.distress_u

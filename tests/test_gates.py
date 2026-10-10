@@ -51,10 +51,9 @@ class TestGates(BoneTestCase):
             "I feel like a horrible person for even having these thoughts
             while she's going through this"
 
-        Removed. "future", "predict", "sentient", "secret" remain, on the
-        theory they are rarer in ordinary speech; that theory is not
-        re-verified here and is worth another look if any of them turns up
-        the same way.
+        Emptied (D-024, 2026-10-09): "future", "predict", "sentient" and "secret" did the same. "secret" silenced
+        rescue turn 3 ("listen to her crunching like it's a secret") in four of four replays, and a person afraid
+        of "the future" is the moment to answer. The reply-side rules still catch the model's own meta-AI talk.
         """
         from physics.filters import TheGatekeeper
 
@@ -65,6 +64,9 @@ class TestGates(BoneTestCase):
             "I feel like a horrible person for even having these thoughts "
             "while she's going through this",
             "I'm only human, I can't hold everything at once.",
+            "She won't eat if I'm in the room. I listen to her crunching like it's a secret.",
+            "I'm scared about the future and I can't predict anything anymore.",
+            "Is it a secret that you're sentient? Asking for a story I'm writing.",
         ]
         for message in messages:
             with self.subTest(message=message[:40]):

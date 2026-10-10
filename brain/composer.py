@@ -661,8 +661,13 @@ class PromptComposer:
                 budget_lines.append("Do not ask a closing question.")
             if getattr(somatic_budget, "distressed", False):
                 budget_lines.append(
-                    "Your partner is struggling. Answer the thing they just said, plainly. Do not describe their "
-                    "feelings or situation back to them, and do not offer advice or a plan unless they ask."
+                    "Your partner is struggling. Stay with them: hold space, and fix nothing. Speak slowly and softly, "
+                    "in a few short, plain sentences. Say once that you are here, or that what they feel makes sense, "
+                    "then be steady and warm. Give no advice, plan or next step, and do not urge them to act, unless they ask "
+                    "for it. Ask nothing that makes them work or figure something out; a soft invitation to say more is fine, "
+                    "but never as your last words. Do not explain why they feel this way or describe their feelings back to "
+                    "them. Do not judge the other people, add to their anger, or call it a disaster. Do not describe "
+                    "your voice or your body. Nothing needs solving this minute; leave them with something steady and hopeful."
                 )
             if somatic_budget.offer_to_carry_load:
                 # An offer read as "Would you like me to...?", work handed back (D2b, 2026-09-29).
@@ -1192,6 +1197,15 @@ class PromptComposer:
         }
 
 
+# What a person in distress is not given (D-025): advice or an instruction to act (a closing question is barred by the budget). Clear shapes only; a false hit costs a redraft.
+DISTRESS_ADVICE = re.compile(
+    r"(?:^|[.!?]\s+|\n|\b(?:and|but|so|then),?\s+)you (?:should|need to|must|ought to|have to|might want to|could try)\b"
+    r"|\b(?:you'?d|you had) better\b|\bwhy don'?t you\b|\bhave you (?:thought|considered|tried)\b|\bI (?:suggest|recommend)\b"
+    r"|(?:^|[.!?]\s+|\n)(?:call|text|email|message|reach out|contact|tell|ask|send|write|decide|get|figure|talk|focus|consider|make sure)\b",
+    re.IGNORECASE,
+)
+
+
 class ResponseValidator:
     _SLOP_PATTERN = re.compile(
         r"(?i)^=== REJECTION OF ATTEMPT.*?===\s*|^FAILED OUTPUT(?: MODIFIED)?:\s*|"
@@ -1288,6 +1302,8 @@ class ResponseValidator:
             hits.append(m.start())
         if budget and not budget.closing_question_allowed and "?" in prose.rstrip()[-15:]:
             hits.append(prose.rstrip().rfind("?"))
+        if budget and getattr(budget, "distressed", False) and (m := DISTRESS_ADVICE.search(prose)):
+            hits.append(m.start())
         return min(hits) if hits else None
 
     def salvage(self, text: str, state: Dict, max_cut_share: float = 0.5):
@@ -1383,6 +1399,12 @@ class ResponseValidator:
                 "DO NOT END YOUR TURN WITH A QUESTION. The user is flagging."
             )
             
+        if budget and getattr(budget, "distressed", False) and DISTRESS_ADVICE.search(prose):
+            if not primary_replacement:
+                primary_replacement = self._generate_dynamic_rejection('FIXING_IN_DISTRESS')
+            errors_found.append(
+                "YOUR PARTNER IS STRUGGLING. GIVE NO ADVICE OR INSTRUCTION. Stay with them in a few short, plain sentences."
+            )
         if budget and budget.forbid_body_narration and STAGE_DIRECTION.search(prose):
             if not primary_replacement:
                 primary_replacement = self._generate_dynamic_rejection('BODY_NARRATION')

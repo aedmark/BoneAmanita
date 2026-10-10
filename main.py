@@ -22,6 +22,7 @@ from brain.cortex import TheCortex, _room_slug
 from brain.mind import NoeticLoop
 from drivers.userprofile import UserProfile
 from engine.gate.keeper import MemoryKeeper
+from engine.gate.distress import DistressReader
 from engine.gate.reflector import MemoryReflector
 from engine.constants import Prisma, RealityLayer
 from engine.core import (
@@ -193,6 +194,10 @@ class BoneAmanita:
         self.memory_keeper = MemoryKeeper(
             self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "HALCYON_KEEPER", True))
         )
+        if (lattice := getattr(self, "shared_lattice", None)) is not None:
+            lattice.distress_reader = DistressReader(
+                self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "DISTRESS_READER", True))
+            )
         self.memory_reflector = MemoryReflector(
             self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "HALCYON_REFLECT", True))
         )

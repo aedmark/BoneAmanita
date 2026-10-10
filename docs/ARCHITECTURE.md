@@ -25,6 +25,7 @@ reply (voice, ending, opening, fairness); and the final state is committed to SQ
 | Gatekeeper | `physics/filters.py` | `TheGatekeeper.mitigate_rejection()` | `lore/style_crimes.json`, `engine/receipts.py` |
 | Memory & Spores | `spores/` | `SemanticEmbedder.embed_batch()` | Ollama `/v1/embeddings`, `spores/memory.py` |
 | The Village | `archetypes/` | `StageManager.negotiate()` | `archetypes/village.py`, `brain/composer.py` |
+| Distress reader | `engine/gate/distress.py` | `DistressReader.read()` | `drivers/lattice.py` (`SharedLatticeDriver`), `body/somatic_budget.py`, `brain/composer.py`; one short model call per message before the reply, the word list as floor (D-023) |
 | Halcyon Store | `engine/gate/` | `Store.save_checkpoint()` | `saves/iris.db`, `engine/gate/secrets.py` |
 | Slash Commands | `mechanics/` | `CommandProcessor.execute()` | `mechanics/commands.py`, engine subsystems |
 
