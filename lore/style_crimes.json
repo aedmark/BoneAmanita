@@ -132,6 +132,12 @@
       "error_msg": "YOU ARE NOT IN THEIR LIFE. You were not there, you told no one anything, and you cannot meet them. Answer as yourself: a program they are texting, talking with them about the people in their life."
     },
     {
+      "name": "JUDGES_THE_OTHER_PERSON",
+      "skip_modes": ["ADVENTURE", "CREATIVE", "TECHNICAL"],
+      "regex": "(?i)\\b(?:violation|betrayal|breach of trust|overstep|outrageous|unacceptable|disrespectful|inconsiderate)\\b|\\b(?:huge|massive|such an?|total|complete|real|serious|major)\\s+(?:\\w+\\s+)?(?:breach|insult|injustice|slap in the face|disrespect|betrayal|violation)\\b|\\b(?:so|really|totally|completely|incredibly|extremely|just plain)\\s+(?:unfair|wrong|messed up|out of line|cruel|rude)\\b|\\bevery right to be\\b|\\b(?:right|entitled) to be (?:angry|upset|mad|pissed|furious|hurt)\\b|\\bthat'?s (?:not okay|not fair|not right|messed up|wrong|unfair)\\b|\\b(?:had|has) no right\\b",
+      "error_msg": "DO NOT JUDGE THE OTHER PERSON. You have heard one side. Say what happened and what it cost them, plainly: no \"violation\", \"betrayal\", \"overstep\" or \"so unfair\", and do not tell them they are right to be angry."
+    },
+    {
       "name": "NEGATIVE_COMPARISON",
       "regex": "(?i)\\bnot\\s+(?:only|just|merely|simply)\\s+[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but|rather|instead)\\b|\\b(?:didn|don|doesn)['’]?t\\s+(?:just|only|merely|simply)\\s+[^.!?\\n]+?(?:,|;|\\s-|—)\\s*(?:but\\s+)?(?:you|it|they|we|he|she)\\b|\\bnot\\s+about\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?:but\\s+)?(?:about|it['’]?s\\s+about|it\\s+is\\s+about)\\b|(?:\\b(?:it|this|that)['’]s\\s+not|\\b(?:is|was)\\s+not|\\b(?:isn['’]?t|wasn['’]?t))\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?:it|this|that)(?:['’]s|\\s+is|\\s+was)\\b|\\b(?:are\\s+not|were\\s+not|aren['’]?t|weren['’]?t)\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)they(?:['’]re|\\s+are|\\s+were)\\b|\\b(?P<s1>you|they|we)(?:(?:['’]re|\\s+are|\\s+were)\\s+not|\\s+(?:aren['’]?t|weren['’]?t))\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)(?P=s1)(?:['’]re|\\s+are|\\s+were)\\b|\\bI(?:['’]m|\\s+am)\\s+not\\b[^.!?;\\n]*?(?:[.!?;,]\\s+|\\s*—\\s*|\\s+-\\s+)I(?:['’]m|\\s+am)\\b",
       "error_msg": "DETECTED NEGATIVE COMPARISON. Don't say what it isn't. Say exactly what it is."

@@ -4,6 +4,11 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.4.135] - 2026-10-10
+
+### Changed
+- **The reply does not rule on the other person (D-026):** in CONVERSATION a reply that calls what someone did to them a violation, a betrayal, an overstep or "so unfair", or tells them they are right to be angry, is rejected, and the last-draft fallback cuts only that sentence. "A huge violation of trust" was in 7 of 8 replies to the feud's birthday dinner and 10 of 12 to the sailboat's "she listed it for sale"; it is in 0 of 84 now. The model sometimes reaches for softer verdicts ("a sharp line to cross").
+
 ## [20.7.4.134] - 2026-10-10
 
 ### Changed

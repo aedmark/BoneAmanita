@@ -13,7 +13,7 @@ Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index
 
 ## Current state
 
-_Last updated: 2026-10-10, session 15, on `main` (20.7.4.134)._
+_Last updated: 2026-10-10, session 15, on `main` (20.7.4.135)._
 
 **Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
 (`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
@@ -103,8 +103,9 @@ arm: earlier panels moved a point or more, so bone's low "performed" is a good s
    0), the distress line says to hold space and fix nothing, the validator rejects advice or an instruction in distress (a closing question was already barred), the voice
    pass and the opening edit stand down in distress (they had put the questions and advice back), and the Gatekeeper's cursed
    list is emptied. On 7 topics: distress mode on 50 of 70 scripted distressed turns (was 13 of 40); in mode 26 words, no question,
-   no pause. Open: (a) a grievance told calmly reads below the cut and is still amplified or advised (sailboat 20 and 21,
-   marathon 20); (b) done 2026-10-10: the validator no longer bars a mid-reply question (Gordon: too strict); the prompt says to ask nothing that
+   no pause. Open: (a) a grievance told calmly reads below the cut: the words "violation", "betrayal", "so unfair" are now enforced out (D-026, 0 of 84
+   replies, was 17 of 20 at the first-telling moments) but the model uses softer verdicts ("she crossed a line you had drawn"); Gordon (2026-10-10): the neutral restatement is
+   enough for now; advice outside distress (marathon 20, "you should probably take a break") is untouched; (b) done 2026-10-10: the validator no longer bars a mid-reply question (Gordon: too strict); the prompt says to ask nothing that
    makes them work, and a soft invitation is fine but never the last words; (c) "I'm right here" in about a third of in-mode replies; (d) Gordon to skim
    the labels in `tools/distress_set.json` and `distress_set_b.json`; (e) a second local model.
 3. **Stock phrases and repeated openers** (conformance check): a stock word is in 39% of the engine's replies (plain 18%) and its
