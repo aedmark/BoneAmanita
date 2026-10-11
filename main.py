@@ -1016,6 +1016,10 @@ if __name__ == "__main__":
             )
             tel.shutdown()
 
+    if "--doctor" in sys.argv:
+        from engine.doctor import main as doctor_main
+
+        sys.exit(doctor_main())
     sys.excepthook = global_exception_handler
     sys_config = environment_config(ConfigWizard.load_or_create())
     engine = BoneAmanita(config=sys_config)

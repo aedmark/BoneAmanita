@@ -34,6 +34,28 @@ class ConfigWizard:
         return ConfigWizard._run_setup()
 
     @staticmethod
+    def _choose_ollama_model(base_url):
+        """Offer the models Ollama already has, by number or name; the engine's own default when it has none to show."""
+        from engine.doctor import has_model, installed_models, server_root
+
+        wanted = getattr(BoneConfig, "MODEL", "gemma4:12b")
+        models = installed_models(server_root(base_url))
+        if models is None:
+            print(f"{Prisma.YEL}Ollama does not answer at {server_root(base_url)}. Start it (`ollama serve`), then check with `python main.py --doctor`.{Prisma.RST}")
+            return input(f"Model ID [{wanted}]: ").strip() or wanted
+        if not models:
+            print(f"{Prisma.YEL}Ollama has no models yet. `ollama pull {wanted}` is the one this was built on.{Prisma.RST}")
+            return input(f"Model ID [{wanted}]: ").strip() or wanted
+        default = wanted if has_model(models, wanted) else models[0]
+        print("Models Ollama has:")
+        for number, name in enumerate(models, 1):
+            print(f"  {number}. {name}")
+        answer = input(f"Model [{default}]: ").strip()
+        if answer.isdigit() and 1 <= int(answer) <= len(models):
+            return models[int(answer) - 1]
+        return answer or default
+
+    @staticmethod
     def _backup_corrupt_file():
         backup_name = f"{ConfigWizard.CONFIG_FILE}.{int(time.time())}.bak"
         try:
@@ -114,7 +136,7 @@ class ConfigWizard:
                     "base_url": "http://127.0.0.1:11434/v1/chat/completions",
                 }
             )
-            config["model"] = input("Model ID [llama3]: ").strip() or "llama3"
+            config["model"] = ConfigWizard._choose_ollama_model(config["base_url"])
 
         print(f"\n{Prisma.paint('STEP 4: COMPUTE PROFILE (METABOLIC TUNING)', 'W')}")
         for k, name, col, desc in [
@@ -150,5 +172,9 @@ class ConfigWizard:
         cfg = getattr(BoneConfig, "GUI", object())
         setup_speed = getattr(cfg, "RENDER_SPEED_SETUP", 0.02)
         typewriter(f"\n{Prisma.paint(commit_msg, 'G')}", speed=setup_speed)
+        if config.get("provider") != "mock":
+            from engine.doctor import render, run_doctor
+
+            print(f"\n{render(run_doctor(config))}")
         time.sleep(1)
         return config

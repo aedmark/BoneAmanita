@@ -248,6 +248,15 @@ Format:
 - Rate every turn automatically: rejected, a prompt after each reply is itself a cost to the person.
 **Consequences:** A week of real use gives tagged examples to tune against (an `off` with a distress reading is the best next test case). `tests/test_note_command.py` (5 of 6 fail on the old code).
 
+## D-031 A doctor checks the machine and names the fix  (2026-10-11, status: accepted)
+**Context:** The first thing that stops anyone else benefiting is setup: the wizard asked for a model name from memory (default `llama3`, which is not what this was built on), the quickstart told people to pull `mistral-nemo`, a missing embedding model silently put memory on hash coordinates, and a missing critic model failed on every turn and was skipped.
+**Decision:** `engine/doctor.py`, run as `python main.py --doctor`, checks Python, packages (missing `requests` or `numpy` fails; a missing `ordvec`, `dspy`, `faiss` or `markdown` warns with what turns off), `config.json`, the writable folders, the chat server and model (one tiny local reply for Ollama and LM Studio; cloud providers only check the key is set and make no request), the critic model and the embedding backend (one probe). Each result is `ok`, `warn`, `FAIL` or `info`, and every one that is not ok prints the one command that fixes it and, for warnings, what it costs. The first-run wizard lists the models Ollama has pulled (by number or name; the engine's own `gemma4:12b` is the default when present) and prints the same report once `config.json` is written, except for the mock provider. The quickstart pulls the three models this was measured on.
+**Alternatives:**
+- A `/doctor` slash command: not now; it is needed before the engine boots.
+- Probe the cloud with a real request: rejected, it costs the person money; `tools/live_run.py` stays the explicit smoke run.
+- Pick the model for the person by VRAM: rejected, the measured claim is only that these three work (D-027 shows another model needs its own checks).
+**Consequences:** `tests/test_doctor.py` (21 tests, offline). On this machine the report is all ok (gemma4:12b answered in 9.8 s including load). Not tried: a machine that is not this one; a first install on another person's computer is the real test.
+
 ## Open questions
 
 None open. Answered 2026-10-08, kept so that references resolve:

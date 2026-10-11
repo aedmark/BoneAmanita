@@ -11,6 +11,8 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 - **A person in distress is not answered with silence about the engine (D-029):** the Stage Manager no longer holds a turn for the ATP floor or tension between voices when the person is in distress; the one survival hold left says "I'm here with you. I need a moment" instead of a line about the engine.
 - **`/note` (D-030):** `/note good`, `/note off <why>` or `/note <words>` saves the last exchange with your verdict to `notes/notes.jsonl`; `python tools/read_notes.py` reads it back.
 
+- **`python main.py --doctor` (D-031):** checks Python, packages, `config.json`, folders, the chat model (one tiny local reply), the critic model and the embedding backend, and prints the one command that fixes each thing. The first-run wizard lists the Ollama models you already have and prints the same report when setup finishes; the quickstart pulls `gemma4:12b`, `gemma4:e4b` and `nomic-embed-text`.
+
 ### Removed
 - The AI-judge ranking tool (`tools/audit_somatic_blind_judge.py`) and its tests (verdicts come from human readers, D-011), the silence diagnostic, a one-time except-codemod and a timing script posing as a test. `tools/corpus_replay.py` joins `tools/` from scratch.
 

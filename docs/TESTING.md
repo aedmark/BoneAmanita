@@ -72,6 +72,10 @@ contain "but"), which is the reason for more varied samples. Regression check (t
 score): 20.7.4.132 14 of 42 unfair, 20.7.4.118 13 of 40, Fisher p 0.62; the engine acted on about half of the unfair replies.
 The scripts that built these sheets are in the archived scratch tarball.
 
+## Is this machine ready: `python main.py --doctor`
+
+Checks packages, config, folders, the chat model (one tiny local reply), the critic and the embedding backend, and prints the fix for each (D-031). Run it first on any new machine; `tests/test_doctor.py` pins what each result means with every server mocked.
+
 ## Your own verdict: `/note`
 
 `/note good`, `/note off <why>` or `/note <words>` in any session saves the last exchange with your tag to `notes/notes.jsonl` (D-030). `python tools/read_notes.py [--tag off] [--distress]` reads them. This is the cheapest human-reader verdict there is (D-011); an `off` note with a distress reading is the best test case to add.

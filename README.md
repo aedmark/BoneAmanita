@@ -24,11 +24,14 @@ measured and which sentences it produces.
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ollama pull nomic-embed-text    # memory and word resolution need this
-ollama pull mistral-nemo        # or whatever chat model you prefer
+ollama pull gemma4:12b          # the chat model this was built and measured on; any local model works
+ollama pull gemma4:e4b          # the reply critic's model (without it the critic's calls fail and are skipped)
+.venv/bin/python main.py --doctor   # checks the machine and names the one command that fixes each thing
 .venv/bin/python main.py
 ```
 
-First run asks some setup questions and writes `config.json`. If the embedding
+First run asks some setup questions (it lists the Ollama models you already have), writes `config.json`, and runs the
+same doctor report. If the embedding
 backend is unreachable the engine still boots on hash coordinates and announces
 degraded operation. Those coordinates do not support meaningful associative
 recall. Grammatical filler and the curated word lists need no server. Runtime
@@ -310,7 +313,7 @@ codebase, and it is what most of the recent work was about.
 
 ## Project status
 
-An experimental system in active development. The suite passes offline (1205 passed, 5 skipped on 2026-10-11; `docs/TESTING.md`),
+An experimental system in active development. The suite passes offline (1226 passed, 5 skipped on 2026-10-11; `docs/TESTING.md`),
 and live-model behaviour is measured with replays of scripted conversations and with checks that need no judge
 (`tools/check_conformance.py`). What was measured and what is still open is in `docs/HANDOFF.md`; why each choice was made is
 in `docs/DECISIONS.md`. Verdicts on whether it helps a person come from human readers, not from a model judging itself.

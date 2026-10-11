@@ -75,3 +75,10 @@ Goal: A person in measured distress is held, not fixed, coddled or argued with (
 - [x] P8-04 A person in distress is never answered with the Stage Manager's silence for the engine's own load (D-029).
 - [ ] P8-05 The hold reader on qwen3.5:9b flags nearly every draft at the shipped cut; try `HOLD_CUT` 3 (D-028).
 - [x] P8-06 `/note`: the person's own verdict on the last exchange, saved to `notes/notes.jsonl` (D-030).
+
+## Phase 9: Anyone Can Run It
+
+Goal: A person who is not the maintainer gets from clone to a first reply without guessing.
+
+- [x] P9-01 `python main.py --doctor` and a first-run wizard that lists the models Ollama has (D-031).
+- [ ] P9-02 A first install on a machine that is not Gordon's, with what went wrong written down.
