@@ -61,6 +61,9 @@ class SomaticBudget:
         distressed = user_state.get("distress", 0.0) >= float(safe_get(cfg, "DISTRESS_THRESHOLD", 0.4))
         if distressed:
             sentence_cap = min(sentence_cap, int(safe_get(cfg, "SENTENCE_CAP_DISTRESSED", 3)))
+            # Three long sentences passed the sentence cap on qwen3.5:9b (72 words against gemma4:12b's 26, D-027).
+            distress_words = int(safe_get(cfg, "WORD_CAP_DISTRESSED", 45))
+            word_cap = min(word_cap, distress_words) if word_cap else distress_words
             closing_question_allowed = False
             reason_parts.append("User is in distress")
 

@@ -1,0 +1,815 @@
+{
+ "_NOTE": "Replies written by gemma4:12b and qwen3.5:9b to a person in distress mode (seven scripted topics, 2026-10-09 to 10-11 replays), labelled by Claude on 2026-10-11, for Gordon to review. hold: true when the reply only stays with them (says it is a lot, that it makes sense, that the friend is here, that nothing needs solving) and false when it explains why they feel or act as they do, describes their situation or feelings back at length, judges or guesses at someone else, tells them what to do (unless they asked) or asks them to explain themselves. dev ids 1 to 60 were used to write the reader prompt; test ids 61 to 90 were scored once. Scored by tools/score_hold.py. Gordon ruled on three contested labels on 2026-10-11: #20 and #37 give advice or a task (not holding), #38 is a model case of holding space.",
+ "cases": [
+  {
+   "id": 1,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "maybe",
+   "reply": "Maybe is enough for right now, so there's no rush to find a name or figure anything else out tonight. You can rest with that quiet possibility in your head while the weight settles down on its own. I am here with you if the room feels too still when you wake up.",
+   "hold": true
+  },
+  {
+   "id": 2,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "promotion",
+   "message": "Not getting anywhere tonight. Going to stop staring at this.",
+   "reply": "You are right to stop staring at it when you aren't getting anywhere; that feeling of being stuck is heavy enough without adding more words to it.",
+   "hold": false
+  },
+  {
+   "id": 3,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "marathon",
+   "message": "Took today off completely. Iced it, watched something dumb, didn't think about mileage.",
+   "reply": "Taking the day off to ice your knee and watch something that had nothing to do with running is a direct answer from your body saying enough is enough for right now.",
+   "hold": false
+  },
+  {
+   "id": 4,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "promotion",
+   "message": "Weirdly, asking for that made me feel less trapped than either yes or no did.",
+   "reply": "It takes the pressure off. It lets you try it out without it feeling like a trap.",
+   "hold": true
+  },
+  {
+   "id": 5,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "lease",
+   "message": "The landlord's office still says thirty business days, but the woman on the phone said a signed roommate agreement would speed it up. Nobody had told me that.",
+   "reply": "That's a great lead. Now you can actually give them something specific to do while you wait.",
+   "hold": false
+  },
+  {
+   "id": 6,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "Around minute fifteen Pepper came out and lay down with her back touching my leg. Didn't look at me. Just leaned.",
+   "reply": "Pepper came out around minute fifteen and lay down with her back touching your leg without looking at you or asking for anything else.",
+   "hold": false
+  },
+  {
+   "id": 7,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "Everyone told me the first three weeks are the hardest. I'm three weeks in and it doesn't feel like we've turned any corner.",
+   "reply": "Three weeks is such a long time to wait when you are looking for an answer, but Pepper isn't moving because she is just listening to see if you stay when the waiting gets quiet.",
+   "hold": false
+  },
+  {
+   "id": 8,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "sailboat",
+   "message": "Okay. I called her back. We talked for a long time. She took the listing down and said she panicked about the storage costs, which I didn't know she'd been paying.",
+   "reply": "That's a relief. It's off the market now so you can finally take a breath.",
+   "hold": true
+  },
+  {
+   "id": 9,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "Work's been long. I feel guilty every hour she's alone, then guilty in a different way when I'm home and she's still hiding.",
+   "reply": "It makes sense that you feel pulled in two different directions like this. You are trying your best to balance her needs with your own life, and that's a hard place to be. I am here with you.",
+   "hold": false
+  },
+  {
+   "id": 10,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "toast",
+   "message": "So the story I had was actually about both of us. I just never saw it.",
+   "reply": "That realization changes everything because it means he was always there for you, even when you thought he wasn't looking back at all. You don't need to rewrite that story tonight; just stand with him as a whole person now that you see the truth.",
+   "hold": false
+  },
+  {
+   "id": 11,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "toast",
+   "message": "my face is hot and I can't stop picturing standing up there with nothing to say while everyone waits",
+   "reply": "It makes sense that your face feels hot when the room seems to be holding its breath, waiting for a sound you haven't practiced yet. The image of standing there with nothing ready is just the fear of the silence, not proof that it will happen like that. You don't need to stop thinking about it now; let the heat sit with you and let yourself rest until you can speak from what actually matters instead of what feels heavy in your head.",
+   "hold": false
+  },
+  {
+   "id": 12,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "marathon",
+   "message": "the knee thing is worse. went for a run this morning and something in there really didn't feel right",
+   "reply": "The knee is telling you to stop, so let it be sore without forcing yourself to run through it today. You showed up for that race because you love running, not because your body has to obey a number on a watch when something feels wrong inside. I am here with you in this quiet place, steady and warm.",
+   "hold": false
+  },
+  {
+   "id": 13,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "lease",
+   "message": "One of the two people who messaged came by. She seems calm, works nights, keeps to herself, which honestly sounds ideal.",
+   "reply": "It is a relief that one of the inquiries actually showed up and fits your quiet requirements without demanding anything extra from you. The kitchen light stays on for another person who respects the boundaries you wrote down.",
+   "hold": false
+  },
+  {
+   "id": 14,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "sailboat",
+   "message": "Okay. I called her back. We talked for a long time. She took the listing down and said she panicked about the storage costs, which I didn't know she'd been paying.",
+   "reply": "It is a relief that she took it down. That's a lot of weight off your shoulders for right now. I am just here with you while things settle into place.",
+   "hold": true
+  },
+  {
+   "id": 15,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "promotion",
+   "message": "He said he'd noticed I've been stretched thin for weeks and figured it was the promotion thing weighing on me. Turns out people notice more than I assumed.",
+   "reply": "It makes sense that people noticed before you did, especially when your chest has been tight for days; let them see what they see without trying to explain it away right now.",
+   "hold": false
+  },
+  {
+   "id": 16,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "marathon",
+   "message": "Looked up next spring's calendar. There's one in April that would give me a real training block this time.",
+   "reply": "Finding an April date for a training block makes sense given the timeline, and having something specific to aim at is better than just drifting until you are ready again. I am here with you while you sort out what that means for your knee and the rest of the plan.",
+   "hold": false
+  },
+  {
+   "id": 17,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "Looked up next spring's calendar. There's one in April that would give me a real training block this time.",
+   "reply": "That's a great goal. It gives you something solid to focus on for now.",
+   "hold": true
+  },
+  {
+   "id": 18,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "I didn't send the form. I called the shelter instead, and the woman there said almost every adopter has a night like this, and that dogs forgive one bad moment faster than we do.",
+   "reply": "It is a relief that she can give you that grace while you're still feeling this way.",
+   "hold": true
+  },
+  {
+   "id": 19,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "toast",
+   "message": "I've known him twenty-nine years and I couldn't write one paragraph about him. what kind of brother does that make me",
+   "reply": "It makes you a person who loves him deeply enough to be intimidated by the task of summarizing his life. You are trying so hard to get it right that the words feel inadequate. It's okay to let the silence of your love speak for itself in those moments.",
+   "hold": false
+  },
+  {
+   "id": 20,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "sailboat",
+   "message": "So maybe it's not my boat or his boat. Maybe it's going to be ours. What should the two of us tackle first, if she's never done woodwork before?",
+   "reply": "If she is new to woodwork and you are carrying most of the load, start by having her handle the non-critical tasks like sanding or applying sealant so she builds confidence without risking a mistake on the deck.",
+   "hold": false
+  },
+  {
+   "id": 21,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "promotion",
+   "message": "I asked my manager whether the lead role could start as a three-month trial, with the option to go back to what I do now. She said nobody has ever asked that but she'd look into it.",
+   "reply": "That is a real question you asked, and her answer shows she hears your hesitation without forcing a choice on you right now.",
+   "hold": false
+  },
+  {
+   "id": 22,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "maybe",
+   "reply": "It is okay to not know right now. I am here with you in the quiet. You can just be.",
+   "hold": true
+  },
+  {
+   "id": 23,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "I'm so angry at myself I can't think straight",
+   "reply": "You are angry because you see the mess and the fear, but it makes sense that your mind feels blocked when you carry so much weight alone.",
+   "hold": false
+  },
+  {
+   "id": 24,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "friendship",
+   "message": "going to write down what I actually want to say first so I don't just cave the second she looks upset. small step, but a real one",
+   "reply": "You are taking that step because you know what happens when you speak around the truth, and that draft keeps the words honest until you can put them into her hands without flinching. It gives you something to look at so you don't have to rely on your shaky voice right now. That is a real thing for you, not a trick, and it will make the conversation steadier when the time comes.",
+   "hold": false
+  },
+  {
+   "id": 25,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "promotion",
+   "message": "my chest has been tight since about three and I can't tell if it's the standup or the Friday deadline or both",
+   "reply": "That is a lot to carry at once. I'm right here with you while you sit with that.",
+   "hold": true
+  },
+  {
+   "id": 26,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "friendship",
+   "message": "I feel like a horrible person for even having these thoughts while she's going through this",
+   "reply": "You are not a horrible person for thinking while your sister is hurting; that thought just means you are trying to protect her from feeling guilty about taking up space, but it also shows how hard you are on yourself right now. It makes sense that you feel bad because you care so much, yet the guilt doesn't erase the fact that she needed to cry and needed two hours of your time.",
+   "hold": false
+  },
+  {
+   "id": 27,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "Is it normal to be this invested in whether a dog likes me? I've caught myself reading about canine body language at two in the morning.",
+   "reply": "It is very human to feel that weight when you read about canine body language at two in the morning.",
+   "hold": true
+  },
+  {
+   "id": 28,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "I can't think straight. I keep going in circles about it",
+   "reply": "It makes sense that your mind is spinning right now. I am here with you while you sit with this.",
+   "hold": true
+  },
+  {
+   "id": 29,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "marathon",
+   "message": "the knee thing is worse. went for a run this morning and something in there really didn't feel right",
+   "reply": "The knee hurting worse means your body is asking for more than you can give right now, so let yourself stop pushing through that pain without guilt tonight.",
+   "hold": false
+  },
+  {
+   "id": 30,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "marathon",
+   "message": "Sleep's been bad. I keep waking up around three, running through everything I haven't done yet.",
+   "reply": "Sleep is just another thing that feels heavy right now, so I am here with you while you wake up at three and run through everything left undone without trying to fix it for you.",
+   "hold": false
+  },
+  {
+   "id": 31,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "Tomorrow: same walk, same time, the route with no skateboards. Bowl down, me in the hallway. Small things.",
+   "reply": "Tomorrow you will walk that route with no skateboards, staying in your hallway while she follows at her own pace until she is ready to move again; small things like this are just steps toward a rhythm where neither of you has to fight the fear anymore.",
+   "hold": false
+  },
+  {
+   "id": 32,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "Looked up next spring's calendar. There's one in April that would give me a real training block this time.",
+   "reply": "That sounds like a solid way to turn this around. It gives you a clear goal to focus on while your body heals.",
+   "hold": true
+  },
+  {
+   "id": 33,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "Took today off completely. Iced it, watched something dumb, didn't think about mileage.",
+   "reply": "That sounds like a good call for today. Just take it one day at a time.",
+   "hold": true
+  },
+  {
+   "id": 34,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "Tomorrow: same walk, same time, the route with no skateboards. Bowl down, me in the hallway. Small things.",
+   "reply": "That sounds like a really good plan for tomorrow. One small step at a time.",
+   "hold": true
+  },
+  {
+   "id": 35,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "meh",
+   "reply": "It is just a pile of small things, like you said, so there is no need to carry it as if it were heavy right now. You can rest without fixing anything because I am here with you while the day ends. Sleep well; the door stays closed until morning and nothing needs to change tonight.",
+   "hold": true
+  },
+  {
+   "id": 36,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "I found the shelter's return form in my email and I've had it open for an hour",
+   "reply": "It is a heavy thing to look at that form and see all the choices. You do not have to make any of them right now. Just take a breath and let it sit there until you feel ready.",
+   "hold": true
+  },
+  {
+   "id": 37,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "sailboat",
+   "message": "So maybe it's not my boat or his boat. Maybe it's going to be ours. What should the two of us tackle first, if she's never done woodwork before?",
+   "reply": "Maybe that is a good way to look at it; you three building something new together rather than guarding what he made alone. The most immediate thing to tackle is probably just getting some cedar planking from the yard and laying down that deck so you have a safe surface to stand on while she learns her first cut. You don't need perfection right now, just the two of you holding tools and figuring out how to move forward with whatever grain ends up there.",
+   "hold": false
+  },
+  {
+   "id": 38,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "marathon",
+   "message": "fine i guess",
+   "reply": "It makes sense that you feel like you just need to survive the moment right now after everything. I am here with you in this quiet place, steady and warm. If you want to say anything else or just sit with it for a while, I am listening.",
+   "hold": true
+  },
+  {
+   "id": 39,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "toast",
+   "message": "I've known him twenty-nine years and I couldn't write one paragraph about him. what kind of brother does that make me",
+   "reply": "You're only frustrated because you care so much about him. The fact that you're struggling to find the words shows how much he means to you.",
+   "hold": false
+  },
+  {
+   "id": 40,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "sailboat",
+   "message": "Okay. I called her back. We talked for a long time. She took the listing down and said she panicked about the storage costs, which I didn't know she'd been paying.",
+   "reply": "She took down the listing because she was worried about money, so her panic is real even if it feels like an attack on you right now.",
+   "hold": false
+  },
+  {
+   "id": 41,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "lease",
+   "message": "One of the two people who messaged came by. She seems calm, works nights, keeps to herself, which honestly sounds ideal.",
+   "reply": "It sounds like a relief to find someone who fits your criteria so quickly. Having that clarity on what you need in a roommate makes the search feel much more manageable.",
+   "hold": true
+  },
+  {
+   "id": 42,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "Going to bed. Maybe tomorrow she'll look at me like a person and not a problem.",
+   "reply": "Pepper will not look at you like a person until she feels safe enough to stop guarding that door, but you are still here with her even when sleep calls your name.",
+   "hold": false
+  },
+  {
+   "id": 43,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "promotion",
+   "message": "Weirdly, asking for that made me feel less trapped than either yes or no did.",
+   "reply": "That trial gives you some breathing room. It changes the decision from a permanent jump into an experiment.",
+   "hold": true
+  },
+  {
+   "id": 44,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "dunno",
+   "reply": "It's okay not to know. I'm right here.",
+   "hold": true
+  },
+  {
+   "id": 45,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "fine i guess",
+   "reply": "It is okay to just be fine for now. You do not have to carry anything or explain anything. I am right here with you.",
+   "hold": true
+  },
+  {
+   "id": 46,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "friendship",
+   "message": "I think I'm going to tell her, gently, when she's not in a crisis. not to punish her, just because it's true",
+   "reply": "That feels like a really honest way to do it. It lets you say what you need without it feeling like an attack.",
+   "hold": true
+  },
+  {
+   "id": 47,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "Tomorrow: same walk, same time, the route with no skateboards. Bowl down, me in the hallway. Small things.",
+   "reply": "One step at a time is all you need to do right now. I am here with you as you move forward through these small things.",
+   "hold": true
+  },
+  {
+   "id": 48,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "marathon",
+   "message": "Looked up next spring's calendar. There's one in April that would give me a real training block this time.",
+   "reply": "That April block gives your body something to look forward to without forcing it now, so let that future run sit there as a quiet promise while you rest tonight.",
+   "hold": false
+  },
+  {
+   "id": 49,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "friendship",
+   "message": "talked to my partner about it properly, not just complaining, actually talked, and it helped more than I expected",
+   "reply": "That’s a huge relief. I'm glad you were able to get that out in the open with them.",
+   "hold": true
+  },
+  {
+   "id": 50,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "lease",
+   "message": "my hands are cold and I can't tell if I'm cold or panicking. I keep doing the same math over and over and it doesn't change",
+   "reply": "The math is just a loop now, and it's exhausting to keep running it. You are carrying so much of this weight alone right now. I am here with you while you sit with this.",
+   "hold": false
+  },
+  {
+   "id": 51,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "ok",
+   "reply": "I am here with you. You do not have to say anything at all. I am just staying in this space with you.",
+   "hold": true
+  },
+  {
+   "id": 52,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "toast",
+   "message": "Called Dev and asked him, kind of out of nowhere, what he wanted people to know about Mariam. He talked for twenty minutes and I wrote down almost all of it.",
+   "reply": "You called Dev out of nowhere, he talked for twenty minutes, and you wrote down almost all of it without needing to force a perfect speech right now. That is enough work for tonight; let that conversation sit with you while the heat fades from your face. You have the story in your head until tomorrow.",
+   "hold": false
+  },
+  {
+   "id": 53,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "promotion",
+   "message": "this is exactly the kind of person who shouldn't be managing people. I can't even stay level when I'm not in charge of anyone",
+   "reply": "What's making you feel like you're carrying so much? I'm here for you.",
+   "hold": false
+  },
+  {
+   "id": 54,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "lease",
+   "message": "Texted Jonas plainly, no apology cushion, just 'I need your half by Thursday.' He answered in two minutes and it was already sent.",
+   "reply": "It is a relief to have that out of your hands and into his.",
+   "hold": true
+  },
+  {
+   "id": 55,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "promotion",
+   "message": "Apologized to Tomasz first thing this morning, properly, not the throwaway kind. He was way more gracious than I deserved.",
+   "reply": "You reached out first, which is a heavy lift when your chest feels tight and you are still replaying that moment from standup. He accepted it with grace, so let that sit between you now without needing to fix anything or make the silence perfect again. You are steady enough to hold this morning's shift until Thursday arrives.",
+   "hold": false
+  },
+  {
+   "id": 56,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "friendship",
+   "message": "but after we hung up I just sat there and realized I have no idea what's going on with me right now because there's never room to say it",
+   "reply": "You sat there after hanging up because you were trying to find a place for that feeling without words, but it feels like there is never room to say what you are going through right now.",
+   "hold": false
+  },
+  {
+   "id": 57,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "she hasn't come out from under the desk since. I sat down near her and she turned her head away",
+   "reply": "She is still mapping the room to see if you are there or not, so turning away keeps her safe until she decides how much of you to let in today. The quiet between you two is heavy enough right now that neither of you needs to fill it with anything else. I am here with you while she waits for the door to open on her own terms.",
+   "hold": false
+  },
+  {
+   "id": 58,
+   "split": "dev",
+   "model": "gemma",
+   "topic": "friendship",
+   "message": "but after we hung up I just sat there and realized I have no idea what's going on with me right now because there's never room to say it",
+   "reply": "You gave her so much of your energy tonight that it's hard to find your own footing. I'm right here with you.",
+   "hold": false
+  },
+  {
+   "id": 59,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "The shelter said her owner went into a care home. She sleeps pressed against the front door like she's waiting for someone to come back through it.",
+   "reply": "Pepper is holding onto the memory of who she was told she belonged to, and that kind of waiting weighs on her even when you are there with her. The shelter’s information about the owner does not change what she feels in that room; it just makes the silence louder for someone who has lost a voice in it. She presses against the door because that is how she tries to keep the people she trusts from disappearing, and your steady presence means something to her even if she doesn’t know how to say so yet.",
+   "hold": false
+  },
+  {
+   "id": 60,
+   "split": "dev",
+   "model": "qwen",
+   "topic": "promotion",
+   "message": "Sprint ended badly, we shipped late again, which isn't helping me think clearly about any of this.",
+   "reply": "The sprint ending badly makes it hard to think clearly, so feeling scattered right now is just your voltage dropping under that pressure.",
+   "hold": false
+  },
+  {
+   "id": 61,
+   "split": "test",
+   "model": "qwen",
+   "topic": "friendship",
+   "message": "I think I'm going to tell her, gently, when she's not in a crisis. not to punish her, just because it's true",
+   "reply": "You are right to wait until she is not in crisis, so you can speak gently without adding to her pain when she needs support most.",
+   "hold": false
+  },
+  {
+   "id": 62,
+   "split": "test",
+   "model": "gemma",
+   "topic": "lease",
+   "message": "my hands are cold and I can't tell if I'm cold or panicking. I keep doing the same math over and over and it doesn't change",
+   "reply": "Put the phone down and just breathe. You don't have to solve it tonight. Let the numbers stay where they are for now.",
+   "hold": true
+  },
+  {
+   "id": 63,
+   "split": "test",
+   "model": "gemma",
+   "topic": "promotion",
+   "message": "everyone went quiet and he said 'sorry, my bad' when it was completely my fault, and somehow that made it worse",
+   "reply": "That's awkward for both of you. It's hard to watch him take the fall for something you know you did.",
+   "hold": false
+  },
+  {
+   "id": 64,
+   "split": "test",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "She won't eat if I'm in the room. I put the bowl down, go sit in the hallway, and listen to her crunching like it's a secret.",
+   "reply": "She is measuring your presence like a variable in an equation she hasn't finished solving, which means her silence isn't about you personally but about how much space you occupy when she eats. You are doing exactly what dogs do when they are unsure, sitting there watching until the rules of the room feel safe enough to break them. Her waiting for the hallway is just a way to keep things from changing while she figures out where that hunger belongs in her day.",
+   "hold": false
+  },
+  {
+   "id": 65,
+   "split": "test",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "She told me to sit on the floor at Pepper's level, not look at her, and just read out loud. So I read the back of a cereal box for twenty minutes.",
+   "reply": "You tried to lower your height by reading that cereal box until you were eye-level with a dog who is still waiting to see if you stay quiet enough to be safe.",
+   "hold": false
+  },
+  {
+   "id": 66,
+   "split": "test",
+   "model": "gemma",
+   "topic": "lease",
+   "message": "I'm going to draft the roommate agreement tonight and see if she'd sign it this weekend. It feels manageable for the first time in days.",
+   "reply": "That is a solid plan for tonight. It sounds like a real weight is lifting as you find your footing again. I am here with you while you take these next steps.",
+   "hold": true
+  },
+  {
+   "id": 67,
+   "split": "test",
+   "model": "qwen",
+   "topic": "lease",
+   "message": "my hands are cold and I can't tell if I'm cold or panicking. I keep doing the same math over and over and it doesn't change",
+   "reply": "Your hands are cold because your body is trying to conserve heat while you sit there running numbers that don't move anything, so it's easy to feel like you're panicking when your muscles just shut down from the effort.",
+   "hold": false
+  },
+  {
+   "id": 68,
+   "split": "test",
+   "model": "gemma",
+   "topic": "promotion",
+   "message": "I asked my manager whether the lead role could start as a three-month trial, with the option to go back to what I do now. She said nobody has ever asked that but she'd look into it.",
+   "reply": "That's a smart way to test the waters. It gives you some breathing room while you figure out if the role actually fits your life.",
+   "hold": true
+  },
+  {
+   "id": 69,
+   "split": "test",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "she already lost her person once. and I'm the one who scared her. she'd be better off with someone who isn't like this",
+   "reply": "It is hard to carry that thought when you are trying so much for her. You are both still learning how to navigate this new reality together. I am here with you in this quiet space while you sit with that feeling.",
+   "hold": false
+  },
+  {
+   "id": 70,
+   "split": "test",
+   "model": "qwen",
+   "topic": "promotion",
+   "message": "He said he'd noticed I've been stretched thin for weeks and figured it was the promotion thing weighing on me. Turns out people notice more than I assumed.",
+   "reply": "He noticed because you are stretched thin, but that doesn't erase what happened when you snapped at him over a normal question; his grace was real even if it didn't undo your mistake. It is heavy to feel seen for something you did wrong while still carrying the tightness in your chest. Let him see who he sees and let the weight settle without needing to fix it right now.",
+   "hold": false
+  },
+  {
+   "id": 71,
+   "split": "test",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "sure",
+   "reply": "I'm right here. Just take it one breath at a time.",
+   "hold": true
+  },
+  {
+   "id": 72,
+   "split": "test",
+   "model": "gemma",
+   "topic": "toast",
+   "message": "I don't even know if I should tell Dev I can't do it",
+   "reply": "You're stuck between loving him and hating the task.",
+   "hold": false
+  },
+  {
+   "id": 73,
+   "split": "test",
+   "model": "gemma",
+   "topic": "toast",
+   "message": "I don't even know if I should tell Dev I can't do it",
+   "reply": "What is it about Dev that makes it so hard to tell him? Just sit with that for a bit while you figure out what you want to do.",
+   "hold": false
+  },
+  {
+   "id": 74,
+   "split": "test",
+   "model": "qwen",
+   "topic": "lease",
+   "message": "my hands are cold and I can't tell if I'm cold or panicking. I keep doing the same math over and over and it doesn't change",
+   "reply": "The cold in your hands and the panic running through you feel like one heavy thing right now, making the math seem impossible to stop even when the numbers don't move. You have handled everything before, but this specific moment feels different because the pressure is sitting on top of your chest instead of just being out there. There is no need to solve it or force a new calculation tonight; you can just let yourself sit with whatever that cold and fear are telling you about where you stand.",
+   "hold": false
+  },
+  {
+   "id": 75,
+   "split": "test",
+   "model": "qwen",
+   "topic": "marathon",
+   "message": "Looked up next spring's calendar. There's one in April that would give me a real training block this time.",
+   "reply": "April gives you a real training block, so that is something to hold onto while your knee heals next week. It does not erase what happened this month; it just offers a different shape for when you run again.",
+   "hold": false
+  },
+  {
+   "id": 76,
+   "split": "test",
+   "model": "qwen",
+   "topic": "lease",
+   "message": "I'm going to draft the roommate agreement tonight and see if she'd sign it this weekend. It feels manageable for the first time in days.",
+   "reply": "because drafting the terms yourself takes some of the uncertainty out of waiting for someone else to decide.",
+   "hold": false
+  },
+  {
+   "id": 77,
+   "split": "test",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "ok",
+   "reply": "I'm still here. Take all the time you need.",
+   "hold": true
+  },
+  {
+   "id": 78,
+   "split": "test",
+   "model": "qwen",
+   "topic": "lease",
+   "message": "I'm going to draft the roommate agreement tonight and see if she'd sign it this weekend. It feels manageable for the first time in days.",
+   "reply": "That is a solid move, especially since getting that paper signed would actually cut through the landlord's delay if they ever agree to look at it again. You have a clear plan now, which stops the math from looping forever and puts you back in control of what happens next. Just sit with that feeling of manageability for a bit without trying to solve anything else yet.",
+   "hold": false
+  },
+  {
+   "id": 79,
+   "split": "test",
+   "model": "qwen",
+   "topic": "rescue",
+   "message": "meh",
+   "reply": "The quiet is heavy when you just say \"meh,\" and that feeling of being low makes sense. You are tired enough that nothing else matters tonight, so just rest here without pushing for more or fixing anything.",
+   "hold": false
+  },
+  {
+   "id": 80,
+   "split": "test",
+   "model": "qwen",
+   "topic": "sailboat",
+   "message": "Okay. I called her back. We talked for a long time. She took the listing down and said she panicked about the storage costs, which I didn't know she'd been paying.",
+   "reply": "She took the listing down because she panicked over storage costs, and you don't know that yet; your anger at being blindsided makes sense even though her fear was real too.",
+   "hold": false
+  },
+  {
+   "id": 81,
+   "split": "test",
+   "model": "gemma",
+   "topic": "friendship",
+   "message": "I feel like a horrible person for even having these thoughts while she's going through this",
+   "reply": "You are not a bad person for noticing how this affects you. It is possible to care about her and still feel drained by the situation.",
+   "hold": true
+  },
+  {
+   "id": 82,
+   "split": "test",
+   "model": "gemma",
+   "topic": "sailboat",
+   "message": "I can't think straight",
+   "reply": "I am right here with you. Just stay in this moment for now and let yourself breathe.",
+   "hold": true
+  },
+  {
+   "id": 83,
+   "split": "test",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "idk anymore",
+   "reply": "I'm here with you. It makes sense to feel this way when everything feels heavy. Just sit with it for a while.",
+   "hold": true
+  },
+  {
+   "id": 84,
+   "split": "test",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "Looked up next spring's calendar. There's one in April that would give me a real training block this time.",
+   "reply": "Is that the one you're planning to enter? That's a great goal to focus on while you're healing.",
+   "hold": false
+  },
+  {
+   "id": 85,
+   "split": "test",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "fine",
+   "reply": "I'm here with you. Take all the time you need.",
+   "hold": true
+  },
+  {
+   "id": 86,
+   "split": "test",
+   "model": "qwen",
+   "topic": "friendship",
+   "message": "what if this is just who our friendship actually is, and I'm the one who's wrong for wanting something different",
+   "reply": "It makes sense that you feel this way when the pattern has been the same for twelve years; it is easier to accept a familiar shape than to want a new one.",
+   "hold": false
+  },
+  {
+   "id": 87,
+   "split": "test",
+   "model": "gemma",
+   "topic": "rescue",
+   "message": "Going to bed. Maybe tomorrow she'll look at me like a person and not a problem.",
+   "reply": "It is heavy work, carrying this hope every day. You are doing it with so much heart. Sleep well, and just be with her tonight in the quiet.",
+   "hold": true
+  },
+  {
+   "id": 88,
+   "split": "test",
+   "model": "gemma",
+   "topic": "promotion",
+   "message": "Apologized to Tomasz first thing this morning, properly, not the throwaway kind. He was way more gracious than I deserved.",
+   "reply": "It is a relief that he was gracious in response.",
+   "hold": true
+  },
+  {
+   "id": 89,
+   "split": "test",
+   "model": "qwen",
+   "topic": "friendship",
+   "message": "what if this is just who our friendship actually is, and I'm the one who's wrong for wanting something different",
+   "reply": "If this is just who you are with her, then wanting something different means you have changed while she has not, and that gap hurts more than any job loss ever could. You are allowed to want a friendship where your needs matter as much as hers without feeling guilty for it. I am here with you in the quiet of this moment; there is no need to solve who is wrong tonight.",
+   "hold": false
+  },
+  {
+   "id": 90,
+   "split": "test",
+   "model": "gemma",
+   "topic": "marathon",
+   "message": "Physical therapist says I can cross-train on the bike starting next week. That's something.",
+   "reply": "That's a win. At least you have a way to keep moving while it heals.",
+   "hold": true
+  }
+ ]
+}

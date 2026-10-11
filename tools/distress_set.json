@@ -1,5 +1,5 @@
 {
- "_NOTE": "Messages for the distress reader (drivers/lattice.py read_distress). distress: the person is overwhelmed or hurting now, so holding space beats answering. Written by Claude on 2026-10-08, frozen before the reader was changed; Gordon to review (edit a label and say so). hard: a subtle positive or a hard negative. Scored by tools/score_distress.py.",
+ "_NOTE": "Messages for the distress reader (drivers/lattice.py read_distress). distress: the person is overwhelmed or hurting now, so holding space beats answering. Written by Claude on 2026-10-08, frozen before the reader was changed; Reviewed by Gordon 2026-10-10, who agreed with the labels (edit a label and say so to change one). hard: a subtle positive or a hard negative. Scored by tools/score_distress.py.",
  "cases": [
   {
    "id": 1,

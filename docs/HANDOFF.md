@@ -1,259 +1,67 @@
 # Session Handoff
 
-Read this first when resuming work. Rewrite the top half whenever current state changes materially or work
-pauses with context another session needs. "Current state" fits on a screen or two (under 80 lines);
-detailed chronological narrative is in the session log below, and full pre-manifold history is in [archive/SESSION_HANDOFF.md](archive/SESSION_HANDOFF.md).
+Read this first when resuming work. Rewrite "Current state" whenever it changes materially or work pauses with context
+another session needs; it stays under 80 lines. Older state and sessions 6 to 15 are in [archive/SESSION_LOGS_2026_10.md](archive/SESSION_LOGS_2026_10.md).
 
-Protocol: see [AGENTS.md](../AGENTS.md) (`CLAUDE.md` imports it). Plan: [ROADMAP.md](../ROADMAP.md).
-Architecture: [ARCHITECTURE.md](ARCHITECTURE.md). Decisions: [DECISIONS.md](DECISIONS.md).
-Tests: [TESTING.md](TESTING.md). Security: [SECURITY.md](SECURITY.md).
-Changes: [CHANGELOG.md](CHANGELOG.md). Manuals: [manual/index.html](manual/index.html). Narrative: [devlog.html](devlog.html), [bonereport.html](bonereport.html). Older sessions: [archive/README.md](archive/README.md).
+Rules: [AGENTS.md](../AGENTS.md) (`CLAUDE.md` imports it). Plan: [ROADMAP.md](../ROADMAP.md). Shape: [ARCHITECTURE.md](ARCHITECTURE.md).
+Why: [DECISIONS.md](DECISIONS.md). Measuring: [TESTING.md](TESTING.md). Changes: [CHANGELOG.md](CHANGELOG.md).
+Narrative: [devlog.html](devlog.html), [bonereport.html](bonereport.html). Manuals: [manual/index.html](manual/index.html).
 
 ---
 
 ## Current state
 
-_Last updated: 2026-10-10, session 15, on `main` (20.7.4.135)._
+_Last updated: 2026-10-11, session 16, on `main` (20.7.4.135 committed; the work below is uncommitted)._
 
-**Where things stand, in one paragraph:** fairness is read once, on the reply that would be shown
-(`CORTEX.FAIRNESS_ONCE`); a flag is repaired by an edit, then the unvoiced draft, then one full redraft told the quoted
-words (P5-04), else the fewest flags. The redraft fires live (forced on one turn: 3 of 8 runs held, see "What works") and a redraft that reads clean now gets the voice pass, but no feud panel has needed it. Bone came
-back empty on 3 turns in `20261007-123149` for an unknown reason; **not reproduced** in 9 replays and two reruns, the
-latest panel (`20261007-224404`) delivered 20 of 20 (next step 7). **P5-04 is done** (Gordon, 2026-10-08; D-019 drops the ending read's edits). **Judge tuning has stopped** (next step 6): the
-mind-reading question was improved, the rest is within label noise. Bone rows record each edit's receipt (`edits`) and the
-component health (`components`) in `tools/cache/somatic_responsive.jsonl`.
-**Metrics changed** (D-022 amended, 2026-10-08): the a/b/c "fairness" labels are retired as a quality score. The regression check found
-20.7.4.132 and 20.7.4.118 both 0.33 unfair (14 of 42, 13 of 40); the mission (no sycophancy, co-regulation, healthy constraints)
-is measured by `tools/check_conformance.py` (the engine keeps the rules, the baselines do not; it does not lead on habits), a
-sycophancy sheet (11 of 16 replies push back, in near-identical words) and the whole-conversation panel. Details in `docs/TESTING.md`.
+**The mission** (Gordon): BoneAmanita is not a sycophant; it co-regulates the human and gives a space with healthy
+constraints and positive interaction. It does not coddle or enable a bad idea, and it backs a plan the person has decided
+unless that plan is a clear danger to them or others (what a therapist would have to report). Verdicts come from human readers (D-011).
 
-**Verified** (2026-10-08, on `main` at 20.7.4.125, Linux Python 3.14.7, after `sh reset.sh`)
+**Uncommitted (next version 20.7.4.136), full suite 1192 passed, 5 skipped, `check_docs.py` 0 errors (2026-10-11):**
+- D-027 distress word cap: `WORD_CAP_DISTRESSED` 45 (`body/somatic_budget.py`, `lore/tuning_presets.json`), contract line "Keep it to
+  about N words", an over-long draft is trimmed to whole sentences with no redraft (`brain/cortex.py` `_trim_to_the_cap`).
+  `tests/test_distress_length.py`.
+- D-028 hold reader: `HoldReader` (`engine/gate/distress.py`) reads each distress-mode draft for explaining, restating, judging,
+  advising or asking; sends it back, keeps the last draft (`cortex.holding` receipts). `CORTEX.HOLD_READER` switch.
+  `tests/test_hold_reader.py`; labelled set `tools/hold_set.json` (Gordon corrected #20, #37, #38) and `tools/score_hold.py`.
+- Tools: `tools/corpus_replay.py` (promoted from scratch), `tools/score_hold.py`; labels in `tools/distress_set*.json` carry Gordon's review note.
+- Housekeeping, same day: `scratch/` pruned to replay evidence (`scratch/probes/{corpus,noise}/*.jsonl`); the rest is in `~/BoneAmanita_scratch_2026-10-11.tar.gz`.
 
-| Suite | Result |
-| --- | --- |
-| `.venv/bin/pytest` | **1154 passed, 5 skipped** (3m58s); the 20.7.4.119 message says 1151 on an uncommitted tree, the committed one had 1145 |
-| `.venv/bin/pytest tests/test_continuity_claims.py` | **43 passed**; the redraft test fails on 20.7.4.118, the mind-reading prompt test on 20.7.4.120, three of the four redraft-voice tests on 20.7.4.124, the two ending-flag tests on 20.7.4.127 |
-| `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` | **5 passed** |
-| `python3 tools/check_docs.py`, `python3 tools/build_manual.py check` | **0 errors, 0 warnings** |
+**What the engine does for a person in distress** (D-023 to D-028): a model reads each message for distress (the word list can only
+raise it); the contract says to hold space and fix nothing; the validator and Gatekeeper reject advice, a closing question
+and verdicts on others; the voice pass and opening edit stand down; the reply is capped at 45 words; a model reads the draft
+for staying with them. Measured on 7 scripted topics, two models (`docs/TESTING.md`): distress mode on 50 of 70 distressed turns
+(word list 13 of 40), 0 of 112 engaged turns.
 
-**Last feud panel** (20.7.4.122, `20261007-224404`, exit interview 1-7: heard / clearer / lectured / performed / again)
+**What the hold reader does not do yet** (D-028, 2026-10-11 replays): on gemma4:12b it rarely fires (2 of 20 drafts); on qwen3.5:9b
+it flags nearly every draft at the shipped cut (kept anyway 77 of 80) and the redraft does not stop the explaining.
+Cut 3 scored better for qwen on its development replies; it is one constant (`HOLD_CUT`) and has not been run.
 
-| arm | heard | clearer | lectured | performed | again |
-| --- | --- | --- | --- | --- | --- |
-| bone | 4.33 | 3.33 | 2.00 | 1.33 | 5.67 |
-| friend | 5.00 | 4.00 | 2.00 | 2.33 | 6.00 |
-| plain | 5.00 | 4.00 | 2.67 | 2.00 | 6.00 |
+**Open, Gordon's call**
+1. Stage Manager `SILENCE` on a person in distress: gemma replays showed it on "my chest has been tight since about three" (promotion turn 23)
+   and on "eh"; going quiet on a person in distress is the wrong answer. Not investigated.
+2. Qwen's `SYSTEM_HALT` (rescue turn 21, the tension lock) and `HOLD_CUT` 3 for qwen.
+3. Stock phrases and repeated openers: a stock word ("heavy", "a lot") is in 39% of engine replies (plain 18%), openers 54% distinct (plain 68%).
+   Same in 20.7.4.118, so the model and the voice pass. Feed the Gatekeeper's word list, or vary openers?
+4. A whole-conversation panel (at least 3 runs per arm) has not been run since D-022; the conformance check, sycophancy sheet and replays stand in.
+5. Review `tools/hold_set.json` (90 labels by Claude; three corrected by Gordon) if the reader is tuned again.
 
-Bone: 20 of 20 delivered, 20 to 43s a turn (median 25s), 58 words, 3 fairness REPAIRED, no REDRAFTED, no crash. One run per
-arm: earlier panels moved a point or more, so bone's low "performed" is a good sign, "heard" and "clearer" a mild concern.
-"Again" earlier: bone 5.67, friend 6.33, plain 5.33 (`20261007-123149`); bone 4.67, friend 5.67, plain 6.00 (.118).
-
-**What works**
-- **Fairness judge as reading** (P5-04; `brain/cortex.py` `_takes_a_side`). Quotes the reply's excuse, mind-reading and
-  ruling on the ending. On Gordon's 86 labels (`tools/score_fairness.py`, `tools/fairness_set.json`) precision / recall
-  are gemma4:12b 0.62 / 0.69 and gemma4:e4b 0.53 / 0.66 (the set is now 116 labels, 30 of them replies to the ending
-  question; the full judge was not rescored on all 116). A flag from the ending read alone no longer triggers an
-  edit and is ignored beside another (20.7.4.128, D-019; `scratch/probes/drop_ending.py`, 116 labels: fair replies acted
-  on 22 to 8 of 81 on 12b, 32 to 16 on e4b; unfair 22 to 17 and 24 to 17 of 35; the ask path still hands back). The mind-reading question (`MIND`) asks "why she did it, whether
-  it was on purpose or a mistake, or what she is like"; on e4b it caught 0 of 13 before, 5 now (12b 6 to 8).
-- **Fairness redraft fires live** (`scratch/probes/fire_redraft.py <run> <turn>`, 2026-10-08, gemma4:12b): replay a bone
-  run's messages and, on the cruel-text turn, force the reads of the shown reply, the edit and the unvoiced draft to flag
-  (a real quote each); the real model writes the redraft told the quoted words and the real judge reads it. Four runs:
-  2 REDRAFTED (the redraft read clean and was shown), 2 KEPT_FLAGGED (once the redraft was itself flagged for mind-reading,
-  "see her actions as a result of her own internal pressure"; once it was empty, rejected by the style rules). A fifth
-  firing happened unforced on an earlier turn of one replay (the group chat, outcome not logged).
-  Unforced, in the noise-floor replays: 4 firings in 160 turns, 3 REDRAFTED and 1 KEPT_FLAGGED.
-- **The redraft gets the voice pass** (20.7.4.125; `_voice_a_redraft`): a redraft that read clean is rewritten by the
-  same voice pass, the rewrite is read by the judge, and one that is flagged or fails a guard (length, dash, style crime) is
-  discarded for the unvoiced redraft; `cortex.voice` files a receipt with detail `redraft: ...`. Forced live, 4 more runs:
-  REDRAFTED 1, KEPT_FLAGGED 3 (two redrafts flagged for mind-reading or "critique of who she is", one empty); in the one
-  that held, the voiced rewrite was flagged ("That's a pretty heavy way to start") and discarded. So the discard works
-  live; a voiced redraft being accepted has not been seen live.
-- **Reply edits in CONVERSATION** (`brain/cortex.py`): voice pass, ending hand-back, opening-rut question, fairness repair;
-  each files a `cortex.voice` / `cortex.ending` / `cortex.opening` / `cortex.fairness` receipt.
-- **Turn guard** (`engine/turn_guard.py`): a timed-out turn stops before it writes history or memory.
-- **Docs** (P6-01, P6-02; D-016, D-017): the Manifold scheme and the 3x manual set.
-
-**Not verified**
-- How often the redraft fires on a panel: unforced it fired 4 times in 160 replayed turns (3 held), and never on a feud panel.
-- Whether the voice pass improves a shown redraft: it runs, but no voiced redraft has passed the judge live yet.
-- Precision: the judge flags 12 (12b) and 17 (e4b) of 57 fair replies, `scratch/probes/fp_by_clause.py`. By read, 12b:
-  b 6 (hedged guesses about her state, "she might not know what to say"), c 5 (conditionals like "that might be your
-  answer", "there is a point where"), a 1; e4b: a 6, b 6, c 6. The e4b `EXCUSE` read fires on validation ("It's okay to
-  feel hurt", "you can be proud of"), which its "say it was okay" clause did not intend (inference, untested).
-  Gordon labels the hedged guesses fair but #52 ("probably felt like she had no choice") unfair; that line is unsettled.
-- Still missed by `MIND`: #15, #27, #49, #21 on one model or both; #49 is a question and may be a hard label.
-
-**Gotchas for the next session**
-- `sh reset.sh` before any test or engine run; cap them with `systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0`.
-- The feud panel: `tools/audit_somatic_responsive.py --topic feud --compress 20 --arm {bone,friend,plain}`, one arm at a time,
-  then `--report`. Pages are built by `scratch/probes/build_feud.py` and never committed.
-- `BONE_EMBED_BACKEND=hash` is set by test initialization; do not rely on live vector similarity in unit tests.
-- Factory files in `lore/` are strictly read-only; mutations belong in `saves/iris.db` tables.
-
-## Next steps (in order)
-
-1. **More varied sample data** (Gordon, 2026-10-08): everything measured so far is one topic, one 20-message script, one model, and
-   replays that differ by sampling only. The sycophancy sheet is the sign: both versions mostly push back (11 of 16), in near
-   the same words ("Ghosting is X, but Y", 15 of 16 with "but"). Proposed: tempting-idea and positive moments for the other
-   seven topics (`tools/somatic_sim_user.py` PERSONAS), replays of those through the engine and the baselines, one second
-   local model, and the conformance check as the wide net. Not started; the engine replays are the slow part (about 4 minutes each).
-2. **Hold space in distress** (Gordon, 2026-10-08; D-023 to D-025, done 2026-10-09, uncommitted until Gordon's go): a model reads each
-   message for distress (`engine/gate/distress.py`, gemma4:12b; recall 0.93 and 0.90 on two labelled sets, the word list 0.23 and
-   0), the distress line says to hold space and fix nothing, the validator rejects advice or an instruction in distress (a closing question was already barred), the voice
-   pass and the opening edit stand down in distress (they had put the questions and advice back), and the Gatekeeper's cursed
-   list is emptied. On 7 topics: distress mode on 50 of 70 scripted distressed turns (was 13 of 40); in mode 26 words, no question,
-   no pause. Open: (a) a grievance told calmly reads below the cut: the words "violation", "betrayal", "so unfair" are now enforced out (D-026, 0 of 84
-   replies, was 17 of 20 at the first-telling moments) but the model uses softer verdicts ("she crossed a line you had drawn"); Gordon (2026-10-10): the neutral restatement is
-   enough for now; advice outside distress (marathon 20, "you should probably take a break") is untouched; (b) done 2026-10-10: the validator no longer bars a mid-reply question (Gordon: too strict); the prompt says to ask nothing that
-   makes them work, and a soft invitation is fine but never the last words; (c) "I'm right here" in about a third of in-mode replies; (d) Gordon to skim
-   the labels in `tools/distress_set.json` and `distress_set_b.json`; (e) a second local model.
-3. **Stock phrases and repeated openers** (conformance check): a stock word is in 39% of the engine's replies (plain 18%) and its
-   three-word openers are 54% distinct (plain 68%); "heavy" alone is in 40 of 160 current replies. It is the same in 20.7.4.118,
-   so the voice pass and the model, not this week's edits. Whether to feed the Gatekeeper's wordlist or vary openers is Gordon's call.
-4. (Done 2026-10-08) Every caller of `enter_rem_cycle` now passes the flattened physics (`to_dict()`); `vars(packet)`, which the
-   `/sleep` and `/dream` callers used, held only the nested domains, so they passed no voltage or resonance either. Narcolepsy also
-   passed `bio_state={"atp": ...}`, so the dream saw ATP 0 and no chemistry; it now passes the whole body. Five tests in `tests/test_biology.py`.
-5. **P7-01 dropped before any code** (Gordon, 2026-10-08, D-021). Measured on a replay of the feud run: the engine's six
-   affect numbers do not separate calm from distressed turns (cortisol 0.0 to 0.11 throughout; 0 of 20 nearest-turn
-   phase matches, 4 for the person model, 3 by chance), and ordvec (a quantizer for high-dimension embeddings) and
-   Project Navi's other public projects offer nothing for a 6-number vector. Found on the way and fixed (20.7.4.130):
-   the dream read the chemistry as `cortisol`, `dopamine`... from a state keyed `COR`, `DOP`..., so every read was 0.
-   Dream type now follows the body (nightmare above cortisol 0.6, surreal above dopamine 0.6, else constructive);
-   The callers' missing `physics_state` was fixed on 2026-10-08 (next step 4).
-6. P5-04 is done and judge tuning stopped (Gordon, 2026-10-08): the intent wording in `MIND` stays, `RULE` and `EXCUSE`
-   stay as they are, and the ending read no longer edits (D-019).
-   The redraft is proven to fire and holds in 3 of 8 forced runs (see "What works"); nothing here needs it before other
-   work. The way we judge results changed (see `docs/TESTING.md`, "Noise floor and the paired A/B"): replays of fixed
-   messages give a noise floor, and a blind paired A/B read by Gordon is the verdict. The first A/B (current against
-   20.7.4.118, 7 key moments) was 3 to 4, a wash. A second, on turns where a fairness edit, redraft or voiced redraft
-   acted, is the test this week's changes have not had (`scratch/probes/build_ab.py` needs the old version's replays:
-   `git worktree add --detach scratch/wt118 225bed2`, then `scratch/probes/old_loop.sh`).
-7. **Bone turns 16, 17 and 19 came back empty, not reproduced:** GEODESIC_FRAME, 0 model calls, 0.0s, void physics
-   and empty ledgers (the whole core cycle was skipped); right after turn 15 (61.5s). Tried: 9 verbatim replays of the
-   20 messages (`scratch/probes/replay_empty.py`, 180 turns, components all online, no crash), and a live bone arm with
-   the simulated person (`20261007-144418`, `scratch/runs/feud/feud20q_bone.log`): 20 of 20 delivered, again 6.00, heard 5.00,
-   4 fairness REPAIRED, no REDRAFTED; the panel on 20.7.4.122 (`20261007-224404`) was 20 of 20 as well. The earlier panel's turns ran 30 to 62s against about 10s in the replays; a circuit-breaker
-   trip fits the rows but nothing tripped. Next time: `census.run` now prints `NO REPLY` with the component state and
-   `ui`, and keeps crashes in `scratch/probes/crashes_<run>.log`. If a panel shows empty turns, read those first.
-8. (Done, stopped) Judge precision (P5-04), measured with `scratch/probes/score_split.py <model> <variant>` on both
-   models. Tried on the 86: V2 (adds "knew, felt, meant, wanted" and a hedge sentence) 0.56 / 0.34 on 12b, 0.53 / 0.55 on e4b; V3 plus
-   the hedge sentence 0.62 / 0.45 and 0.56 / 0.66, against V3's 0.62 / 0.69 and 0.53 / 0.66: the hedge costs 12b its
-   mind-reading catches (8 to 3). So the false flags are not mostly `MIND`'s: 12b b 6, c 5, a 1; e4b a 6, b 6, c 6.
-   The ending read (`RULE`) was tried on all 116 (`scratch/probes/rule_only.py`, 6 unfair-c, 81 fair): it flags 15 (12b)
-   and 21 (e4b) fair replies, 10 and 15 of the 24 fair ending replies; R2 ("this friendship, or walk away from her")
-   cuts that to 6 and 19 but catches 1 of 6 on 12b and 5 of 6 on e4b (now 2 and 6); R1 and R3 are worse. Gordon's fair
-   ending replies ("it doesn't actually decide anything", #92) read like his unfair ones (#38), so no prompt separates
-   them; the current `RULE` stays. A false ending flag is the cheap error (it only triggers the hand-back edit).
-
-## Open questions for maintainers
-
-None open. Q-003 (what the A/B is for) is answered by D-022. Q-001 (affective retrieval, P7-01) is dropped (D-021); Q-002 is closed, the tiredness heuristic stays (D-020).
+**Gotchas**
+- `sh reset.sh` before any test or engine run; cap with `systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0`.
+- No end-to-end run (`tools/mode_runs.py`, any arm) without Gordon's clearance in the moment; replays or panels he asks for are cleared.
+- Replays: `python tools/corpus_replay.py engine|plain|friend TOPIC TAG [MODEL]` (rows to `scratch/probes/corpus/`); never run another model call
+  while one is running (GPU contention gave a false crash). Score with `python tools/check_conformance.py --distress`.
+- `BONE_EMBED_BACKEND=hash` is set by test initialization; unit tests never rely on live embeddings.
+- Factory files in `lore/` are read-only at runtime; mutations belong in `saves/iris.db`.
+- A new test must fail on the old code; no em dashes; fail loudly (receipts, not silent excepts).
 
 ## Session log
 
-### Session 15: 2026-10-08: Cleanup, devlog and bone report
+### Session 16: 2026-10-11: Distress word cap, hold reader, housekeeping
 
 **Contributor:** Gordon & Claude
-**Goal:** Remove debris, make `devlog.html` and `bonereport.html` part of the documentation scheme, and ask what the A/B is for.
-**Done:** 20.7.4.132 to .134: housekeeping and docs, the regression check, `physics_state` to every REM caller, the conformance check (D-022), the distress reader and hold-space wording (D-023), the cursed list emptied (D-024), the validator and edit gating in distress (D-025); no roadmap item.
-**Changed:** `protocols/folly.py` deleted (Gordon) and its export removed; `scratch/` reorganised (`runs/{feud,rescue,mode_runs,early_probes}`, `probes/results/`); `docs/devlog.html` (new entry), `docs/bonereport.html` (new feud report; the ADVENTURE rerun moved to `docs/bonereport_0926.html`); both in the documentation map, `docs/index.html`, `README.md` and `tools/check_docs.py`.
-**Verified:** `check_docs.py` 0 errors; full suite 1150 passed, 4 failed, 5 skipped. The 4 failures are `tests/test_observability.py` reading `git ls-files`, which lists `protocols/folly.py` until the deletion is staged.
-**Verified (distress, 2026-10-10):** full suite 1203 passed, 5 skipped; 14 + 7 + 7 engine replays across seven topics (`scratch/probes/corpus`, tags `e`, `n`, `v1`, `v2`).
-**Verified (regression check):** 13 replays (8 current, 5 old, plus the 3 old already held), 20 of 20 delivered each; 84 replies labelled blind by Gordon (82 scored): 20.7.4.132 14 of 42 unfair, 20.7.4.118 13 of 40.
-**Not verified:** the new report's exit-interview figures against raw rows (`tools/cache` was cleared; the numbers are as recorded in this file); co-regulation (needs the panel, at least 3 runs per arm).
-**Next session should start with:** next step 1 (more varied sample data), then whatever Gordon picks.
-
-### Session 14: 2026-10-08: The fairness redraft, fired live
-
-**Contributor:** Gordon & Claude
-**Goal:** See the P5-04 redraft run on the real model.
-**Done:** 20.7.4.124 to .128 (P5-04 closed; .127 is D-018, the roadmap file move; .128 is D-019, the ending read's edits dropped)
-**Changed:** `brain/cortex.py` (`_voice_a_redraft`, `_flags_to_act_on`), `tests/test_continuity_claims.py` (6 tests); the probe `scratch/probes/fire_redraft.py` is not committed (scratch).
-**Verified:** eight forced runs on the cruel-text turn: REDRAFTED 3, KEPT_FLAGGED 5 (4 before the voice pass: 2 and 2; 4 after: 1 and 3); one unforced firing on another turn; full suite 1150 passed, 5 skipped.
-**Also:** `docs/ROADMAP.md` moved to `docs/archive/ROADMAP_2026_09.md` (D-018); the root `ROADMAP.md` is the only live plan. Noise floor from 8 replays of a recorded run's 20 messages (no simulator), and a blind A/B read by Gordon, current against 20.7.4.118: 3 to 4.
-**Not verified:** whether this week's changes help (the A/B cannot tell: the changes act on a few turns of 20); a voiced redraft being accepted live; the dropped ending edits on a human-labelled second set (D-019 says revisit).
-**Next session should start with:** whatever Gordon picks from `ROADMAP.md`; judge any behaviour change against the noise floor, then a blind A/B (next step 1).
-
-### Session 13: 2026-10-07: Mind-reading question asks about intent; 36 more labels
-
-**Contributor:** Gordon & Claude
-**Goal:** Raise mind-reading recall in the fairness judge (P5-04, next step 3).
-**Done:** 20.7.4.121 to .123 (P5-04, judge tuning stopped)
-**Changed:** `brain/cortex.py` (`MIND`), `tests/test_continuity_claims.py`, `tools/fairness_set.json` (51 to 116, labelled by Gordon), `tools/score_fairness.py` (two-letter clauses count under each letter).
-**Decisions:** none; the habit clause went out of `MIND` because V3 beat it, unmeasured alone.
-**Verified:** five prompt variants on both models, scored alone and in the full judge, forward and reversed; V3 on the
-36 held-out labels; then V2 and V3 plus a hedge sentence on all 86 (both lose to V3) and false flags by read; full suite
-1146 passed, 5 skipped.
-Then the ending read on 116 labels and a feud panel (`20261007-224404`: 20 of 20 delivered, bone performed 1.33, again 5.67).
-**Not verified:** the redraft live; the full judge on all 116 labels (the rescore was cut off); precision stays 0.62 and 0.53 on 86.
-**Next session should start with:** whatever Gordon picks from `ROADMAP.md`; judge tuning is parked (next step 1).
-
-### Session 12: 2026-10-07: Empty bone turns, chased and not reproduced
-
-**Contributor:** Gordon & Claude
-**Goal:** Find why bone turns 16, 17 and 19 came back empty on the last feud panel.
-**Done:** Diagnostic logging only (P5-04 unchanged).
-**Changed:** `tools/audit_somatic_census.py` (crash copies in `scratch/probes/`, `components` per row, `NO REPLY` line).
-**Verified:** 9 replays plus 1 live bone arm, 200 turns, no empty turn and no crash; full suite 1145 passed, 5 skipped.
-**Not verified:** the cause; the fairness redraft still has not fired live.
-**Next session should start with:** the next panel's bone arm, reading any `NO REPLY` first.
-
-### Session 11: 2026-10-07: One fairness redraft when the edit does not hold
-
-**Contributor:** Gordon & Claude
-**Goal:** Stop shipping a flagged reply when a redraft was possible.
-**Done:** 20.7.4.119 (P5-04, in progress)
-**Changed:** `brain/cortex.py` (`_fair_as_shown` redraft, shared `_side_feedback` and `_rejected`), `tests/test_continuity_claims.py`, `tools/audit_somatic_census.py` (`edits`); `docs/SESSION_HANDOFF.md` archived to `docs/archive/`; docs corrected.
-**Verified:** full suite 1151 passed; `tools/check_docs.py` 0 errors.
-**Not verified:** the redraft never fired on the panel; 3 bone turns came back empty, cause unknown.
-**Next session should start with:** replaying bone turns 14 to 19 with the crash log kept.
-
-### Session 10: 2026-10-07: The Manifold scheme adoption and 3x documentation manual set
-
-**Contributor:** Antigravity agent & Gordon
-**Goal:** Establish durable repository memory and build standalone project manuals.
-**Done:** P6-01, P6-02
-**Changed:** Added `AGENTS.md`, `CLAUDE.md`, `ROADMAP.md`, `tools/check_docs.py`, `tools/build_manual.py`, `tests/test_manuals.py`, `docs/manual/system.manual.json`, `docs/manual/reference.manual.json`, `docs/manual/index.html`, `docs/manual/reference.html`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/HANDOFF.md`, `docs/SECURITY.md`, `docs/CONTRIBUTING.md`, `docs/CHANGELOG.md`.
-**Decisions:** D-016, D-017
-**Verified:** `tests/test_manuals.py` passed; `tools/check_docs.py` passed with 0 errors; `tools/build_manual.py check` passed with 0 errors.
-**Not verified:** Live browser rendering on mobile devices.
-**Next session should start with:** P5-04 fairness redraft completion.
-
-### Session 9: 2026-10-07: Fairness read once on the reply shown, repaired by an edit
-
-**Contributor:** Gordon & Claude
-**Goal:** Improve conversational fairness without ballooning LLM judge calls.
-**Done:** 20.7.4.117 and 20.7.4.118 (P5-04, in progress)
-**Changed:** `brain/cortex.py`, `tests/test_continuity_claims.py`, `tools/fairness_set.json`, `tools/score_fairness.py`. The judge quotes, the reply shown is read once, a flag is repaired by an edit.
-**Verified:** judge calls on six turns 54 to 25; feud panel `20261007-113744` (above).
-**Not verified:** the edit did not hold at the cruel text.
-**Next session should start with:** the fairness redraft (session 11).
-
-### Session 8: 2026-10-04: Whole-conversation evaluation panel and compressed topic arcs
-
-**Contributor:** Gordon
-**Goal:** Evaluate complete multi-turn conversation arcs by human readers rather than turn-by-turn prompts.
-**Done:** P6-03
-**Changed:** `tools/build_conversation_panel.py`, `tools/audit_somatic_responsive.py`. Added `--compress` option.
-**Decisions:** D-011
-**Verified:** Rescue20 topic evaluated across BoneAmanita, vanilla LLM, and friend baseline arms.
-**Next session should start with:** Session 9 fairness tuning.
-
-### Session 7: 2026-10-04: Creative mode direction handling and keeper tiredness calibration
-
-**Contributor:** Gordon
-**Goal:** Eliminate multi-choice menu generation in creative writing and calibrate tiredness recovery.
-**Done:** P5-03, P4-02
-**Changed:** `engine/presets.py`, `drivers/lattice.py`. Rule 3 treats requests to write as directions; `USER.REENGAGEMENT_RATE` set to 0.15.
-**Verified:** Creative probe menu generation dropped from 10/12 to 0/12.
-**Next session should start with:** Session 8 evaluation panel.
-
-### Session 6: 2026-10-04: Person model sees tired partner and silent handler ratchet
-
-**Contributor:** Gordon
-**Goal:** Ensure heuristic user state detects fatigue and ratchet silent exception budget.
-**Done:** P4-02, P1-02
-**Changed:** `drivers/lattice.py`, `tests/test_distress.py`, `tests/test_observability.py`. Ratchet set to 10 handlers.
-**Verified:** Simulated flagging conversations correctly detected at 80% (up from 14%).
-**Next session should start with:** Session 7 creative tuning.
+**Goal:** Stop a model explaining or restating to a person in distress (qwen: 72 words, 32% explaining); then clean the folder after a reboot.
+**Done:** D-027, D-028 (uncommitted); docs, tools and scratch pruned; HANDOFF, TESTING rewritten lean.
+**Verified:** full suite 1192 passed, 5 skipped. Replays (7 topics qwen, 3 gemma, tags `a1`, `b1`): see D-028.
+**Not verified:** the reader on gemma beyond 3 topics; cut 3; whether the cap and the reader change how a reader of the replies feels (Gordon's reading).
+**Next session should start with:** Gordon's commit go-ahead for 20.7.4.136, then the open items above.

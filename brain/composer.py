@@ -655,6 +655,8 @@ class PromptComposer:
         if somatic_budget:
             budget_lines = ["=== SOMATIC CONTRACT ==="]
             budget_lines.append(f"Your partner is running low. Answer in at most {somatic_budget.sentence_cap} sentences." if somatic_budget.sentence_cap <= 5 else f"Sentence cap: {somatic_budget.sentence_cap} sentences.")
+            if getattr(somatic_budget, "distressed", False) and somatic_budget.word_cap:
+                budget_lines[-1] += f" Keep it to about {somatic_budget.word_cap} words."
             if somatic_budget.forbid_body_narration:
                 budget_lines.append("CRITICAL: Do not narrate your body, breath, lungs, or physical exhaustion.")
             if not somatic_budget.closing_question_allowed:

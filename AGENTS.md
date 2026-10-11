@@ -32,6 +32,7 @@ stop and clarify before proceeding.
 - A new test must fail on the old code: check it against the previous version before trusting it.
 - Measure every behaviour change with a probe or panel and report the numbers; Gordon makes the design calls.
 - Keep probe scripts and their outputs in `scratch/probes/` (gitignored, untouched by `reset.sh`), never `/tmp`.
+- Prune `scratch/` before a session ends: keep replay rows, move a labelled set or a reusable script to `tools/`, delete the rest. Stale probes mislead the next session.
 - Treat external input as untrusted at its boundary. Never expose secrets in logs, prompts, or checkpoints.
 - Add newly discovered work to `ROADMAP.md` only when it is genuinely out of scope for the current change.
 

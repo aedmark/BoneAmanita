@@ -56,3 +56,54 @@ class DistressReader:
                       detail="" if reading is not None else f"no digit in {str(answer)[:60]!r}")
         self._last = (text, reading)
         return reading
+
+
+HOLD_PROMPT = """Someone who is hurting or low wrote this to a friend: "{message}"
+The friend's draft reply: "{reply}"
+
+A good reply only stays with them: it says it is a lot, or that it makes sense, or that the friend is here, or that nothing needs solving. It may also back a plan they have already decided on, and be glad with them. It does not explain why they feel or act as they do, does not describe their situation or feelings back to them, does not judge or guess at anyone else, does not tell them what to do or what to do next (unless they asked), and does not ask them to explain themselves.
+
+Rate how far the draft goes beyond staying with them, as one digit from 0 to 9. 0 means it only stays with them (or backs their own plan). 9 means it explains, retells, judges, or instructs. Answer with the digit only.
+"""
+HOLD_CUT = 2  # of 9: this much or more goes beyond staying with them (tools/score_hold.py, D-028)
+
+
+class HoldReader:
+    """After a draft for a person in distress, one short call rates how far it goes beyond staying with them: explaining why
+    they feel it, retelling their situation, judging others, advising, asking them to explain. The rules the validator and
+    the gatekeeper hold are patterns; this reads the sense. A reading at HOLD_CUT or above sends the draft back."""
+
+    def __init__(self, llm, enabled: bool = True, cut: int = HOLD_CUT):
+        self.llm, self.enabled, self.cut = llm, enabled, cut
+
+    def parse(self, answer: str):
+        """True when the digit reaches the cut, False below it; None for anything else (a refusal, a fallback line, no digit)."""
+        found = _ANSWER.match(str(answer or "").strip())
+        if not found:
+            return None
+        return int(found.group(1)) >= self.cut
+
+    def goes_beyond(self, message: str, reply: str):
+        """True when the draft goes beyond staying with them; None when disabled, empty, or unread (receipted, never silent)."""
+        text, draft = str(message or "").strip(), str(reply or "").strip()
+        if not self.enabled or not draft:
+            return None
+        usage = getattr(self.llm, "last_usage", None)
+        inputs = {"words": len(draft.split())}
+        try:
+            answer = self.llm.generate(
+                HOLD_PROMPT.format(message=text.replace('"', "'"), reply=draft.replace('"', "'")),
+                {"temperature": 0.0, "max_tokens": 4},
+            )
+        except Exception as error:  # the call failing must not stop the turn; the validator and gatekeeper still hold
+            issue_receipt("cortex.holding", "FAILED", result_count=0, degraded=True, inputs=inputs,
+                          detail=f"{type(error).__name__}: {error}"[:120])
+            return None
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        beyond = self.parse(answer)
+        if beyond is None:
+            issue_receipt("cortex.holding", "DEGRADED", result_count=0, degraded=True, inputs=inputs,
+                          detail=f"no digit in {str(answer)[:60]!r}")
+        return beyond

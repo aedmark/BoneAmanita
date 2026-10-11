@@ -111,6 +111,7 @@ class TheCortex:
         self.ballast_active = False
         self.last_model_raw = ""
         self.heavy_cap = None
+        self.hold_reader = None  # engine/gate/distress.py HoldReader, attached by the engine; None skips the reading
         self.svc = services
         self.cfg = services.config_ref or BoneConfig
         self.events = services.events
@@ -256,6 +257,39 @@ Answer:"""
             if usage is not None:
                 self.llm.last_usage = usage
         return next((m for m in self.MOVES if answer.strip().upper().startswith(m)), ""), sentence
+
+    @staticmethod
+    def _trim_to_the_cap(text: str, cap: int) -> str:
+        """The whole sentences of text that fit within cap words; text itself when it fits or no sentence does."""
+        from body.somatic_metrics import trim_to_word_cap
+        from engine.prose import mask_code
+
+        if len(mask_code(text).split()) <= cap:
+            return text
+        return trim_to_word_cap(text, cap) or text
+
+    def _beyond_staying_with(self, message: str, draft: str, last_draft: bool) -> str:
+        """Feedback for a draft the hold reader says goes beyond staying with a person in distress, else "". The last draft
+        is kept as it is, receipted KEPT_ANYWAY: a pause line would be the worse thing to hand them (D-028)."""
+        from engine.receipts import issue as issue_receipt
+
+        beyond = self.hold_reader.goes_beyond(message, draft) if self.hold_reader else None
+        if beyond is None:  # no reader, or it could not read (receipted DEGRADED or FAILED)
+            return ""
+        if not beyond:
+            issue_receipt("cortex.holding", "HELD", result_count=1)
+            return ""
+        if last_draft:
+            issue_receipt("cortex.holding", "KEPT_ANYWAY", result_count=1, degraded=True,
+                          detail="the last draft goes beyond staying with them")
+            return ""
+        issue_receipt("cortex.holding", "SENT_BACK", result_count=1)
+        return (
+            "CRITICAL FAILURE: Your reply goes beyond staying with them. Do not explain why they feel this way, do not "
+            "describe their situation or feelings back to them, do not judge anyone, do not tell them what to do, and "
+            "ask them nothing. Say that it is a lot or makes sense, that you are here, and that nothing needs solving. "
+            "A few short, plain sentences."
+        )
 
     @staticmethod
     def _holding_space(state: dict) -> bool:
@@ -1286,9 +1320,17 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
                 beta = float(
                     phys_state.get("beta_index", phys_state.get("contradiction", 0.0))
                 )
-                if e_u > 0.6 or beta > 0.7:
+                budget = full_state.get("somatic_budget")
+                if self._holding_space(full_state) and budget.word_cap and (
+                        trimmed := self._trim_to_the_cap(final_text, budget.word_cap)) != final_text:
+                    # The cap is mechanical: cut whole sentences now, with no redraft (on qwen3.5:9b a redraft per
+                    # long draft cost 144 audits in 210 turns and a halted turn, D-027). A first sentence that is
+                    # itself too long still goes back, below.
+                    issue_receipt("cortex.salvage", "cut", result_count=1, detail="word cap, holding space")
+                    final_text = trimmed
+                if e_u > 0.6 or beta > 0.7 or self._holding_space(full_state):
                     is_faithful, judge_reason = self._run_heuristic_audit(
-                        user_input, final_text, e_u, beta
+                        user_input, final_text, e_u, beta, full_state.get("somatic_budget")
                     )
                     if not is_faithful:
                         rejected_by = "heuristic_audit"
@@ -1317,6 +1359,9 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
                     )
                 else:
                     val_res = self.validator.validate(gate_txt, full_state)
+            if val_res.get("valid") and self._holding_space(full_state) and (
+                    beyond := self._beyond_staying_with(user_input, val_res["content"], last_draft)):
+                rejected_by, val_res = "hold_reader", {"valid": False, "feedback_instruction": beyond}
             if val_res.get("valid"):
                 final_output = val_res["content"]
                 extracted_logs = val_res.get("meta_logs", [])
@@ -1350,7 +1395,8 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
                 # Too long on the last draft: keep the sentences that fit, then the usual checks and salvage.
                 from body.somatic_metrics import trim_to_word_cap
 
-                if trimmed := trim_to_word_cap(final_text, self.heavy_cap):
+                if trimmed := (trim_to_word_cap(final_text, self.heavy_cap)
+                               or (first_sentence(final_text) if self._holding_space(full_state) else "")):
                     gate_pass, gate_txt = gk.audit_generation(
                         trimmed, self.svc.bio.mito, attempt=attempt, mode=full_state.get("meta", {}).get("active_mode"),
                     )
@@ -1661,7 +1707,7 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
         return f'Your reply used the banned phrase "{text}". Do not use it or any close variant; say it plainly.'
 
     def _run_heuristic_audit(
-        self, user_input: str, final_text: str, e_u: float, beta: float
+        self, user_input: str, final_text: str, e_u: float, beta: float, budget: Any = None
     ) -> Tuple[bool, str]:
         self.heavy_cap = None  # the word cap a too-long reply broke, for the last draft's trim
         try:
@@ -1674,6 +1720,13 @@ In the draft, {why}. Rewrite the draft without that: {fix} Keep everything else 
 
             # The person's line, flat: how well the engine is doing never raises it (Track D).
             exhaustion_gate = float(safe_get(safe_get(self.cfg, "CORTEX", {}), "EXHAUSTION_GATE", 0.5))
+
+            if getattr(budget, "distressed", False) and budget.word_cap and word_count > budget.word_cap:
+                self.heavy_cap = budget.word_cap
+                return (
+                    False,
+                    f"Response too long ({word_count} words) for someone in distress; about {budget.word_cap} words at most.",
+                )
 
             if e_u > exhaustion_gate:
                 if word_count > 100:

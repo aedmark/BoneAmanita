@@ -309,24 +309,18 @@ codebase, and it is what most of the recent work was about.
 
 ## Project status
 
-An experimental system in active development. **The current test baseline is
-fully green.** The September 18 Stage Manager and somatic refusal unifications
-resolved the final known failures, successfully bringing all 525 unit tests to
-passing status (`525 passed, 5 skipped, 29 subtests passed` in ~4m53s). Live-model
-behavioral audits will commence next to ensure the D9 track plays correctly in production.
+An experimental system in active development. The suite passes offline (1192 passed, 5 skipped on 2026-10-11; `docs/TESTING.md`),
+and live-model behaviour is measured with replays of scripted conversations and with checks that need no judge
+(`tools/check_conformance.py`). What was measured and what is still open is in `docs/HANDOFF.md`; why each choice was made is
+in `docs/DECISIONS.md`. Verdicts on whether it helps a person come from human readers, not from a model judging itself.
 
-See the [archived session handoff](docs/archive/SESSION_HANDOFF.md#refusal-test-repair-2026-09-18)
-for the tested changes, remaining validation steps, and next-round work.
+What it is for: not to be a sycophant, to co-regulate the person it talks to, and to give a space with healthy constraints and
+positive interaction. When it reads a person as distressed it holds space: it stays with them, says little and softly, and does not
+fix, advise, explain their feelings or take sides against someone who is not in the room.
 
-Earlier audits found disconnected components, hash-based memory coordinates,
-settings absent from config files, and severity logs routed incorrectly. That
-history motivated the receipts and state-to-prompt tests. Fluent prose can hide
-broken internals: neither a plausible reply nor the absence of an exception is
-enough to establish that the machinery worked. The current review shows that
-failure paths still need scrutiny even when diagnostics are present.
-
-`docs/archive/ROADMAP_2026_09.md` preserves the earlier measurements and development plan. Its dated
-status summary and the latest handoff take precedence over historical sections.
+Earlier audits found disconnected components, hash-based memory coordinates, settings absent from config files, and severity
+logs routed incorrectly. That history motivated the receipts and state-to-prompt tests. Fluent prose can hide broken
+internals: neither a plausible reply nor the absence of an exception is enough to establish that the machinery worked.
 
 ### Honest limits
 
@@ -348,21 +342,8 @@ status summary and the latest handoff take precedence over historical sections.
   power-loss durability, and a hard process kill can leave an unpublished
   temporary file. Shutdown waits for the cycle daemon and background workers
   before persistence and telemetry teardown; active work must finish first.
-- **The six-turn starvation result is historical.** The roadmap records later
-  D0 repairs and a 30-turn live census with ATP between 16 and 53. That establishes
-  an improved energy budget for that experiment, not reliable responses on every
-  turn. D0b's resized refusal gates still lack a completed confirming live census;
-  the current somatic and refusal changes have not been revalidated by this review.
-- **Earlier somatic wording had weak effects.** Measured on two local
-  models (`tools/audit_somatic.py`), the low-energy instruction makes sentences
-  about 10% shorter and no shorter overall, and one of the two models mostly
-  responds by writing about its breathing. The "three sentences or less"
-  instruction is not obeyed: neither model got shorter, and one wrote more
-  sentences under it than without it. The instructions reach the model every
-  time in those experiments; what the model does with them is weak, and for
-  exhaustion it is wrong. These measurements describe the earlier directives.
-  The current somatic-budget wording needs a fresh live audit before claiming
-  improved compliance.
+- **Small local models follow the prompt unevenly.** On qwen3.5:9b the rules transfer (no dashes, no style crimes) but brevity and
+  softness do not without a word cap and a reading of the draft (D-027, D-028); the checks measure it, they do not guarantee it.
 
 ## Checking it yourself
 
@@ -374,13 +355,14 @@ isolated from the configured backend. Live embedding tests can be enabled with
 `BONE_EMBED_LIVE_TEST=1`.
 
 ```bash
-.venv/bin/python -m pytest -q                      # current baseline has known failures
+.venv/bin/python -m pytest -q                      # the offline suite (run `sh reset.sh` first)
 .venv/bin/python tools/audit_physics_inputs.py     # how much vocabulary it knows
 .venv/bin/python tools/audit_receipts.py           # which subsystems did real work
 .venv/bin/python tools/audit_handlers.py           # silent exception handlers
 .venv/bin/python tools/audit_safe_get.py           # runtime default hit-rate
 .venv/bin/python tools/audit_somatic.py            # does the model obey its body (live, ~15 min)
 .venv/bin/python tools/audit_somatic_census.py     # a scripted conversation: where the energy goes (live)
+.venv/bin/python tools/check_conformance.py        # does a system keep the rules (counts over replays; needs replay rows)
 ```
 
 If replies ever start feeling generic, `audit_receipts.py` is the first thing to
@@ -390,8 +372,10 @@ check.
 
 | File | What it is |
 |---|---|
-| `ROADMAP.md` | Current priorities: phases with permanent item IDs. The September 2026 measurements and plans are in `docs/archive/ROADMAP_2026_09.md`. |
-| `docs/HANDOFF.md` | Current state, next steps and gotchas: read before changing anything. Decisions that bind changes are in `docs/DECISIONS.md`; the pre-2026-10-07 log is `docs/archive/SESSION_HANDOFF.md`. |
+| `ROADMAP.md` | Current priorities: phases with permanent item IDs. |
+| `docs/HANDOFF.md` | Current state, open questions and gotchas: read before changing anything. |
+| `docs/DECISIONS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` | Why each choice was made; the shape of the system; how it is measured. |
+| `docs/devlog.html`, `docs/bonereport.html` | The dev diary and the latest measurement report. |
 | `docs/README.MD` | The Hypervisor, BoneAmanita's no-math sibling for cloud models. |
 | `CREDITS.MD` | Full lineage and attribution. |
 | `license.txt` | MIT, human/computer variant. |

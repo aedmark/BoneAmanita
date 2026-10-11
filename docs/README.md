@@ -13,7 +13,7 @@ other documents link to it instead of duplicating it.
 | `HANDOFF.md` | The next work session | Bounded current state, active context, next steps | Permanent architectural rules |
 | `ARCHITECTURE.md` | Developers and agents | System shape, interfaces, invariants, data flow | Chronological session history |
 | `DECISIONS.md` | Future decision-makers | Rationale and alternatives for durable choices (D-NNN) | Routine implementation detail |
-| `TESTING.md` | Contributors and test runners | Verification commands, test suites, and blind evaluation | Full current test output |
+| `TESTING.md` | Contributors and test runners | Verification commands, the live instruments and what each answers, the measured results | Full current test output; the retired judge pipeline (archive) |
 | `SECURITY.md` | Users and developers | Sensitive assets, secret withholding, substrate sandbox | Operational incident history |
 | `CONTRIBUTING.md` | Human and agent contributors | Setup, change, review, and submission workflow | Agent-only rules |
 | `CHANGELOG.md` | Users and operators | User-visible changes and release history | Developer-facing commit logs |

@@ -57,10 +57,20 @@ Goal: Structure repository knowledge into standalone manuals and maintainer-agen
 
 - [x] P6-01 Standalone What/How/Why Manual Set via the 3x Documentation Scheme in `docs/manual/` (D-016).
 - [x] P6-02 Adoption of the Manifold documentation scheme (`AGENTS.md`, `ROADMAP.md`, `docs/`) (D-017).
-- [-] P6-03 Human blind panel calibration against automated LLM judge failures (D-011). Dropped 2026-10-08: automated judging is a wash; verdicts are the noise floor plus Gordon's blind A/B (`docs/TESTING.md`, "Noise floor and the paired A/B").
+- [-] P6-03 Human blind panel calibration against automated LLM judge failures (D-011). Dropped 2026-10-08: automated judging is a wash; verdicts are replays read against their noise floor plus Gordon's reading (`docs/TESTING.md`). The AI-judge tool was removed 2026-10-11.
 
 ## Phase 7: Affective Memory
 
 Goal: Recall memories by how a moment felt, not by text similarity alone.
 
 - [-] P7-01 Affective retrieval: an affective state vector stored beside each semantic embedding, queried by emotional resonance (Q-001, D-020). Dropped 2026-10-08 before any code: no available vector tracks mood (D-021).
+
+## Phase 8: Holding Space
+
+Goal: A person in measured distress is held, not fixed, coddled or argued with (Gordon, 2026-10-08).
+
+- [x] P8-01 A model reads each message for distress; the word list can only raise it (`engine/gate/distress.py`; D-023).
+- [x] P8-02 The contract says to hold space and fix nothing; the validator and Gatekeeper reject advice, a closing question and verdicts on others; the voice and opening edits stand down (D-024, D-025, D-026).
+- [x] P8-03 A distress word cap (45), trimmed not redrafted (D-027), and a model reading of the draft for staying with them (D-028).
+- [ ] P8-04 A person in distress is never answered with the Stage Manager's silence (seen on gemma replays, promotion turns 18 and 23); find which gate and why.
+- [ ] P8-05 The hold reader on qwen3.5:9b flags nearly every draft at the shipped cut; try `HOLD_CUT` 3 (D-028).

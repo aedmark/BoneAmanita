@@ -1,5 +1,5 @@
 {
- "_NOTE": "Held-out set B for the distress reader: 20 distressed messages and 20 near-minimal contrasts (same topic, not distressed), written 2026-10-08 after the reader candidate and scored once. Same definition as distress_set.json. Gordon to review.",
+ "_NOTE": "Held-out set B for the distress reader: 20 distressed messages and 20 near-minimal contrasts (same topic, not distressed), written 2026-10-08 after the reader candidate and scored once. Same definition as distress_set.json. Reviewed by Gordon 2026-10-10, who agreed with the labels.",
  "cases": [
   {
    "id": 1,
