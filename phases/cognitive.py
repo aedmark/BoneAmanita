@@ -209,6 +209,9 @@ class ArbitrationPhase(SimulationPhase):
             verdict.gate or "_default",
             ux("silence_reasons", "_default", "I need a moment before I can answer that."),
         )
+        if verdict.gate != "NABLA_SILENCE" and getattr(getattr(ctx, "somatic_budget", None), "distressed", False):
+            # A person in distress is told the engine is here, never that it is short of energy or heading somewhere unstable.
+            human_reason = ux("silence_reasons", "_distressed", human_reason)
         ctx.log(f"{Prisma.GRY}{held}{Prisma.RST}")
         ctx.log(f"{Prisma.GRY}   {verdict.reason}.{Prisma.RST}")
         if verdict.gate == "POINT_OF_NO_RETURN":

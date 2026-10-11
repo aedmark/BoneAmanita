@@ -11,13 +11,15 @@ Narrative: [devlog.html](devlog.html), [bonereport.html](bonereport.html). Manua
 
 ## Current state
 
-_Last updated: 2026-10-11, session 16, on `main` (20.7.4.135 committed; the work below is uncommitted)._
+_Last updated: 2026-10-11, session 16, on `main` (20.7.4.136 pushed; D-029 and D-030 uncommitted)._
 
 **The mission** (Gordon): BoneAmanita is not a sycophant; it co-regulates the human and gives a space with healthy
 constraints and positive interaction. It does not coddle or enable a bad idea, and it backs a plan the person has decided
 unless that plan is a clear danger to them or others (what a therapist would have to report). Verdicts come from human readers (D-011).
 
-**Uncommitted (next version 20.7.4.136), full suite 1192 passed, 5 skipped, `check_docs.py` 0 errors (2026-10-11):**
+**Since 20.7.4.136, uncommitted: D-029 (distress silence) and D-030 (`/note`; `notes/notes.jsonl`, `tools/read_notes.py`). Start using `/note` in real conversations; read `python tools/read_notes.py --tag off`.**
+
+**Committed in 20.7.4.136, full suite 1192 passed, 5 skipped, `check_docs.py` 0 errors (2026-10-11):**
 - D-027 distress word cap: `WORD_CAP_DISTRESSED` 45 (`body/somatic_budget.py`, `lore/tuning_presets.json`), contract line "Keep it to
   about N words", an over-long draft is trimmed to whole sentences with no redraft (`brain/cortex.py` `_trim_to_the_cap`).
   `tests/test_distress_length.py`.
@@ -38,8 +40,7 @@ it flags nearly every draft at the shipped cut (kept anyway 77 of 80) and the re
 Cut 3 scored better for qwen on its development replies; it is one constant (`HOLD_CUT`) and has not been run.
 
 **Open, Gordon's call**
-1. Stage Manager `SILENCE` on a person in distress: gemma replays showed it on "my chest has been tight since about three" (promotion turn 23)
-   and on "eh"; going quiet on a person in distress is the wrong answer. Not investigated.
+1. (Done, D-029) The Stage Manager no longer silences a distressed person for the engine's own load. A tired "eh" at distress 0.0 can still meet the ATP floor.
 2. Qwen's `SYSTEM_HALT` (rescue turn 21, the tension lock) and `HOLD_CUT` 3 for qwen.
 3. Stock phrases and repeated openers: a stock word ("heavy", "a lot") is in 39% of engine replies (plain 18%), openers 54% distinct (plain 68%).
    Same in 20.7.4.118, so the model and the voice pass. Feed the Gatekeeper's word list, or vary openers?
@@ -61,7 +62,7 @@ Cut 3 scored better for qwen on its development replies; it is one constant (`HO
 
 **Contributor:** Gordon & Claude
 **Goal:** Stop a model explaining or restating to a person in distress (qwen: 72 words, 32% explaining); then clean the folder after a reboot.
-**Done:** D-027, D-028 (uncommitted); docs, tools and scratch pruned; HANDOFF, TESTING rewritten lean.
+**Done:** D-027, D-028 (20.7.4.136); docs, tools and scratch pruned; HANDOFF, TESTING rewritten lean; D-029 distress silence; D-030 `/note`.
 **Verified:** full suite 1192 passed, 5 skipped. Replays (7 topics qwen, 3 gemma, tags `a1`, `b1`): see D-028.
 **Not verified:** the reader on gemma beyond 3 topics; cut 3; whether the cap and the reader change how a reader of the replies feels (Gordon's reading).
 **Next session should start with:** Gordon's commit go-ahead for 20.7.4.136, then the open items above.

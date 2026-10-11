@@ -160,6 +160,7 @@ class CommandProcessor:
         "inject": "Forces payload into the EventBus",
         "trauma": "DEV: Spikes trauma and drops health to test The Therapist.",
         "journal": "Generates a narrative diary entry of the session so far",
+        "note": "Saves the last exchange with your verdict: /note good, /note off it advised me, /note any words (notes/notes.jsonl)",
         "shuffle": "Explicit intent [ !s ]: The Jester's Gambit. Breaks loops, resets drag, lateral shift."
     }
 
@@ -786,6 +787,51 @@ class CommandProcessor:
             return True
         dropped = self._substrate().deny(parts[1])
         self.interface.log(f"Dropped the edit to output/{parts[1].lstrip('/')}." if dropped else f"No held edit for output/{parts[1].lstrip('/')}.")
+        return True
+
+    NOTE_TAGS = ("good", "off")
+
+    def _cmd_note(self, parts):
+        """Save the last exchange with the person's own verdict: the engine is judged by the person it talks to (D-011)."""
+        import json
+        import os
+        from datetime import datetime
+        from pathlib import Path
+
+        from engine.receipts import ReceiptLedger
+
+        eng = self.interface.eng
+        cortex = getattr(eng, "cortex", None)
+        buffer = getattr(cortex, "dialogue_buffer", None)
+        if not buffer:
+            self.interface.log(f"{self.P.YEL}Nothing to note yet: say something first, then /note good, /note off why, or /note anything.{self.P.RST}")
+            return True
+        said, _, reply = str(buffer[-1]).partition("\nSystem: ")
+        words = parts[1:]
+        tag = words[0].lower() if words and words[0].lower() in self.NOTE_TAGS else "note"
+        comment = " ".join(words[1:] if tag != "note" else words)
+        lattice = getattr(eng, "shared_lattice", None)
+        distress = getattr(getattr(lattice, "u", None), "distress_u", None)
+        row = {
+            "ts": datetime.now().isoformat(timespec="seconds"),
+            "tag": tag,
+            "comment": comment,
+            "mode": getattr(cortex, "active_mode", ""),
+            "model": getattr(getattr(cortex, "llm", None), "model", ""),
+            "distress_u": None if distress is None else round(float(distress), 3),
+            "user": said.removeprefix("Traveler: "),
+            "reply": reply,
+            "receipts": [[r.subsystem, r.effect] for r in ReceiptLedger.get_instance().for_turn() if r.subsystem.startswith("cortex.")],
+        }
+        path = Path(os.environ.get("BONE_NOTES", "notes/notes.jsonl"))
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        except OSError as error:
+            self.interface.log(f"{self.P.RED}Note not saved: {type(error).__name__}: {error}{self.P.RST}")
+            return True
+        self.interface.log(f"{self.P.GRN}Noted ({tag}): {path}{self.P.RST}")
         return True
 
     def _cmd_journal(self, _parts):

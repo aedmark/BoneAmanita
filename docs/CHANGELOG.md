@@ -8,6 +8,9 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 - **A person in distress gets a short reply (D-027):** the reply is capped at 45 words (`WORD_CAP_DISTRESSED`); an over-long draft is cut to whole sentences, not sent back. On qwen3.5:9b replies in distress went from 72 words to 30 and the audit redrafts from 144 to 6 in 210 turns; gemma4:12b (median 33 words) is unchanged.
 - **A model reads the draft for staying with them (D-028):** in distress a draft that explains why they feel it, retells their situation, judges others, advises or asks them to explain is sent back (`engine/gate/distress.py` `HoldReader`, receipts `cortex.holding`); the last draft is kept, never turned into a pause line. Backing a plan the person decided is allowed. `CORTEX.HOLD_READER` switches it off. It rarely fires on gemma4:12b and flags nearly every qwen3.5:9b draft at the shipped cut.
 
+- **A person in distress is not answered with silence about the engine (D-029):** the Stage Manager no longer holds a turn for the ATP floor or tension between voices when the person is in distress; the one survival hold left says "I'm here with you. I need a moment" instead of a line about the engine.
+- **`/note` (D-030):** `/note good`, `/note off <why>` or `/note <words>` saves the last exchange with your verdict to `notes/notes.jsonl`; `python tools/read_notes.py` reads it back.
+
 ### Removed
 - The AI-judge ranking tool (`tools/audit_somatic_blind_judge.py`) and its tests (verdicts come from human readers, D-011), the silence diagnostic, a one-time except-codemod and a timing script posing as a test. `tools/corpus_replay.py` joins `tools/` from scratch.
 

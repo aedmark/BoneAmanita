@@ -17,10 +17,12 @@ venv/
 /config.json
 
 # --- Engine state (written at runtime, never authored) --------------------
+# notes/ is yours (the /note command's verdicts) and reset.sh leaves it alone.
 logs/
 memories/
 saves/
 scratch/
+notes/
 output/
 tools/cache/
 /legacy.json

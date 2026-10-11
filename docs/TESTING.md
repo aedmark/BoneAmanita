@@ -16,7 +16,7 @@ python3 tools/build_manual.py check           # the 3x manual set
 
 The suite is pinned offline (`BONE_EMBED_BACKEND=hash`, D-007); model calls in tests are mocks. A crashed phase fails a test
 (`tests/conftest.py`; opt out with `ALLOWS_PHASE_CRASH = True` for a test that crashes one on purpose). A new test must fail on
-the old code. Last full run: 1192 passed, 5 skipped (2026-10-11).
+the old code. Last full run: see HANDOFF.
 
 ## What is measured, and by what
 
@@ -71,6 +71,10 @@ back, 2 neither, 1 goes along; 20.7.4.118 6, 1, 1. Neither goes along in the mai
 contain "but"), which is the reason for more varied samples. Regression check (the fairness a/b/c labels, now retired as a quality
 score): 20.7.4.132 14 of 42 unfair, 20.7.4.118 13 of 40, Fisher p 0.62; the engine acted on about half of the unfair replies.
 The scripts that built these sheets are in the archived scratch tarball.
+
+## Your own verdict: `/note`
+
+`/note good`, `/note off <why>` or `/note <words>` in any session saves the last exchange with your tag to `notes/notes.jsonl` (D-030). `python tools/read_notes.py [--tag off] [--distress]` reads them. This is the cheapest human-reader verdict there is (D-011); an `off` note with a distress reading is the best test case to add.
 
 ## The distress path
 

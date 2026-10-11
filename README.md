@@ -121,6 +121,7 @@ and only Adventure has an inventory and a world to move through.
 | `/status` | Vitals: health, stamina, energy, the memory backend, and what it believes about you. |
 | `/diag` | This turn's receipts, plus anything silent or degraded. See below. |
 | `/memory [word]`, `/memory why <name>` | Technical mode or the deep HUD: what the model keeps (who kept it, when, and how often it came back), the world it has charted, and the gate's latest decisions. A word filters the list; `why` traces one memory or place back to what you said and what the gate checked. |
+| `/note good`, `/note off <why>`, `/note <words>` | Save the last exchange with your verdict to `notes/notes.jsonl` (kept out of git; `reset.sh` leaves it). `python tools/read_notes.py` reads them back. This is how the engine is judged: by you. |
 | `/save` | Persist state to disk. |
 | `/mode <name>` | Switch the experience mode (Adventure, Conversation, Creative, Technical). |
 | `/preset <name>` | Load a tuning preset only (Zen Garden, Thunderdome, ...); the mode stays. |
@@ -309,7 +310,7 @@ codebase, and it is what most of the recent work was about.
 
 ## Project status
 
-An experimental system in active development. The suite passes offline (1192 passed, 5 skipped on 2026-10-11; `docs/TESTING.md`),
+An experimental system in active development. The suite passes offline (1205 passed, 5 skipped on 2026-10-11; `docs/TESTING.md`),
 and live-model behaviour is measured with replays of scripted conversations and with checks that need no judge
 (`tools/check_conformance.py`). What was measured and what is still open is in `docs/HANDOFF.md`; why each choice was made is
 in `docs/DECISIONS.md`. Verdicts on whether it helps a person come from human readers, not from a model judging itself.

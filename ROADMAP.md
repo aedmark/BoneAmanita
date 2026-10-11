@@ -72,5 +72,6 @@ Goal: A person in measured distress is held, not fixed, coddled or argued with (
 - [x] P8-01 A model reads each message for distress; the word list can only raise it (`engine/gate/distress.py`; D-023).
 - [x] P8-02 The contract says to hold space and fix nothing; the validator and Gatekeeper reject advice, a closing question and verdicts on others; the voice and opening edits stand down (D-024, D-025, D-026).
 - [x] P8-03 A distress word cap (45), trimmed not redrafted (D-027), and a model reading of the draft for staying with them (D-028).
-- [ ] P8-04 A person in distress is never answered with the Stage Manager's silence (seen on gemma replays, promotion turns 18 and 23); find which gate and why.
+- [x] P8-04 A person in distress is never answered with the Stage Manager's silence for the engine's own load (D-029).
 - [ ] P8-05 The hold reader on qwen3.5:9b flags nearly every draft at the shipped cut; try `HOLD_CUT` 3 (D-028).
+- [x] P8-06 `/note`: the person's own verdict on the last exchange, saved to `notes/notes.jsonl` (D-030).

@@ -140,6 +140,13 @@ class StageManager:
             self.consecutive_holds = 0
             return Verdict(SPEAK, tension.voices[0], f"{tension}; early turns, {tension.voices[0]} carries it", tension)
 
+        if getattr(somatic_budget, "distressed", False):
+            # Never answer a person in distress with the engine's own load: it speaks, short, with the first voice (D-029).
+            self.consecutive_holds = 0
+            return Verdict(
+                SPEAK, tension.voices[0], f"{tension}; {tension.voices[0]} holds space for a person in distress", tension
+            )
+
         atp_floor = self._cfg("SYNTHESIS_ATP_FLOOR", 25.0)
         if float(atp) < atp_floor:
             self.consecutive_holds += 1

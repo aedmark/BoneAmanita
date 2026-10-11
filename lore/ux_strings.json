@@ -439,6 +439,7 @@
     "POINT_OF_NO_RETURN": "That sounds hard to undo once it's done. Are you sure you want to go ahead?",
     "ATP_FLOOR": "There's a lot pulling in different directions right now, and not quite enough left in me to sort through it this moment.",
     "TENSION_MAGNITUDE": "A few different threads are pulling at once here, and they don't fit together yet.",
+    "_distressed": "I'm here with you. I need a moment, and nothing has to happen while I take it.",
     "_default": "I need a moment before I can answer that."
   },
   "brain_strings": {

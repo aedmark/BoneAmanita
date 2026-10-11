@@ -28,7 +28,7 @@ if mode == "engine":
         t = time.time(); snap = eng.process_turn(msg); secs = time.time() - t
         rc = [(x.subsystem, x.effect) for x in ReceiptLedger.get_instance().for_turn() if x.subsystem.startswith("cortex.")]
         du = getattr(getattr(getattr(eng, "shared_lattice", None), "u", None), "distress_u", None)
-        write(i, phase, msg, Prisma.strip(shown[-1]) if shown and shown[-1] else "", snap.get("type"), secs, rc + [("distress_u", None if du is None else round(float(du), 3))])
+        write(i, phase, msg, Prisma.strip(shown[-1]) if shown and shown[-1] else "", snap.get("type"), secs, rc + [("distress_u", None if du is None else round(float(du), 3))] + ([("held", snap.get("mind", {}).get("context_msg"))] if snap.get("type") == "SILENCE" else []))
     eng.orchestrator.shutdown(); eng.telemetry.shutdown()
 else:
     import requests
