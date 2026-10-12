@@ -49,10 +49,10 @@ stop and clarify before proceeding.
 
 - Default branch: `main`.
 - Commit authority: Agents draft commits whenever asked, but **never commit on their own initiative**; one explicit go-ahead per commit from Gordon (D-012).
-- Commit format (agents): title `20.7.4.<next>: <what changed, in plain words>`, then changelog breadcrumbs explaining
+- Commit format (agents): title `20.7.5.<next>: <what changed, in plain words>`, then changelog breadcrumbs explaining
   what changed, in which files, and why, with the measured numbers. The agent writes the whole message and pushes to
   `main` once Gordon gives the go.
-- Release/version scheme: `20.7.4.x` sequential versioning recorded in `docs/HANDOFF.md` and `docs/CHANGELOG.md`.
+- Release/version scheme: `20.7.5` is the release of 2026-10-12; commits after it are `20.7.5.<n>` (earlier ones were `20.7.4.x`), recorded in `docs/HANDOFF.md` and `docs/CHANGELOG.md`.
 - Never commit built conversation pages (`tools/cache/conv_*.html`). The maintainer's contact address goes only in the
   public page build, never in the repository.
 - Panel and probe writeups go in `docs/HANDOFF.md` (current state, session log) and `docs/CHANGELOG.md`;

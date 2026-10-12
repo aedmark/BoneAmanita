@@ -3,7 +3,7 @@
   "project": {
     "name": "BoneAmanita",
     "short_name": "BoneAmanita",
-    "version": "20.7.4.91",
+    "version": "20.7.5",
     "repository": "https://github.com/aedmark/BoneAmanita"
   },
   "manual": {
@@ -196,6 +196,102 @@
             {"label": "Cartographer export tests", "target": "tests/test_cartographer.py"}
           ],
           "related": ["halcyon-database", "substrate-security"]
+        },
+        {
+          "id": "command-checkin",
+          "title": "checkin",
+          "summary": "A short bounded check-in that holds space the whole way and keeps nothing unless you ask.",
+          "synopsis": "/checkin [turns] | /checkin keep | /checkin end",
+          "tags": [
+            "check-in",
+            "distress",
+            "safety",
+            "memory"
+          ],
+          "what": "Starts a conversation of at most 12 turns (10 by default) with a hard end. It opens with a fixed line, answers in short held-space replies (about 45 words, no advice, no closing question), says once that time is nearly up, and lands the last reply without inviting you back. A fixed closing line follows. Nothing is remembered unless you type `/checkin keep` right after it ends. A message that says you may harm yourself or someone else ends it at once with a fixed line.",
+          "how": [
+            "`engine/checkin.py` counts the turns and names the stage (settle, wind, land); `phases/biological.py` hands it to `SomaticBudget.checkin`, which forces the hold-space budget and adds a stage line to the contract in `brain/composer.py`.",
+            "`CHECKIN_HOOK` in the validator rejects a last reply that reaches for another conversation (\"feel free\", \"anytime\", \"come back\", \"anything else\").",
+            "`engine/cycle.py` skips the Halcyon gate and the memory keeper while it runs; the earlier dialogue is set aside and restored; `/checkin keep` runs your own lines through the keeper once, as an ordinary turn would have."
+          ],
+          "why": "The distress path only helps when a person is read as distressed. A bounded check-in gives it a use that cannot become a dependency: it ends, it keeps nothing by default, and its last reply leaves no hook (D-032).",
+          "evidence": [
+            {
+              "label": "Check-in state machine",
+              "target": "engine/checkin.py"
+            },
+            {
+              "label": "Command",
+              "target": "mechanics/commands.py"
+            },
+            {
+              "label": "Check-in tests",
+              "target": "tests/test_checkin.py"
+            }
+          ],
+          "related": [
+            "command-note"
+          ]
+        },
+        {
+          "id": "command-note",
+          "title": "note",
+          "summary": "Saves the last exchange with your own verdict.",
+          "synopsis": "/note good | /note off <why> | /note <words>",
+          "tags": [
+            "evaluation",
+            "notes"
+          ],
+          "what": "Appends the last exchange, your tag (`good`, `off` or a plain note) and comment, the mode, model, distress reading and that turn's receipts to `notes/notes.jsonl` (override with `BONE_NOTES`). The file stays out of git and `reset.sh` leaves it alone. `python tools/read_notes.py [--tag off] [--distress]` reads it back.",
+          "how": [
+            "`_cmd_note` in `mechanics/commands.py` reads the last dialogue-buffer entry and the ledger's receipts for the turn and appends one JSON line.",
+            "A failed write is reported in red, never swallowed."
+          ],
+          "why": "The engine is judged by the person it talks to (D-011); this is the cheapest way to collect that verdict in use (D-030).",
+          "evidence": [
+            {
+              "label": "Command",
+              "target": "mechanics/commands.py"
+            },
+            {
+              "label": "Reader",
+              "target": "tools/read_notes.py"
+            },
+            {
+              "label": "Note tests",
+              "target": "tests/test_note_command.py"
+            }
+          ],
+          "related": [
+            "command-checkin"
+          ]
+        },
+        {
+          "id": "command-doctor",
+          "title": "doctor (python main.py --doctor)",
+          "summary": "Checks the machine and names the one command that fixes each problem.",
+          "synopsis": "python main.py --doctor",
+          "tags": [
+            "setup",
+            "diagnostics"
+          ],
+          "what": "Checks Python, packages, `config.json`, the writable folders, the chat server and model (one tiny local reply), the critic model and the embedding backend, and prints ok, warn, FAIL or info with the fix. It makes no paid request: a cloud provider only checks that its key is set. The first-run wizard lists the models Ollama already has and prints the same report.",
+          "how": [
+            "`engine/doctor.py` runs read-only checks; every network failure goes through one helper that logs it and returns it as the check's detail.",
+            "`mechanics/setup.py` calls it after writing `config.json` (not for the mock provider)."
+          ],
+          "why": "The first thing that stops anyone else benefiting is setup (D-031).",
+          "evidence": [
+            {
+              "label": "Doctor",
+              "target": "engine/doctor.py"
+            },
+            {
+              "label": "Doctor tests",
+              "target": "tests/test_doctor.py"
+            }
+          ],
+          "related": []
         },
         {
           "id": "command-truth-hud",

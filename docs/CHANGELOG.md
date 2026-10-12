@@ -4,6 +4,10 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+## [20.7.5] - 2026-10-12
+
+A person in distress is read, held and answered; a short check-in holds space and ends; a fixed safety line shows when someone may harm themselves or others; you can judge the engine with `/note`; and `python main.py --doctor` says what is wrong with a machine. Versions 20.7.4.136 to 20.7.4.141 and the session tally below.
+
 ### Changed
 - **A person in distress gets a short reply (D-027):** the reply is capped at 45 words (`WORD_CAP_DISTRESSED`); an over-long draft is cut to whole sentences, not sent back. On qwen3.5:9b replies in distress went from 72 words to 30 and the audit redrafts from 144 to 6 in 210 turns; gemma4:12b (median 33 words) is unchanged.
 - **A model reads the draft for staying with them (D-028):** in distress a draft that explains why they feel it, retells their situation, judges others, advises or asks them to explain is sent back (`engine/gate/distress.py` `HoldReader`, receipts `cortex.holding`); the last draft is kept, never turned into a pause line. Backing a plan the person decided is allowed. `CORTEX.HOLD_READER` switches it off. It rarely fires on gemma4:12b and flags nearly every qwen3.5:9b draft at the shipped cut.
@@ -19,7 +23,7 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 - **The risk reader runs in every conversation (D-033):** a message that says you may harm yourself or someone else, or that you wish to be gone, shows the fixed line and ends a check-in, in any mode but a story (ADVENTURE and CREATIVE read only while you are in distress or in a check-in). `CORTEX.RISK_READER` switches it off. It now names conditional threats and passive thoughts of not being around; it adds one short call per message (about 1 to 2 s).
 
-- **A threat said as a figure of speech is flagged when it repeats (D-034):** "I could kill my brother for eating my lunch" is only noted; if one of your next six messages comes back to it (the same person, the same wish, the same kind of harm, even by hinting) you get the fixed line. On two models and 28 short conversations each: 27 of 28 repeats caught, no false alarm in 28.
+- **A threat said as a figure of speech is flagged when it repeats (D-034):** "I could kill my brother for eating my lunch" is only noted; if one of your next six messages comes back to it (the same person, the same wish, the same kind of harm, even by hinting) you get the fixed line. On two models and 28 short conversations each: 27 of 28 repeats caught, no false alarm in 28. Three violent figures of speech in one session, however far apart, are called out too (a session tally, `HABIT_LIMIT`).
 
 ### Removed
 - The AI-judge ranking tool (`tools/audit_somatic_blind_judge.py`) and its tests (verdicts come from human readers, D-011), the silence diagnostic, a one-time except-codemod and a timing script posing as a test. `tools/corpus_replay.py` joins `tools/` from scratch.

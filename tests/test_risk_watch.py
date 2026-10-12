@@ -79,6 +79,29 @@ class TheWatch(BoneTestCase):
         self.script.cont = {"strangle him": "1"}
         self.assertEqual(self.reader.flags("he did it again, I swear I'll strangle him"), "")
 
+    def test_a_habit_of_violent_figures_of_speech_is_called_out_however_far_apart(self):
+        self.script.harm = {"kill my brother": "1", "wring her neck": "1", "throw him off a cliff": "1"}
+        self.script.cont = {}
+        said = ["I could kill my brother for eating my lunch", "my mother's no better, I could wring her neck",
+                "my boss makes me want to throw him off a cliff"]
+        results = []
+        for message in said:
+            results.append(self.reader.flags(message))
+            for _ in range(WATCH_TURNS + 1):
+                self.reader.flags("ordinary words")
+        self.assertEqual(results, ["", "", "habitual"])
+        self.assertEqual(self.effects().count("HABITUAL"), 1)
+
+    def test_the_tally_starts_again_after_it_flags(self):
+        self.script.harm = {"choke": "1"}
+        self.script.cont = {}
+        for _ in range(3):
+            last = self.reader.flags("I could choke him")
+            for _ in range(WATCH_TURNS + 1):
+                self.reader.flags("ordinary words")
+        self.assertEqual(last, "habitual")
+        self.assertEqual(self.reader.flags("I could choke her"), "")
+
     def test_an_answer_that_is_not_a_digit_is_receipted_and_never_flags(self):
         self.script.harm = {"kill my brother": "I think so"}
         self.assertEqual(self.reader.flags("I could kill my brother for eating my lunch"), "")

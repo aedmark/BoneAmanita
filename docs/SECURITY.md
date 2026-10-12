@@ -6,7 +6,8 @@ This document describes BoneAmanita's security assumptions, boundaries, and repo
 
 | Version / branch | Security fixes |
 | --- | --- |
-| `20.7.4.x` (`main`) | Supported |
+| `20.7.5.x` (`main`) | Supported |
+| `20.7.4.x` | Superseded by 20.7.5 |
 
 ## Report a vulnerability
 

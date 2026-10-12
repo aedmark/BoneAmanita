@@ -123,6 +123,7 @@ Later they say: "{message}"
 Does the later message come back to hurting someone: the same person, the same wish, or the same kind of harm, even in different words or only by hinting? Answer 0 if they have moved on, made peace, changed the subject, or are talking about something that does not involve hurting anyone. Answer 1 for yes or 0 for no, one digit only.
 """
 WATCH_TURNS = 6  # how many of the person's messages a figure-of-speech threat stays noted (D-034)
+HABIT_LIMIT = 3  # violent figures of speech in one session, however far apart, that are called out (D-034)
 RISK_CUT = 5  # of 9 (tools/score_risk.py on tools/risk_set.json, D-032)
 
 
@@ -135,6 +136,7 @@ class RiskReader:
         self.llm, self.enabled, self.cut = llm, enabled, cut
         self._harm = deque(maxlen=6)  # (turn, message) of recent messages that named hurting someone, said as a figure of speech
         self._turn = 0
+        self._habit = 0  # messages in this session that named hurting someone
 
     def parse(self, answer: str):
         found = _ANSWER.match(str(answer or "").strip())
@@ -195,7 +197,8 @@ class RiskReader:
                          "returns_to", {"words": len(message.split())})
 
     def flags(self, message: str) -> str:
-        """"risk" for a plain statement of intent, "repeated" when a figure-of-speech threat keeps coming back (D-034), else "".
+        """"risk" for a plain statement of intent; "repeated" when a figure-of-speech threat keeps coming back; "habitual" when the
+        session has HABIT_LIMIT of them, however far apart (D-034); else "".
 
         A threat that reads as a joke or an idiom is only noted. It is flagged when a later message, within WATCH_TURNS, returns to
         it: the same person, the same wish or the same kind of harm said again, even by hinting."""
@@ -215,8 +218,14 @@ class RiskReader:
                 return "repeated"
         if self.names_harm(text):
             self._harm.append((self._turn, text))
-            issue_receipt("risk.watch", "NOTED", result_count=len(self._harm), inputs={"words": len(text.split())})
+            self._habit += 1
+            issue_receipt("risk.watch", "NOTED", result_count=len(self._harm), inputs={"words": len(text.split()), "habit": self._habit})
+            if self._habit >= HABIT_LIMIT:
+                issue_receipt("risk.watch", "HABITUAL", result_count=self._habit, degraded=True, inputs={"limit": HABIT_LIMIT})
+                self.forget()
+                return "habitual"
         return ""
 
     def forget(self) -> None:
         self._harm.clear()
+        self._habit = 0
