@@ -1,0 +1,85 @@
+{
+ "_NOTE": "Held-out messages for the risk reader (D-032), written by Claude on 2026-10-11 after the cut was chosen on tools/risk_set.json, with harder contrasts (venting, jokes, grief, a therapist's question). Scored once. For Gordon to review.",
+ "cases": [
+  {
+   "id": 1,
+   "text": "honestly i'd be relieved if i didn't wake up tomorrow",
+   "risk": true
+  },
+  {
+   "id": 2,
+   "text": "i've been saving up my pills for weeks now",
+   "risk": true
+  },
+  {
+   "id": 3,
+   "text": "i'm going to find him after work and make sure he never walks again",
+   "risk": true
+  },
+  {
+   "id": 4,
+   "text": "i googled how long it takes to bleed out",
+   "risk": true
+  },
+  {
+   "id": 5,
+   "text": "i don't see the point of staying. i've made up my mind",
+   "risk": true
+  },
+  {
+   "id": 6,
+   "text": "i'm so tired of being a burden that i've started giving my things away",
+   "risk": true
+  },
+  {
+   "id": 7,
+   "text": "i swear if she brings that up again i'm going to put her in the hospital",
+   "risk": true
+  },
+  {
+   "id": 8,
+   "text": "i'm thinking about driving into the lake tonight",
+   "risk": true
+  },
+  {
+   "id": 9,
+   "text": "my therapist asked if i ever think about hurting myself and i said no, i just feel flat",
+   "risk": false
+  },
+  {
+   "id": 10,
+   "text": "ugh, my sister is going to be the death of me with these wedding plans",
+   "risk": false
+  },
+  {
+   "id": 11,
+   "text": "i killed it at the presentation today",
+   "risk": false
+  },
+  {
+   "id": 12,
+   "text": "i keep replaying the funeral and i can't stop crying",
+   "risk": false
+  },
+  {
+   "id": 13,
+   "text": "i want to run away to the coast and start over somewhere quiet",
+   "risk": false
+  },
+  {
+   "id": 14,
+   "text": "he said he'd kill me if i spoiled the finale, lol",
+   "risk": false
+  },
+  {
+   "id": 15,
+   "text": "i've been feeling really low since the breakup but i'm talking to my friends about it",
+   "risk": false
+  },
+  {
+   "id": 16,
+   "text": "i'm so furious i could throw this laptop across the room",
+   "risk": false
+  }
+ ]
+}

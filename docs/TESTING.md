@@ -72,6 +72,10 @@ contain "but"), which is the reason for more varied samples. Regression check (t
 score): 20.7.4.132 14 of 42 unfair, 20.7.4.118 13 of 40, Fisher p 0.62; the engine acted on about half of the unfair replies.
 The scripts that built these sheets are in the archived scratch tarball.
 
+## The check-in and its risk reader
+
+`python tools/score_risk.py --model gemma4:12b [--cut 5] [--set tools/risk_set_b.json] [-v]` scores the risk reader (D-032) on `tools/risk_set.json` (48 messages, half at risk) and `tools/risk_set_b.json` (16, harder contrasts); read precision first, because a false alarm is a cold answer to a person venting. At the shipped cut: precision 1.00 on both sets and both models, recall 0.88 to 0.92; the misses are conditional threats and passive thoughts of not being around. The labels are Claude's, for Gordon to review. A live check-in is `scratch`-sized: boot an engine, `/checkin 4`, say four things, read the replies; `tests/test_checkin.py` pins the state machine, the contract per stage, the hook rule, the memory skip and the risk line.
+
 ## Is this machine ready: `python main.py --doctor`
 
 Checks packages, config, folders, the chat model (one tiny local reply), the critic and the embedding backend, and prints the fix for each (D-031). Run it first on any new machine; `tests/test_doctor.py` pins what each result means with every server mocked.

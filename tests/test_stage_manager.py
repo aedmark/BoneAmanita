@@ -264,7 +264,7 @@ class TestSilenceReasonsAreHumanSafe(unittest.TestCase):
         "GATEKEEPER", "MOOG", "GORDON_ANCHOR", "PINKER", "ROS_PANIC",
         "LINEHAN", "AFFECTIVE", "NABLA_SILENCE", "APOPTOTIC_BLOCK",
         "PREMISE_VIOLATION", "POINT_OF_NO_RETURN", "ATP_FLOOR",
-        "TENSION_MAGNITUDE",
+        "TENSION_MAGNITUDE", "RISK",
     )
     # Words that must never appear in what a person reads: raw internal tags
     # a developer would recognise from logs, or language adjacent to

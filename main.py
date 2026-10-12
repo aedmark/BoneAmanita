@@ -22,7 +22,8 @@ from brain.cortex import TheCortex, _room_slug
 from brain.mind import NoeticLoop
 from drivers.userprofile import UserProfile
 from engine.gate.keeper import MemoryKeeper
-from engine.gate.distress import DistressReader, HoldReader
+from engine.checkin import CheckIn
+from engine.gate.distress import DistressReader, HoldReader, RiskReader
 from engine.gate.reflector import MemoryReflector
 from engine.constants import Prisma, RealityLayer
 from engine.core import (
@@ -198,6 +199,7 @@ class BoneAmanita:
             lattice.distress_reader = DistressReader(
                 self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "DISTRESS_READER", True))
             )
+        self.checkin = CheckIn(self, RiskReader(self.cortex.llm))
         self.cortex.hold_reader = HoldReader(
             self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "HOLD_READER", True))
         )
@@ -728,6 +730,7 @@ class BoneAmanita:
                 self.events.log("Pacemaker detected terminal stagnation. Forcing a novelty spike.", "SYS")
                 current_novelty = float(safe_get(self.active_physics, "novelty", 0.0))
                 safe_set(self.active_physics, "novelty", min(1.0, current_novelty + 0.3))
+            snapshot = self.checkin.after_turn(snapshot, is_system)
             self.save_checkpoint()
             if not is_system:
                 self.tick_count += 1

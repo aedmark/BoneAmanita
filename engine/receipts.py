@@ -25,7 +25,7 @@ CORE_SUBSYSTEMS = (
     "user.profile",
 )
 # Issued only when their event happens (a draft sent back or cut, a room charted, memories forgotten, a lost embedder checked), so their absence is not silence.
-EVENT_SUBSYSTEMS = ("cortex.redraft", "cortex.opening", "cortex.voice", "cortex.ending", "cortex.fairness", "cortex.salvage", "halcyon.update", "halcyon.chart", "halcyon.forget", "embeddings.reprobe", "halcyon.refusal", "halcyon.reflect", "halcyon.dream", "config.tune", "lattice.distress_read", "cortex.holding")
+EVENT_SUBSYSTEMS = ("cortex.redraft", "cortex.opening", "cortex.voice", "cortex.ending", "cortex.fairness", "cortex.salvage", "halcyon.update", "halcyon.chart", "halcyon.forget", "embeddings.reprobe", "halcyon.refusal", "halcyon.reflect", "halcyon.dream", "config.tune", "lattice.distress_read", "cortex.holding", "checkin.begin", "checkin.end", "checkin.keep", "checkin.risk_read")
 
 
 @dataclass(frozen=True)

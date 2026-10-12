@@ -209,7 +209,7 @@ class ArbitrationPhase(SimulationPhase):
             verdict.gate or "_default",
             ux("silence_reasons", "_default", "I need a moment before I can answer that."),
         )
-        if verdict.gate != "NABLA_SILENCE" and getattr(getattr(ctx, "somatic_budget", None), "distressed", False):
+        if verdict.gate not in ("NABLA_SILENCE", "RISK") and getattr(getattr(ctx, "somatic_budget", None), "distressed", False):
             # A person in distress is told the engine is here, never that it is short of energy or heading somewhere unstable.
             human_reason = ux("silence_reasons", "_distressed", human_reason)
         ctx.log(f"{Prisma.GRY}{held}{Prisma.RST}")
@@ -646,6 +646,12 @@ class SimulationPreflightPhase(SimulationPhase):
                     "log": f"{Prisma.GRY}[AUDIT]: Narrative illusion dropped. Coordinates exposed.{Prisma.RST}",
                 }
             )
+        if (checkin := getattr(self.eng, "checkin", None)) is not None and checkin.risky(raw_input):
+            # Their words, not a model's: a fixed line, and the check-in is over (D-032).
+            msg = ux("silence_reasons", "RISK")
+            ctx.log(f"{Prisma.GRY}Check-in ended: the message read as a risk to themselves or others.{Prisma.RST}")
+            packet = self._build_refusal(ctx, phys_obj, "RISK", msg)
+            ctx.nominations.append(Nomination(gate="RISK", reason=msg, magnitude=100.0, packet=packet))
         if "[NO_JUMP]" in upper_input or "[SILENCE]" in upper_input:
             phys_obj.silence = 1.0
             msg = "Silence engaged. Stopping token prediction. Waiting for a mathematical rupture."

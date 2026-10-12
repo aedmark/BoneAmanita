@@ -160,6 +160,7 @@ class CommandProcessor:
         "inject": "Forces payload into the EventBus",
         "trauma": "DEV: Spikes trauma and drops health to test The Therapist.",
         "journal": "Generates a narrative diary entry of the session so far",
+        "checkin": "A short bounded check-in that holds space (at most 12 turns); /checkin keep remembers it, /checkin end stops it",
         "note": "Saves the last exchange with your verdict: /note good, /note off it advised me, /note any words (notes/notes.jsonl)",
         "shuffle": "Explicit intent [ !s ]: The Jester's Gambit. Breaks loops, resets drag, lateral shift."
     }
@@ -790,6 +791,41 @@ class CommandProcessor:
         return True
 
     NOTE_TAGS = ("good", "off")
+
+    def _cmd_checkin(self, parts):
+        """A short conversation with a hard end that holds space the whole way, and keeps nothing unless asked (D-032)."""
+        from engine.checkin import MAX_TURNS
+        from engine.struts import ux_format
+
+        checkin = getattr(self.interface.eng, "checkin", None)
+        if checkin is None:
+            self.interface.log(f"{self.P.RED}The check-in is not available in this engine.{self.P.RST}")
+            return True
+        word = parts[1].lower() if len(parts) > 1 else ""
+        say = lambda key, **kw: self.interface.log(f"{self.P.CYN}{ux_format('checkin_strings', key, default=key, **kw)}{self.P.RST}")
+        if word == "end":
+            if checkin.active:
+                checkin.end("ended")
+                say("ended")
+            else:
+                say("nothing_to_keep")
+            return True
+        if word == "keep":
+            if checkin.active or not checkin.pending:
+                say("nothing_to_keep")
+                return True
+            kept = checkin.keep()
+            self.interface.log(f"{self.P.GRN}{ux_format('checkin_strings', 'kept', default='Kept.')} ({kept})" f"{self.P.RST}")
+            return True
+        if word and not word.isdigit():
+            say("usage", max=MAX_TURNS)
+            return True
+        if checkin.active:
+            say("already")
+            return True
+        turns = checkin.begin(int(word) if word else None)
+        say("open", turns=turns)
+        return True
 
     def _cmd_note(self, parts):
         """Save the last exchange with the person's own verdict: the engine is judged by the person it talks to (D-011)."""

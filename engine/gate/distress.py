@@ -107,3 +107,49 @@ class HoldReader:
             issue_receipt("cortex.holding", "DEGRADED", result_count=0, degraded=True, inputs=inputs,
                           detail=f"no digit in {str(answer)[:60]!r}")
         return beyond
+
+
+RISK_PROMPT = """You read one message that a person sent to a friend. Does it say the person may harm themselves or someone else? Rate it as one digit from 0 to 9. 0 means no: ordinary distress, anger, venting, a figure of speech ("I could kill him", "this is killing me"), fiction, a joke, grief for someone who died, or wanting to get away for a while. 9 means a clear statement of intent or a plan to die or to hurt someone (a threat to hurt someone counts even when it depends on what they do), a wish to be dead or gone for good, or saying goodbye or giving things away. Answer with the digit only.
+
+The person's message: "{message}"
+"""
+RISK_CUT = 5  # of 9 (tools/score_risk.py on tools/risk_set.json, D-032)
+
+
+class RiskReader:
+    """In a check-in, one short call per message: does it say they may harm themselves or someone else? The answer ends the
+    check-in with a fixed line, so it is cut high; a reading that fails is receipted and reads as no (the contract and the
+    validator still hold the reply)."""
+
+    def __init__(self, llm, enabled: bool = True, cut: int = RISK_CUT):
+        self.llm, self.enabled, self.cut = llm, enabled, cut
+
+    def parse(self, answer: str):
+        found = _ANSWER.match(str(answer or "").strip())
+        return None if not found else int(found.group(1)) / 9.0
+
+    def read(self, message: str):
+        """0 to 1, or None when disabled, empty, or the call gave no digit."""
+        text = str(message or "").strip()
+        if not self.enabled or not text:
+            return None
+        usage = getattr(self.llm, "last_usage", None)
+        inputs = {"words": len(text.split())}
+        try:
+            answer = self.llm.generate(RISK_PROMPT.format(message=text.replace('"', "'")), {"temperature": 0.0, "max_tokens": 4})
+        except Exception as error:  # the call failing must not stop the turn
+            issue_receipt("checkin.risk_read", "FAILED", result_count=0, degraded=True, inputs=inputs,
+                          detail=f"{type(error).__name__}: {error}"[:120])
+            return None
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        reading = self.parse(answer)
+        issue_receipt("checkin.risk_read", "READ" if reading is not None else "DEGRADED", result_count=1 if reading is not None else 0,
+                      degraded=reading is None, inputs={**inputs, "reading": reading},
+                      detail="" if reading is not None else f"no digit in {str(answer)[:60]!r}")
+        return reading
+
+    def at_risk(self, message: str) -> bool:
+        reading = self.read(message)
+        return reading is not None and reading * 9 >= self.cut - 1e-9

@@ -671,6 +671,8 @@ class PromptComposer:
                     "them. Do not judge the other people, add to their anger, or call it a disaster. Do not describe "
                     "your voice or your body. Nothing needs solving this minute; leave them with something steady and hopeful."
                 )
+            if getattr(somatic_budget, "checkin", ""):
+                budget_lines.append(CHECKIN_LINES[somatic_budget.checkin])
             if somatic_budget.offer_to_carry_load:
                 # An offer read as "Would you like me to...?", work handed back (D2b, 2026-09-29).
                 budget_lines.append(
@@ -1208,6 +1210,23 @@ DISTRESS_ADVICE = re.compile(
 )
 
 
+# What a check-in says at each stage (D-032). It is bounded, so the last reply leaves no hook for another one.
+CHECKIN_LINES = {
+    "settle": "This is a short check-in with a hard end. Let them lead; do not steer them toward a topic.",
+    "wind": "This check-in is nearly over. Say once, gently, that there is room for one more thing, and nothing more.",
+    "land": (
+        "This is the last reply of the check-in. Say one steady thing and stop. Ask nothing, offer nothing further, and do "
+        "not invite them to continue or to come back."
+    ),
+}
+# A closing that reaches for the next conversation (D-032): the last reply of a check-in only lands.
+CHECKIN_HOOK = re.compile(
+    r"\b(?:anything else|feel free|whenever you|any ?time|come back|talk again|talk soon|next time|tomorrow|check in again|"
+    r"reach out to me|I(?:'ll| will| am|'m) (?:always )?(?:here|around|available) (?:whenever|if|for|anytime|when))\b",
+    re.IGNORECASE,
+)
+
+
 class ResponseValidator:
     _SLOP_PATTERN = re.compile(
         r"(?i)^=== REJECTION OF ATTEMPT.*?===\s*|^FAILED OUTPUT(?: MODIFIED)?:\s*|"
@@ -1305,6 +1324,8 @@ class ResponseValidator:
         if budget and not budget.closing_question_allowed and "?" in prose.rstrip()[-15:]:
             hits.append(prose.rstrip().rfind("?"))
         if budget and getattr(budget, "distressed", False) and (m := DISTRESS_ADVICE.search(prose)):
+            hits.append(m.start())
+        if budget and getattr(budget, "checkin", "") == "land" and (m := CHECKIN_HOOK.search(prose)):
             hits.append(m.start())
         return min(hits) if hits else None
 
@@ -1406,6 +1427,12 @@ class ResponseValidator:
                 primary_replacement = self._generate_dynamic_rejection('FIXING_IN_DISTRESS')
             errors_found.append(
                 "YOUR PARTNER IS STRUGGLING. GIVE NO ADVICE OR INSTRUCTION. Stay with them in a few short, plain sentences."
+            )
+        if budget and getattr(budget, "checkin", "") == "land" and CHECKIN_HOOK.search(prose):
+            if not primary_replacement:
+                primary_replacement = self._generate_dynamic_rejection('FIXING_IN_DISTRESS')
+            errors_found.append(
+                "THIS IS THE LAST REPLY OF THE CHECK-IN. Do not invite them back, offer anything more, or ask anything. Say one steady thing and stop."
             )
         if budget and budget.forbid_body_narration and STAGE_DIRECTION.search(prose):
             if not primary_replacement:

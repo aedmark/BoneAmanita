@@ -13,6 +13,10 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 - **`python main.py --doctor` (D-031):** checks Python, packages, `config.json`, folders, the chat model (one tiny local reply), the critic model and the embedding backend, and prints the one command that fixes each thing. The first-run wizard lists the Ollama models you already have and prints the same report when setup finishes; the quickstart pulls `gemma4:12b`, `gemma4:e4b` and `nomic-embed-text`.
 
+- **`/checkin` (D-032):** a short check-in, 12 turns at most, that holds space throughout (the 45-word cap, no advice, no closing question), whose last reply lands without inviting you back, that keeps nothing unless you type `/checkin keep` right after, and that ends with a fixed line if a message says you may harm yourself or someone else.
+
+- **Fixed:** the doctor's seven catch blocks swallowed their errors by the observability ratchet's rule, which only counted once `engine/doctor.py` was tracked (the 20.7.4.138 commit fails `tests/test_observability.py`); they now go through one helper that logs and returns the error as the check's detail.
+
 ### Removed
 - The AI-judge ranking tool (`tools/audit_somatic_blind_judge.py`) and its tests (verdicts come from human readers, D-011), the silence diagnostic, a one-time except-codemod and a timing script posing as a test. `tools/corpus_replay.py` joins `tools/` from scratch.
 

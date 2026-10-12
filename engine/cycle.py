@@ -998,6 +998,9 @@ class GeodesicOrchestrator:
             keeper = getattr(self.eng, "memory_keeper", None)
             # A held turn has no draft, but what the person said can still be kept.
             wants_keeper = bool(keeper and keeper.enabled and not is_system)
+            if getattr(getattr(self.eng, "checkin", None), "active", False):
+                # A check-in keeps nothing unless the person asks at its end (D-032).
+                model_raw, wants_keeper = "", False
             if hasattr(self.eng, "store") and hasattr(self.eng, "boundary") and (model_raw or wants_keeper):
                 from engine.gate.kernel import Gate
                 import copy

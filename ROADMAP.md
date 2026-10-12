@@ -76,6 +76,13 @@ Goal: A person in measured distress is held, not fixed, coddled or argued with (
 - [ ] P8-05 The hold reader on qwen3.5:9b flags nearly every draft at the shipped cut; try `HOLD_CUT` 3 (D-028).
 - [x] P8-06 `/note`: the person's own verdict on the last exchange, saved to `notes/notes.jsonl` (D-030).
 
+## Phase 10: The Check-in
+
+Goal: A short, bounded conversation that holds space, keeps nothing unless asked, and ends (Gordon, 2026-10-11).
+
+- [x] P10-01 `/checkin [turns]`: 12 turns at most, hold-space contract throughout, a closing that lands without a hook, a fixed risk line, `/checkin keep` (D-032).
+- [ ] P10-02 Read the risk line's misses (conditional threats, passive thoughts of not being around) with Gordon; decide whether the risk reading belongs outside a check-in.
+
 ## Phase 9: Anyone Can Run It
 
 Goal: A person who is not the maintainer gets from clone to a first reply without guessing.

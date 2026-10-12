@@ -17,6 +17,8 @@ class SomaticBudget:
     reason: str
     # The person is struggling: answer what they said, never narrate their state back to them.
     distressed: bool = False
+    # A bounded check-in is on: "settle", "wind" or "land" (D-032). The hold-space contract holds for all of it.
+    checkin: str = ""
 
     @classmethod
     def evaluate(
@@ -67,6 +69,15 @@ class SomaticBudget:
             closing_question_allowed = False
             reason_parts.append("User is in distress")
 
+        checkin = str(engine_state.get("checkin", "") or "")
+        if checkin and not distressed:
+            distressed = True
+            sentence_cap = min(sentence_cap, int(safe_get(cfg, "SENTENCE_CAP_DISTRESSED", 3)))
+            distress_words = int(safe_get(cfg, "WORD_CAP_DISTRESSED", 45))
+            word_cap = min(word_cap, distress_words) if word_cap else distress_words
+            closing_question_allowed = False
+            reason_parts.append("Check-in")
+
         p_u_critical = float(safe_get(cfg, "P_U_CRITICAL", 30.0))
         if p_u < p_u_critical:
             offer_to_carry_load = True
@@ -113,4 +124,5 @@ class SomaticBudget:
             forbid_body_narration=active_mode != "ADVENTURE",
             reason="; ".join(reason_parts),
             distressed=distressed,
+            checkin=checkin,
         )

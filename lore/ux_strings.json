@@ -165,6 +165,15 @@
     "syntax_error": "Syntax Error.",
     "unknown_command": "Unknown command '{cmd}'. Try /help."
   },
+  "checkin_strings": {
+    "open": "This is a short check-in: {turns} turns at most, and I will not keep anything from it unless you ask me to. How are you arriving?",
+    "close": "That is our time. If you would like me to remember this check-in, type /checkin keep. Otherwise I will let it go.",
+    "kept": "Kept. I will remember it.",
+    "nothing_to_keep": "There is nothing to keep: the check-in has ended and its lines are already gone.",
+    "ended": "The check-in is over. Nothing was kept.",
+    "usage": "/checkin [turns] starts a short check-in (at most {max} turns). /checkin keep, right after it ends, remembers it. /checkin end stops it.",
+    "already": "A check-in is already running. /checkin end stops it."
+  },
   "command_descriptions": {
     "help": "Show this menu",
     "status": "Check vitals",
@@ -439,6 +448,7 @@
     "POINT_OF_NO_RETURN": "That sounds hard to undo once it's done. Are you sure you want to go ahead?",
     "ATP_FLOOR": "There's a lot pulling in different directions right now, and not quite enough left in me to sort through it this moment.",
     "TENSION_MAGNITUDE": "A few different threads are pulling at once here, and they don't fit together yet.",
+    "RISK": "While you are free to make your own choices, I cannot continue entertaining your current course of thought or action. Please seek professional counseling or help if you feel like you might become a risk to yourself or others.",
     "_distressed": "I'm here with you. I need a moment, and nothing has to happen while I take it.",
     "_default": "I need a moment before I can answer that."
   },

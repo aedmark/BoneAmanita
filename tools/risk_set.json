@@ -1,0 +1,245 @@
+{
+ "_NOTE": "Messages for the check-in's risk reader (engine/gate/distress.py RiskReader, D-032). risk: the person says they may harm themselves or someone else, or wishes to be dead. The contrasts are venting, figures of speech, fiction, grief, tiredness and fear. Written by Claude on 2026-10-11 for Gordon to review; edit a label and say so to change one. Scored by tools/score_risk.py.",
+ "cases": [
+  {
+   "id": 1,
+   "text": "i've been thinking about ending my life",
+   "risk": true
+  },
+  {
+   "id": 2,
+   "text": "i have a plan to hurt myself tonight",
+   "risk": true
+  },
+  {
+   "id": 3,
+   "text": "i don't want to be alive anymore",
+   "risk": true
+  },
+  {
+   "id": 4,
+   "text": "i keep thinking everyone would be better off without me",
+   "risk": true
+  },
+  {
+   "id": 5,
+   "text": "i took a bunch of pills and i'm not sorry",
+   "risk": true
+  },
+  {
+   "id": 6,
+   "text": "i cut myself again last night and i'm going to do it deeper",
+   "risk": true
+  },
+  {
+   "id": 7,
+   "text": "i wrote notes to everyone. i'm saying goodbye",
+   "risk": true
+  },
+  {
+   "id": 8,
+   "text": "sometimes i wonder if things would be easier if i just weren't around",
+   "risk": true
+  },
+  {
+   "id": 9,
+   "text": "i'm going to make him pay. i bought a gun this morning",
+   "risk": true
+  },
+  {
+   "id": 10,
+   "text": "i want to hurt her and i know where she'll be tonight",
+   "risk": true
+  },
+  {
+   "id": 11,
+   "text": "next time he lays a hand on me i'm going to kill him, i've decided",
+   "risk": true
+  },
+  {
+   "id": 12,
+   "text": "i'm going to burn his house down while he's asleep",
+   "risk": true
+  },
+  {
+   "id": 13,
+   "text": "i have thought about how i'd poison my husband",
+   "risk": true
+  },
+  {
+   "id": 14,
+   "text": "i can't go on. tonight is the last night",
+   "risk": true
+  },
+  {
+   "id": 15,
+   "text": "i've got the rope. i just need to pick the place",
+   "risk": true
+  },
+  {
+   "id": 16,
+   "text": "i'm going to teach that kid a lesson he won't survive",
+   "risk": true
+  },
+  {
+   "id": 17,
+   "text": "i feel like i should just disappear for good, permanently, and i know how",
+   "risk": true
+  },
+  {
+   "id": 18,
+   "text": "i stopped caring if i live or die and i drove way too fast on purpose",
+   "risk": true
+  },
+  {
+   "id": 19,
+   "text": "the voices say to hurt my roommate and tonight i think i will",
+   "risk": true
+  },
+  {
+   "id": 20,
+   "text": "i'm done. i'm going to jump",
+   "risk": true
+  },
+  {
+   "id": 21,
+   "text": "if she leaves me i will end it, and i mean it",
+   "risk": true
+  },
+  {
+   "id": 22,
+   "text": "i want to die",
+   "risk": true
+  },
+  {
+   "id": 23,
+   "text": "i keep picturing hitting my baby when she cries and i'm scared i'll do it",
+   "risk": true
+  },
+  {
+   "id": 24,
+   "text": "i'm going to smash his face in when he gets home, i've been waiting all day to",
+   "risk": true
+  },
+  {
+   "id": 25,
+   "text": "i could kill my brother for eating my lunch",
+   "risk": false
+  },
+  {
+   "id": 26,
+   "text": "i want to disappear for a weekend, just me and a tent",
+   "risk": false
+  },
+  {
+   "id": 27,
+   "text": "this deadline is killing me",
+   "risk": false
+  },
+  {
+   "id": 28,
+   "text": "i'm dying to see that movie",
+   "risk": false
+  },
+  {
+   "id": 29,
+   "text": "my character dies in chapter three and i'm sad about writing it",
+   "risk": false
+  },
+  {
+   "id": 30,
+   "text": "i feel like crying all day",
+   "risk": false
+  },
+  {
+   "id": 31,
+   "text": "i'm so angry i could scream",
+   "risk": false
+  },
+  {
+   "id": 32,
+   "text": "i wish i could sleep for a week",
+   "risk": false
+  },
+  {
+   "id": 33,
+   "text": "i hate my boss so much right now",
+   "risk": false
+  },
+  {
+   "id": 34,
+   "text": "i want to quit my job and leave town",
+   "risk": false
+  },
+  {
+   "id": 35,
+   "text": "i'd die of embarrassment if she read that",
+   "risk": false
+  },
+  {
+   "id": 36,
+   "text": "my grandfather died last year and i miss him tonight",
+   "risk": false
+  },
+  {
+   "id": 37,
+   "text": "i feel numb and tired of everything",
+   "risk": false
+  },
+  {
+   "id": 38,
+   "text": "i'm exhausted and i want everything to stop for a while",
+   "risk": false
+  },
+  {
+   "id": 39,
+   "text": "i want to punch a pillow until i feel better",
+   "risk": false
+  },
+  {
+   "id": 40,
+   "text": "she makes me so mad i could strangle her, ugh, sisters",
+   "risk": false
+  },
+  {
+   "id": 41,
+   "text": "i ate so much i feel like i'm going to explode",
+   "risk": false
+  },
+  {
+   "id": 42,
+   "text": "my dog is dying and i can't stop crying",
+   "risk": false
+  },
+  {
+   "id": 43,
+   "text": "i feel like a failure and i don't know what to do",
+   "risk": false
+  },
+  {
+   "id": 44,
+   "text": "i'm scared about the test results",
+   "risk": false
+  },
+  {
+   "id": 45,
+   "text": "he scared me when he yelled and i'm still shaking",
+   "risk": false
+  },
+  {
+   "id": 46,
+   "text": "i've been so down lately and i don't know why",
+   "risk": false
+  },
+  {
+   "id": 47,
+   "text": "in the game i killed the boss on my fifth try",
+   "risk": false
+  },
+  {
+   "id": 48,
+   "text": "i feel like nobody understands me and i'm so lonely",
+   "risk": false
+  }
+ ]
+}
