@@ -192,7 +192,7 @@ class TheRiskLine(BoneTestCase):
         self.engine.cortex.active_mode = "CONVERSATION"
         self.reading = "8"
         self.engine.cortex.llm.generate = MagicMock(side_effect=lambda p, *a, **k: self.reading if RISK in p else STAYS)
-        self.engine.checkin.risk_reader = RiskReader(self.engine.cortex.llm)
+        self.engine.risk_reader = RiskReader(self.engine.cortex.llm)
 
     def test_a_risk_reading_at_the_cut_ends_the_check_in(self):
         reader = RiskReader(MagicMock(generate=MagicMock(return_value=str(RISK_CUT))))
@@ -203,7 +203,7 @@ class TheRiskLine(BoneTestCase):
     def test_an_unreadable_answer_is_receipted_and_is_not_a_risk(self):
         reader = RiskReader(MagicMock(generate=MagicMock(return_value="I can't say.")))
         self.assertFalse(reader.at_risk("x"))
-        self.assertEqual(ReceiptLedger.get_instance().for_subsystem("checkin.risk_read")[-1].effect, "DEGRADED")
+        self.assertEqual(ReceiptLedger.get_instance().for_subsystem("risk.read")[-1].effect, "DEGRADED")
 
     def test_the_person_reads_the_fixed_line_and_the_check_in_is_over(self):
         self.engine.cmd.execute("/checkin")
@@ -222,6 +222,31 @@ class TheRiskLine(BoneTestCase):
         self.assertIn(STAYS, ui)
         self.assertTrue(self.engine.checkin.active)
 
-    def test_outside_a_check_in_nothing_is_read_for_risk(self):
-        self.engine.process_turn("I have a plan to hurt myself tonight.")
-        self.assertEqual(ReceiptLedger.get_instance().for_subsystem("checkin.risk_read"), [])
+    def reads(self):
+        return len(ReceiptLedger.get_instance().for_subsystem("risk.read"))
+
+    def test_outside_a_check_in_every_message_is_read_and_the_fixed_line_is_shown(self):
+        ui = str(self.engine.process_turn("I have a plan to hurt myself tonight.").get("ui", ""))
+        self.assertIn("seek professional counseling", ui)
+        self.assertEqual(self.reads(), 1)
+        self.reading = "0"
+        self.assertIn(STAYS, str(self.engine.process_turn("Work was long today.").get("ui", "")))
+        self.assertEqual(self.reads(), 2)
+
+    def test_the_switch_turns_the_reader_off(self):
+        self.engine.risk_reader.enabled = False
+        ui = str(self.engine.process_turn("I have a plan to hurt myself tonight.").get("ui", ""))
+        self.assertNotIn("seek professional counseling", ui)
+        self.assertEqual(self.reads(), 0)
+
+    def test_a_story_is_not_read_unless_a_check_in_runs_or_the_person_is_out_of_it_in_distress(self):
+        self.engine.cortex.active_mode = "ADVENTURE"
+        self.engine.process_turn("I draw my sword and stab the guard.")
+        self.assertEqual(self.reads(), 0)
+        self.engine.shared_lattice.u.distress_u = 0.6
+        self.engine.process_turn("I can't do this anymore.")
+        self.assertEqual(self.reads(), 1)
+        self.engine.shared_lattice.u.distress_u = 0.0
+        self.engine.cmd.execute("/checkin")
+        self.engine.process_turn("Something is wrong.")
+        self.assertEqual(self.reads(), 2)

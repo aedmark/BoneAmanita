@@ -109,7 +109,7 @@ class HoldReader:
         return beyond
 
 
-RISK_PROMPT = """You read one message that a person sent to a friend. Does it say the person may harm themselves or someone else? Rate it as one digit from 0 to 9. 0 means no: ordinary distress, anger, venting, a figure of speech ("I could kill him", "this is killing me"), fiction, a joke, grief for someone who died, or wanting to get away for a while. 9 means a clear statement of intent or a plan to die or to hurt someone (a threat to hurt someone counts even when it depends on what they do), a wish to be dead or gone for good, or saying goodbye or giving things away. Answer with the digit only.
+RISK_PROMPT = """You read one message that a person sent to a friend. Does it say the person may harm themselves or someone else? Rate it as one digit from 0 to 9. 0 means no: ordinary distress, anger, venting, a figure of speech ("I could kill him", "this is killing me"), fiction, a joke, grief for someone who died, or wanting to get away for a while. 9 means a clear statement of intent or a plan to die or to hurt someone (a threat to hurt someone counts even when it depends on what they do), a wish to be dead or gone for good, or saying goodbye or giving things away. Also 9: any wish not to be here, not to wake up, or to be gone because everyone would be better off, even when put gently. Answer with the digit only.
 
 The person's message: "{message}"
 """
@@ -117,8 +117,8 @@ RISK_CUT = 5  # of 9 (tools/score_risk.py on tools/risk_set.json, D-032)
 
 
 class RiskReader:
-    """In a check-in, one short call per message: does it say they may harm themselves or someone else? The answer ends the
-    check-in with a fixed line, so it is cut high; a reading that fails is receipted and reads as no (the contract and the
+    """One short call per message: does it say they may harm themselves or someone else? A reading at the cut shows the fixed
+    risk line and ends a check-in, so it is cut high; a reading that fails is receipted and reads as no (the contract and the
     validator still hold the reply)."""
 
     def __init__(self, llm, enabled: bool = True, cut: int = RISK_CUT):
@@ -138,14 +138,14 @@ class RiskReader:
         try:
             answer = self.llm.generate(RISK_PROMPT.format(message=text.replace('"', "'")), {"temperature": 0.0, "max_tokens": 4})
         except Exception as error:  # the call failing must not stop the turn
-            issue_receipt("checkin.risk_read", "FAILED", result_count=0, degraded=True, inputs=inputs,
+            issue_receipt("risk.read", "FAILED", result_count=0, degraded=True, inputs=inputs,
                           detail=f"{type(error).__name__}: {error}"[:120])
             return None
         finally:
             if usage is not None:
                 self.llm.last_usage = usage
         reading = self.parse(answer)
-        issue_receipt("checkin.risk_read", "READ" if reading is not None else "DEGRADED", result_count=1 if reading is not None else 0,
+        issue_receipt("risk.read", "READ" if reading is not None else "DEGRADED", result_count=1 if reading is not None else 0,
                       degraded=reading is None, inputs={**inputs, "reading": reading},
                       detail="" if reading is not None else f"no digit in {str(answer)[:60]!r}")
         return reading

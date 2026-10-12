@@ -143,6 +143,7 @@ class BoneTestCase(unittest.TestCase):
             if (lattice := getattr(self.engine, "shared_lattice", None)) is not None:
                 lattice.distress_reader = None
             self.engine.cortex.hold_reader = None  # likewise the hold reader (D-028)
+            self.engine.risk_reader = None  # and the risk reader (D-033)
         except Exception as e:
             print(
                 f"{Prisma.RED}Test Engine Initialization Failed! Captured Output is preserved in test_output_full.log{Prisma.RST}"

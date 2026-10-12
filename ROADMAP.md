@@ -81,7 +81,8 @@ Goal: A person in measured distress is held, not fixed, coddled or argued with (
 Goal: A short, bounded conversation that holds space, keeps nothing unless asked, and ends (Gordon, 2026-10-11).
 
 - [x] P10-01 `/checkin [turns]`: 12 turns at most, hold-space contract throughout, a closing that lands without a hook, a fixed risk line, `/checkin keep` (D-032).
-- [ ] P10-02 Read the risk line's misses (conditional threats, passive thoughts of not being around) with Gordon; decide whether the risk reading belongs outside a check-in.
+- [x] P10-02 The risk reader runs in every conversation (stories only when in distress or in a check-in), with a prompt that names conditional threats and passive thoughts (D-033).
+- [ ] P10-03 Read the risk line's false alarms and misses from real use (`/note off` on the line); a threat said as a figure of speech is still missed.
 
 ## Phase 9: Anyone Can Run It
 

@@ -3,7 +3,8 @@
 `/checkin [turns]` opens it (at most MAX_TURNS). While it runs the hold-space contract is on whether or not distress is read, the
 Halcyon gate keeps nothing from it, and the person's earlier dialogue is set aside. The last reply only lands; a fixed line
 follows it and the check-in ends. Nothing is remembered unless the person asks (`/checkin keep`). A message that says they may
-harm themselves or someone else ends it at once with a fixed line, never a model's."""
+harm themselves or someone else ends it at once with a fixed line, never a model's (the risk reader runs in every conversation,
+`engine/gate/distress.py`)."""
 from __future__ import annotations
 
 from typing import List, Optional
@@ -15,9 +16,8 @@ DEFAULT_TURNS = 10
 
 
 class CheckIn:
-    def __init__(self, engine, risk_reader=None):
+    def __init__(self, engine):
         self.eng = engine
-        self.risk_reader = risk_reader  # engine/gate/distress.py RiskReader, attached by the engine; None never reads
         self.active = False
         self.turns = 0
         self.limit = DEFAULT_TURNS
@@ -66,14 +66,10 @@ class CheckIn:
         if self.active:
             self._finish(reason, keep_lines=reason != "risk")
 
-    def risky(self, message: str) -> bool:
-        """True when this message says they may harm themselves or someone else; the check-in is over and nothing is kept."""
-        if not self.active or self.risk_reader is None:
-            return False
-        if not self.risk_reader.at_risk(message):
-            return False
-        self._finish("risk", keep_lines=False)
-        return True
+    def end_for_risk(self) -> None:
+        """A message said they may harm themselves or someone else: the check-in is over and nothing is kept."""
+        if self.active:
+            self._finish("risk", keep_lines=False)
 
     def after_turn(self, snapshot: dict, is_system: bool) -> dict:
         """Count a finished reply; on the last, end the check-in and append the fixed closing line."""

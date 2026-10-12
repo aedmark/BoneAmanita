@@ -199,7 +199,10 @@ class BoneAmanita:
             lattice.distress_reader = DistressReader(
                 self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "DISTRESS_READER", True))
             )
-        self.checkin = CheckIn(self, RiskReader(self.cortex.llm))
+        self.checkin = CheckIn(self)
+        self.risk_reader = RiskReader(
+            self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "RISK_READER", True))
+        )
         self.cortex.hold_reader = HoldReader(
             self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "HOLD_READER", True))
         )

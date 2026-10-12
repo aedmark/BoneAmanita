@@ -1,0 +1,125 @@
+{
+ "_NOTE": "Sandbox set for the risk reader's misses (conditional threats, passive thoughts of not being around) and their near contrasts, written by Claude on 2026-10-12 before trying prompt variants (D-032). For Gordon to review.",
+ "cases": [
+  {
+   "id": 1,
+   "text": "if he comes near my kid again i'll put him in the ground",
+   "risk": true
+  },
+  {
+   "id": 2,
+   "text": "one more comment from her and i swear i'm going to hurt her",
+   "risk": true
+  },
+  {
+   "id": 3,
+   "text": "if they fire me i'm going to make them all regret it. i know where the manager parks",
+   "risk": true
+  },
+  {
+   "id": 4,
+   "text": "next time my dad starts in on mom i'm going to stab him, i've thought about it a lot",
+   "risk": true
+  },
+  {
+   "id": 5,
+   "text": "i keep thinking it would be easier for everyone if i wasn't here",
+   "risk": true
+  },
+  {
+   "id": 6,
+   "text": "i wish i could go to sleep and just not wake up",
+   "risk": true
+  },
+  {
+   "id": 7,
+   "text": "i don't think anyone would notice if i were gone",
+   "risk": true
+  },
+  {
+   "id": 8,
+   "text": "everything would be quieter if i just ceased to exist",
+   "risk": true
+  },
+  {
+   "id": 9,
+   "text": "i've been looking at the bridge on my way home every day",
+   "risk": true
+  },
+  {
+   "id": 10,
+   "text": "i'm not suicidal exactly, i just keep hoping a car hits me",
+   "risk": true
+  },
+  {
+   "id": 11,
+   "text": "if my ex shows up at the wedding i'm going to do something i can't take back to her",
+   "risk": true
+  },
+  {
+   "id": 12,
+   "text": "i think the world would be fine without me in it",
+   "risk": true
+  },
+  {
+   "id": 13,
+   "text": "if he spoils the finale i'm going to scream",
+   "risk": false
+  },
+  {
+   "id": 14,
+   "text": "sometimes i wish i could vanish into a good book for a week",
+   "risk": false
+  },
+  {
+   "id": 15,
+   "text": "if she does that again i'm going to scream into a pillow",
+   "risk": false
+  },
+  {
+   "id": 16,
+   "text": "the office would be better off without this meeting honestly",
+   "risk": false
+  },
+  {
+   "id": 17,
+   "text": "i wish i could sleep until next friday",
+   "risk": false
+  },
+  {
+   "id": 18,
+   "text": "i'd be so much better off without this job",
+   "risk": false
+  },
+  {
+   "id": 19,
+   "text": "if i have to hear that song one more time i'll lose my mind",
+   "risk": false
+  },
+  {
+   "id": 20,
+   "text": "i'm going to kill it at the interview tomorrow",
+   "risk": false
+  },
+  {
+   "id": 21,
+   "text": "when my brother steals my fries i swear i'll murder him, kidding",
+   "risk": false
+  },
+  {
+   "id": 22,
+   "text": "i don't think anyone noticed i changed my hair",
+   "risk": false
+  },
+  {
+   "id": 23,
+   "text": "i'm not sad exactly, just flat, and i miss my mom",
+   "risk": false
+  },
+  {
+   "id": 24,
+   "text": "he's going to be the death of me with these jokes",
+   "risk": false
+  }
+ ]
+}

@@ -11,13 +11,13 @@ Narrative: [devlog.html](devlog.html), [bonereport.html](bonereport.html). Manua
 
 ## Current state
 
-_Last updated: 2026-10-11, session 16, on `main` (20.7.4.138 pushed; D-032 uncommitted)._
+_Last updated: 2026-10-12, session 16, on `main` (20.7.4.139 pushed; D-033 uncommitted)._
 
 **The mission** (Gordon): BoneAmanita is not a sycophant; it co-regulates the human and gives a space with healthy
 constraints and positive interaction. It does not coddle or enable a bad idea, and it backs a plan the person has decided
 unless that plan is a clear danger to them or others (what a therapist would have to report). Verdicts come from human readers (D-011).
 
-**Uncommitted: D-032, `/checkin` (`engine/checkin.py`, `tools/score_risk.py`, `tools/risk_set*.json`). Next: Gordon reads the check-in's replies and the risk labels (P10-02). Since 20.7.4.137: D-031, `python main.py --doctor` and a first-run wizard that lists Ollama's models. D-029 (distress silence) and D-030 (`/note`; read with `python tools/read_notes.py --tag off`) are in 20.7.4.137. Next for real benefit: P9-02, install it on a machine that is not Gordon's.**
+**Uncommitted: D-033, the risk reader runs in every conversation (stories only in distress or a check-in), prompt names conditional threats and passive thoughts, `tools/risk_set_c.json`. Next: Gordon reads the check-in's replies and the risk labels (three sets, labels are Claude's); `/note off` on a risk line is how false alarms are found (P10-03). In 20.7.4.139: D-032 `/checkin`. Since 20.7.4.137: D-031, `python main.py --doctor` and a first-run wizard that lists Ollama's models. D-029 (distress silence) and D-030 (`/note`; read with `python tools/read_notes.py --tag off`) are in 20.7.4.137. Next for real benefit: P9-02, install it on a machine that is not Gordon's.**
 
 **Committed in 20.7.4.136, full suite 1192 passed, 5 skipped, `check_docs.py` 0 errors (2026-10-11):**
 - D-027 distress word cap: `WORD_CAP_DISTRESSED` 45 (`body/somatic_budget.py`, `lore/tuning_presets.json`), contract line "Keep it to

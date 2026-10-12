@@ -17,6 +17,8 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 - **Fixed:** the doctor's seven catch blocks swallowed their errors by the observability ratchet's rule, which only counted once `engine/doctor.py` was tracked (the 20.7.4.138 commit fails `tests/test_observability.py`); they now go through one helper that logs and returns the error as the check's detail.
 
+- **The risk reader runs in every conversation (D-033):** a message that says you may harm yourself or someone else, or that you wish to be gone, shows the fixed line and ends a check-in, in any mode but a story (ADVENTURE and CREATIVE read only while you are in distress or in a check-in). `CORTEX.RISK_READER` switches it off. It now names conditional threats and passive thoughts of not being around; it adds one short call per message (about 1 to 2 s).
+
 ### Removed
 - The AI-judge ranking tool (`tools/audit_somatic_blind_judge.py`) and its tests (verdicts come from human readers, D-011), the silence diagnostic, a one-time except-codemod and a timing script posing as a test. `tools/corpus_replay.py` joins `tools/` from scratch.
 

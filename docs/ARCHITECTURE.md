@@ -26,7 +26,8 @@ reply (voice, ending, opening, fairness); and the final state is committed to SQ
 | Memory & Spores | `spores/` | `SemanticEmbedder.embed_batch()` | Ollama `/v1/embeddings`, `spores/memory.py` |
 | The Village | `archetypes/` | `StageManager.negotiate()` | `archetypes/village.py`, `brain/composer.py` |
 | Distress reader | `engine/gate/distress.py` | `DistressReader.read()` | `drivers/lattice.py` (`SharedLatticeDriver`), `body/somatic_budget.py`, `brain/composer.py`; one short model call per message before the reply, the word list as floor (D-023) |
-| Check-in | `engine/checkin.py` | `CheckIn`, `RiskReader` (`engine/gate/distress.py`) | `main.py` (`after_turn`), `mechanics/commands.py` (`/checkin`), `phases/biological.py` (the stage reaches `SomaticBudget.checkin`), `phases/cognitive.py` (the `RISK` nomination), `engine/cycle.py` (the gate keeps nothing); D-032 |
+| Risk reader | `engine/gate/distress.py` | `RiskReader.at_risk()` | `phases/cognitive.py` (the `RISK` nomination, every conversation but a story; D-033), `main.py` (`engine.risk_reader`) |
+| Check-in | `engine/checkin.py` | `CheckIn` | `main.py` (`after_turn`), `mechanics/commands.py` (`/checkin`), `phases/biological.py` (the stage reaches `SomaticBudget.checkin`), `phases/cognitive.py` (the `RISK` nomination), `engine/cycle.py` (the gate keeps nothing); D-032 |
 | Doctor | `engine/doctor.py` | `run_doctor()`, `render()` | `main.py --doctor`, `mechanics/setup.py` (first run); read-only checks, no paid request (D-031) |
 | Hold reader | `engine/gate/distress.py` | `HoldReader.goes_beyond()` | `brain/cortex.py` (`_beyond_staying_with`, in the retry loop after the validator, distress mode only); one short call per draft, sends it back, keeps the last (D-028) |
 | Halcyon Store | `engine/gate/` | `Store.save_checkpoint()` | `saves/iris.db`, `engine/gate/secrets.py` |

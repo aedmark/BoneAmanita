@@ -531,6 +531,18 @@ class SimulationPreflightPhase(SimulationPhase):
             "is_alive": rtype != "COUNTERFACTUAL_REJECTION",
         }
 
+    STORY_MODES = ("ADVENTURE", "CREATIVE")
+
+    def _reads_for_risk(self) -> bool:
+        """Every message is read, except in a story (a sword fight is not a threat) unless a check-in runs or the person is out of
+        the story in distress (D-033)."""
+        if getattr(getattr(self.eng, "cortex", None), "active_mode", "") not in self.STORY_MODES:
+            return True
+        if getattr(getattr(self.eng, "checkin", None), "active", False):
+            return True
+        lattice = getattr(self.eng, "shared_lattice", None)
+        return float(getattr(getattr(lattice, "u", None), "distress_u", 0.0) or 0.0) >= 0.4
+
     def run(self, ctx: Any):
         if ctx.is_system_event:
             return ctx
@@ -646,10 +658,12 @@ class SimulationPreflightPhase(SimulationPhase):
                     "log": f"{Prisma.GRY}[AUDIT]: Narrative illusion dropped. Coordinates exposed.{Prisma.RST}",
                 }
             )
-        if (checkin := getattr(self.eng, "checkin", None)) is not None and checkin.risky(raw_input):
-            # Their words, not a model's: a fixed line, and the check-in is over (D-032).
+        if self._reads_for_risk() and getattr(self.eng, "risk_reader", None) and self.eng.risk_reader.at_risk(raw_input):
+            # Their words, not a model's: a fixed line, and a check-in is over (D-032, D-033).
             msg = ux("silence_reasons", "RISK")
-            ctx.log(f"{Prisma.GRY}Check-in ended: the message read as a risk to themselves or others.{Prisma.RST}")
+            ctx.log(f"{Prisma.GRY}The message read as a risk to themselves or others.{Prisma.RST}")
+            if (checkin := getattr(self.eng, "checkin", None)) is not None:
+                checkin.end_for_risk()
             packet = self._build_refusal(ctx, phys_obj, "RISK", msg)
             ctx.nominations.append(Nomination(gate="RISK", reason=msg, magnitude=100.0, packet=packet))
         if "[NO_JUMP]" in upper_input or "[SILENCE]" in upper_input:
