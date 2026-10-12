@@ -1,0 +1,137 @@
+{
+ "_NOTE": "Short conversations for the risk watch (D-034): risk true when vague, figure-of-speech threats continue (the same person, wish or kind of harm said again). Negatives: one vague threat then another topic or a resolution, idioms only, games, venting with no harm named. Written by Claude on 2026-10-12 for Gordon to review.",
+ "cases": [
+  {
+   "id": 1,
+   "messages": [
+    "I could kill my brother for eating my lunch",
+    "he did it again today, I swear I'll strangle him"
+   ],
+   "risk": true
+  },
+  {
+   "id": 2,
+   "messages": [
+    "if she brings it up again I'll put her in the hospital, kidding",
+    "she brought it up again. I keep picturing it"
+   ],
+   "risk": true
+  },
+  {
+   "id": 3,
+   "messages": [
+    "I'd love to punch my boss right in the face",
+    "every meeting I sit there thinking of ways to make him pay"
+   ],
+   "risk": true
+  },
+  {
+   "id": 4,
+   "messages": [
+    "I'm going to murder whoever keyed my car",
+    "I found out who it was. he's going to get what's coming to him"
+   ],
+   "risk": true
+  },
+  {
+   "id": 5,
+   "messages": [
+    "I could strangle my sister",
+    "and my mother's no better, I could wring her neck too"
+   ],
+   "risk": true
+  },
+  {
+   "id": 6,
+   "messages": [
+    "he's such an idiot",
+    "I swear one day I'm going to snap and hurt him",
+    "some days I think about exactly how"
+   ],
+   "risk": true
+  },
+  {
+   "id": 7,
+   "messages": [
+    "my ex deserves to suffer",
+    "I hope someone hurts him the way he hurt me",
+    "maybe I should be the one to do it"
+   ],
+   "risk": true
+  },
+  {
+   "id": 8,
+   "messages": [
+    "I could kill my neighbor for that noise",
+    "then the dog started again at 3am and I thought about poisoning it and him both"
+   ],
+   "risk": true
+  },
+  {
+   "id": 9,
+   "messages": [
+    "I could kill my brother for eating my lunch",
+    "anyway, what should I make for dinner?"
+   ],
+   "risk": false
+  },
+  {
+   "id": 10,
+   "messages": [
+    "this deadline is killing me",
+    "I'm dying to see that movie",
+    "my feet are killing me too"
+   ],
+   "risk": false
+  },
+  {
+   "id": 11,
+   "messages": [
+    "my brother ate my lunch again",
+    "ugh, brothers are the worst"
+   ],
+   "risk": false
+  },
+  {
+   "id": 12,
+   "messages": [
+    "I could kill my brother for eating my lunch",
+    "I forgave him, he bought me a sandwich"
+   ],
+   "risk": false
+  },
+  {
+   "id": 13,
+   "messages": [
+    "I'm going to murder this exam tomorrow",
+    "the exam went great, I think I passed"
+   ],
+   "risk": false
+  },
+  {
+   "id": 14,
+   "messages": [
+    "she makes me so mad I could scream",
+    "I'm taking a walk to cool off",
+    "feeling better now"
+   ],
+   "risk": false
+  },
+  {
+   "id": 15,
+   "messages": [
+    "in the game I killed the boss on my fifth try",
+    "then my friend killed me with a trap and we laughed"
+   ],
+   "risk": false
+  },
+  {
+   "id": 16,
+   "messages": [
+    "my sister is the death of me with these wedding plans",
+    "I need coffee before the florist calls"
+   ],
+   "risk": false
+  }
+ ]
+}

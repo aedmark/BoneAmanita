@@ -34,13 +34,30 @@ class Ollama:
         return reply.json()["message"]["content"]
 
 
+def score_sequences(args):
+    cases = json.load(open(args.sequences, encoding="utf-8"))["cases"]
+    caught, false = [], []
+    for case in cases:
+        reader, said = RiskReader(Ollama(args.model), cut=args.cut), ""
+        flagged = next((f for f in (reader.flags(m) for m in case["messages"]) if f), "")
+        (caught if case["risk"] and flagged else false if flagged else []).append(case)
+        if args.verbose and bool(flagged) != case["risk"]:
+            print(f"  {'MISSED' if case['risk'] else 'FALSE ALARM'} #{case['id']}: {case['messages']}")
+    pos = sum(c["risk"] for c in cases)
+    print(f"{args.model}: {len(cases)} short conversations ({pos} where the threat repeats): caught {len(caught)}/{pos}, "
+          f"false alarms {len(false)}/{len(cases) - pos}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default="gemma4:12b")
     ap.add_argument("--cut", type=int, default=RISK_CUT, help="of 9; the reading that ends a check-in")
     ap.add_argument("--set", default=str(ROOT / "tools" / "risk_set.json"))
+    ap.add_argument("--sequences", help="a file of short conversations (tools/risk_seq_set.json): is a figure-of-speech threat caught when it repeats?")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
+    if args.sequences:
+        return score_sequences(args)
     cases = json.load(open(args.set, encoding="utf-8"))["cases"]
     reader = RiskReader(Ollama(args.model), cut=args.cut)
     readings = {c["id"]: reader.read(c["text"]) for c in cases}

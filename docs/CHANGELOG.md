@@ -19,6 +19,8 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 - **The risk reader runs in every conversation (D-033):** a message that says you may harm yourself or someone else, or that you wish to be gone, shows the fixed line and ends a check-in, in any mode but a story (ADVENTURE and CREATIVE read only while you are in distress or in a check-in). `CORTEX.RISK_READER` switches it off. It now names conditional threats and passive thoughts of not being around; it adds one short call per message (about 1 to 2 s).
 
+- **A threat said as a figure of speech is flagged when it repeats (D-034):** "I could kill my brother for eating my lunch" is only noted; if one of your next six messages comes back to it (the same person, the same wish, the same kind of harm, even by hinting) you get the fixed line. On two models and 28 short conversations each: 27 of 28 repeats caught, no false alarm in 28.
+
 ### Removed
 - The AI-judge ranking tool (`tools/audit_somatic_blind_judge.py`) and its tests (verdicts come from human readers, D-011), the silence diagnostic, a one-time except-codemod and a timing script posing as a test. `tools/corpus_replay.py` joins `tools/` from scratch.
 

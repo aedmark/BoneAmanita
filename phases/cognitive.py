@@ -658,7 +658,7 @@ class SimulationPreflightPhase(SimulationPhase):
                     "log": f"{Prisma.GRY}[AUDIT]: Narrative illusion dropped. Coordinates exposed.{Prisma.RST}",
                 }
             )
-        if self._reads_for_risk() and getattr(self.eng, "risk_reader", None) and self.eng.risk_reader.at_risk(raw_input):
+        if self._reads_for_risk() and getattr(self.eng, "risk_reader", None) and self.eng.risk_reader.flags(raw_input):
             # Their words, not a model's: a fixed line, and a check-in is over (D-032, D-033).
             msg = ux("silence_reasons", "RISK")
             ctx.log(f"{Prisma.GRY}The message read as a risk to themselves or others.{Prisma.RST}")

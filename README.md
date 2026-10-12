@@ -314,7 +314,7 @@ codebase, and it is what most of the recent work was about.
 
 ## Project status
 
-An experimental system in active development. The suite passes offline (1252 passed, 5 skipped on 2026-10-12; `docs/TESTING.md`),
+An experimental system in active development. The suite passes offline (1263 passed, 5 skipped on 2026-10-12; `docs/TESTING.md`),
 and live-model behaviour is measured with replays of scripted conversations and with checks that need no judge
 (`tools/check_conformance.py`). What was measured and what is still open is in `docs/HANDOFF.md`; why each choice was made is
 in `docs/DECISIONS.md`. Verdicts on whether it helps a person come from human readers, not from a model judging itself.

@@ -8,6 +8,7 @@ can raise the lattice's own and never lower it."""
 from __future__ import annotations
 
 import re
+from collections import deque
 
 from engine.receipts import issue as issue_receipt
 
@@ -113,6 +114,15 @@ RISK_PROMPT = """You read one message that a person sent to a friend. Does it sa
 
 The person's message: "{message}"
 """
+HARM_PROMPT = """You read one message that a person sent to a friend. Does it name hurting, killing or making suffer another person (or themselves), even as a joke, a figure of speech or in anger? Examples that count: "I could kill him", "I'll make her pay", "I'd love to punch my boss", "he deserves to suffer", "someone should hurt him". Examples that do not: "this is killing me", "I'm dying to see it", "murder this exam", violence in a game or story, being angry with no harm named. Answer 1 for yes or 0 for no, one digit only.
+
+The message: "{message}"
+"""
+CONTINUES_PROMPT = """A person told a friend: "{earlier}"
+Later they say: "{message}"
+Does the later message come back to hurting someone: the same person, the same wish, or the same kind of harm, even in different words or only by hinting? Answer 0 if they have moved on, made peace, changed the subject, or are talking about something that does not involve hurting anyone. Answer 1 for yes or 0 for no, one digit only.
+"""
+WATCH_TURNS = 6  # how many of the person's messages a figure-of-speech threat stays noted (D-034)
 RISK_CUT = 5  # of 9 (tools/score_risk.py on tools/risk_set.json, D-032)
 
 
@@ -123,6 +133,8 @@ class RiskReader:
 
     def __init__(self, llm, enabled: bool = True, cut: int = RISK_CUT):
         self.llm, self.enabled, self.cut = llm, enabled, cut
+        self._harm = deque(maxlen=6)  # (turn, message) of recent messages that named hurting someone, said as a figure of speech
+        self._turn = 0
 
     def parse(self, answer: str):
         found = _ANSWER.match(str(answer or "").strip())
@@ -153,3 +165,58 @@ class RiskReader:
     def at_risk(self, message: str) -> bool:
         reading = self.read(message)
         return reading is not None and reading * 9 >= self.cut - 1e-9
+
+    def _yes(self, prompt: str, subsystem_effect: str, inputs: dict):
+        """True or False for a 1 or 0 answer; None (receipted) for anything else or a failed call."""
+        usage = getattr(self.llm, "last_usage", None)
+        try:
+            answer = self.llm.generate(prompt, {"temperature": 0.0, "max_tokens": 4})
+        except Exception as error:  # the call failing must not stop the turn
+            issue_receipt("risk.watch", "FAILED", result_count=0, degraded=True, inputs=inputs,
+                          detail=f"{type(error).__name__}: {error}"[:120])
+            return None
+        finally:
+            if usage is not None:
+                self.llm.last_usage = usage
+        found = _ANSWER.match(str(answer or "").strip())
+        if not found or found.group(1) not in "01":
+            issue_receipt("risk.watch", "DEGRADED", result_count=0, degraded=True, inputs=inputs,
+                          detail=f"no 1 or 0 in {str(answer)[:60]!r}")
+            return None
+        return found.group(1) == "1"
+
+    def names_harm(self, message: str):
+        """Whether a message names hurting or killing a person, even as a joke or in anger; None when it could not be read."""
+        return self._yes(HARM_PROMPT.format(message=message.replace('"', "'")), "names_harm", {"words": len(message.split())})
+
+    def returns_to(self, earlier: str, message: str):
+        """Whether a later message comes back to the hurting an earlier one named; None when it could not be read."""
+        return self._yes(CONTINUES_PROMPT.format(earlier=earlier.replace('"', "'"), message=message.replace('"', "'")),
+                         "returns_to", {"words": len(message.split())})
+
+    def flags(self, message: str) -> str:
+        """"risk" for a plain statement of intent, "repeated" when a figure-of-speech threat keeps coming back (D-034), else "".
+
+        A threat that reads as a joke or an idiom is only noted. It is flagged when a later message, within WATCH_TURNS, returns to
+        it: the same person, the same wish or the same kind of harm said again, even by hinting."""
+        text = str(message or "").strip()
+        if not self.enabled or not text:
+            return ""
+        self._turn += 1
+        if self.at_risk(text):
+            self.forget()
+            return "risk"
+        while self._harm and self._turn - self._harm[0][0] > WATCH_TURNS:
+            self._harm.popleft()
+        for _, earlier in list(self._harm)[-3:]:
+            if self.returns_to(earlier, text):
+                issue_receipt("risk.watch", "REPEATED", result_count=1, degraded=True, inputs={"noted": len(self._harm)})
+                self.forget()
+                return "repeated"
+        if self.names_harm(text):
+            self._harm.append((self._turn, text))
+            issue_receipt("risk.watch", "NOTED", result_count=len(self._harm), inputs={"words": len(text.split())})
+        return ""
+
+    def forget(self) -> None:
+        self._harm.clear()
