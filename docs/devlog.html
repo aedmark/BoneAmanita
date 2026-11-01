@@ -1,5 +1,123 @@
 <article class="dev-diary">
   <header>
+    <h1>BoneAmanita Dev Diary: Holding Space, and Knowing When to Stop</h1>
+    <p class="date">October 12, 2026</p>
+    <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>
+  </header>
+
+  <p>
+    The last entry ended with instruments: a way to count the rules, a way
+    to measure noise, a decision about what a blind comparison is for. This
+    one is about what those instruments were pointed at. BoneAmanita is
+    meant not to be a sycophant, to help a person settle, and to hold a
+    space with healthy constraints in it. For about a week I spent my time
+    on the middle one, and then I got tired of testing and built something a
+    person could use.
+  </p>
+
+  <h2>A Person Who Is Hurting</h2>
+
+  <p>
+    The old way of noticing distress was a word list, and it found 14 of 60
+    messages I had labelled and none of 20 it had not been written for. People
+    report pain as events ("she listed it for sale without asking me"),
+    not as feelings. A model now reads each message for distress with one
+    short call, and it finds 93% and 90% of the two sets with no false
+    alarms. When it reads a person as struggling, the instruction is the one
+    I would give a friend: stay with them, fix nothing, speak slowly and
+    softly, say once that you are here. No advice, no plan, no explaining why
+    they feel it, no judging the people who are not in the room.
+  </p>
+
+  <p>
+    A second local model showed me what a prompt cannot do alone. The
+    rules carried over, but the softness did not: its replies in distress
+    ran 72 words against 26, and a third of them explained the person to
+    themselves ("she is crying because..."). A cap of 45 words, cut at the
+    sentence and never redrafted, brought it to 30 and took 144 wasted
+    redrafts down to 6. A reader of each draft, looking for
+    explaining and retelling, came out less well, and I am saying so. On the
+    first model it rarely fires, and on the second it flags nearly every
+    draft and the redraft does not stop the explaining. It stays on because
+    it costs little and never pauses a turn. My rule for it:
+    backing a plan someone has already decided on is the best way to hold
+    space, unless it is a danger to them or to others.
+  </p>
+
+  <h2>Silence Is Not an Answer</h2>
+
+  <p>
+    Two replays met a person in distress with the engine holding its tongue,
+    and the line they read was about the engine: not enough left in me, that
+    direction felt unstable. Three paths could do it, and none of them
+    asked whether the person was hurting. Two no longer do. The one that
+    remains protects the engine from a draft that would end the session,
+    and it now says "I'm here with you. I need a moment."
+  </p>
+
+  <h2>A Check-in With an End</h2>
+
+  <p>
+    The distress path only helps when someone happens to be read as
+    distressed, so I asked for a mode that is a small, bounded thing in its
+    own right. <code>/checkin</code> runs at most twelve turns. The hold-space
+    rules are on the whole way, whether or not the person is distressed. The
+    last reply only lands: a rule rejects any closing that invites them back,
+    and a fixed line says time is up. Nothing is kept unless the person
+    types <code>/checkin keep</code> right after. It is built so it cannot
+    become a habit.
+  </p>
+
+  <p>
+    The part I wrote myself is the line. When a message says a person may
+    harm themselves or someone else, the engine does not improvise. It shows
+    the same words every time: it cannot continue entertaining that course of
+    thought or action, and it asks them to seek professional help. A model
+    reads every message for it. On 88 messages I wrote, it catches most of
+    the 44 at risk and raises no false alarm on the 44 contrasts, such as
+    "I could kill my brother for eating my lunch". It misses some threats said as a figure of speech, and
+    that is where I drew a line a model could not: a joke about hurting
+    someone is only noted, and it becomes a flag when it repeats. That
+    caught 27 of 28 repeats and flagged none of the 28 that were not. Someone
+    who is consistently violent in their language should be called out, so
+    three such remarks in one session are enough, however far apart.
+  </p>
+
+  <h2>Cleaning House</h2>
+
+  <p>
+    I came back from a reboot tired of test after test, and said so. The
+    folder was full of probes that had done their job. Scratch went from 21 MB
+    to 3.6 MB, the handoff from 260 lines to about 70, the testing guide from 815
+    to about 160, and the AI-judge tool is gone, since it never gave a verdict I
+    trusted. Nothing was lost: the old text is in the archive and the
+    probes are in a tarball outside the repo.
+  </p>
+
+  <p>
+    What replaced the testing is use. <code>/note good</code> or
+    <code>/note off, it told me what to do</code> saves the last exchange
+    with my own verdict. <code>python main.py --doctor</code> checks a
+    machine and prints the one command that fixes each problem, and the
+    first-run wizard lists the models Ollama already has instead of asking
+    for a name from memory.
+  </p>
+
+  <h2>Where the Project Stands</h2>
+
+  <p>
+    This is 20.7.5. About 1,265 tests pass offline. The honest limits are
+    these. The labels on the risk sets are Claude's and I have not read them
+    all. The replies in a check-in are held-space and a little sweet, and I
+    do not yet know whether they are good. Nobody but me has installed it.
+    The next thing to settle is not another measurement. It is a week of
+    <code>/note</code> from real conversations, and a clean install on a
+    machine that is not mine.
+  </p>
+</article>
+
+<article class="dev-diary">
+  <header>
     <h1>BoneAmanita Dev Diary: Measuring What We Cannot Measure</h1>
     <p class="date">October 8, 2026</p>
     <p><strong><a href="https://github.com/aedmark/BoneAmanita">Github Repo</a></strong></p>

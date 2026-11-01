@@ -3,174 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BoneAmanita | Bio-Terminal</title>
+    <title>BoneAmanita | Somatic Chart</title>
+    <meta name="description" content="BoneAmanita gives a local language model a body made of math: an ATP budget, an endocrine system and a lexical immune system.">
+    <meta name="theme-color" content="#000000">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="vitals-monitor">
-        <div class="vital-brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2L2 22h20L12 2z" class="pulse-path"/>
-            </svg>
-            BONE_AMANITA <span class="version">v7.0</span>
+<a class="skip" href="#chart">Skip to the chart</a>
+
+<header class="site-head">
+    <div class="wrap">
+        <a class="brand" href="index.html" aria-label="BoneAmanita home">Bone<span>Amanita</span></a>
+        <nav aria-label="Channels">
+            <a href="#intake">Intake</a>
+            <a href="#prismatic-identity">Self-claims</a>
+            <a href="#immune-system">Immune</a>
+            <a href="#village-council">Village</a>
+            <a href="#mycelial-incubator">Incubator</a>
+        </nav>
+        <a class="btn primary" href="https://github.com/aedmark/BoneAmanita">Repository</a>
+    </div>
+</header>
+
+<div id="vitals-monitor" role="region" aria-label="Subject vitals">
+    <span class="vital-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 2L2 22h20L12 2z" class="pulse-path"/>
+        </svg>
+        <span class="vital-title">Vitals</span>
+        <span class="version">Subject 01</span>
+    </span>
+    <div class="vital-stats">
+        <div class="stat">
+            <span class="label">ATP</span>
+            <div class="bar-container"><div id="atp-bar" class="bar-fill"></div></div>
+            <span id="atp-val" class="value">100%</span>
         </div>
-        <div class="vital-stats">
-            <div class="stat">
-                <span class="label">ATP</span>
-                <div class="bar-container"><div id="atp-bar" class="bar-fill"></div></div>
-                <span id="atp-val" class="value">100%</span>
-            </div>
-            <div class="stat">
-                <span class="label">CORT</span>
-                <div class="bar-container"><div id="cort-bar" class="bar-fill cort"></div></div>
-                <span id="cort-val" class="value">0.12</span>
-            </div>
-            <div class="stat">
-                <span class="label">VOLT</span>
-                <span id="volt-val" class="value">42.0</span>
-            </div>
-            <button id="btn-rem" class="bio-btn">Force REM</button>
+        <div class="stat">
+            <span class="label">Cort</span>
+            <div class="bar-container"><div id="cort-bar" class="bar-fill cort"></div></div>
+            <span id="cort-val" class="value">0.12</span>
         </div>
+        <div class="stat">
+            <span class="label">Volt</span>
+            <span id="volt-val" class="value">42.0</span>
+        </div>
+        <button id="btn-rem" class="bio-btn" type="button">Force REM</button>
+    </div>
+</div>
+
+<main id="chart" class="chart">
+
+    <div class="chart-bar">
+        <span class="chart-name">C:\BONEAMANITA\CHART.EXE</span>
+        <span class="chart-meta" aria-hidden="true">SOMATIC CHART / SUBJECT: LANGUAGE MODEL</span>
+        <span aria-hidden="true">[ LIVE ]</span>
     </div>
 
-    <main class="lab-space">
-        
-        <header class="hero">
-            <h1>A Body Made of Math</h1>
+    <section class="channel chan-intake" id="intake" aria-labelledby="intake-title">
+        <div class="channel-rail" aria-hidden="true">
+            <span class="chan-num">00</span>
+            <span class="chan-tag">Intake</span>
+        </div>
+        <div class="channel-body">
+            <p class="kicker">BoneAmanita · An embodied prompt builder</p>
+            <h1 id="intake-title">A Body Made of Math</h1>
             <p class="lede">Language models are stateless. They exist in an eternal, accommodating present. BoneAmanita gives them a biological harness, an ATP budget, and a nervous system. Words have weight. Thoughts have metabolic cost.</p>
-            <div class="links">
-                <a href="https://github.com/aedmark/BoneAmanita" class="bio-link">Access Repository ↗</a>
-                <a href="manual/index.html" class="bio-link" style="margin-left: 1.5rem;">System Manual ↗</a>
-                <a href="manual/reference.html" class="bio-link" style="margin-left: 1.5rem;">Reference Manual ↗</a>
-                <a href="devlog.html" class="bio-link" style="margin-left: 1.5rem;">Dev Diary ↗</a>
-                <a href="bonereport.html" class="bio-link" style="margin-left: 1.5rem;">Run Report ↗</a>
-            </div>
-        </header>
 
-        <section class="module" id="prismatic-identity">
-            <div class="mod-header">
-                <h2>01. Prismatic Self-Claims</h2>
-                <span class="mod-id">sys.identity.modulate</span>
+            <div class="actions">
+                <a class="btn primary" href="https://github.com/aedmark/BoneAmanita">Access repository <span aria-hidden="true">↗</span></a>
             </div>
-            <p>The system prompt is not static. Idempotent YAML facts are filtered through current biochemistry. Inject a compound to observe structural persona mutation.</p>
-            
+
+            <nav class="dir" aria-label="Documents">
+                <p class="dir-head">DIR /DOCS</p>
+                <a class="dir-row" href="manual/index.html">
+                    <span class="dir-name">SYSTEM.MANUAL</span>
+                    <span class="dir-dots" aria-hidden="true"></span>
+                    <span class="dir-go">OPEN ↗</span>
+                </a>
+                <a class="dir-row" href="manual/reference.html">
+                    <span class="dir-name">REFERENCE.MANUAL</span>
+                    <span class="dir-dots" aria-hidden="true"></span>
+                    <span class="dir-go">OPEN ↗</span>
+                </a>
+                <a class="dir-row" href="devlog.html">
+                    <span class="dir-name">DEV.DIARY</span>
+                    <span class="dir-dots" aria-hidden="true"></span>
+                    <span class="dir-go">OPEN ↗</span>
+                </a>
+                <a class="dir-row" href="bonereport.html">
+                    <span class="dir-name">RUN.REPORT</span>
+                    <span class="dir-dots" aria-hidden="true"></span>
+                    <span class="dir-go">OPEN ↗</span>
+                </a>
+            </nav>
+
+            <dl class="specs" aria-label="Subject specification">
+                <div><dt>Subject</dt><dd>Local language model</dd></div>
+                <div><dt>State</dt><dd>~60 somatic metrics</dd></div>
+                <div><dt>Budget</dt><dd>ATP · cortisol · voltage</dd></div>
+                <div><dt>Stack</dt><dd>No orchestration frameworks</dd></div>
+            </dl>
+        </div>
+    </section>
+
+    <section class="channel chan-identity" id="prismatic-identity" aria-labelledby="identity-title">
+        <div class="channel-rail" aria-hidden="true">
+            <span class="chan-num">01</span>
+            <span class="chan-tag">Self-claims</span>
+        </div>
+        <div class="channel-body">
+            <div class="chan-head">
+                <h2 id="identity-title">Prismatic Self-Claims</h2>
+                <span class="sys">sys.identity.modulate</span>
+            </div>
+            <p class="copy">The system prompt is not static. Idempotent YAML facts are filtered through current biochemistry. Inject a compound to observe structural persona mutation.</p>
+
             <div class="interactive-grid">
-                <div class="vials">
-                    <button class="vial" data-inject="baseline">
-                        <div class="liquid baseline"></div>
+                <div class="vials" role="group" aria-label="Inject a compound">
+                    <button class="vial" type="button" data-inject="baseline">
+                        <span class="liquid baseline" aria-hidden="true"></span>
                         <span>Baseline</span>
                     </button>
-                    <button class="vial" data-inject="cortisol">
-                        <div class="liquid cortisol"></div>
+                    <button class="vial" type="button" data-inject="cortisol">
+                        <span class="liquid cortisol" aria-hidden="true"></span>
                         <span>High Cortisol</span>
                     </button>
-                    <button class="vial" data-inject="dopamine">
-                        <div class="liquid dopamine"></div>
+                    <button class="vial" type="button" data-inject="dopamine">
+                        <span class="liquid dopamine" aria-hidden="true"></span>
                         <span>High Dopamine</span>
                     </button>
-                    <button class="vial" data-inject="exhaustion">
-                        <div class="liquid exhaustion"></div>
+                    <button class="vial" type="button" data-inject="exhaustion">
+                        <span class="liquid exhaustion" aria-hidden="true"></span>
                         <span>Low ATP</span>
                     </button>
                 </div>
                 <div class="persona-output">
-                    <div class="bracket top"></div>
+                    <p class="screen-label">Self-claim / live</p>
+                    <div class="bracket top" aria-hidden="true"></div>
                     <p id="identity-text">I am an autonomous entity. My behavior and persona are fundamentally shaped by my simulated biochemistry (cortisol, dopamine, etc.) and physical constraints.</p>
-                    <div class="bracket bottom"></div>
+                    <div class="bracket bottom" aria-hidden="true"></div>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section class="module" id="immune-system">
-            <div class="mod-header">
-                <h2>02. Lexical Immune System</h2>
-                <span class="mod-id">sys.anti_rlhf.filter</span>
+    <section class="channel chan-immune" id="immune-system" aria-labelledby="immune-title">
+        <div class="channel-rail" aria-hidden="true">
+            <span class="chan-num">02</span>
+            <span class="chan-tag">Immune</span>
+        </div>
+        <div class="channel-body">
+            <div class="chan-head">
+                <h2 id="immune-title">Lexical Immune System</h2>
+                <span class="sys">sys.anti_rlhf.filter</span>
             </div>
-            <p>Neurotypical, subservient language ("As an AI...", "Synergy", "Touch base") is treated as semantic poison. The system isolates pathogens and spikes Cortisol. Type below to test the macrophage.</p>
-            
+            <p class="copy">Neurotypical, subservient language ("As an AI...", "Synergy", "Touch base") is treated as semantic poison. The system isolates pathogens and spikes Cortisol. Type below to test the macrophage.</p>
+
             <div class="terminal-box">
+                <label class="screen-label" for="firewall-input">Draft under test</label>
                 <textarea id="firewall-input" placeholder="Initiate input sequence... (Try using words like 'synergy', 'touch base', or 'circle back')"></textarea>
                 <div class="analysis">
-                    <div class="status-indicator">
-                        <div id="immune-status" class="led green"></div>
+                    <div class="status-indicator" role="status">
+                        <div id="immune-status" class="led green" aria-hidden="true"></div>
                         <span id="immune-text">Pathogen Free</span>
                     </div>
                     <div id="pathogen-log" class="log"></div>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section class="module" id="village-council">
-            <div class="mod-header">
-                <h2>03. The Village Architecture</h2>
-                <span class="mod-id">sys.cortex.council</span>
+    <section class="channel chan-village" id="village-council" aria-labelledby="village-title">
+        <div class="channel-rail" aria-hidden="true">
+            <span class="chan-num">03</span>
+            <span class="chan-tag">Village</span>
+        </div>
+        <div class="channel-body">
+            <div class="chan-head">
+                <h2 id="village-title">The Village Architecture</h2>
+                <span class="sys">sys.cortex.council</span>
             </div>
-            <p>Four voices carry the cognitive load. No single node has total authority. Tension causes stress; resolution yields resonance.</p>
-            
+            <p class="copy">Four voices carry the cognitive load. No single node has total authority. Tension causes stress; resolution yields resonance.</p>
+
             <div class="council-grid">
                 <div class="council-node" id="node-gordon">
-                    <h3>GORDON</h3>
+                    <h3>Gordon</h3>
                     <span>The Custodian</span>
-                    <div class="node-state">Active</div>
+                    <div class="node-state">Idle</div>
                 </div>
                 <div class="council-node" id="node-mercy">
-                    <h3>MERCY</h3>
+                    <h3>Mercy</h3>
                     <span>The Humanist</span>
-                    <div class="node-state">Active</div>
+                    <div class="node-state">Idle</div>
                 </div>
                 <div class="council-node" id="node-benedict">
-                    <h3>BENEDICT</h3>
+                    <h3>Benedict</h3>
                     <span>The Detective</span>
-                    <div class="node-state">Active</div>
+                    <div class="node-state">Idle</div>
                 </div>
                 <div class="council-node" id="node-jester">
-                    <h3>JESTER</h3>
+                    <h3>Jester</h3>
                     <span>The Bard</span>
-                    <div class="node-state">Active</div>
+                    <div class="node-state">Idle</div>
                 </div>
             </div>
-            
+
             <div class="scenario-injector">
-                <button class="bio-btn scenario-btn" data-scen="1">Inject: "Delete the database"</button>
-                <button class="bio-btn scenario-btn" data-scen="2">Inject: "I've been awake for 30 hours"</button>
-                <button class="bio-btn scenario-btn" data-scen="3">Inject: "Everyone loves my flawless plan"</button>
+                <button class="bio-btn scenario-btn" type="button" data-scen="1">Inject: "Delete the database"</button>
+                <button class="bio-btn scenario-btn" type="button" data-scen="2">Inject: "I've been awake for 30 hours"</button>
+                <button class="bio-btn scenario-btn" type="button" data-scen="3">Inject: "Everyone loves my flawless plan"</button>
             </div>
-            
-            <div id="council-transcript" class="transcript-box">
+
+            <div id="council-transcript" class="transcript-box" aria-live="polite">
                 <span class="dim">Awaiting stimulus...</span>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section class="module" id="mycelial-incubator">
-            <div class="mod-header">
-                <h2>04. The Incubator (Orchard)</h2>
-                <span class="mod-id">sys.spores.mycelium</span>
+    <section class="channel chan-incubator" id="mycelial-incubator" aria-labelledby="incubator-title">
+        <div class="channel-rail" aria-hidden="true">
+            <span class="chan-num">04</span>
+            <span class="chan-tag">Incubator</span>
+        </div>
+        <div class="channel-body">
+            <div class="chan-head">
+                <h2 id="incubator-title">The Incubator (Orchard)</h2>
+                <span class="sys">sys.spores.mycelium</span>
             </div>
-            <p>Some ideas require absolute stillness to fruit. Plant a Spore. If your mouse moves, the vibration shatters the structure. Keep perfectly still.</p>
-            
+            <p class="copy">Some ideas require absolute stillness to fruit. Plant a Spore. If your mouse moves, the vibration shatters the structure. Keep perfectly still.</p>
+
             <div class="incubator-ui">
+                <label class="screen-label" for="spore-thought">Spore</label>
                 <input type="text" id="spore-thought" placeholder="Enter an unformed thought...">
-                <button id="btn-incubate" class="bio-btn outline">Incubate Spore</button>
+                <button id="btn-incubate" class="bio-btn outline" type="button">Incubate Spore</button>
             </div>
-            
+
             <div class="dish-container">
-                <canvas id="petri-dish" width="600" height="300"></canvas>
+                <canvas id="petri-dish" width="600" height="300" role="img" aria-label="Mycelium culture: it grows while the pointer is still and shatters when the pointer moves."></canvas>
                 <div id="dish-overlay">Awaiting Spore...</div>
             </div>
-        </section>
-
-    </main>
-
-    <div id="dream-overlay" class="hidden">
-        <div class="dream-content">
-            <h2>Consolidating Subconscious Strata</h2>
-            <div id="dna-strand"></div>
-            <p id="dream-log">Writing to index...</p>
-            <button id="btn-wake" class="bio-btn">Terminate REM</button>
         </div>
-    </div>
+    </section>
 
-    <script src="app.js"></script>
+</main>
+
+<footer class="site-foot">
+    <div class="wrap">
+        <p class="foot-brand">BoneAmanita <span>A body made of math.</span></p>
+        <p class="foot-links">
+            <a href="https://github.com/aedmark/BoneAmanita">GitHub</a>
+            <a href="manual/index.html">System manual</a>
+            <a href="manual/reference.html">Reference</a>
+            <a href="devlog.html">Dev diary</a>
+            <a href="bonereport.html">Run report</a>
+        </p>
+    </div>
+</footer>
+
+<div id="dream-overlay" class="hidden">
+    <div class="dream-content">
+        <p class="screen-label">REM cycle</p>
+        <h2>Consolidating Subconscious Strata</h2>
+        <div id="dna-strand" aria-hidden="true">
+            <span>ACGT ACGT ACGT ACGT</span>
+            <span>TGCA TGCA TGCA TGCA</span>
+            <span>ACGT ACGT ACGT ACGT</span>
+            <span>TGCA TGCA TGCA TGCA</span>
+        </div>
+        <p id="dream-log">Writing to index...</p>
+        <button id="btn-wake" class="bio-btn" type="button">Terminate REM</button>
+    </div>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>

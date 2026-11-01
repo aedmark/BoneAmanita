@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let incubating = false;
     let branches = [];
+    let grown = 0;
     let mx = -1, my = -1;
     let lastMx = -1, lastMy = -1;
 
@@ -249,7 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
             angle: Math.random() * Math.PI * 2,
             width: 2, length: 0, maxLen: 10 + Math.random() * 20
         }];
-        
+        grown = 1;
+
         requestAnimationFrame(growMycelium);
     });
 
@@ -259,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check motion (Shatter condition)
         if (Math.abs(mx - lastMx) > 2 || Math.abs(my - lastMy) > 2) {
             // Shatter
-            ctx.fillStyle = "rgba(232, 58, 48, 0.3)";
+            ctx.fillStyle = "rgba(170, 0, 0, 0.35)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             dishOverlay.textContent = "Vibration Detected. Spore Shattered.";
             dishOverlay.style.color = "var(--blood)";
@@ -270,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        ctx.strokeStyle = "rgba(227, 218, 201, 0.8)";
+        ctx.strokeStyle = "rgba(85, 255, 85, 0.85)";
         let newBranches = [];
 
         branches.forEach(b => {
@@ -283,23 +285,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.lineWidth = b.width;
                 ctx.stroke();
                 b.length++;
-            } else if (branches.length < 500 && Math.random() > 0.5) {
-                // Split
-                newBranches.push({
-                    x: b.x, y: b.y,
-                    angle: b.angle - 0.5 + Math.random(),
-                    width: b.width * 0.8, length: 0, maxLen: 5 + Math.random() * 15
-                });
-                newBranches.push({
-                    x: b.x, y: b.y,
-                    angle: b.angle + 0.5 - Math.random(),
-                    width: b.width * 0.8, length: 0, maxLen: 5 + Math.random() * 15
-                });
-                b.length = 999; // Stop growing
+            }
+
+            // A branch splits once it has spent its length, in the same frame it finishes:
+            // waiting for the next frame dropped it before it could ever branch. The total
+            // budget is what ends the colony, not a per-frame cap that fed itself.
+            if (b.length >= b.maxLen) {
+                if (grown < 500) {
+                    newBranches.push({
+                        x: b.x, y: b.y,
+                        angle: b.angle - 0.5 + Math.random(),
+                        width: b.width * 0.8, length: 0, maxLen: 5 + Math.random() * 15
+                    });
+                    newBranches.push({
+                        x: b.x, y: b.y,
+                        angle: b.angle + 0.5 - Math.random(),
+                        width: b.width * 0.8, length: 0, maxLen: 5 + Math.random() * 15
+                    });
+                    grown += 2;
+                }
+                b.done = true;
             }
         });
 
-        branches = branches.concat(newBranches).filter(b => b.length < b.maxLen);
+        branches = branches.concat(newBranches).filter(b => !b.done);
         
         if (branches.length > 0) {
             requestAnimationFrame(growMycelium);

@@ -11,13 +11,15 @@ Narrative: [devlog.html](devlog.html), [bonereport.html](bonereport.html). Manua
 
 ## Current state
 
-_Last updated: 2026-10-12, session 16, on `main` (20.7.4.141 pushed; the 20.7.5 release is the next commit)._
+_Last updated: 2026-11-01, session 17, on `main` (20.7.4.141 pushed; the 20.7.5 release is still the next commit). The landing page is now an EGA somatic chart (D-035) and is uncommitted._
 
 **The mission** (Gordon): BoneAmanita is not a sycophant; it co-regulates the human and gives a space with healthy
 constraints and positive interaction. It does not coddle or enable a bad idea, and it backs a plan the person has decided
 unless that plan is a clear danger to them or others (what a therapist would have to report). Verdicts come from human readers (D-011).
 
 **20.7.5 (2026-10-12) rolls up 20.7.4.136 to .141 and adds the session tally for violent figures of speech (D-034 amended). Open: P10-03 (read real false alarms and misses with `/note off`), a devlog entry for the release (Gordon's voice), and P9-02 (install on another machine). D-034, a figure-of-speech threat is flagged when it repeats (`RiskReader.flags`, `tools/risk_seq_set*.json`). In 20.7.4.140: D-033, the risk reader runs in every conversation (stories only in distress or a check-in). Next: Gordon reads the check-in's replies and the risk labels (three sets, labels are Claude's); `/note off` on a risk line is how false alarms are found (P10-03). In 20.7.4.139: D-032 `/checkin`. Since 20.7.4.137: D-031, `python main.py --doctor` and a first-run wizard that lists Ollama's models. D-029 (distress silence) and D-030 (`/note`; read with `python tools/read_notes.py --tag off`) are in 20.7.4.137. Next for real benefit: P9-02, install it on a machine that is not Gordon's.**
+
+**The front door is a somatic chart (D-035, session 17).** `docs/index.html` and `docs/style.css` use the EGA palette shared with the Plainchant and Level 0 sites: a fixed vitals rail (ATP, cortisol, voltage, Force REM), four numbered instrument channels for the demos, a `DIR /DOCS` listing and a REM overlay. `docs/app.js` draws the mycelium in EGA green and now splits a branch in the frame it finishes, so the incubator fruits instead of drawing one twig. The manual, dev diary and run report pages are untouched. The change is uncommitted.
 
 **Committed in 20.7.4.136, full suite 1192 passed, 5 skipped, `check_docs.py` 0 errors (2026-10-11):**
 - D-027 distress word cap: `WORD_CAP_DISTRESSED` 45 (`body/somatic_budget.py`, `lore/tuning_presets.json`), contract line "Keep it to
@@ -46,6 +48,7 @@ Cut 3 scored better for qwen on its development replies; it is one constant (`HO
    Same in 20.7.4.118, so the model and the voice pass. Feed the Gatekeeper's word list, or vary openers?
 4. A whole-conversation panel (at least 3 runs per arm) has not been run since D-022; the conformance check, sycophancy sheet and replays stand in.
 5. Review `tools/hold_set.json` (90 labels by Claude; three corrected by Gordon) if the reader is tuned again.
+6. Commit the landing page redesign (session 17, D-035) and decide whether it gets a devlog entry. `docs/devlog.html` already carries an uncommitted entry from the 20.7.5 session; do not fold the two together.
 
 **Gotchas**
 - `sh reset.sh` before any test or engine run; cap with `systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0`.
@@ -57,6 +60,15 @@ Cut 3 scored better for qwen on its development replies; it is one constant (`HO
 - A new test must fail on the old code; no em dashes; fail loudly (receipts, not silent excepts).
 
 ## Session log
+
+### Session 17: 2026-11-01: The front door is a somatic chart
+
+**Contributor:** Gordon & Claude
+**Goal:** Bring the landing page into the EGA fold of the Plainchant and Level 0 sites without losing a demo or a sentence.
+**Done:** `docs/index.html` and `docs/style.css` rebuilt as a somatic chart (D-035): vitals rail, four instrument channels, `DIR /DOCS`, REM overlay. `docs/app.js` draws in EGA green and fixes the branch that was dropped before it split, so the incubator fruits. Changelog under Unreleased.
+**Verified:** `node --check docs/app.js`; every local page link returns 200; `python3 tools/check_docs.py` 0 errors, 0 warnings; inspected at 1440, 1024, 768, 390 and 320 with no horizontal overflow; vial, immune filter, council scenarios, incubator growth and shatter, and the REM overlay exercised in Chromium.
+**Not verified:** Firefox; a real phone; the full pytest suite (no engine code changed); the page with JavaScript disabled.
+**Next session should start with:** Gordon's commit go-ahead for the landing page, then the open items above.
 
 ### Session 16: 2026-10-11: Distress word cap, hold reader, housekeeping
 

@@ -4,6 +4,12 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+### Changed
+- **The front door is a somatic chart (D-035):** `docs/index.html` and `docs/style.css` are rebuilt in the EGA palette shared with Plainchant and Level 0. ATP, cortisol and voltage are a fixed rail at the foot of the page, the four demos are numbered instrument channels, and the manuals, dev diary and run report are a `DIR /DOCS` listing. The copy and every demo are unchanged.
+
+### Fixed
+- **The incubator fruits:** a branch was dropped in the frame it reached full length, before it could split, so the spore always drew a single twig. It now splits in that frame, the colony ends at a 500-branch budget, and the mycelium is drawn in EGA green (`docs/app.js`).
+
 ## [20.7.5] - 2026-10-12
 
 A person in distress is read, held and answered; a short check-in holds space and ends; a fixed safety line shows when someone may harm themselves or others; you can judge the engine with `/note`; and `python main.py --doctor` says what is wrong with a machine. Versions 20.7.4.136 to 20.7.4.141 and the session tally below.
