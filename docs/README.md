@@ -3,25 +3,31 @@
 This directory stores durable project knowledge for BoneAmanita. Each fact has one authoritative home;
 other documents link to it instead of duplicating it.
 
+Knowledge is organized across three epistemic speeds:
+- **Śruti (Axiomatic Invariants in `INVARIANTS.md`):** Foundational, immutable laws (`INV-NNN`) requiring maintainer re-consecration to amend.
+- **Smṛti (Epochal Conventions and Structure):** Architecture, decisions (`DECISIONS.md`), testing contracts, and security rules that adapt as the project matures.
+- **Vartamāna (Immediate State in `HANDOFF.md`):** Rewritten session state qualified with explicit *Pramāṇa* proof tags under an 80-line cap.
+
 ## Audiences and ownership
 
-| Document | Primary audience | Owns | Does not own |
-| --- | --- | --- | --- |
-| `../README.md` | Users and newcomers | Purpose, quickstart, public entry points | Internal workflow or session history |
-| `../AGENTS.md` | Coding agents and maintainers | Standing working rules and repository conventions | Feature history or design rationale |
-| `../ROADMAP.md` | Maintainers and contributors | Phased planned scope and permanent item status | Detailed implementation notes |
-| `HANDOFF.md` | The next work session | Bounded current state, active context, next steps | Permanent architectural rules |
-| `ARCHITECTURE.md` | Developers and agents | System shape, interfaces, invariants, data flow | Chronological session history |
-| `DECISIONS.md` | Future decision-makers | Rationale and alternatives for durable choices (D-NNN) | Routine implementation detail |
-| `TESTING.md` | Contributors and test runners | Verification commands, the live instruments and what each answers, the measured results | Full current test output; the retired judge pipeline (archive) |
-| `SECURITY.md` | Users and developers | Sensitive assets, secret withholding, substrate sandbox | Operational incident history |
-| `CONTRIBUTING.md` | Human and agent contributors | Setup, change, review, and submission workflow | Agent-only rules |
-| `CHANGELOG.md` | Users and operators | User-visible changes and release history | Developer-facing commit logs |
-| `devlog.html` | Readers following the project | The dev diary: one dated, first-person entry per milestone worth telling | Rules, current state, or the full change list |
-| `bonereport.html` | Maintainers reading measurements | The latest measurement report of real-model runs (2026-10-08, the feud panel and the instruments); the one before it is `bonereport_0926.html` | Live state; each report is a snapshot tied to a code version |
-| `manual/index.html` | Operators and architects | Standalone What/How/Why System Manual (3x scheme) | Transient session context |
-| `manual/reference.html` | Operators and developers | Standalone What/How/Why Reference Manual (3x scheme) | Internal decision logs |
-| `archive/` | Historians and maintainers | Historical session logs, older tracks, and test notes | Normative current rules |
+| Document | Epistemic Speed | Primary audience | Owns | Does not own |
+| --- | --- | --- | --- | --- |
+| `INVARIANTS.md` | **Śruti** | Maintainers and architects | Immutable foundational axioms (`INV-NNN`) | Configurable parameters |
+| `../README.md` | Smṛti | Users and newcomers | Purpose, quickstart, public entry points | Internal workflow or session history |
+| `../AGENTS.md` | Smṛti | Coding agents and maintainers | Standing working rules and repository conventions | Feature history or design rationale |
+| `../ROADMAP.md` | Smṛti | Maintainers and contributors | Phased planned scope and permanent item status | Detailed implementation notes |
+| `HANDOFF.md` | **Vartamāna** | The next work session | Bounded current state with Pramāṇa tags, active context, next steps | Permanent architectural rules |
+| `ARCHITECTURE.md` | Smṛti | Developers and agents | System shape, interfaces, invariants, data flow | Chronological session history |
+| `DECISIONS.md` | Smṛti | Future decision-makers | Rationale and alternatives for durable choices (D-NNN) | Routine implementation detail |
+| `TESTING.md` | Smṛti | Contributors and test runners | Verification commands, Pramāṇa proof boundaries, measured results | Full current test output; the retired judge pipeline (archive) |
+| `SECURITY.md` | Smṛti | Users and developers | Sensitive assets, secret withholding, substrate sandbox | Operational incident history |
+| `CONTRIBUTING.md` | Smṛti | Human and agent contributors | Setup, change, review, and submission workflow | Agent-only rules |
+| `CHANGELOG.md` | Smṛti | Users and operators | User-visible changes and release history | Developer-facing commit logs |
+| `devlog.html` | Smṛti | Readers following the project | The dev diary: one dated, first-person entry per milestone worth telling | Rules, current state, or the full change list |
+| `bonereport.html` | Smṛti | Maintainers reading measurements | The latest measurement report of real-model runs (2026-10-08, the feud panel and the instruments); the one before it is `bonereport_0926.html` | Live state; each report is a snapshot tied to a code version |
+| `manual/index.html` | Smṛti | Operators and architects | Standalone What/How/Why System Manual (3x scheme) | Transient session context |
+| `manual/reference.html` | Smṛti | Operators and developers | Standalone What/How/Why Reference Manual (3x scheme) | Internal decision logs |
+| `archive/` | Smṛti | Historians and maintainers | Historical session logs, older tracks, and test notes | Normative current rules |
 
 ## Update triggers
 
@@ -29,6 +35,7 @@ Update documents because a relevant fact changed, not merely because a session e
 
 | Change | Required documentation |
 | --- | --- |
+| Foundational axiom or non-negotiable invariant change | `INVARIANTS.md` (requires Gordon's explicit re-consecration) |
 | User-visible behaviour or CLI command | `../README.md` if onboarding changed; `CHANGELOG.md` |
 | Component, interface, dependency, or data flow | `ARCHITECTURE.md` |
 | Durable tradeoff, architecture rule, or reversal | `DECISIONS.md`; mark old decisions superseded |

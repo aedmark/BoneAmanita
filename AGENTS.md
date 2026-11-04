@@ -7,43 +7,64 @@ sheet for each turn, and filters the generated reply for corporate clichés and 
 This is the canonical instruction file for coding agents. `CLAUDE.md` imports it; do not duplicate these rules in
 tool-specific files. Project facts belong in the documents linked below, not in an agent's private memory.
 
-## Start here
+## The Six Vedāṅgas (Epistemic Framework)
 
-1. Read `docs/HANDOFF.md` for current state, active context, and immediate gotchas.
-2. Read the relevant roadmap item in `ROADMAP.md` and applicable sections of `docs/ARCHITECTURE.md` and `docs/TESTING.md`.
-3. Inspect `git status` and recent history. Do not overwrite work you did not create.
-4. Verify important inherited claims before relying on them. Run the fast check first (after `sh reset.sh`, see
-   [Running tests and the engine](#running-tests-and-the-engine)):
-   `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` and `python3 tools/check_docs.py`.
-5. State the intended scope briefly, then work on one independently reviewable change at a time.
+The agent operates strictly within the six disciplines of Vedic repository preservation:
 
-If the request conflicts with these instructions or the working tree contains uncommitted edits from the maintainer,
-stop and clarify before proceeding.
+### 1. Kalpa: The Session Ritual Loop
+Every agent session follows the five invariant stages:
 
-## While working
+1. **Śravaṇa (Attentive Orientation):**
+   - Read `docs/HANDOFF.md` for current state, active context, and immediate gotchas.
+   - Read `docs/INVARIANTS.md` (Śruti) and the relevant roadmap item in `ROADMAP.md`.
+   - Inspect `git status` and recent history. Do not overwrite work you did not create.
+   - Verify important inherited claims before relying on them. Run the fast check first (after `sh reset.sh`, see [Running tests and the engine](#running-tests-and-the-engine)):
+     `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` and `python3 tools/check_docs.py`.
+2. **Manana (Reflective Scoping):**
+   - State the intended scope briefly; propose exactly one independently reviewable change.
+   - Confirm that the proposed change honors all Śruti invariants (`INV-001` through `INV-008`).
+   - If the request conflicts with instructions or the tree has uncommitted maintainer edits, stop and clarify.
+3. **Nididhyāsana (Execution and Measurement):**
+   - Keep changes scoped. Do not mix opportunistic refactors with requested work.
+   - Preserve user changes. Never reset, clean, or rewrite history without explicit permission.
+   - Measure every behaviour change with a probe or panel and report the numbers; Gordon makes the design calls.
+   - Keep probe scripts and outputs in `scratch/probes/` (gitignored, untouched by `reset.sh`), never `/tmp`.
+   - Prune `scratch/` before a session ends: keep replay rows, move reusable scripts to `tools/`, delete the rest.
+   - Record architectural choices in `docs/DECISIONS.md` whenever maintainers could revisit the choice later.
+4. **Pramāṇa-Parīkṣā (Epistemic Verification):**
+   - Run tests following `docs/TESTING.md` (after `sh reset.sh`, memory-capped):
+     full `.venv/bin/pytest` when code changed, else fast checks.
+   - A new test must fail on the old code: check it against the previous version before trusting it.
+   - Classify all assertions and test results using formal *Pramāṇa* tags:
+     `[OBSERVED]` (directly tested/run), `[DEDUCED]` (logical invariant), `[CONTRACT]` (authority), `[HYPOTHESIS]` (unproven), `[UNTESTED]` (boundary).
+5. **Saṃgraha (Handoff and Closure):**
+   - Review the diff for unrelated edits, credentials, and documentation drift.
+   - Rewrite the top half of `docs/HANDOFF.md` (staying strictly under the 80-line Chandas limit).
+   - Update roadmap item, decision record, architecture, security notes, and changelog when their triggers apply.
+   - Run `python3 tools/check_docs.py` and confirm 0 errors.
 
-- Reference roadmap IDs (`P<phase>-<nn>`) and decision IDs (`D-<nnn>`) where they exist.
-- Keep changes scoped. Do not mix opportunistic refactors with requested work.
-- Preserve user changes. Never reset, clean, or rewrite history without explicit permission.
-- Record architectural choices in `docs/DECISIONS.md` whenever maintainers could revisit the choice later.
-- Update documentation in the same change when behaviour, interfaces, commands, risks, or schemas change.
-- Distinguish observed facts from inference. Include the command, date, and commit behind volatile claims.
-- Prefer enforcement to prose: critical invariants must have a test, type, or runtime check.
-- A new test must fail on the old code: check it against the previous version before trusting it.
-- Measure every behaviour change with a probe or panel and report the numbers; Gordon makes the design calls.
-- Keep probe scripts and their outputs in `scratch/probes/` (gitignored, untouched by `reset.sh`), never `/tmp`.
-- Prune `scratch/` before a session ends: keep replay rows, move a labelled set or a reusable script to `tools/`, delete the rest. Stale probes mislead the next session.
-- Treat external input as untrusted at its boundary. Never expose secrets in logs, prompts, or checkpoints.
-- Add newly discovered work to `ROADMAP.md` only when it is genuinely out of scope for the current change.
+---
 
-## Finishing a change
+### 2. Vyākaraṇa: Formal Contract Grammar
+`tools/check_docs.py` acts as the formal linguistic engine. It refuses dangling placeholders, broken links, invalid decision ordering, and reciprocal Ghana-pāṭha reference violations.
 
-1. Run the test suite following `docs/TESTING.md` (after `sh reset.sh`, memory-capped): the full `.venv/bin/pytest`
-   when code changed, else `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py`.
-2. Review the diff for unrelated edits, credentials, and documentation drift.
-3. Update `docs/HANDOFF.md` if work will continue in another session or if the repository's current state changed.
-4. Update the roadmap item, decision record, architecture, security notes, and changelog when their triggers apply.
-5. Run `python3 tools/check_docs.py` and confirm 0 errors.
+### 3. Nirukta: Canonical Lexicon
+Names in the [Names and terms](#names-and-terms) table represent foundational domain concepts (`atp_pool`, `cortisol`, `The Village`). They must never be rewritten or translated into generic terms.
+
+### 4. Chandas: Metrical Economy
+- **Current state cap:** `docs/HANDOFF.md` Current state must fit on a single screen (**maximum 80 lines**).
+- **Log limit:** The session log retains at most **10 sessions**; older entries move to `docs/archive/`.
+- **Token budget:** Decisions in `docs/DECISIONS.md` are kept dense and axiomatic.
+
+### 5. Jyotiṣa: Chronometry and Phasing
+Work is sequenced through permanent, immutable identifiers in `ROADMAP.md`: `P<phase>-<nn>`. Items are never renumbered or repurposed.
+
+### 6. Śikṣā: Signal Fidelity and Cleanliness
+- **Lexical Firewall:** Zero em dashes in prose, code comments, and commit messages (use commas, semicolons, or parentheses).
+- **Secret redaction:** Treat external input as untrusted at boundary; never expose secrets in logs, prompts, or checkpoints.
+- Clean git hygiene: Agents draft commits when asked, but **never commit on their own initiative**; one explicit go-ahead per commit from Gordon (D-012).
+
+---
 
 ## Working agreement
 
@@ -115,6 +136,7 @@ Never force-push, rewrite shared git history, or delete database files in `saves
 | `lore/` | Factory JSON wordlists, style crimes, tuning presets, and self-claims |
 | `tools/` | Somatic audit scripts, blind panel generators, and manual builders |
 | `docs/` | Authoritative project documentation, architecture, decisions, and handoff |
+| `docs/INVARIANTS.md` | Immutable Śruti system invariants (INV-001 through INV-008) |
 | `docs/manual/` | Searchable 3x What/How/Why standalone manual set |
 | `tests/` | Pytest test suite pinned offline |
 

@@ -50,12 +50,16 @@ Partner Input -> Lexical Observation -> Metabolic Processing -> Cognitive Assemb
 
 ## Invariants
 
-- **The model never performs a body:** The model is forbidden from narrating physical exhaustion, breathlessness, or biological roleplay. Enforced by `SomaticBudget.forbid_body_narration` and `tests/test_composer.py` (D-001).
-- **Poetic variable names are load-bearing:** Variables like `atp_pool`, `cortisol`, and `godel_scars` map to real control loops and must not be renamed (D-003).
-- **Fail loudly:** No broad `except Exception: pass` handlers; phase crashes are recorded in `record_crash` and isolated by `PhaseExecutor`. Enforced by `tests/test_failure_boundaries.py` and `tests/test_observability.py` (D-015).
-- **Test suite runs offline:** Tests run without network access or running model servers. Enforced by `tests/__init__.py` setting `BONE_EMBED_BACKEND=hash` (D-007).
-- **Sensitive credentials withheld:** Passwords, API keys, and card numbers are redacted with `[withheld: ...]`. Enforced by `engine/gate/secrets.py` and `tests/test_secrets.py`.
-- **Substrate writes sandboxed:** File modifications outside the engine are confined to `output/` and require `/allow` permission (P3-02).
+The immutable axiomatic foundation is codified in [INVARIANTS.md](INVARIANTS.md) (Śruti). Core architectural invariants include:
+
+- **INV-001 [The model never performs a body]:** The model is forbidden from narrating physical exhaustion, breathlessness, or biological roleplay. Enforced by `SomaticBudget.forbid_body_narration` and `tests/test_composer.py` (D-001).
+- **INV-002 [Zero external orchestration frameworks]:** LangChain, LlamaIndex, SemanticKernel, and dedicated vector packages are excluded in favor of standard-library and minimal HTTP transport (D-002).
+- **INV-003 [Poetic variable names are load-bearing]:** Variables like `atp_pool`, `cortisol`, and `godel_scars` map to real control loops and must not be renamed (D-003).
+- **INV-004 [Test suite runs offline]:** Tests run without network access or running model servers. Enforced by `tests/__init__.py` setting `BONE_EMBED_BACKEND=hash` (D-007).
+- **INV-005 [Human evaluative primacy]:** Production verdicts on conversational authenticity come from human reading panels, never automated AI judges (D-011).
+- **INV-006 [Fail loudly]:** No broad `except Exception: pass` handlers; phase crashes are recorded in `record_crash` and isolated by `PhaseExecutor`. Enforced by `tests/test_failure_boundaries.py` and `tests/test_observability.py` (D-015).
+- **INV-007 [Sensitive credentials withheld]:** Passwords, API keys, and card numbers are redacted with `[withheld: ...]`. Enforced by `engine/gate/secrets.py` and `tests/test_secrets.py`.
+- **INV-008 [Substrate writes sandboxed]:** File modifications outside the engine are confined to `output/` and require `/allow` permission (P3-02).
 
 ## Boundaries
 

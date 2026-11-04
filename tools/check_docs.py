@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = [
     "AGENTS.md", "CLAUDE.md", "README.md", "ROADMAP.md",
-    "docs/README.md", "docs/HANDOFF.md", "docs/ARCHITECTURE.md", "docs/DECISIONS.md",
+    "docs/README.md", "docs/INVARIANTS.md", "docs/HANDOFF.md", "docs/ARCHITECTURE.md", "docs/DECISIONS.md",
     "docs/TESTING.md", "docs/SECURITY.md", "docs/CHANGELOG.md", "docs/CONTRIBUTING.md",
     "docs/devlog.html", "docs/bonereport.html", "docs/bonereport_0926.html",
 ]
@@ -36,8 +36,10 @@ CURRENT_STATE_LINES = 80
 ITEM_RE = re.compile(r"\bP(\d+)-(\d+)\b")
 DECISION_RE = re.compile(r"\bD-(\d{3})\b")
 QUESTION_RE = re.compile(r"\bQ-(\d{3})\b")
+INVARIANT_RE = re.compile(r"\bINV-(\d{3})\b")
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 LINK_RE = re.compile(r"\]\(([^)\s]+)\)|\b(?:href|src)=\"([^\"]+)\"")
+PRAMANA_RE = re.compile(r"\[(OBSERVED|DEDUCED|CONTRACT|HYPOTHESIS|UNTESTED)\]")
 
 errors, warnings = [], []
 
@@ -93,6 +95,16 @@ def main():
             if path.parent.name == "archive":
                 items.update(m.group(1) for m in re.finditer(r"^- \[.\] (P\d+-\d+)\b", text, flags=re.M))
 
+    invariants_path = ROOT / "docs" / "INVARIANTS.md"
+    invariants = set()
+    if invariants_path in texts:
+        text = texts[invariants_path]
+        for m in re.finditer(r"^## INV-(\d{3})\b", text, flags=re.M):
+            inv_id = f"INV-{m.group(1)}"
+            if inv_id in invariants:
+                errors.append(f"{where(invariants_path, text, m.start())}: {inv_id} is used twice")
+            invariants.add(inv_id)
+
     decisions_path = ROOT / "docs" / "DECISIONS.md"
     decisions, supersessions, questions = set(), [], set()
     if decisions_path in texts:
@@ -129,6 +141,10 @@ def main():
             for m in QUESTION_RE.finditer(text):
                 if m.group(0) not in questions:
                     errors.append(f"{where(path, text, m.start())}: {m.group(0)} is not in DECISIONS.md's open questions")
+        if invariants_path in texts:
+            for m in INVARIANT_RE.finditer(text):
+                if m.group(0) not in invariants:
+                    errors.append(f"{where(path, text, m.start())}: {m.group(0)} is not in INVARIANTS.md")
         for m in LINK_RE.finditer(text):
             target = (m.group(1) or m.group(2)).split("#")[0]
             if not target or "{{" in target or re.match(r"[a-z][a-z0-9+.-]*:", target):
@@ -139,9 +155,11 @@ def main():
     agents = ROOT / "AGENTS.md"
     if agents in texts:
         layout, offset = section(texts[agents], "Layout")
+        if not layout:
+            layout, offset = section(texts[agents], "Repository map")
         for m in re.finditer(r"^\| `([^`]+)` \|", layout, flags=re.M):
             if "{{" not in m.group(1) and not (ROOT / m.group(1)).exists():
-                errors.append(f"{where(agents, texts[agents], offset + m.start())}: Layout lists {m.group(1)}, "
+                errors.append(f"{where(agents, texts[agents], offset + m.start())}: Repository Map lists {m.group(1)}, "
                               f"which does not exist")
 
     handoff = ROOT / "docs" / "HANDOFF.md"
