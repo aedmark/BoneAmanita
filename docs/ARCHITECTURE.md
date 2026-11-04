@@ -30,6 +30,7 @@ reply (voice, ending, opening, fairness); and the final state is committed to SQ
 | Check-in | `engine/checkin.py` | `CheckIn` | `main.py` (`after_turn`), `mechanics/commands.py` (`/checkin`), `phases/biological.py` (the stage reaches `SomaticBudget.checkin`), `phases/cognitive.py` (the `RISK` nomination), `engine/cycle.py` (the gate keeps nothing); D-032 |
 | Doctor | `engine/doctor.py` | `run_doctor()`, `render()` | `main.py --doctor`, `mechanics/setup.py` (first run); read-only checks, no paid request (D-031) |
 | Hold reader | `engine/gate/distress.py` | `HoldReader.goes_beyond()` | `brain/cortex.py` (`_beyond_staying_with`, in the retry loop after the validator, distress mode only); one short call per draft, sends it back, keeps the last (D-028) |
+| Sūtra Consolidator | `engine/gate/sutra.py` | `SutraConsolidator.consolidate()` | `engine/cycle.py` (`consolidate_sutras`), `engine/gate/store.py`, `mechanics/commands.py` (`/sutra`); distills memories into invariant seeds in REM (D-036, P11-01) |
 | Halcyon Store | `engine/gate/` | `Store.save_checkpoint()` | `saves/iris.db`, `engine/gate/secrets.py` |
 | Slash Commands | `mechanics/` | `CommandProcessor.execute()` | `mechanics/commands.py`, engine subsystems |
 

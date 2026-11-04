@@ -162,6 +162,7 @@ class CommandProcessor:
         "journal": "Generates a narrative diary entry of the session so far",
         "checkin": "A short bounded check-in that holds space (at most 12 turns); /checkin keep remembers it, /checkin end stops it",
         "note": "Saves the last exchange with your verdict: /note good, /note off it advised me, /note any words (notes/notes.jsonl)",
+        "sutra": "View or consolidate crystallized Sūtra invariants: /sutra, /sutra consolidate",
         "shuffle": "Explicit intent [ !s ]: The Jester's Gambit. Breaks loops, resets drag, lateral shift."
     }
 
@@ -487,6 +488,43 @@ class CommandProcessor:
         for line in lines:
             colour = self.P.GRY if line.startswith(" ") or line.startswith("Matching") else self.P.CYN
             self.interface.log(f"{colour}{line}{self.P.RST}")
+        return True
+
+    def _cmd_sutra(self, parts):
+        """View or consolidate crystallized Sūtra invariants from memory (Vedas Path C)."""
+        eng = self.interface.eng
+        store = getattr(eng, "store", None)
+        if store is None:
+            self.interface.log(f"{self.P.RED}No Halcyon store is attached.{self.P.RST}")
+            return True
+        _, state = store.state()
+        memory = state.get("self", {}).get("memory", {})
+        sutras = {k: v for k, v in memory.items() if "sutra." in k}
+
+        if len(parts) > 1 and parts[1].lower() in ("consolidate", "run", "now"):
+            orchestrator = getattr(eng, "orchestrator", None)
+            if orchestrator and hasattr(orchestrator, "consolidate_sutras"):
+                import time
+                written = orchestrator.consolidate_sutras(f"manual-{int(time.time())}")
+                if written:
+                    self.interface.log(f"{self.P.GRN}Crystallized {len(written)} new Sūtra(s):{self.P.RST}")
+                    for key in written:
+                        _, updated_state = store.state()
+                        val = updated_state.get("self", {}).get("memory", {}).get(key, "")
+                        self.interface.log(f"  {self.P.CYN}{key}{self.P.RST}: {val}")
+                else:
+                    self.interface.log(f"{self.P.GRY}No new Sūtras crystallized (need at least 2 distinct memories or novel invariant).{self.P.RST}")
+            else:
+                self.interface.log(f"{self.P.RED}Orchestrator does not support Sūtra consolidation.{self.P.RST}")
+            return True
+
+        if not sutras:
+            self.interface.log(f"{self.P.GRY}No Sūtras crystallized yet. Sleep or run '/sutra consolidate'.{self.P.RST}")
+            return True
+
+        self.interface.log(f"{self.P.WHT}=== CRYSTALLIZED SŪTRAS ({len(sutras)}) ==={self.P.RST}")
+        for k, v in sorted(sutras.items()):
+            self.interface.log(f"  {self.P.CYN}{k}{self.P.RST}: {v}")
         return True
 
     def _cmd_inventory(self, _parts):

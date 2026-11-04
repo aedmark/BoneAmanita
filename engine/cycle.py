@@ -751,12 +751,52 @@ class GeodesicOrchestrator:
                                                 "from": list(fresh)})
         return text
 
+    def consolidate_sutras(self, trace_id: str) -> list:
+        """Sūtra consolidation (Vedas Path C): distills enduring invariants from memories and
+        reflections through the gate into self/memory/sutra.<name>."""
+        from engine.gate.kernel import Gate
+        from engine.gate.recall import STORY, zone_of
+        from engine.gate.reflector import mean_feeling
+
+        consolidator = getattr(self.eng, "sutra_consolidator", None)
+        if not (consolidator and consolidator.enabled):
+            return []
+        store = self.eng.store
+        meta = store.memory_meta()
+        modes = {k: m["mode"] for k, m in meta.items()}
+        memory = (store.state()[1].get("self") or {}).get("memory", {})
+        written = []
+        for zone_name, prefix in (("real", ""), ("story", STORY)):
+            here = {k: v for k, v in memory.items() if k in meta and zone_of(k, modes) == zone_name}
+            if len(here) < consolidator.least:
+                continue
+            lines = consolidator.consolidate(here, prefix)
+            for line in lines:
+                seq, state = store.state()
+                gate = Gate(self.eng.boundary, state, self.eng.gate_tools, self.eng.gate_invariants)
+                text = f"(Sūtra consolidation in REM on {len(here)} memories.)\n{line}"
+                receipt = gate.adjudicate(text)
+                mode = "ADVENTURE" if zone_name == "story" else next((modes[k] for k in reversed(list(here)) if modes.get(k)), None)
+                feelings = [meta[k]["feeling"] for k in here if k in meta and meta[k].get("feeling")]
+                store.commit_cycle(trace_id=f"{trace_id}:sutra", new_state=gate.state, expected_sequence=seq,
+                                   receipt=receipt, raw=text, boundary_hash=getattr(self.eng, "boundary_hash", ""),
+                                   by="sutra", feeling=mean_feeling(feelings), mode=mode)
+                result = receipt.get("result") or {}
+                if receipt.get("decision") == "ACCEPT" and "reflected" in result:
+                    written.append(result["reflected"])
+                ReceiptLedger.get_instance().issue(
+                    "halcyon.sutra", receipt["decision"], result_count=1 if "reflected" in result else 0,
+                    inputs={"memories": len(here), "zone": zone_name},
+                    detail=str(receipt["decision_basis"][-1][2]) if receipt.get("decision_basis") else "")
+        return written
+
     def sleep_dream(self) -> str | None:
-        """/sleep and /idle: reflect and dream now, rather than waiting for the idle REM tick."""
+        """/sleep and /idle: reflect, distill sūtras, and dream now, rather than waiting for the idle REM tick."""
         if not (hasattr(self.eng, "store") and hasattr(self.eng, "boundary")):
             return None
         try:
             self.reflect_memory(f"sleep-{int(time.time())}")
+            self.consolidate_sutras(f"sleep-sutra-{int(time.time())}")
             return self.dream_memory()
         except Exception as e:
             record_crash(self.eng, "sleep reflection", e)

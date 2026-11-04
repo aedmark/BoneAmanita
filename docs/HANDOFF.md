@@ -21,11 +21,12 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 
 **The front door is a somatic chart (D-035, session 17).** `[OBSERVED]` Committed in `5f8422f`. `docs/index.html` and `docs/style.css` use the EGA palette shared with the Plainchant and Level 0 sites: a fixed vitals rail (ATP, cortisol, voltage, Force REM), four numbered instrument channels for the demos, a `DIR /DOCS` listing and a REM overlay. `docs/app.js` draws the mycelium in EGA green and now splits a branch in the frame it finishes, so the incubator fruits instead of drawing one twig.
 
-**Verified in 20.7.5 release (2026-10-12):** `[OBSERVED]` Full suite 1265 passed, 5 skipped offline; `check_docs.py` 0 errors; `build_manual.py check` passed (28 entries).
+**Verified in 20.7.5 release and Path A/C sessions (2026-11-04):** `[OBSERVED]` Full suite 1265 passed, 5 skipped offline; `check_docs.py` 0 errors; `build_manual.py check` passed (28 entries).
 - D-027 distress word cap: `[OBSERVED]` `WORD_CAP_DISTRESSED` 45 (`body/somatic_budget.py`), over-long drafts trimmed to whole sentences (`brain/cortex.py`). `tests/test_distress_length.py`.
 - D-028 hold reader: `[OBSERVED]` `HoldReader` reads distress drafts for explaining/advising (`cortex.holding` receipts). `tests/test_hold_reader.py`.
 - D-034 risk watch: `[OBSERVED]` Session tally flags third violent figure of speech; `tests/test_risk_watch.py` (13 tests).
 - Vedas Epistemic Layer: `[OBSERVED]` `docs/INVARIANTS.md` (`INV-001` - `INV-008`), Ghana-pāṭha checks in `tools/check_docs.py`, fast tests passed 5/5.
+- D-036 Sūtra Consolidator: `[OBSERVED]` `engine/gate/sutra.py` distills enduring invariants into `self/memory/sutra.*` during sleep; `/sutra` command (`mechanics/commands.py`). `tests/test_sutra_consolidation.py` (7 tests).
 
 **What the engine does for a person in distress** (D-023 to D-028): `[OBSERVED]` a model reads each message for distress; the contract says to hold space and fix nothing; the validator and Gatekeeper reject advice, a closing question and verdicts on others; the voice pass and opening edit stand down; the reply is capped at 45 words; a model reads the draft for staying with them. Measured on 7 scripted topics, two models: distress mode on 50 of 70 distressed turns, 0 of 112 engaged turns.
 
@@ -48,13 +49,13 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 
 ## Session log
 
-### Session 18: 2026-11-04: Retrofit Vedas Epistemic Layer
+### Session 18: 2026-11-04: Retrofit Vedas Epistemic Layer and Sūtra Consolidator
 
 **Contributor:** Gordon & Gemini
-**Goal:** Formalize BoneAmanita's architectural memory using the Vedas Epistemic Layer (Path A).
-**Done:** Codified immutable Śruti invariants (`INV-001` through `INV-008`) in `docs/INVARIANTS.md`; integrated Six Vedāṅgas into `AGENTS.md`; formalized Pramāṇa proof boundaries in `docs/TESTING.md`; upgraded `tools/check_docs.py` with invariant validation and Ghana-pāṭha checks; updated `docs/README.md` with three epistemic speeds.
-**Verified:** `python3 tools/check_docs.py` passed with 0 errors, 0 warnings across 24 files (`[OBSERVED]`); fast test suite `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` passed 5/5 (`[OBSERVED]`).
-**Next session should start with:** Path C (Subconscious Sūtra / Memory Consolidator in `engine/` & `saves/iris.db`) or Gordon's call on open items.
+**Goal:** Formalize BoneAmanita's architectural memory using the Vedas Epistemic Layer (Path A) and build the Subconscious Sūtra Consolidator (Path C).
+**Done:** Codified immutable Śruti invariants (`INV-001` through `INV-008`) in `docs/INVARIANTS.md`; integrated Six Vedāṅgas into `AGENTS.md`; formalized Pramāṇa proof boundaries in `docs/TESTING.md`; upgraded `tools/check_docs.py` with invariant validation and Ghana-pāṭha checks; updated `docs/README.md` with three epistemic speeds (committed as `20.7.5.1`). Implemented `SutraConsolidator` (`engine/gate/sutra.py`, D-036, P11-01, P11-02), integrated into `engine/cycle.py` REM consolidation, added `/sutra` command (`mechanics/commands.py`), added unit tests (`tests/test_sutra_consolidation.py`, 7 passed).
+**Verified:** `python3 tools/check_docs.py` passed with 0 errors, 0 warnings across 24 files (`[OBSERVED]`); `tests/test_sutra_consolidation.py` passed 7/7 (`[OBSERVED]`); fast test suite `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` passed 5/5 (`[OBSERVED]`); zero em dashes.
+**Next session should start with:** Path B (Open frontiers: Qwen `HOLD_CUT 3` in P8-05, `/note off` telemetry in P10-03).
 
 ### Session 17: 2026-11-01: The front door is a somatic chart
 

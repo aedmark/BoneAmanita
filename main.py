@@ -25,6 +25,7 @@ from engine.gate.keeper import MemoryKeeper
 from engine.checkin import CheckIn
 from engine.gate.distress import DistressReader, HoldReader, RiskReader
 from engine.gate.reflector import MemoryReflector
+from engine.gate.sutra import SutraConsolidator
 from engine.constants import Prisma, RealityLayer
 from engine.core import (
     CyberneticGovernor,
@@ -208,6 +209,9 @@ class BoneAmanita:
         )
         self.memory_reflector = MemoryReflector(
             self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "HALCYON_REFLECT", True))
+        )
+        self.sutra_consolidator = SutraConsolidator(
+            self.cortex.llm, enabled=bool(safe_get(safe_get(self.config, "CORTEX", {}), "HALCYON_SUTRA", True))
         )
         self.user_profile = UserProfile(self.user_name, config_ref=self.config)
         self.user_profile.attach_store(self.store)

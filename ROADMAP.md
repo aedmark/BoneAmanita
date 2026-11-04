@@ -91,3 +91,10 @@ Goal: A person who is not the maintainer gets from clone to a first reply withou
 
 - [x] P9-01 `python main.py --doctor` and a first-run wizard that lists the models Ollama has (D-031).
 - [ ] P9-02 A first install on a machine that is not Gordon's, with what went wrong written down.
+
+## Phase 11: Subconscious Sūtra Consolidation
+
+Goal: Distill enduring invariants and behavioral axioms into dense, minimal-syllable Sūtras during sleep.
+
+- [x] P11-01 Sūtra Consolidator (`engine/gate/sutra.py`, D-036) crystallizing episodic memories into `self/memory/sutra.*`.
+- [x] P11-02 Integration into REM `sleep_dream` cycle and `/sutra` command (`mechanics/commands.py`).

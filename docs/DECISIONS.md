@@ -295,6 +295,14 @@ Format:
 **Consequences:** The landing page depends on the palette tokens and the 4px dark desk; a new module needs a channel, a rail number and a screen area. `docs/style.css` belongs to this page alone, so the manual, dev diary and run report keep their own styling. Making the incubator actually fruit needed a branch fix in `docs/app.js`: a branch used to be filtered out in the frame it reached full length, before it could split, so the spore drew one twig.
 **Review trigger:** A redesign of the Plainchant or Level 0 front doors, or a move to one shared stylesheet.
 
+## D-036 Sūtra consolidation crystallizes enduring invariants in REM  (2026-11-04, status: accepted)
+**Context:** Vedic Path C. While REM reflection (D-028) synthesizes episodic stretches into conversational sentences, loose memories and reflections accumulate over sessions without distilling permanent behavioral, relational, or procedural invariants.
+**Decision:** `SutraConsolidator` (`engine/gate/sutra.py`) distills enduring invariants from candidate memories during sleep into `self/memory/sutra.<name>`. It enforces strict Sūtra constraints: Alpākṣaram (under 25 words), Asandigdham (declarative and unambiguous), Astobham (zero conversational fluff), and lexical firewall compliance (no em dashes). Nominations pass through the Halcyon gate via `reflect` verb; `/sutra` inspects and manually triggers consolidation.
+**Alternatives:**
+- Store in a separate SQLite table: rejected because memories in `self/memory/` are automatically vector-indexed by `SemanticEmbedder` and retrieved into associative context blocks.
+- Unconstrained narrative summarization: rejected because conversational fluff inflates prompt tokens and dilutes model grounding.
+**Consequences:** Enduring invariants consume minimal prompt tokens when recalled; tested offline by `tests/test_sutra_consolidation.py` (7 tests).
+
 ## Open questions
 
 None open. Answered 2026-10-08, kept so that references resolve:

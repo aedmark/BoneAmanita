@@ -4,6 +4,9 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 
 ## Unreleased
 
+### Added
+- **Sūtra Consolidator (D-036, P11-01, P11-02):** `engine/gate/sutra.py` distills memories and reflections during REM sleep into minimal-syllable invariant seeds (`self/memory/sutra.*`) under Alpākṣara word constraints. `/sutra` inspects and manually triggers consolidation (`mechanics/commands.py`).
+
 ### Changed
 - **Vedas Epistemic Layer:** `docs/INVARIANTS.md` codifies immutable Śruti axioms INV-001 through INV-008 (anti-performance, zero external frameworks, load-bearing poetic variable names, offline test pinning, human evaluative primacy, fail-loudly architecture, credential withholding, substrate sandboxing). `AGENTS.md` is structured across the Six Vedāṅgas (Kalpa, Vyākaraṇa, Nirukta, Chandas, Jyotiṣa, Śikṣā). `docs/TESTING.md` formalizes Pramāṇa proof boundaries ([OBSERVED], [DEDUCED], [CONTRACT], [HYPOTHESIS], [UNTESTED]). `tools/check_docs.py` enforces invariant validation and cross-references.
 - **The front door is a somatic chart (D-035):** `docs/index.html` and `docs/style.css` are rebuilt in the EGA palette shared with Plainchant and Level 0. ATP, cortisol and voltage are a fixed rail at the foot of the page, the four demos are numbered instrument channels, and the manuals, dev diary and run report are a `DIR /DOCS` listing. The copy and every demo are unchanged.
