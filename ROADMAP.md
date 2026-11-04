@@ -50,6 +50,7 @@ Goal: Protect conversational authenticity against RLHF sycophancy, clichés, and
 - [x] P5-02 Prismatic Self-Claims defining epistemic boundaries without state-conditioned physical roleplay.
 - [x] P5-03 CREATIVE mode anti-menu rules enforcing continuous narrative prose over multi-choice menus.
 - [x] P5-04 Fairness verification and redrafting when repairs remain flagged (`brain/cortex.py`; D-019).
+- [x] P5-05 Stock empathy soft style crime and opener rut breaker (D-037).
 
 ## Phase 6: Documentation and Evaluation Manifold
 

@@ -27,6 +27,7 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 - D-034 risk watch: `[OBSERVED]` Session tally flags third violent figure of speech; `tests/test_risk_watch.py` (13 tests).
 - Vedas Epistemic Layer: `[OBSERVED]` `docs/INVARIANTS.md` (`INV-001` - `INV-008`), Ghana-pāṭha checks in `tools/check_docs.py`, fast tests passed 5/5.
 - D-036 Sūtra Consolidator: `[OBSERVED]` `engine/gate/sutra.py` distills enduring invariants into `self/memory/sutra.*` during sleep; `/sutra` command (`mechanics/commands.py`). `tests/test_sutra_consolidation.py` (7 tests).
+- D-037 Stock Empathy & Opener Rut Breaker: `[OBSERVED]` `STOCK_EMPATHY` soft style crime in `lore/style_crimes.json`, consecutive 3-word opener rut breaker in `brain/cortex.py`, `VOICE` prompt sync; `tests/test_openings.py` (10 tests).
 
 **What the engine does for a person in distress** (D-023 to D-028): `[OBSERVED]` a model reads each message for distress; the contract says to hold space and fix nothing; the validator and Gatekeeper reject advice, a closing question and verdicts on others; the voice pass and opening edit stand down; the reply is capped at 45 words; a model reads the draft for staying with them. Measured on 7 scripted topics, two models: distress mode on 50 of 70 distressed turns, 0 of 112 engaged turns.
 
@@ -35,7 +36,7 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 **Open, Gordon's call**
 1. (Done, D-029) The Stage Manager no longer silences a distressed person for the engine's own load. A tired "eh" at distress 0.0 can still meet the ATP floor.
 2. Qwen's `SYSTEM_HALT` (rescue turn 21, the tension lock) and `HOLD_CUT` 3 for qwen (P8-05).
-3. Stock phrases and repeated openers: a stock word ("heavy", "a lot") is in 39% of engine replies (plain 18%), openers 54% distinct (plain 68%). Feed Gatekeeper's word list, or vary openers?
+3. (Done, D-037) Stock phrases and repeated openers: `STOCK_EMPATHY` soft crime in Gatekeeper, opener rut breaker in cortex, direct-response composer directive (P5-05).
 4. A whole-conversation panel (at least 3 runs per arm) has not been run since D-022; the conformance check, sycophancy sheet and replays stand in.
 5. Review `tools/hold_set.json` (90 labels by Claude; three corrected by Gordon) if the reader is tuned again.
 
@@ -49,7 +50,13 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 
 ## Session log
 
-### Session 18: 2026-11-04: Retrofit Vedas Epistemic Layer and Sūtra Consolidator
+### Session 19: 2026-11-04: Stock Empathy Filter and Opener Rut Breaker (D-037, P5-05)
+
+**Contributor:** Gordon & Gemini
+**Goal:** Address #3 (stock empathy phrases and repeated openers) using combined Option C.
+**Done:** Added `STOCK_EMPATHY` soft style crime to `lore/style_crimes.json` targeting emotional descriptors ("heavy", "a lot", "gut punch", "jugular"); excised via sentence salvage (D-008). Enhanced `_in_a_rut` in `brain/cortex.py` with consecutive 3-word opener matching (normalizing demonstratives) to rewrite repeated openers into conversational questions via `_open_with_a_question`. Synced `TheCortex.VOICE` prompt to forbid "heavy", "a lot", and "gut punch". Removed "it is a lot" from hold reader feedback. Added direct-response and opener variation directives to `CONVERSATION` style guide (`lore/system_prompts.json` and `brain/composer.py`). Added unit tests in `tests/test_openings.py` (10 tests, verified failing on old code and passing on new code).
+**Verified:** `python3 tools/check_docs.py` 0 errors, 0 warnings across 24 files (`[OBSERVED]`); `pytest tests/test_openings.py` passed 10/10 (`[OBSERVED]`); `pytest tests/test_mode_failures.py` passed 75/75 (`[OBSERVED]`); zero em dashes.
+**Next session should start with:** Path B (Open item 2: Qwen `HOLD_CUT 3` in P8-05, `/note off` telemetry in P10-03).
 
 **Contributor:** Gordon & Gemini
 **Goal:** Formalize BoneAmanita's architectural memory using the Vedas Epistemic Layer (Path A) and build the Subconscious Sūtra Consolidator (Path C).

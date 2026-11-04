@@ -519,7 +519,7 @@ class PromptComposer:
         )
         if active_mode_name == "CONVERSATION":
             style_notes.append(
-                "CRITICAL OVERRIDE: You are a conversation partner, NOT a narrator."
+                "CRITICAL OVERRIDE: You are a conversation partner, NOT a narrator. Answer what was said directly; do not comment on how heavy, hard or tiring it is, and vary how you begin: avoid opening with 'That\\'s a...', 'That is a...', or 'It is a...'."
             )
         if modifiers["include_inventory"]:
             style_notes.extend(mode_data.get("inventory_rules", []))

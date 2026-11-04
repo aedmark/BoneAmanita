@@ -120,6 +120,12 @@
       "error_msg": "DO NOT NARRATE THEIR STATE. Do not tell the person what they are feeling or that their feeling is valid; answer the thing they said."
     },
     {
+      "name": "STOCK_EMPATHY",
+      "skip_modes": ["ADVENTURE", "TECHNICAL"],
+      "regex": "(?i)\\b(?:that|it)(?:'s|’s| is) (?:a |a pretty |so )?heavy (?:word|place|thing|things|way|realization|moment|space|feeling|silence|load|step)\\b|\\bheavy (?:word|place|thing|things|way|realization|moment|space|feeling|silence)\\b|\\bfeels? (?:so |really |this )?heavy\\b|\\b(?:that|it)(?:'s|’s| is) (?:a lot\\b|a lot to (?:carry|process|take in|handle|weigh)\\b|a lot of (?:history|exhaustion)\\b)|\\b(?:sounds|sound) like a lot of\\b|\\b(?:that|it)(?:'s|’s| is) (?:a )?gut punch\\b|\\bgut punch\\b|\\b(?:went for the |for the )?jugular\\b",
+      "error_msg": "NO STOCK EMPATHY. Do not call situations or feelings 'heavy', 'a lot', a 'gut punch', or 'jugular'. Answer what was said directly."
+    },
+    {
       "name": "UNBACKED_CONTINUITY",
       "skip_modes": ["ADVENTURE", "CREATIVE"],
       "regex": "(?i)\\bI(?:'ve|’ve| have) been (?:thinking|wondering|reflecting|mulling)(?: (?:a lot|a bit|more))? (?:about|on|over|whether|if)\\b|\\bI (?:kept|keep|have kept) (?:thinking|coming back to|wondering|turning (?:it|this|that) over)\\b|\\b(?:has|have) been on my mind\\b|\\b(?:has|have) stayed with me\\b|\\bI(?:'ve|’ve| have) (?:thought|wondered) about (?:it|this|that|what you|you|her|him|them)\\b",

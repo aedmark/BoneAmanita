@@ -67,7 +67,7 @@ The immutable axiomatic foundation is codified in [INVARIANTS.md](INVARIANTS.md)
 | Boundary | Comes in as | Checked by | Rule |
 | --- | --- | --- | --- |
 | Partner message | String from terminal or API | `mechanics/lexicon.py` | Word classification; filler, curated lists, and resonance |
-| Model reply | Raw text stream from LLM | `TheGatekeeper` in `physics/filters.py` | RLHF masks and style crimes; soft crimes salvaged, hard crimes paused (D-008) |
+| Model reply | Raw text stream from LLM | `TheGatekeeper` in `physics/filters.py` | RLHF masks and style crimes (including `STOCK_EMPATHY`); soft crimes salvaged, hard crimes paused (D-008, D-037) |
 | Embedding backend | JSON from `/v1/embeddings` | `SemanticEmbedder` | Checked for 768d vectors; network errors fall back loudly to hash (D-005) |
 | File modifications | `<write_file>` blocks | `mechanics/tools.py` | Contained to `output/`; existing files held until `/allow` |
 

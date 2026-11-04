@@ -109,3 +109,35 @@ class TheOpening(BoneTestCase):
         self.turn()
         self.assertEqual(self.judged + self.edits, [])
         self.assertEqual(len(self.engine.cortex.openings), 3)
+
+    def test_consecutive_identical_opener_is_in_a_rut(self):
+        """Repeating the exact same 3-word opening across consecutive turns is a rut."""
+        self.engine.cortex.openings.append(["ASSESS", "That is a long day to get through."])
+        ui = self.turn("The commute was even worse.")
+        self.assertIn(QUESTION, ui)
+        self.assertEqual(len(self.rewritten()), 1)
+
+    def test_stock_empathy_is_rejected_in_conversation_mode(self):
+        from physics import TheGatekeeper
+
+        gk = TheGatekeeper(self.engine.lex, config_ref=self.engine.config)
+        for stock in (
+            "That's a heavy word to land after everything you've been processing.",
+            "That's a heavy place to land.",
+            "That’s a lot of history to walk back into.",
+            "It's a lot to carry when you're stuck in that loop.",
+            "That's a gut punch to see.",
+            "You went for the jugular.",
+        ):
+            with self.subTest(stock=stock):
+                ok, _ = gk.audit_generation(stock, self.engine.bio.mito, mode="CONVERSATION")
+                self.assertFalse(ok)
+                self.assertEqual(gk.last_rejection["name"], "STOCK_EMPATHY")
+        for fine in (
+            "The heavy iron door swung open.",
+            "An hour each way is a lot of time to give up.",
+            "Her name carries a lot of weight in his stories.",
+        ):
+            with self.subTest(fine=fine):
+                ok, _ = gk.audit_generation(fine, self.engine.bio.mito, mode="CONVERSATION")
+                self.assertTrue(ok)

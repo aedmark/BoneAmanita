@@ -287,7 +287,7 @@ Answer:"""
         return (
             "CRITICAL FAILURE: Your reply goes beyond staying with them. Do not explain why they feel this way, do not "
             "describe their situation or feelings back to them, do not judge anyone, do not tell them what to do, and "
-            "ask them nothing. Say that it is a lot or makes sense, that you are here, and that nothing needs solving. "
+            "ask them nothing. Say that what they feel makes sense, that you are here, and that nothing needs solving. "
             "A few short, plain sentences."
         )
 
@@ -298,19 +298,32 @@ Answer:"""
         return bool(getattr(state.get("somatic_budget"), "distressed", False))
 
     def _in_a_rut(self, reply: str) -> bool:
-        """The reply opens as the last OPENING_RUT replies shown did. Openings are judged only now, newest first, and
-        only until two differ."""
+        """The reply opens as the last OPENING_RUT replies shown did, or repeats the previous reply's opening words.
+        Openings are judged only now, newest first, and only until two differ."""
+        last = list(self.openings)
+        if last and last[-1][1]:
+            from body.somatic_metrics import WORD, visible_text
+            def _norm_op(text: str) -> str:
+                words = [w.lower() for w in WORD.findall(visible_text(text))[:3]]
+                s = " ".join(words)
+                return s.replace("that s ", "that is ").replace("it s ", "it is ")
+            curr_op = _norm_op(reply)
+            prev_op = _norm_op(last[-1][1])
+            if curr_op and curr_op == prev_op:
+                if last[-1][0] is None:
+                    last[-1][0] = self._opening_move(last[-1][1])[0]
+                return True
         rut = int(safe_get(safe_get(self.cfg, "CORTEX", {}), "OPENING_RUT", 3))
-        last = list(self.openings)[-rut:]
-        if len(last) < rut:
+        last_rut = last[-rut:]
+        if len(last_rut) < rut:
             return False
-        for entry in reversed(last):
+        for entry in reversed(last_rut):
             if entry[0] is None:
                 entry[0] = self._opening_move(entry[1])[0]
-            if not entry[0] or entry[0] != last[-1][0]:
+            if not entry[0] or entry[0] != last_rut[-1][0]:
                 return False
         self._draft_opening = self._opening_move(reply)
-        return self._draft_opening[0] == last[-1][0]
+        return self._draft_opening[0] == last_rut[-1][0]
 
     REWRITE = """Here is a message a friend wrote back to someone, and what that person had said to them.
 {earlier}They just said: "{message}"
@@ -338,7 +351,7 @@ Replace the reply's first sentence with one short question that takes what they 
     VOICE = """Here is what someone said to a friend, and the reply the friend drafted.
 {earlier}They just said: "{message}"
 The draft: "{reply}"
-Rewrite the draft the way the friend would actually say it to them, sitting across a table: talking with them, not describing their situation back to them or explaining how things work. Plain words. React, say what you think, or ask what you want to know. Keep what the draft means, including anything it says about what they did themselves, and anything it leaves for them to decide. About as long as the draft, or shorter. No "I hear you", no "that makes sense", no stage directions, no dashes between clauses. Answer with the rewritten reply and nothing else."""
+Rewrite the draft the way the friend would actually say it to them, sitting across a table: talking with them, not describing their situation back to them or explaining how things work. Plain words. React, say what you think, or ask what you want to know. Keep what the draft means, including anything it says about what they did themselves, and anything it leaves for them to decide. About as long as the draft, or shorter. No "I hear you", no "that makes sense", no "heavy", no "a lot", no "gut punch", no stage directions, no dashes between clauses. Answer with the rewritten reply and nothing else."""
 
     def _earlier(self) -> str:
         said = [line.split("\n")[0].removeprefix("Traveler: ") for line in self.dialogue_buffer][-4:]

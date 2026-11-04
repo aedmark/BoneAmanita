@@ -303,6 +303,17 @@ Format:
 - Unconstrained narrative summarization: rejected because conversational fluff inflates prompt tokens and dilutes model grounding.
 **Consequences:** Enduring invariants consume minimal prompt tokens when recalled; tested offline by `tests/test_sutra_consolidation.py` (7 tests).
 
+## D-037 Stock empathy filter and lexical opener rut breaker  (2026-11-04, status: accepted)
+**Context:** In deterministic conformance benchmarks (`tools/check_conformance.py`), stock empathy words ("heavy", "a lot", "gut punch", "jugular") appeared in 39% of engine replies (plain 18%), and openers were only 54% distinct (plain 68%). Investigation revealed both metrics stemmed from a shared model reflex: opening vulnerable turns with formulaic assessment clichés ("That's a heavy word to land", "That's a lot of history to walk back into", "It is a heavy realization"). The existing `NARRATING_STATE` regex matched 0 of 160 replay turns due to overly narrow trailing predicates ("to sit with/carry/weigh"), while `OPENING_RUT` checked only 3-turn categorical move repetitions without checking syntactic opener words.
+**Decision:** A three-layer defense (Option C):
+1. Add soft style crime `STOCK_EMPATHY` (`lore/style_crimes.json`, active in `CONVERSATION` mode) targeting stock empathy phrases ("heavy" as emotional descriptor, "a lot of history/exhaustion", "a lot to carry/process", "gut punch", "jugular"); excised via sentence salvage (D-008).
+2. Forbid "heavy", "a lot", and "gut punch" in `TheCortex.VOICE` prompt rewrite, remove "it is a lot" from the hold reader critical failure feedback, and add direct-response instructions to `CONVERSATION` style guide in `lore/system_prompts.json` and `brain/composer.py`.
+3. Enhance `_in_a_rut` (`brain/cortex.py`) to detect consecutive 3-word opener matches (normalizing demonstrative contractions) and rewrite repeated openers into plain questions via `_open_with_a_question`.
+**Alternatives:**
+- Word list filter alone: rejected because it stops specific words without breaking the repetitive syntactic posture ("That's a [adj] [noun]").
+- Rut breaker alone: rejected because mid-sentence stock words ("silence is heavy", "gut punch") would persist.
+**Consequences:** Soft style crime is tested in `tests/test_openings.py` (offline); consecutive opener rut rewrite tested in `tests/test_openings.py` (failing on old code, passing on new code); all existing test suites pass.
+
 ## Open questions
 
 None open. Answered 2026-10-08, kept so that references resolve:
