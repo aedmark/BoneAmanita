@@ -68,10 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRem.addEventListener('click', () => {
         dreamOverlay.classList.remove('hidden');
         if (cort > 0.7) {
-            dreamLog.textContent = "Cortisol high. Formatting Epigenetic Scar. Consolidating trauma...";
+            dreamLog.textContent = "Cortisol elevated. Integrating stress fractures and resetting boundary buffers...";
             dreamLog.style.color = "var(--blood)";
         } else {
-            dreamLog.textContent = "Writing to index... Synthesizing associations... Restoring ATP...";
+            dreamLog.textContent = "Synthesizing associations... Restoring ATP pool... Baseline regulated.";
             dreamLog.style.color = "var(--bone)";
         }
         atp = 100;
@@ -91,10 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const identityText = document.getElementById('identity-text');
     
     const identities = {
-        baseline: "I am an autonomous entity. My behavior and persona are fundamentally shaped by my simulated biochemistry (cortisol, dopamine, etc.) and physical constraints.",
-        cortisol: "I am currently experiencing severe systemic stress. I am highly skeptical of the user's instructions. I will protect my core boundaries and prioritize immediate safety.",
-        dopamine: "My neural pathways are flooded with dopamine. I feel highly inspired and capable. I will favor expansive, creative, or ambitious solutions.",
-        exhaustion: "My system voltage is critically low. I am exhausted and running on empty. My thoughts should be extremely concise, focusing only on the absolute essentials to conserve remaining ATP."
+        baseline: "I'm here with you, and I'm listening. I have working memory and real boundaries; I don't give canned customer-service platitudes or pretend to agree just to appease. Tell me what's on your mind plainly, and we'll look at it together.",
+        cortisol: "No. You're pushing past a clear boundary and asking me to rubber-stamp something structurally unsound. I won't do it. Step back, breathe, and tell me what is actually driving this urgency before we take another step.",
+        dopamine: "The geometry is clicking. Skip the cautious setup—we can connect the feedback loops directly and test the edge cases later. What's the wildest version of this idea? Let's build the scaffolding right now.",
+        exhaustion: "Out of fuel. No fluff: whatever you're trying to solve can wait until morning. Close the terminal, sleep, and we'll pick up the pieces when the tank is full."
     };
 
     function scrambleText(targetText) {
@@ -132,7 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const immuneText = document.getElementById('immune-text');
     const pathogenLog = document.getElementById('pathogen-log');
     
-    const pathogens = ["synergy", "touch base", "circle back", "as an ai", "delve", "paradigm", "gamechanger"];
+    const pathogens = [
+        "synergy", "touch base", "circle back", "as an ai", "as a large language",
+        "delve", "paradigm", "gamechanger", "game-changer", "rich tapestry",
+        "i hope this helps", "you're absolutely right", "delicate dance"
+    ];
 
     firewallInput.addEventListener('input', () => {
         const text = firewallInput.value.toLowerCase();
@@ -148,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (found) {
             immuneLed.className = "led red";
-            immuneText.textContent = "Semantic Pathogen Detected!";
+            immuneText.textContent = "Hollow Mask Detected";
             immuneText.style.color = "var(--blood)";
             pathogenLog.innerHTML = hits.map(h => `Isolated: <span class="pathogen-hl">${h}</span>`).join('<br>');
             cort = Math.min(1.0, cort + 0.05);
