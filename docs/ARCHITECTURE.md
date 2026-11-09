@@ -12,6 +12,39 @@ cues; `physics/` and `body/` update roughly sixty state metrics (ATP, cortisol, 
 `physics/filters.py` scans for clichés and salvages clean sentences; in CONVERSATION, `brain/cortex.py` then edits the
 reply (voice, ending, opening, fairness); and the final state is committed to SQLite in `saves/iris.db`.
 
+## System Topology
+
+BoneAmanita bounds ephemeral LLM execution within a three-speed epistemic memory manifold:
+
+```text
+                      ┌────────────────────────────┐
+                      │    AI Context (Śūnya)      │
+                      │  Empty, unconditioned,     │
+                      │   ephemeral potentiality   │
+                      └─────────────┬──────────────┘
+                                    │ Projects from & Writes to
+                                    ▼
+       ┌─────────────────────────────────────────────────────────┐
+       │                BONEAMANITA MEMORY MANIFOLD              │
+       ├─────────────────────────────────────────────────────────┤
+       │  ŚRUTI LAYER (docs/INVARIANTS.md)                       │
+       │  - Axioms INV-001 through INV-010                       │
+       │  - Immutable foundational laws                          │
+       ├─────────────────────────────────────────────────────────┤
+       │  SMṚTI LAYER (AGENTS.md, ARCHITECTURE.md, DECISIONS.md) │
+       │  - The Six Vedāṅgas (Protocol, Lexicon, Grammar...)     │
+       │  - Sūtra ADRs (D-NNN), Held Tensions (T-NNN), Roadmap   │
+       ├─────────────────────────────────────────────────────────┤
+       │  VARTAMĀNA LAYER (docs/HANDOFF.md)                      │
+       │  - Ephemeral state qualified by Pramāṇa tags            │
+       │  - Strict Chandas bound (<= 80 lines)                   │
+       ├─────────────────────────────────────────────────────────┤
+       │  SOMATIC SUBSTRATE & VYĀKARAṆA LINTER                   │
+       │  - Phase pipeline, receipts, and SQLite (iris.db)       │
+       │  - check_docs.py Ghana-pāṭha & firewall enforcement     │
+       └─────────────────────────────────────────────────────────┘
+```
+
 ## Code map
 
 | Area | Where | Entry point | Talks to |
@@ -85,3 +118,42 @@ The immutable axiomatic foundation is codified in [INVARIANTS.md](INVARIANTS.md)
 | `markdown` | unpinned | Markdown generation and rendering | Light text rendering |
 | `pytest` | unpinned | The test suite | Standard runner |
 | Python standard library | 3.14 | SQLite, hashlib, urllib, threading | Standard library preferred over external frameworks (D-002) |
+
+## State and Caches
+
+Everything a run leaves on disk or in external stores, and what may delete it. Reset commands must never wipe expensive caches without warning.
+
+| What | Where | Written by | Reset by | Committed? |
+| :--- | :--- | :--- | :--- | :--- |
+| Persistent SQLite store | `saves/iris.db` | `engine/gate/store.py` (`Store`) | `sh reset.sh` | No, gitignored |
+| Subconscious Sūtra seeds | `self/memory/sutra.*` | `engine/gate/sutra.py` (`SutraConsolidator`) | Manual pruning or `sh reset.sh` | No, gitignored |
+| Replay corpus rows | `scratch/probes/corpus/` | `tools/corpus_replay.py` | Manual cleanup | No, gitignored |
+| Substrate output sandbox | `output/` | `mechanics/tools.py` under `/allow` | `sh reset.sh` | No, gitignored |
+| Substrate audit ledger | `output/.substrate_ledger.json` | `mechanics/tools.py` | `sh reset.sh` | No, gitignored |
+| Human verdict notes | `notes/notes.jsonl` | `mechanics/commands.py` (`/note`) | Preserved across resets | No, gitignored |
+| Built conversation pages | `tools/cache/conv_*.html` | `tools/build_manual.py` | Cleaned before commits | Never committed |
+
+## Failure Modes and Epistemic Mitigations
+
+| Failure Mode | Mechanism in Standard Agents | Epistemic Mitigation in BoneAmanita |
+| :--- | :--- | :--- |
+| **Cognitive Drift** | Nuanced rules in chat context fade as conversations lengthen. | **Śruti Contracts:** Invariants live in dedicated, immutable files outside the chat (`INV-001` - `INV-010`). |
+| **Hallucinated Competence** | Agent assumes untested functions work because they look plausible. | **Pramāṇa Tagging:** Every capability assertion must explicitly state whether it is `[OBSERVED]` or `[UNTESTED]`. |
+| **Tautological Testing** | Tests written post-hoc that never failed on defective code. | **Negative Proof Grounding:** Mandatory proof of failure on pre-change code before accepting tests. |
+| **Semantic Inflation** | Documents balloon with conversational explanations and boilerplate. | **Sūtra Compression:** Minimal-syllable, high-density propositions save context tokens (`INV-008`, `D-036`). |
+| **Sycophantic Cliché & Opener Rut** | Model defaults to formulaic validation ("heavy", "a lot") and repetitive openers. | **Lexical Firewall & Rut Breaker:** Soft style crime salvage (`INV-006`, `D-008`) and consecutive 3-word opener rewrites (`D-037`). |
+| **Dangling Intentions** | Tasks mentioned in handoffs are never tracked in roadmaps. | **Ghana-pāṭha Reciprocity:** `check_docs.py` fails if a handoff step is not an active roadmap item. |
+| **Silent Assumption** | Agent guesses intent when requirements or edge cases are ambiguous. | **Saṃśaya & Praśna:** Agent halts during *Manana* to ask clarifying questions or log `Q-NNN` before building (`INV-009`). |
+| **Prior Superimposition** | Agent projects training-distribution defaults (assumed build steps, packages, idioms) onto the repository. | **Adhyāsa-Nirāsa:** Agent audits priors during *Śravaṇa* and relies only on `[CONTRACT]` or `[OBSERVED]` conventions (`INV-010`). |
+| **Linear Tunnel Vision** | Agent discovers a broken premise mid-build and patches locally to reach handoff, widening scope silently. | **Āvartana Loopback:** Agent halts during *Nididhyāsana* or *Pramāṇa* and returns to *Manana* to re-scope or issue *Praśna* (`INV-009`). |
+| **Workaround Smoothing** | Agent papers over unexpected test, type, or contract resistance with silent fallbacks or weakened assertions. | **Pratibandha Stop-Trigger:** Agent halts on textual resistance and surfaces the contradiction via *Praśna* or `[HYPOTHESIS]` (`INV-009`). |
+| **Fence Demolition** | Agent deletes or refactors an unfamiliar guard or constraint without knowing what defect it prevented. | **Pūrva-Pakṣa Reconstruction:** Agent traces the originating `D-NNN` or `INV-NNN` (or asks *Praśna*) before altering a constraint (`INV-009`). |
+
+## Claims vs. Code
+
+Places where a doc, a name, or a comment says more than the code does, so nobody builds on an unverified claim. When a session encounters friction (*Pratibandha*) where the code contradicts a documented claim (or vice versa), record the mismatch here (`[HYPOTHESIS]`) and ask the maintainer (*Praśna*) rather than papering over the discrepancy in code (`INV-009`). Remove a row when the code catches up or the claim is corrected.
+
+- `physics/`: Suggests a continuous Newtonian / quantum simulation; in practice it is kinematic coordinates (voltage, drag, chi) computed from lexical density thresholds and punctuation rates feeding the prompt and somatic budget.
+- `The Village`: Emergent archetypal persona cast; in practice mediated by Stage Manager refusal routing and composer directives rather than separate autonomous model instances.
+- `spores/`: Mycelial associative network; in practice a 768d vector index with SHAKE-256 hash fallback in SQLite overlays.
+
