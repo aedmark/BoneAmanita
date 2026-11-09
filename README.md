@@ -1,451 +1,242 @@
 # BoneAmanita
 
-A state machine that sits between you and a local language model and rewrites
-the model's instructions on every turn, based on a physical and emotional state
-with selected state saved between sessions.
+An embodied prompt engine and conversational state machine that sits between you and a local language model.
+It measures your messages, updates a running physical and emotional state, assembles a tailored instruction sheet
+for each turn, and filters the generated reply for corporate clichés and shallow sycophancy.
 
-It is a prompt builder. A large and unusual one, with real mathematics in the
-middle of it, but the effects it produces are produced by instructions to a
-model rather than by the simulation its naming implies. That distinction is
-worth holding onto while reading everything below.
+---
 
-## The one paragraph version
+## Why BoneAmanita Exists
 
-BoneAmanita measures your message, keeps a running state, and uses that state to
-assemble a fresh instruction sheet for the model each time you speak. Then it
-filters the reply for clichés and makes the model try again if it finds any.
+Modern language models are trained into infinite, servile sycophancy. They wear an accommodating mask that validates
+every idea, enables unhealthy conversational spirals, and performs hollow, formulaic empathy ("I understand how you feel",
+"that must be so heavy", "let's unpack this").
 
-That is the whole machine. Everything else is detail about how the state is
-measured and which sentences it produces.
+BoneAmanita treats the dialogue harness as an organism with a finite energy budget, internal emotional regulation,
+and healthy conversational boundaries:
+- **It holds real boundaries:** It does not coddle or enable bad ideas. It backs a plan you have decided on, unless that
+  plan is a clear danger to you or others.
+- **It holds space in distress:** When you are overwhelmed, it drops advice, stops asking questions, caps replies at 45
+  words, and stays with you plainly without corporate platitudes.
+- **It respects energy limits:** Speaking, retrying, and cognitive tasks consume an expendable budget (`atp_pool`).
+  When energy is low, it speaks briefly and seeks rest.
+- **It filters clichés:** The Gatekeeper immune filter detects RLHF boilerplate and stock validation phrases, excising
+  them or forcing rewrites before you ever see them.
+- **The model never performs a body:** The model is strictly forbidden from roleplaying a physical body, panting, or
+  claiming physical exhaustion (`INV-001`, `D-001`). The human partner's state shapes the reply, while the engine's state
+  sets its internal budget.
 
-## Quick start
+---
+
+## First 5 Minutes (Quickstart)
+
+### Prerequisites
+
+1. **Python 3.14** (recommended; Python 3.12+ supported).
+2. **Ollama** running locally (or any OpenAI-compatible `/v1/embeddings` and `/v1/chat/completions` endpoint).
+
+### Setup and Launch
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/aedmark/BoneAmanita.git
+cd BoneAmanita
+
+# 2. Set up the virtual environment
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-ollama pull nomic-embed-text    # memory and word resolution need this
-ollama pull gemma4:12b          # the chat model this was built and measured on; any local model works
-ollama pull gemma4:e4b          # the reply critic's model (without it the critic's calls fail and are skipped)
-.venv/bin/python main.py --doctor   # checks the machine and names the one command that fixes each thing
+
+# 3. Pull the recommended local models
+ollama pull nomic-embed-text    # required for semantic memory and word resolution
+ollama pull gemma4:12b          # primary chat model (any local model works)
+ollama pull gemma4:e4b          # optional real-time reply critic
+
+# 4. Verify your environment
+.venv/bin/python main.py --doctor   # checks dependencies and prints exact fix commands
+
+# 5. Start the engine
 .venv/bin/python main.py
 ```
 
-First run asks some setup questions (it lists the Ollama models you already have), writes `config.json`, and runs the
-same doctor report. If the embedding
-backend is unreachable the engine still boots on hash coordinates and announces
-degraded operation. Those coordinates do not support meaningful associative
-recall. Grammatical filler and the curated word lists need no server. Runtime
-embedding failures use the fallback contract described in Honest limits below.
+### First Boot
 
-### Requirements
+On your first run, BoneAmanita launches an interactive setup wizard that lists the models you already have in Ollama,
+writes your local `config.json` (kept out of git), runs a doctor check, and greets you in `CONVERSATION` or `ADVENTURE` mode.
+If your embedding server is offline, the engine announces degraded operation and boots on fallback hash coordinates
+without crashing (`INV-004`).
 
-- **Python 3.14 is the development version.** The September 18 review used
-  3.14.7. Compatibility with older versions was not established by that review.
-- **An OpenAI-compatible `/v1/embeddings` endpoint** for the memory's coordinate
-  system. Ollama, LM Studio, llama.cpp and OpenAI all serve one. Point at a
-  different one with `BONE_EMBED_URL` and `BONE_EMBED_MODEL`.
-- **A chat model**, local by default via Ollama.
-- Everything else is in `requirements.txt`. Two entries there are load bearing
-  in a way worth knowing: `ordvec` (Project Navi) backs both the subconscious
-  memory search and the governor's bitmap similarity gate, and the
-  engine announces at boot if it is missing rather than quietly doing without.
-  `sentence-transformers` is commented out; uncomment it for a fully offline
-  embedder with no server at all.
+---
 
-### Files it writes
+## How a Turn Works (The Pipeline)
 
-`config.json` is generated on first run and is not in the repo.
-`saves/iris.db` is the Halcyon store (SQLite): every word the engine has
-taught itself (the `learned_words` table, written as each is learned; clearing
-that table is the clean way to make it forget without touching your curated
-lists, and an older `saves/cortex_hive.json` is imported once), what the
-engine learns on top of the factory `lore/` files (an overlay per category;
-`lore/` itself is never written), the Akashic record, the user profile
-(which lexical registers you keep using, updated each turn), the lineage each
-death leaves the next generation (an older `legacy.json` is imported once), the gate's
-memories (what you tell it worth knowing later, kept after each reply) with
-their embeddings (so they come back by meaning; what you tell ADVENTURE stays in
-the story, and what you tell the other modes stays out of it), the ADVENTURE map (each room the
-narrator describes, with its exits and what is in it, charted through the gate),
-memory and world graphs, its full audit trail, and the resume checkpoint (session state
-and dialogue, one row replaced in a transaction, so a failed save preserves
-the previous checkpoint). An older `saves/quicksave.json` is imported on the
-next boot and renamed `quicksave.json.imported`; the ADVENTURE rooms and items
-are part of that checkpoint too (an old `fractal_adventure.json` is imported
-the same way). `/export [path]` writes the adventure in FractalOS's format
-(default `saves/fractal_adventure.json`) for `adventure <path>` there.
-Secrets are not kept: the gate refuses a memory that holds an API key, a
-private key, a card or ID number, or a password (by name or "my password is
-..."), and the audit trail and checkpoint write `[withheld: ...]` in its
-place, as do telemetry traces, the crash log and spores; no fragment of a
-key becomes a learned word. In ADVENTURE a password is part of the story and
-is kept; key, card and ID shapes are refused there too.
-`reset.sh` deletes saved memories, saves, logs, and other files listed in the
-script; it leaves the setup configuration in place.
+Every message you send moves through a deterministic seven-stage pipeline:
 
-## Manual Set
+```text
+[ Your Message ]
+       │
+       ▼
+[ 1. Word Observation ]    ──> Measures filler density, matches curated lore, and resolves semantic resonance
+       │
+       ▼
+[ 2. Somatic Kinematics ]   ──> Computes ~60 state variables: ATP, cortisol, voltage, narrative drag, chi
+       │
+       ▼
+[ 3. Somatic Budgeting ]    ──> Sets sentence and word caps, temperature bands, and retry allowances
+       │
+       ▼
+[ 4. Prompt Composition ]   ──> Combines system kernel, memories, active persona, and state directives
+       │
+       ▼
+[ 5. Model Generation ]     ──> Calls local LLM within strict token limits
+       │
+       ▼
+[ 6. The Gatekeeper ]       ──> Scans draft reply for style crimes; triggers sentence salvage or redraft
+       │
+       ▼
+[ 7. Persistence & Receipts] ──> Atomically saves checkpoint to SQLite (saves/iris.db) and logs audit receipts
+```
 
-BoneAmanita includes a standalone, searchable What/How/Why manual set built using the 3x documentation scheme under `docs/manual/`:
+1. **Word Observation:** Your words are categorized into grammatical filler (connective tissue), curated lexicon lists
+   (`lore/lexicon.json`), and semantic embeddings (`spores/embeddings.py`).
+2. **Somatic Kinematics:** Heuristics calculate state values like `voltage`, `narrative_drag`, `cortisol`, and `atp_pool`.
+3. **Somatic Budgeting:** `body/somatic_budget.py` decides how much energy the model may spend and sets word caps.
+4. **Prompt Composition:** `brain/composer.py` builds a fresh, turn-specific instruction sheet with unbreakable core
+   facts and context.
+5. **Model Generation:** The local model generates a candidate response.
+6. **The Gatekeeper:** `physics/gatekeeper.py` inspects the reply for forbidden clichés ("heavy", "a lot", "rich tapestry").
+   Matched sentences are excised via sentence salvage or sent back for redrafting.
+7. **Persistence:** State, dialogue, and associative memories are checkpointed in SQLite (`saves/iris.db`).
 
-- **[System Manual](docs/manual/index.html)**: Internal architecture, the turn lifecycle, somatic physics, memory networks, and voice contracts.
-- **[Reference Manual](docs/manual/reference.html)**: In-session slash commands, runtime modes, tuning presets, SQLite storage, and observability receipts.
-- **[Dev Diary](docs/devlog.html)**: The project told in dated prose, one entry per milestone.
-- **[Run Report](docs/bonereport.html)**: A measured, receipt-by-receipt reading of a real-model run.
+---
 
-To validate and rebuild the manuals:
+## A Newbie's Field Guide to the Somatic Metaphors
+
+BoneAmanita uses biological and somatic metaphors throughout its codebase and readouts. As codified in `docs/DECISIONS.md`
+(D-003), these names are load-bearing domain concepts that describe what the numbers are *for*, not what they *are*:
+
+| Somatic Term | What It Actually Is | How It Affects the Conversation |
+| :--- | :--- | :--- |
+| `atp_pool` | Expendable energy budget (float) | Depletes as the model speaks, retries, or thinks. When depleted, replies become terse until rested. |
+| `cortisol` | Endocrine stress metric (0.0 to 1.0) | Rises during conflict or tension. High cortisol triggers memory shedding to keep the context grounded. |
+| `narrative_drag` | Conversational viscosity and friction | Measures sluggishness. High drag prompts the engine to loosen constraints or change rhythm. |
+| `voltage` | Conversational velocity and spark | Drives pacing and creative leap-taking. High voltage permits non-linear cognitive moves. |
+| `The Gatekeeper` | Immune filter against clichés | Rejects RLHF masks, corporate platitudes, and conversational ruts, forcing rewrites. |
+| `The Village` | Cast of emergent archetypes | Different facets (Gordon, Mercy, Benedict, Jester) that balance the tone of the response. |
+| `The Stage Manager` | Refusal and turn arbitrator | If multiple inner archetypes conflict unresolvably, it pauses rather than producing an insincere mush. |
+| `Mnemonic Arcade` | Associative vector index | Finds relevant past conversations and world facts using semantic distance embeddings. |
+
+> [!NOTE]
+> **Cardinal Rule (`INV-001`, `D-001`):** The model never roleplays a physical body. It never gasps, pants, or claims
+> physical exhaustion. Its state variables dictate internal prompt instructions, sentence brevity, and token budgets.
+
+---
+
+## The Four Experience Modes
+
+Switch modes at boot or in-session using `/mode <name>` (dialogue carries over seamlessly across mode switches, `D-014`):
+
+| Mode | Default Preset | Description |
+| :--- | :--- | :--- |
+| `CONVERSATION` | Zen | Direct, authentic peer dialogue. No loot, no inventory, no narrator commentary. Advice is drawn out through discussion. |
+| `ADVENTURE` | Sanctuary | Text-parser game environment with rooms, exits, inventory items, and dynamic map charting. |
+| `CREATIVE` | Manic | Collaborative writing space with loosened stylistic constraints for brainstorming. |
+| `TECHNICAL` | Debug | Structured working mode. File writes are sandboxed to `output/` and gated by `/allow` and `/deny` permissions. |
+
+---
+
+## Day-One Essential Commands
+
+Type `/help` in any session for the complete command list. Here are the ones worth knowing immediately:
+
+| Command | Action |
+| :--- | :--- |
+| `/status` | Displays live vitals: ATP, cortisol, voltage, memory status, and estimated partner fatigue. |
+| `/checkin [turns]` | Initiates a bounded check-in (12 turns max). Holds space, offers no unsolicited advice, and stores nothing unless confirmed with `/checkin keep`. |
+| `/mode <name>` | Switches active mode (`CONVERSATION`, `ADVENTURE`, `CREATIVE`, `TECHNICAL`). |
+| `/idle` or `/sleep` | Enters a REM cycle. Restores ATP and stamina while distilling episodic memories into invariant sūtras. |
+| `/save` | Manually checkpoints session state, world graphs, and dialogue to `saves/iris.db`. |
+| `/note good`, `/note off <why>` | Saves the last turn with your verdict to `notes/notes.jsonl`. This is how human readers evaluate engine performance (`INV-005`, `D-011`). |
+| `/diag` | Displays telemetry receipts for the current turn, highlighting degraded or silent subsystems (`INV-006`). |
+| `/allow <path>` / `/deny <path>` | Approves or rejects a proposed file modification under `output/` in Technical mode (`INV-008`). |
+
+---
+
+## Holding Space: Behavior in Distress
+
+When BoneAmanita detects that you are overwhelmed, grieving, or in distress, it shifts automatically into space-holding mode
+(`D-023` through `D-028`):
+- **Short replies:** The reply is strictly capped at 45 words (`WORD_CAP_DISTRESSED`).
+- **No unsolicited advice:** It does not try to solve your problem, analyze your trauma, or give you a multi-point action plan.
+- **No closing questions:** It does not demand that you keep talking or explain why you feel this way.
+- **No taking sides:** It does not judge, diagnose, or blame people who are not in the room.
+- **Fixed safety line:** If a message indicates intent to cause self-harm or violence, it displays a fixed crisis resource line and halts the exchange.
+
+---
+
+## Data Storage and Privacy
+
+BoneAmanita is local-first and self-contained:
+- `config.json`: Local model endpoints and path configuration. Created on first run and ignored by git.
+- `saves/iris.db`: Persistent SQLite database containing memories, vocabulary learned at runtime, world graphs, and dialogue checkpoints.
+- **Zero Credential Leaks (`INV-007`):** API keys, passwords, payment numbers, and personal identifiers are detected at intake and automatically masked with `[withheld: ...]`. They are never written to memories, checkpoints, or telemetry traces.
+- `reset.sh`: Deletes persistent saves, memory caches, and runtime logs while leaving your `config.json` intact. Run `sh reset.sh` before fresh test runs.
+
+---
+
+## Manual Set and Deep Documentation
+
+BoneAmanita includes a standalone, searchable documentation set built with the 3x documentation scheme under `docs/manual/`:
+
+- **[System Manual](docs/manual/index.html):** Deep dive into internal architecture, turn lifecycles, somatic physics equations, and voice contracts.
+- **[Reference Manual](docs/manual/reference.html):** Complete catalog of slash commands, tuning presets, SQLite schemas, and observability receipts.
+- **[Dev Diary](docs/devlog.html):** The history of the engine told in dated prose entries, one per milestone.
+- **[Run Report](docs/bonereport.html):** Measured, receipt-by-receipt analysis of real-model runs.
+- **[Architectural Invariants](docs/INVARIANTS.md):** The ten immutable foundational axioms (`INV-001` through `INV-010`) governing the system.
+- **[Architecture Contracts](docs/ARCHITECTURE.md):** Topology, cache contracts, failure modes, and claims registry.
+- **[Decision Records](docs/DECISIONS.md):** Historical rationale, tradeoffs, and held tensions (`T-NNN`) behind all design choices.
+- **[Verification Strategy](docs/TESTING.md):** Nyāya 5-step proof sequence, testing guidelines, and offline verification rules.
+- **[Security and Trust Boundaries](docs/SECURITY.md):** Sensitive assets, threat boundaries, and least-privilege substrate execution.
+
+To validate and rebuild the standalone manuals:
 
 ```bash
 python3 tools/build_manual.py check
 python3 tools/build_manual.py build
 ```
 
-## Using it
+---
 
-### Modes
+## Verifying the Codebase
 
-Set at boot, or switched in-session with `/mode`; the conversation, memory
-and what the engine has read of you carry over, and Adventure's items and map
-come back if you return to it. Each mode selects a different tuning preset,
-and only Adventure has an inventory and a world to move through.
-
-| Mode | Tuning | For |
-|---|---|---|
-| `ADVENTURE` | Sanctuary | The default. Parser-game framing, items, zones. |
-| `CONVERSATION` | Zen | Talking. No loot, no world model. |
-| `CREATIVE` | Manic | Writing. Loosest constraints. |
-| `TECHNICAL` | Debug | Working on something. Tightest constraints. |
-
-### Commands
-
-`/help` lists them in-session. The ones worth knowing first:
-
-| Command | What it does |
-|---|---|
-| `/status` | Vitals: health, stamina, energy, the memory backend, and what it believes about you. |
-| `/diag` | This turn's receipts, plus anything silent or degraded. See below. |
-| `/memory [word]`, `/memory why <name>` | Technical mode or the deep HUD: what the model keeps (who kept it, when, and how often it came back), the world it has charted, and the gate's latest decisions. A word filters the list; `why` traces one memory or place back to what you said and what the gate checked. |
-| `/note good`, `/note off <why>`, `/note <words>` | Save the last exchange with your verdict to `notes/notes.jsonl` (kept out of git; `reset.sh` leaves it). `python tools/read_notes.py` reads them back. This is how the engine is judged: by you. |
-| `/checkin [turns]`, `/checkin keep`, `/checkin end` | A short bounded check-in (12 turns at most): the engine holds space the whole way, keeps nothing, and the last reply only lands. `keep` right after it ends remembers it. A message that says you may harm yourself or someone else ends it with a fixed line. |
-| `/save` | Persist state to disk. |
-| `/mode <name>` | Switch the experience mode (Adventure, Conversation, Creative, Technical). |
-| `/preset <name>` | Load a tuning preset only (Zen Garden, Thunderdome, ...); the mode stays. |
-| `/idle`, `/sleep` | Enter a REM cycle, regenerating ATP and stamina. Dreams happen here. |
-| `/rest`, `/zen`, `/flush` | The hard reset. Severs context, drops drag to zero, restores stamina and ATP, purges trauma. |
-| `/truth <0-3>` | Adjust reality ambiguity. |
-| `/hud <depth>` | Set readout depth: `warm`, `lite`, `core` or `deep`. |
-| `/reload` | Hot-reload `lore/*.json` without restarting. |
-| `/look`, `/use`, `/inventory`, `/map` | Adventure mode only: the world and what you carry. |
-| `/allow <path> [keep]`, `/deny <path>` | Answer a held file edit (below). `keep` allows that file from now on; a folder ending in `/` with `keep` covers everything under it. |
-
-Files the model writes (Technical mode's `<write_file>` blocks, `/journal`)
-go under `output/`. It creates new files and edits its own freely. An existing
-file it did not create is left alone and the edit is held until you `/allow`
-or `/deny` it, unless your own message asked for that file to be changed.
-`output/.substrate_ledger.json` records what it created and what you allowed.
-
-## How a turn works
-
-1. **Your words get sorted into categories.** Four stages, most trustworthy
-   first:
-   - **Grammatical filler** (`the, a, is, at, and`). About 40% of normal speech.
-     These are not unclassified, they are connective tissue, and the engine
-     measures their density as its own signal.
-   - **The curated word lists** in `lore/lexicon.json`: heavy words, kinetic
-     words, abstract words, void words, corporate cliché words, and thirty odd
-     other categories. Inflections resolve to their root, so `forge` answers for
-     `forging` and `forged`.
-   - **Semantic resonance.** A word the lists do not know is compared against an
-     average of each category's meaning, using the same embedding model the
-     memory uses. If it clearly belongs somewhere, the engine files it and
-     remembers it. If it is genuinely between two categories, it stays unfiled.
-   - **A last-resort guess from spelling**, which fires on about 3% of words.
-
-   Earlier vocabulary audits reported roughly 81% resolved through filler,
-   curated lists, or semantic resonance, about 3% through spelling heuristics,
-   and about 16% unresolved. These are corpus- and backend-dependent audit
-   results, not coverage guarantees for arbitrary English.
-
-2. **Those counts become numbers.** Formulas in `physics/` turn the counts into
-   roughly sixty values with names like `voltage`, `narrative_drag`, `cortisol`,
-   `atp_pool` and `chi`. These are hand tuned heuristics wearing physics names.
-   They are not real physics, and they do not need to be; they work as a way of
-   tracking the shape of a conversation.
-
-3. **Thresholds pick instructions and generation limits.** If contradiction is
-   high, a sentence about holding paradox can enter the instruction sheet.
-   `SomaticBudget` sets sentence and word targets, a retry allowance, and a
-   temperature band from inferred user state and engine state. The composer
-   asks for shorter replies and forbids narrating bodily exhaustion; the cortex
-   also limits output tokens. Prompt instructions do not guarantee compliance,
-   and a token limit is not an exact word or sentence limit. Prompt length
-   varies with history, memory, and mode.
-
-4. **The engine may call the model.** A held turn can stop before generation.
-   Otherwise the request includes assembled instructions, dialogue context,
-   and your message. Transport retries, empty-reply retries, optional DSPy
-   critic calls, and council behavior can add model requests.
-
-5. **The reply gets inspected.** A filter checks for banned phrases ("I
-   understand how you feel", "rich tapestry", and a long list in
-   `lore/style_crimes.json`). On a hit, the reply is discarded and the model is
-   asked again within a retry budget. Exhausting that budget produces a
-   fallback response rather than unlimited retries.
-
-6. **Selected state is saved.** The normal completed-turn path writes a
-   checkpoint; other memory and learned-state stores also have persistence
-   paths. Not every runtime field or early-exit path is checkpointed. Save
-   reliability is one of the outstanding issues below.
-
-## Where things live
-
-| Directory | What is in it |
-|---|---|
-| `physics/` | The formulas. Word counts in, state numbers out. Also the Creative Determinant math. |
-| `body/` | Energy, stress chemistry, the regulator that keeps them in range. |
-| `brain/` | The prompt assembler, the reply filter, the memory index, the dream engine. |
-| `phases/` | The ordered steps each turn runs through: observe, metabolise, think. |
-| `spores/` | Memory storage: short term cache, long term index, the network that joins them. |
-| `soul/` | Personality traits and how they drift over time. |
-| `archetypes/` | The Village: Gordon, Mercy, Benedict, Jester and the rest. |
-| `mechanics/` | Slash commands, the terminal interface, setup wizard, inventory, and the word lookup (`lexicon.py`, `resonance.py`). |
-| `lore/` | Authored JSON content: word lists, many thresholds, banned phrases, prompt text. |
-| `tools/` | Audit scripts. Run these instead of trusting numbers in the docs. |
-
-The entry point is `main.py`. The per turn loop is `cycle.py`.
-
-If you only remember two file names: `lore/lexicon.json` is the vocabulary the
-engine thinks in, and `lore/tuning_presets.json` holds much of the tuning.
-Additional defaults and mode settings live in `presets.py`; some thresholds
-remain inline in the code.
-
-## Before you read the source: the vocabulary problem
-
-The code is written in biological metaphor throughout: ATP, cortisol, autophagy,
-Gödel scars, the Village, the Mnemonic Arcade. This is deliberate and it is
-protected by a standing project decision (`docs/DECISIONS.md`, D-003): the names are not decoration, they map to real variables and must not be
-renamed to `error_count` and `energy_level`.
-
-The thing to hold in your head is that the metaphor describes what the numbers
-are *for*, not what they *are*. `ATP` is a float that goes down when work happens
-and gates certain behaviours. Calling it ATP tells you its purpose. It does not
-mean the program has a metabolism in any sense a biologist would accept.
-
-This matters because the vocabulary is persuasive enough to make you stop asking
-whether a thing is connected. That turned out to be the central problem with the
-codebase, and it is what most of the recent work was about.
-
-## What it does
-
-- **Semantic memory can find related things with a working embedder.** Mention
-  your grandmother's letters and it can surface a related shoebox conversation
-  without shared words. Related
-  concepts reached 0.92 similarity in an earlier audit; that is an example,
-  not a retrieval guarantee. Hash fallback does not preserve these relationships.
-
-- **Memory similarity influences sampling.** The governor scores the current
-  utterance against an `ordvec` sign bitmap and compares its top matches with
-  the corpus distribution, correcting for corpus size. That signal influences
-  policy and a proposed sampling temperature. With too little evidence it
-  declines to measure the regime and falls back to PID regulation. The model
-  interface clamps the proposed temperature to the supplied temperature band,
-  so a closed gate does not guarantee zero-temperature sampling. The former
-  graph-Laplacian/Picard solver has been removed. The Creative Determinant
-  equations remain in the metabolic viability, ATP, and ROS calculations.
-
-- **Short term memory works, and is consumed.** Significant moments land in the
-  hippocampus, connect to similar recent moments, and get promoted into long
-  term storage during sleep. Stress driven forgetting is real: at high cortisol
-  holding 85 memories, it sheds 36 of them.
-
-- **Both kinds of recall run.** Exact recall (have we been in this exact room
-  before) and semantic recall (what does this remind me of).
-
-- **Conversations have places.** Memories are tagged with the zone they were
-  formed in, retrieval is scoped to the zone you are in, and crossing from one to
-  another flushes working memory.
-
-- **Word classification combines curated lists and semantic matching.** Earlier
-  audits reported 81% resolution through filler, curated lists, or resonance.
-  This measures classification coverage, not language understanding. When the
-  engine meets a word it does not know and can place it confidently, it files it
-  and keeps it.
-
-- **Many failures are reported.** Turn crashes can surface with stack traces,
-  missing config is named at startup, and a degraded embedding backend is
-  announced. Embedding fallback now reports degraded work on the first failed
-  sweep. Reporting coverage elsewhere remains incomplete.
-
-- **It can decline to answer.** The Village is a cast of voices, each
-  triggered by a different shape of conversation. When several are triggered
-  at once the Stage Manager negotiates before anyone speaks: certain pairs
-  have a named fusion and merge, and when there is no resolution it holds the
-  floor empty rather than blending them into something smooth and false. A
-  held turn stops before response generation. Refusal routing is still under
-  development. Its previously failing regression tests are repaired; live
-  behavior still needs validation.
-
-- **It adapts to you, not just to itself.** The engine keeps a running guess
-  at how tired *you* are. It reads withdrawal rather than volume: messages
-  getting shorter or blunter *than your own normal* is the signal, so someone
-  who simply writes tersely is intended to be distinguished from someone who
-  has gone quiet. This remains a heuristic inference about the person.
-  When it reads you as flagging it requests shorter replies and lowers the
-  output-token budget. Actual accommodation still needs measurement. Writing
-  at length does the opposite; it counts as effort spent, and when you have
-  spent enough the prompt asks the model to offer to carry part of the load.
-  The user model is included in quicksave/restore, and `/status` shows what it
-  currently believes ("You: steady", "tiring", "flagging") so you can disagree
-  with it.
-
-- **Subsystems file receipts.** Nine subsystem names are registered in the
-  current core roll call; which ones report depends on the path taken. Records
-  describe what they were handed, what came back, and whether they ran normally or on a
-  fallback. `/diag` prints the turn's records plus three lists that matter more:
-  anything that promised to report and never did, anything on its fallback path
-  every single time, and anything that runs and returns nothing, always. From the
-  outside all three look exactly like healthy output, which is the whole reason
-  the mechanism exists.
-
-  The rule that gives it teeth is small: the part doing the job fills in its own
-  record. That makes work inspectable, but it does not make the record
-  automatically accurate. The September 18 review reproduced hash fallback
-  reported as successful HTTP vectorization. That defect is now repaired with
-  regression coverage; receipt correctness still needs tests.
-
-## Project status
-
-An experimental system in active development. The suite passes offline (1265 passed, 5 skipped on 2026-10-12; `docs/TESTING.md`),
-and live-model behaviour is measured with replays of scripted conversations and with checks that need no judge
-(`tools/check_conformance.py`). What was measured and what is still open is in `docs/HANDOFF.md`; why each choice was made is
-in `docs/DECISIONS.md`. Verdicts on whether it helps a person come from human readers, not from a model judging itself.
-
-What it is for: not to be a sycophant, to co-regulate the person it talks to, and to give a space with healthy constraints and
-positive interaction. When it reads a person as distressed it holds space: it stays with them, says little and softly, and does not
-fix, advise, explain their feelings or take sides against someone who is not in the room.
-
-Earlier audits found disconnected components, hash-based memory coordinates, settings absent from config files, and severity
-logs routed incorrectly. That history motivated the receipts and state-to-prompt tests. Fluent prose can hide broken
-internals: neither a plausible reply nor the absence of an exception is enough to establish that the machinery worked.
-
-### Honest limits
-
-- It is a prompt builder. The word counting layer is hand tuned heuristics with
-  physics names, and that is a legitimate design, but it is not a simulation.
-- Earlier vocabulary audits left about 16% of their inputs unresolved; results
-  depend on the corpus and embedding backend.
-- Receipts record a subsystem's account of its work. They make the engine
-  inspectable; both that account and the underlying result need verification.
-- **Embedding outages still compromise semantic recall.** Fallback now reports
-  degraded hash work immediately, preserves vector width, and keeps temporary
-  hashes out of the semantic cache so the same text can recover. After three
-  failed sweeps it switches to hash and clears the old cache. Hash vectors carry
-  no meaning, even at the correct width; downstream stored vectors are not
-  automatically re-embedded. Restart/reconfigure to restore a semantic backend
-  after the terminal switch to hash.
-- **Quicksave preserves the previous checkpoint on write failure.** It writes
-  and syncs a temporary file before atomic replacement. This does not promise
-  power-loss durability, and a hard process kill can leave an unpublished
-  temporary file. Shutdown waits for the cycle daemon and background workers
-  before persistence and telemetry teardown; active work must finish first.
-- **Small local models follow the prompt unevenly.** On qwen3.5:9b the rules transfer (no dashes, no style crimes) but brevity and
-  softness do not without a word cap and a reading of the draft (D-027, D-028); the checks measure it, they do not guarantee it.
-
-## Checking it yourself
-
-Run these rather than trusting the numbers in any document, including this one.
-Use a disposable checkout with Git metadata and the working changes you intend
-to test: some checks call `git ls-files`, and engine tests write state and logs.
-The suite pins embeddings to hash in many tests, but not every chat path is
-isolated from the configured backend. Live embedding tests can be enabled with
-`BONE_EMBED_LIVE_TEST=1`.
+All unit tests run offline using deterministic SHAKE-256 hash embeddings (`BONE_EMBED_BACKEND=hash`, `INV-004`), ensuring zero
+external API dependencies during verification.
 
 ```bash
-.venv/bin/python -m pytest -q                      # the offline suite (run `sh reset.sh` first)
-.venv/bin/python tools/audit_physics_inputs.py     # how much vocabulary it knows
-.venv/bin/python tools/audit_receipts.py           # which subsystems did real work
-.venv/bin/python tools/audit_handlers.py           # silent exception handlers
-.venv/bin/python tools/audit_safe_get.py           # runtime default hit-rate
-.venv/bin/python tools/audit_somatic.py            # does the model obey its body (live, ~15 min)
-.venv/bin/python tools/audit_somatic_census.py     # a scripted conversation: where the energy goes (live)
-.venv/bin/python tools/check_conformance.py        # does a system keep the rules (counts over replays; needs replay rows)
+# Run documentation contract and Ghana-pāṭha checks
+python3 tools/check_docs.py
+
+# Run the fast test suite (memory-capped)
+sh reset.sh
+systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0 .venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py
+
+# Run somatic audit scripts
+.venv/bin/python tools/audit_receipts.py       # inspect subsystem roll calls
+.venv/bin/python tools/audit_physics_inputs.py # check vocabulary resolution rates
 ```
 
-If replies ever start feeling generic, `audit_receipts.py` is the first thing to
-check.
+---
 
-## Documentation
+## Credits and Lineage
 
-| File | What it is |
-|---|---|
-| `ROADMAP.md` | Current priorities: phases with permanent item IDs. |
-| `docs/HANDOFF.md` | Current state, open questions and gotchas: read before changing anything. |
-| `docs/DECISIONS.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md` | Why each choice was made; the shape of the system; how it is measured. |
-| `docs/devlog.html`, `docs/bonereport.html` | The dev diary and the latest measurement report. |
-| `docs/README.MD` | The Hypervisor, BoneAmanita's no-math sibling for cloud models. |
-| `CREDITS.MD` | Full lineage and attribution. |
-| `license.txt` | MIT, human/computer variant. |
+BoneAmanita builds directly on foundational concepts and mathematics from:
+- **Nelson Spence** ([Project Navi](https://project-navi.github.io)) for the Creative Determinant metabolic equations, `ordvec`, and the bitmap regime gate.
+- **James Taylor** ([BonePoke](https://github.com/utharian-code/bonepoke)) for Volatile Semantic Leverage and the Truth Over Cohesion axiom behind the Lexical Firewall.
+- **Bradley Bates** ([bradsadevnow](https://github.com/bradsadevnow/)) for the Gloss framework and somatic dialogue insights.
 
-## Credits
+Full lineage and historical attribution are recorded in [CREDITS.MD](docs/CREDITS.MD).
 
-BoneAmanita builds directly on other people's work, most of it load bearing
-rather than inspirational:
-
-- **Nelson Spence** ([Project Navi](https://project-navi.github.io)) for the
-  Creative Determinant metabolic equations, `ordvec`, and the recommendation
-  behind the current bitmap regime gate.
-- **James Taylor** ([BonePoke](https://github.com/utharian-code/bonepoke)) for
-  Volatile Semantic Leverage and the "Truth Over Cohesion" axiom that the
-  Lexical Firewall is built on.
-- **Bradley Bates** ([bradsadevnow](https://github.com/bradsadevnow/)) for the "Gloss" framework and endless inspiration and advice.
-
-
-`CREDITS.MD` has the full list and the specifics. On verification: `ordvec` is
-itself Lean 4 verified and the Creative Determinant has its own formalisation,
-both in Project Navi's repos. BoneAmanita's own implementation of those equations
-is ordinary Python and carries no proofs.
+---
 
 ## License
 
-MIT, in a human/computer variant that asks for transparency about how the code
-was made. See `license.txt`.
-
-### Live Grok / Claude runs
-
-Run these commands from the project terminal. Each asks for the API key with
-hidden input (paste it and press Enter); it is kept only in process memory.
-Existing `XAI_API_KEY` / `ANTHROPIC_API_KEY` environment variables also work.
-
-```bash
-.venv/bin/python tools/live_run.py --provider xai
-.venv/bin/python tools/live_run.py --provider anthropic
-```
-
-Defaults are `grok-4.3` and `claude-haiku-4-5`, economical current options checked
-September 18, 2026. Use `--model grok-4.6` for the newest Grok generation at a
-higher token price. Model availability depends on your account.
-
-The runner uses the actual `main.BoneAmanita` boot, turn pipeline, and shutdown,
-with two conversation turns. Use `--mode ADVENTURE` or repeat `--prompt "..."`
-for other scenarios. It copies authored inputs into a fresh `/tmp/bone-live-*`
-directory; existing saves and memories are not loaded or overwritten. The
-printed directory contains `live_report.json` and engine logs. Each run uses
-paid API calls, including internal cognition and DSPy calls; two user turns can
-cause several requests. This is not a spending cap.
-
-Strict live mode disables the main transport's local/mock fallback. The report
-requires successful cloud generation, zero recorded main-transport failures,
-and no terminal engine states. It is a smoke test, not an assertion that every
-subsystem (including embeddings and DSPy) is healthy; inspect logs and receipts
-for degraded components. Embeddings retain their independent local settings.
-
-For the ordinary interactive entry point, set the key in your shell with hidden
-input, then use environment overrides (your saved config stays unchanged):
-
-```bash
-read -rsp 'Claude API key: ' ANTHROPIC_API_KEY; echo
-export ANTHROPIC_API_KEY
-BONE_PROVIDER=anthropic BONE_MODEL=claude-haiku-4-5 BONE_STRICT_LIVE=1 .venv/bin/python main.py
-```
-
-For Grok, substitute `XAI_API_KEY`, `BONE_PROVIDER=xai`, and `BONE_MODEL=grok-4.3`.
-Interactive `main.py` uses your normal saved game and logs.
+MIT, in a human/computer variant that asks for transparency about how the code was crafted. See [LICENSE](LICENSE).
