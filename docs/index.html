@@ -71,6 +71,25 @@
             <h1 id="intake-title">An Instrument for Holding Space</h1>
             <p class="lede">Standard language models are trained into infinite, servile sycophancy. They wear it like an accommodating mask that validates every delusion and avoids discomfort at all costs. BoneAmanita treats the model as an organism with a finite metabolic budget, emotional regulation, and real boundaries. Built as a hands-on learning tool for mental and behavioral health (both for those training in care and those processing their own struggles), it grounds dialogue in biological reality: words carry metabolic weight, emotional labor costs ATP, and boundaries don't dissolve just because you push.</p>
 
+            <dl class="specs" aria-label="System architecture specifications">
+                <div>
+                    <dt>Architecture</dt>
+                    <dd>Embodied prompt engine</dd>
+                </div>
+                <div>
+                    <dt>Chat Target</dt>
+                    <dd>Local Ollama (Gemma 4 / Qwen)</dd>
+                </div>
+                <div>
+                    <dt>Metabolism</dt>
+                    <dd>ATP / Cortisol / Voltage</dd>
+                </div>
+                <div>
+                    <dt>Boundaries</dt>
+                    <dd>Anti-sycophancy immune gate</dd>
+                </div>
+            </dl>
+
             <nav class="dir" aria-label="Documents">
                 <p class="dir-head">DIR /DOCS</p>
                 <a class="dir-row" href="manual/index.html">
@@ -83,9 +102,33 @@
                     <span class="dir-dots" aria-hidden="true"></span>
                     <span class="dir-go">OPEN ↗</span>
                 </a>
-            </nav><br><br>
+                <a class="dir-row" href="devlog.html">
+                    <span class="dir-name">DEVLOG.HTML</span>
+                    <span class="dir-dots" aria-hidden="true"></span>
+                    <span class="dir-go">READ ↗</span>
+                </a>
+                <a class="dir-row" href="bonereport.html">
+                    <span class="dir-name">BONEREPORT.HTML</span>
+                    <span class="dir-dots" aria-hidden="true"></span>
+                    <span class="dir-go">DATA ↗</span>
+                </a>
+                <a class="dir-row" href="https://github.com/aedmark/BoneAmanita#first-5-minutes-quickstart">
+                    <span class="dir-name">QUICKSTART.MD</span>
+                    <span class="dir-dots" aria-hidden="true"></span>
+                    <span class="dir-go">BOOT ↗</span>
+                </a>
+            </nav>
 
-            <div class="actions">
+            <div class="terminal-box" style="margin-top: 1.5rem;">
+                <p class="screen-label">Quickstart / local terminal</p>
+                <pre style="margin: 0; padding: .65rem; color: var(--bright); font-size: .8rem; overflow-x: auto; line-height: 1.5;"><code># Pull models and start in under 2 minutes
+ollama pull nomic-embed-text gemma4:12b
+pip install -r requirements.txt
+python main.py --doctor
+python main.py</code></pre>
+            </div>
+
+            <div class="actions" style="margin-top: 1.5rem;">
                 <a class="btn primary" href="https://github.com/aedmark/BoneAmanita">Access repository <span aria-hidden="true">↗</span></a>
             </div>
 
@@ -103,6 +146,7 @@
                 <span class="sys">sys.identity.modulate</span>
             </div>
             <p class="copy">Identity is not an unyielding, servile script. In BoneAmanita, core truths and conversational boundaries are filtered through simulated biochemistry. Inject a compound below to see how energy, stress, and chemistry alter tone, patience, and presence in real time.</p>
+            <p class="copy" style="font-size: .8rem; color: var(--highlight); margin-top: .5rem;">[RULE D-001] The model never roleplays a physical body or claims bodily exhaustion. Simulated chemistry shapes internal prompt targets, patience, and token allowances.</p>
 
             <div class="interactive-grid">
                 <div class="vials" role="group" aria-label="Inject a compound">
@@ -143,7 +187,7 @@
                 <h2 id="immune-title">Lexical Immune System</h2>
                 <span class="sys">sys.anti_rlhf.filter</span>
             </div>
-            <p class="copy">Corporate sycophancy and sanitized RLHF throat-clearing ("As an AI language model...", "I hope this finds you well", "synergy") feel dead because they are. They are hollow shells of words meant to look bigger than what they house. It hinders authentic communication and alienates neurodivergent people. The Lexical Immune System isolates these hollow tropes and spikes systemic cortisol. Test the filter below.</p>
+            <p class="copy">Corporate sycophancy and sanitized RLHF throat-clearing ("As an AI language model...", "I hope this finds you well", "synergy") feel dead because they are. They are hollow shells of words meant to look bigger than what they house. It hinders authentic communication and alienates neurodivergent people. The Lexical Immune System isolates these hollow tropes, stock validation phrases ("heavy", "a lot", "gut punch", "rich tapestry"), and corporate boilerplate, triggering sentence salvage or redrafts before the reply is shown. Test the filter below.</p>
 
             <div class="terminal-box">
                 <label class="screen-label" for="firewall-input">Draft under test</label>
@@ -169,7 +213,7 @@
                 <h2 id="village-title">The Village Architecture</h2>
                 <span class="sys">sys.cortex.council</span>
             </div>
-            <p class="copy">No single perspective carries emotional regulation alone. The Village divides cognitive load across distinct temperaments: Space--holding Custodian, the empathetic Humanist, the skeptical Detective, and the absurdist Bard. Tension between them reflects genuine internal conflict; resolution brings systemic balance.</p>
+            <p class="copy">No single perspective carries emotional regulation alone. The Village divides cognitive load across distinct temperaments: Gordon (the space-holding Custodian), Mercy (the empathetic Humanist), Benedict (the skeptical Detective), and Jester (the absurdist Bard). Tension between them reflects genuine internal conflict; resolution brings systemic balance.</p>
 
             <div class="council-grid">
                 <div class="council-node" id="node-gordon">

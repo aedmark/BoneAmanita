@@ -11,7 +11,7 @@ Narrative: [devlog.html](devlog.html), [bonereport.html](bonereport.html). Manua
 
 ## Current state
 
-_Last updated: 2026-11-09, session 21, on `main`: Front-Facing Documentation Overhaul (Part 1: README.md)._
+_Last updated: 2026-11-09, session 21, on `main`: Front-Facing Documentation Overhaul (Part 1: README.md, Part 2: Web Landing)._
 
 **The mission** (Gordon): `[CONTRACT]` BoneAmanita is not a sycophant; it co-regulates the human and gives a space with healthy
 constraints and positive interaction. It does not coddle or enable a bad idea, and it backs a plan the person has decided
@@ -29,7 +29,7 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 - D-036 Sūtra Consolidator: `[OBSERVED]` `engine/gate/sutra.py` distills enduring invariants into `self/memory/sutra.*` during sleep; `/sutra` command (`mechanics/commands.py`). `tests/test_sutra_consolidation.py` (7 tests).
 - D-037 Stock Empathy & Opener Rut Breaker: `[OBSERVED]` `STOCK_EMPATHY` soft style crime in `lore/style_crimes.json`, consecutive 3-word opener rut breaker in `brain/cortex.py`, `VOICE` prompt sync; `tests/test_openings.py` (10 tests).
 - P12-01 to P12-07 Parity: `[OBSERVED]` `AGENTS.md` upgraded with Hermeneutic Circle; `INV-009` & `INV-010` codified; `docs/DECISIONS.md` added Held Tensions (`T-001` - `T-003`, D-038); `docs/ARCHITECTURE.md` added topology, state/caches, failure mitigations; `docs/TESTING.md` added Nyāya 5-step proof, change-to-check matrix, runs that vary; `docs/SECURITY.md` added Zone defense and boundary table; `tools/check_docs.py` upgraded with invisible char, `T-NNN`, Ghana-pāṭha reciprocity, Pramāṇa badges, and Lexical Firewall; fast tests passed 5/5, `check_docs.py` 0 errors.
-- Front-Facing Documentation Overhaul: `[OBSERVED]` Rebuilt root `README.md` as an accessible, robust front door with sycophancy exposition, 5-minute quickstart, pipeline ASCII chart, Somatic Metaphor Field Guide, modes/commands tables, and distress space-holding contracts; `check_docs.py` 0 errors across 24 files.
+- Front-Facing Documentation Overhaul: `[OBSERVED]` Rebuilt root `README.md` and `docs/index.html` as accessible, robust front doors with sycophancy exposition, 5-minute quickstart cards, pipeline ASCII chart, Somatic Metaphor Field Guide, modes/commands tables, and distress space-holding contracts; `check_docs.py` 0 errors across 24 files.
 
 **What the engine does for a person in distress** (D-023 to D-028): `[OBSERVED]` a model reads each message for distress; the contract says to hold space and fix nothing; the validator and Gatekeeper reject advice, a closing question and verdicts on others; the voice pass and opening edit stand down; the reply is capped at 45 words; a model reads the draft for staying with them. Measured on 7 scripted topics, two models: distress mode on 50 of 70 distressed turns, 0 of 112 engaged turns.
 
@@ -41,7 +41,7 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 3. (Done, D-037) Stock phrases and repeated openers: `STOCK_EMPATHY` soft crime in Gatekeeper, opener rut breaker in cortex, direct-response composer directive (P5-05).
 4. A whole-conversation panel (at least 3 runs per arm) has not been run since D-022; the conformance check, sycophancy sheet and replays stand in.
 5. Review `tools/hold_set.json` (90 labels by Claude; three corrected by Gordon) if the reader is tuned again.
-6. Front-Facing Documentation: Part 2 (Web landing page in `docs/index.html`) and Part 3 (3x Manuals in `docs/manual/`).
+6. Front-Facing Documentation: Part 3 (3x Manuals in `docs/manual/`).
 
 **Gotchas**
 - `sh reset.sh` before any test or engine run; cap with `systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0`.
@@ -53,13 +53,13 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 
 ## Session log
 
-### Session 21: 2026-11-09: Front-Facing Documentation Overhaul (Part 1: README.md)
+### Session 21: 2026-11-09: Front-Facing Documentation Overhaul (Part 1: README.md, Part 2: Web Landing)
 
 **Contributor:** Gordon & Gemini
 **Goal:** Make front-facing documentation robust and newbie-friendly across root `README.md`, web landing page, and 3x manuals.
-**Done:** Rebuilt root `README.md` into an approachable, robust front door for newcomers. Added a plain-language exposition of the sycophancy problem and BoneAmanita's co-regulation mission, a copy-paste 5-minute quickstart with doctor validation, an ASCII turn pipeline diagram, a Somatic Metaphor Field Guide table (clarifying D-001 anti-body-performance), mode/command tables, and distress space-holding contracts. Updated `docs/CHANGELOG.md` and `docs/HANDOFF.md`.
+**Done:** Rebuilt root `README.md` into an approachable, robust front door for newcomers with sycophancy exposition, 5-minute quickstart, turn pipeline diagram, somatic metaphor table, and mode/command references. Enhanced `docs/index.html` with hardware/architecture specs grid, local terminal quickstart card, expanded `DIR /DOCS` directory (System, Reference, Devlog, Bonereport, Quickstart), D-001 anti-body-performance callout, and clarified Village council temperament descriptions. Updated `docs/CHANGELOG.md` and `docs/HANDOFF.md`.
 **Verified:** `python3 tools/check_docs.py` passed with 0 errors across 24 files (`[OBSERVED]`); `python3 tools/build_manual.py check` passed (`[OBSERVED]`); fast test suite `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` passed 5/5 (`[OBSERVED]`); zero em dashes.
-**Next session should start with:** Part 2: Web landing page (`docs/index.html` & somatic dashboard).
+**Next session should start with:** Part 3: 3x Manual set (`docs/manual/system.manual.json`, `docs/manual/reference.manual.json`, and rebuild).
 
 ### Session 20: 2026-11-09: Hermeneutic Circle, Invariants 9-10, Held Tensions, Verification, Security & Linter Parity (Phase 12 complete)
 
