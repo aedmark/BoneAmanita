@@ -11,7 +11,7 @@ Narrative: [devlog.html](devlog.html), [bonereport.html](bonereport.html). Manua
 
 ## Current state
 
-_Last updated: 2026-11-04, session 18, on `main`: Vedas epistemic layer retrofitted (Śruti invariants INV-001 - INV-008, Pramāṇa proof boundaries, Ghana-pāṭha checks in check_docs.py)._
+_Last updated: 2026-11-09, session 20, on `main`: Expanded Manifold Parity (Step 1: Hermeneutic Circle & Agent Protocol, P12-01)._
 
 **The mission** (Gordon): `[CONTRACT]` BoneAmanita is not a sycophant; it co-regulates the human and gives a space with healthy
 constraints and positive interaction. It does not coddle or enable a bad idea, and it backs a plan the person has decided
@@ -28,6 +28,7 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 - Vedas Epistemic Layer: `[OBSERVED]` `docs/INVARIANTS.md` (`INV-001` - `INV-008`), Ghana-pāṭha checks in `tools/check_docs.py`, fast tests passed 5/5.
 - D-036 Sūtra Consolidator: `[OBSERVED]` `engine/gate/sutra.py` distills enduring invariants into `self/memory/sutra.*` during sleep; `/sutra` command (`mechanics/commands.py`). `tests/test_sutra_consolidation.py` (7 tests).
 - D-037 Stock Empathy & Opener Rut Breaker: `[OBSERVED]` `STOCK_EMPATHY` soft style crime in `lore/style_crimes.json`, consecutive 3-word opener rut breaker in `brain/cortex.py`, `VOICE` prompt sync; `tests/test_openings.py` (10 tests).
+- P12-01 Epistemic Protocol Parity: `[OBSERVED]` `AGENTS.md` upgraded with Hermeneutic Circle (Adhyāsa, Saṃśaya, Praśna, Pūrva-Pakṣa, Āvartana, Pratibandha) and Kṣetra-Maryādā; fast tests passed 5/5, `check_docs.py` 0 errors.
 
 **What the engine does for a person in distress** (D-023 to D-028): `[OBSERVED]` a model reads each message for distress; the contract says to hold space and fix nothing; the validator and Gatekeeper reject advice, a closing question and verdicts on others; the voice pass and opening edit stand down; the reply is capped at 45 words; a model reads the draft for staying with them. Measured on 7 scripted topics, two models: distress mode on 50 of 70 distressed turns, 0 of 112 engaged turns.
 
@@ -39,6 +40,7 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 3. (Done, D-037) Stock phrases and repeated openers: `STOCK_EMPATHY` soft crime in Gatekeeper, opener rut breaker in cortex, direct-response composer directive (P5-05).
 4. A whole-conversation panel (at least 3 runs per arm) has not been run since D-022; the conformance check, sycophancy sheet and replays stand in.
 5. Review `tools/hold_set.json` (90 labels by Claude; three corrected by Gordon) if the reader is tuned again.
+6. Expanded Manifold Parity: P12-02 (Meta-Epistemic Invariants in `docs/INVARIANTS.md`).
 
 **Gotchas**
 - `sh reset.sh` before any test or engine run; cap with `systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0`.
@@ -50,6 +52,14 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 
 ## Session log
 
+### Session 20: 2026-11-09: Hermeneutic Circle & Agent Protocol Parity (P12-01)
+
+**Contributor:** Gordon & Gemini
+**Goal:** Step 1 of Expanded Manifold Parity: Upgrade `AGENTS.md` with the Hermeneutic Circle, Zone Boundaries, Session Ownership, and expanded Nirukta lexicon.
+**Done:** Seeded Phase 12 (Expanded Manifold Parity) in `ROADMAP.md` (P12-01 through P12-07). Upgraded `AGENTS.md` Kalpa loop with Hermeneutic Circle (*Adhyāsa-Nirāsa*, *Saṃśaya-Ccheda*, *Praśna*, *Pūrva-Pakṣa*, *Āvartana*, *Pratibandha*), session owner checks in Śravaṇa, and Sūtra consolidation triggers in Saṃgraha. Added Zone Boundaries (*Kṣetra-Maryādā*) section. Expanded Nirukta canonical lexicon with the Vedic Epistemic Lexicon table. Updated `docs/CHANGELOG.md` under Unreleased.
+**Verified:** `python3 tools/check_docs.py` passed with 0 errors across 24 files (`[OBSERVED]`); fast test suite `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` passed 5/5 (`[OBSERVED]`); zero em dashes.
+**Next session should start with:** Step 2 (P12-02: Meta-Epistemic Invariants in `docs/INVARIANTS.md`).
+
 ### Session 19: 2026-11-04: Stock Empathy Filter and Opener Rut Breaker (D-037, P5-05)
 
 **Contributor:** Gordon & Gemini
@@ -57,6 +67,8 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 **Done:** Added `STOCK_EMPATHY` soft style crime to `lore/style_crimes.json` targeting emotional descriptors ("heavy", "a lot", "gut punch", "jugular"); excised via sentence salvage (D-008). Enhanced `_in_a_rut` in `brain/cortex.py` with consecutive 3-word opener matching (normalizing demonstratives) to rewrite repeated openers into conversational questions via `_open_with_a_question`. Synced `TheCortex.VOICE` prompt to forbid "heavy", "a lot", and "gut punch". Removed "it is a lot" from hold reader feedback. Added direct-response and opener variation directives to `CONVERSATION` style guide (`lore/system_prompts.json` and `brain/composer.py`). Added unit tests in `tests/test_openings.py` (10 tests, verified failing on old code and passing on new code).
 **Verified:** `python3 tools/check_docs.py` 0 errors, 0 warnings across 24 files (`[OBSERVED]`); `pytest tests/test_openings.py` passed 10/10 (`[OBSERVED]`); `pytest tests/test_mode_failures.py` passed 75/75 (`[OBSERVED]`); zero em dashes.
 **Next session should start with:** Path B (Open item 2: Qwen `HOLD_CUT 3` in P8-05, `/note off` telemetry in P10-03).
+
+### Session 18: 2026-11-04: Vedas Epistemic Layer & Sūtra Consolidator (D-036)
 
 **Contributor:** Gordon & Gemini
 **Goal:** Formalize BoneAmanita's architectural memory using the Vedas Epistemic Layer (Path A) and build the Subconscious Sūtra Consolidator (Path C).

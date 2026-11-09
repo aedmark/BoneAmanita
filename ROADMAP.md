@@ -99,3 +99,16 @@ Goal: Distill enduring invariants and behavioral axioms into dense, minimal-syll
 
 - [x] P11-01 Sūtra Consolidator (`engine/gate/sutra.py`, D-036) crystallizing episodic memories into `self/memory/sutra.*`.
 - [x] P11-02 Integration into REM `sleep_dream` cycle and `/sutra` command (`mechanics/commands.py`).
+
+## Phase 12: Expanded Manifold Parity
+
+Goal: Integrate the expanded Manifold standards (Hermeneutic Circle, Held Tensions, Zone Boundaries, Extended Ghana-pāṭha checks, and full Vyākaraṇa linting).
+
+- [x] P12-01 Epistemic Agent Protocol and Hermeneutic Circle in `AGENTS.md` (Adhyāsa, Saṃśaya, Praśna, Pūrva-Pakṣa, Āvartana, Pratibandha, Kṣetra-Maryādā).
+- [ ] P12-02 Meta-Epistemic Invariants (Zero Silent Assumptions and Anti-Superimposition) in `docs/INVARIANTS.md`.
+- [ ] P12-03 Held Tensions (`T-NNN`) framework and initial entries in `docs/DECISIONS.md`.
+- [ ] P12-04 Architecture contracts in `docs/ARCHITECTURE.md` (System Topology, State/Caches matrix, Claims vs. Code friction registry, Failure Modes and Epistemic Mitigations).
+- [ ] P12-05 Verification Strategy expansion in `docs/TESTING.md` (Nyāya 5-step proof sequence, Change-to-Check matrix, Runs That Vary, and Known Pitfalls).
+- [ ] P12-06 Security and Zone Boundary defense in `docs/SECURITY.md`.
+- [ ] P12-07 Vyākaraṇa Linter parity in `tools/check_docs.py` (Invisible character scanner, `T-NNN` validation, Ghana-pāṭha reciprocity for completed tasks and invariant citations, Pramāṇa tags check, and automated prose Lexical Firewall).
+
