@@ -5,6 +5,7 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 ## Unreleased
 
 ### Added
+- **Held Tensions Framework (D-038, P12-03):** Added `## Held tensions` section to `docs/DECISIONS.md` tracking active design tensions (`T-001` energy conservation vs. partner responsiveness, `T-002` Sūtra conciseness vs. prompt context grounding, `T-003` model agnosticism vs. model-specific tuning) with explicit owners, costs, and review triggers.
 - **Meta-Epistemic Invariants INV-009 and INV-010 (P12-02):** Codified `INV-009` (Zero Silent Assumptions / Saṃśaya-Ccheda) and `INV-010` (Anti-Superimposition / Adhyāsa-Nirāsa) in `docs/INVARIANTS.md`, establishing foundational epistemic requirements for pre-execution inquiry and training prior auditing.
 - **Stock Empathy Filter and Opener Rut Breaker (D-037, P5-05):** `STOCK_EMPATHY` soft style crime in `lore/style_crimes.json` filters stock validation clichés ("heavy", "a lot", "gut punch", "jugular"); excised via sentence salvage. `_in_a_rut` in `brain/cortex.py` catches consecutive 3-word opener matches (normalizing demonstratives) and rewrites them into plain conversational questions. `TheCortex.VOICE` prompt explicitly forbids "heavy", "a lot", and "gut punch".
 - **Sūtra Consolidator (D-036, P11-01, P11-02):** `engine/gate/sutra.py` distills memories and reflections during REM sleep into minimal-syllable invariant seeds (`self/memory/sutra.*`) under Alpākṣara word constraints. `/sutra` inspects and manually triggers consolidation (`mechanics/commands.py`).

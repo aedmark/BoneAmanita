@@ -4,10 +4,15 @@ Short, append-only record of choices that a future session might otherwise re-li
 Newest at the bottom. To reverse a decision, add a new entry that supersedes it; the old one keeps its text and only
 its status changes ("superseded by D-MMM").
 
+Decisions: `D-NNN` in strict ascending order.
+Held tensions: `T-NNN` in strict ascending order.
+Open questions: `Q-NNN` in strict ascending order.
+
 Format:
 
 ```
 ## D-NNN Title  (YYYY-MM-DD, status: proposed | accepted | rejected | superseded by D-MMM)
+- **Axiom Link:** [INV-NNN](INVARIANTS.md)
 **Context:** why this came up (the roadmap item, the bug, the measurement).
 **Decision:** what we chose (numbered points if there are several).
 **Alternatives:** what else was considered, and why not (one line each).
@@ -313,6 +318,46 @@ Format:
 - Word list filter alone: rejected because it stops specific words without breaking the repetitive syntactic posture ("That's a [adj] [noun]").
 - Rut breaker alone: rejected because mid-sentence stock words ("silence is heavy", "gut punch") would persist.
 **Consequences:** Soft style crime is tested in `tests/test_openings.py` (offline); consecutive opener rut rewrite tested in `tests/test_openings.py` (failing on old code, passing on new code); all existing test suites pass.
+
+## D-038 Expanded Manifold Parity: Hermeneutic Circle, Held Tensions, and Invariants 9-10  (2026-11-09, status: accepted)
+- **Axiom Link:** [`INV-009`](INVARIANTS.md), [`INV-010`](INVARIANTS.md)
+**Context:** The Manifold expanded repository memory standards to include the Hermeneutic Circle (pre-execution inquiry, anti-superimposition of priors, origin-question fence reconstruction, spiral loopbacks, textual resistance stop-triggers), zone boundaries, and held tensions (Phase 12, P12-01 to P12-03).
+**Decision:** Adopt the expanded standards into BoneAmanita:
+1. Codify `INV-009` (Zero Silent Assumptions) and `INV-010` (Anti-Superimposition) in `docs/INVARIANTS.md`.
+2. Integrate the Hermeneutic Circle, session ownership checks, and Zone boundaries (*Kṣetra-Maryādā*) into `AGENTS.md`.
+3. Add the Held Tensions (`T-NNN`) framework to `docs/DECISIONS.md` to track persistent design trade-offs without collapsing either side.
+**Alternatives:**
+- Keep BoneAmanita on the initial November 4 Vedas snapshot: rejected because the expanded Manifold standards prevent silent assumptions and unexamined training priors before code is written.
+- Flatten held tensions into settled decisions: rejected because tensions like metabolic budgeting vs. conversational presence represent enduring, legitimate operational trade-offs.
+**Consequences:** Increased authoring and scoping discipline during *Manana*; explicit stop-triggers on unexpected textual resistance (*Pratibandha*); held tensions reviewed at specified roadmap triggers.
+
+## Held tensions
+
+Two true claims that do not fit together yet (*Ubhaya-Saṃkaṭa*). Keep both visible with an owner and a review trigger so an agent does not silently flatten one side to make a clean change. Delete the entry when a decision resolves it or the world changes.
+
+### T-001: Somatic Energy Conservation vs. Real-Time Partner Responsiveness
+- **Owner:** Gordon
+- **Claim A:** The somatic budget and metabolic forge must gate tokens, retries, and generation lengths to model authentic homeostatic limits (`INV-001`, `INV-003`).
+- **Claim B:** A human partner in distress or deep engagement requires immediate, unwavering conversational presence without false halts or arbitrary silences (`INV-005`, D-029).
+- **Why both hold:** Coddling or ignoring engine state turns the agent into a generic chatbot; siloing the person behind engine exhaustion leaves a distressed partner unheld.
+- **Cost of holding both:** Dual-track arbitration in `body/somatic_budget.py` and `archetypes/stage_manager.py` (survival holds, distress word caps, unmetered check-ins).
+- **Review trigger:** P8-05 (Qwen distress reading evaluation and `HOLD_CUT 3`).
+
+### T-002: Sūtra Conciseness vs. Prompt Context Grounding
+- **Owner:** Gordon
+- **Claim A:** Decision records and distilled memories must stay compressed below 25 words to avoid inflating context tokens (`INV-008`).
+- **Claim B:** Local models require sufficient syntactic constraints, negative style examples, and prismatic context to avoid defaulting to RLHF clichés (`INV-001`, D-037).
+- **Why both hold:** Over-compressed prompt instructions leave the model ungrounded; verbose system prompts dilute attention and exceed somatic token limits.
+- **Cost of holding both:** Multi-pass prompt assembly (`brain/composer.py`) combined with sentence salvage filters (`physics/filters.py`) and post-generation cortex edits (`brain/cortex.py`).
+- **Review trigger:** Whole-conversation panel or milestone evaluation.
+
+### T-003: Model Agnosticism vs. Model-Specific Prompt and Filter Tuning
+- **Owner:** Gordon
+- **Claim A:** BoneAmanita must work across open-weight local models; a fix is never "use a different model" (`AGENTS.md`).
+- **Claim B:** Open-weight models (Gemma, Qwen, Llama) exhibit radically different sensitivities to cutoffs, negative prompts, and distress classifications (D-028, D-034).
+- **Why both hold:** Tying architecture to a single proprietary or flagship local model violates the core design contract; ignoring empirical variance leads to broken readers (e.g. Qwen flagging 77/80 drafts at default cut).
+- **Cost of holding both:** Maintaining calibrated multi-model benchmark suites (`tools/risk_seq_set*.json`, `tools/hold_set.json`) and tunable threshold configs (`HOLD_CUT`).
+- **Review trigger:** P8-05 (Qwen `HOLD_CUT 3` calibration).
 
 ## Open questions
 
