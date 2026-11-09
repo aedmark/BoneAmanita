@@ -61,6 +61,8 @@ The immutable axiomatic foundation is codified in [INVARIANTS.md](INVARIANTS.md)
 - **INV-006 [Fail loudly]:** No broad `except Exception: pass` handlers; phase crashes are recorded in `record_crash` and isolated by `PhaseExecutor`. Enforced by `tests/test_failure_boundaries.py` and `tests/test_observability.py` (D-015).
 - **INV-007 [Sensitive credentials withheld]:** Passwords, API keys, and card numbers are redacted with `[withheld: ...]`. Enforced by `engine/gate/secrets.py` and `tests/test_secrets.py`.
 - **INV-008 [Substrate writes sandboxed]:** File modifications outside the engine are confined to `output/` and require `/allow` permission (P3-02).
+- **INV-009 [Zero silent assumptions]:** Unverified assumptions may never be silently compiled into implementation. Ambiguity triggers clarifying questions (*Praśna*) or open questions (`Q-NNN`) in `docs/DECISIONS.md` before building (P12-01, P12-02).
+- **INV-010 [Anti-superimposition]:** Pre-trained model priors may never be superimposed onto the repository; all conventions must trace to explicit `[CONTRACT]` or `[OBSERVED]` repository truth (P12-01, P12-02).
 
 ## Boundaries
 

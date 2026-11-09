@@ -105,7 +105,7 @@ Goal: Distill enduring invariants and behavioral axioms into dense, minimal-syll
 Goal: Integrate the expanded Manifold standards (Hermeneutic Circle, Held Tensions, Zone Boundaries, Extended Ghana-pāṭha checks, and full Vyākaraṇa linting).
 
 - [x] P12-01 Epistemic Agent Protocol and Hermeneutic Circle in `AGENTS.md` (Adhyāsa, Saṃśaya, Praśna, Pūrva-Pakṣa, Āvartana, Pratibandha, Kṣetra-Maryādā).
-- [ ] P12-02 Meta-Epistemic Invariants (Zero Silent Assumptions and Anti-Superimposition) in `docs/INVARIANTS.md`.
+- [x] P12-02 Meta-Epistemic Invariants `INV-009` and `INV-010` in `docs/INVARIANTS.md`.
 - [ ] P12-03 Held Tensions (`T-NNN`) framework and initial entries in `docs/DECISIONS.md`.
 - [ ] P12-04 Architecture contracts in `docs/ARCHITECTURE.md` (System Topology, State/Caches matrix, Claims vs. Code friction registry, Failure Modes and Epistemic Mitigations).
 - [ ] P12-05 Verification Strategy expansion in `docs/TESTING.md` (Nyāya 5-step proof sequence, Change-to-Check matrix, Runs That Vary, and Known Pitfalls).

@@ -60,3 +60,18 @@ Identifiers: `INV-NNN`. Permanent and immutable.
 - **Axiom:** File modifications outside the engine are strictly confined to the `output/` directory and require explicit `/allow` authorization from the human partner.
 - **Rationale:** Unrestricted file modification tools turn conversational agents into safety liabilities. Confining writes to a dedicated ledgered sandbox protects host integrity (P3-02).
 - **Enforcement:** Enforced by `mechanics/tools.py` and `output/.substrate_ledger.json`.
+
+---
+
+## INV-009: Zero Silent Assumptions (Saṃśaya-Ccheda)
+- **Axiom:** Unverified assumptions may never be silently compiled into implementation. When requirements, scope, or part-whole architecture admit multiple valid interpretations (*Saṃśaya*), the agent must halt and ask targeted clarifying questions (*Praśna*) or record an explicit open question (`Q-NNN` in `docs/DECISIONS.md`) before building.
+- **Rationale:** Silent assumptions convert pre-execution ambiguity into architectural drift and wasted implementation cycles (P12-01, P12-02).
+- **Enforcement:** Mandated by Stage 2 (*Manana*) of the Session Ritual in `AGENTS.md`.
+
+---
+
+## INV-010: Anti-Superimposition (Adhyāsa-Nirāsa)
+- **Axiom:** Pre-trained model priors (assumed build steps, package managers, framework conventions, or implicit directory roles) may never be superimposed (*Adhyāsa*) onto the repository. Every architectural or operational convention relied upon must trace to an explicit `[CONTRACT]` or `[OBSERVED]` source in the repository.
+- **Rationale:** A fresh context window (*Śūnya*) clears chat history, not model weights; unexamined training defaults corrupt bespoke repository architectures on entry (P12-01, P12-02).
+- **Enforcement:** Mandated by Stage 1 (*Śravaṇa*) of the Session Ritual in `AGENTS.md`.
+

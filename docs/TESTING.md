@@ -26,7 +26,7 @@ Every verification method and assertion carries an explicit epistemic classifica
 | :--- | :--- | :--- | :--- | :--- |
 | `[OBSERVED]` | *Pratyakṣa* (Empirical test or probe execution) | `.venv/bin/pytest` offline suite, `tools/check_conformance.py`, human blind panels | Deterministic code mechanics pass; exact word counts; style crimes eliminated. | Does not prove real conversational rapport across varied human partners. |
 | `[DEDUCED]` | *Anumāna* (Logical/systemic inference) | `SomaticBudget` calculation, AST types, mathematical bounds | If ATP < floor, turn cannot proceed; word caps truncate deterministic strings. | Does not guarantee open-weight model compliance without validator enforcement. |
-| `[CONTRACT]` | *Śabda* (Axiomatic rule or maintainer decree) | `INVARIANTS.md` (`INV-001` - `INV-008`), `lore/style_crimes.json` | Non-negotiable system invariants and lexical boundaries. | Does not prove absence of novel corporate tropes not yet in style lists. |
+| `[CONTRACT]` | *Śabda* (Axiomatic rule or maintainer decree) | `INVARIANTS.md` (`INV-001` - `INV-010`), `lore/style_crimes.json` | Non-negotiable system invariants and lexical boundaries. | Does not prove absence of novel corporate tropes not yet in style lists. |
 | `[HYPOTHESIS]` | *Arthāpatti* (Active conjecture awaiting proof) | Replays on Qwen3.5:9b with `HOLD_CUT 3` (P8-05) | Conjecture that cut 3 reduces over-explaining flags without false pauses. | Unproven until measured against real replay sets. |
 | `[UNTESTED]` | *Anupalabdhi* (Explicit absence of observation) | Multi-machine deployment (`P9-02`), live GPU latency spikes | Disclosed limit of offline-only development. | Cannot be claimed as working in `HANDOFF.md`. |
 
