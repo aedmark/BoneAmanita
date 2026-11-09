@@ -30,6 +30,28 @@ Every verification method and assertion carries an explicit epistemic classifica
 | `[HYPOTHESIS]` | *Arthāpatti* (Active conjecture awaiting proof) | Replays on Qwen3.5:9b with `HOLD_CUT 3` (P8-05) | Conjecture that cut 3 reduces over-explaining flags without false pauses. | Unproven until measured against real replay sets. |
 | `[UNTESTED]` | *Anupalabdhi* (Explicit absence of observation) | Multi-machine deployment (`P9-02`), live GPU latency spikes | Disclosed limit of offline-only development. | Cannot be claimed as working in `HANDOFF.md`. |
 
+## The Nyāya 5-Step Verification Proof Sequence (*Nyāya Pañca-Avayava*)
+
+When introducing or modifying behavior, the agent follows the classical 5-step Nyāya epistemic sequence:
+
+1. **Pratijñā (Proposition):** State the thesis, invariant, or architectural requirement being asserted (`INV-001` through `INV-010`).
+2. **Hetu (Causal Reason):** Identify the operational defect or missing check in the pre-change codebase.
+3. **Udāharaṇa (Negative Proof, Vyatireka):** Run the test against the pre-change codebase to observe and prove that it fails (`INV-007`). A test that passes on broken code proves nothing.
+4. **Upanaya (Implementation):** Apply the scoped, minimal implementation.
+5. **Nigamana (Proof Conclusion):** Run the test against the post-change codebase to observe clean passage (`[OBSERVED]`).
+
+## Change-to-Check Matrix
+
+| Changed area | Minimum checks | Additional evidence |
+| :--- | :--- | :--- |
+| Documentation only | `python3 tools/check_docs.py` | `python3 tools/build_manual.py check` |
+| Pure logic or physics | Fast checks (`pytest tests/test_command_routing.py ...`) | Full unit suite (`.venv/bin/pytest`) and negative proof on defect (`INV-007`) |
+| Somatic budget & chemistry | `tests/test_composer.py`, `tests/test_failure_boundaries.py` | Somatic census probe or conformance check |
+| Distress or risk reading | `tests/test_risk_watch.py`, `tests/test_hold_reader.py` | Replay sets (`tools/risk_seq_set*.json`, `tools/hold_set.json`) |
+| Schema or database (`saves/iris.db`) | Store & secret tests (`tests/test_secrets.py`, `tests/test_sutra_consolidation.py`) | Reset check (`sh reset.sh`) |
+| Style crimes or Gatekeeper filters | `tests/test_openings.py`, `tests/test_conformance.py` | Conformance benchmark (`tools/check_conformance.py`) |
+| Substrate tools / sandbox | `tests/test_save_file_directive.py` | Substrate audit ledger in `output/` (`INV-008`) |
+
 ## What is measured, and by what
 
 Verdicts come from human readers (D-011); a check inside the reply path is engine behaviour, measured against human labels.
@@ -170,3 +192,20 @@ Run model jobs one at a time: a second job evicts the first model and doubles VR
 5. **A same-family judge, or a rubric shaped like the kernel's own rules, inflates the score it gives BoneAmanita.**
 6. **A judge's example format gets copied**: use placeholders in a template a small model fills in.
 7. **The scratchpad is wiped between sessions and `scratch/` is gitignored**: evidence worth keeping goes to `tools/` (labelled sets, tools) or the docs, not scratch.
+
+## Runs That Vary (Nondeterministic & Model-Evaluated Suites)
+
+Some results depend on factors outside deterministic code: an open-weight language model, network latency to Ollama, or context sampling bands.
+
+- **One run proves little:** Run nondeterministic suites multiple times and record the tally with date and model (`"6/7, 7/7 on gemma4:12b, 2026-11-09"`).
+- **Read the failure before blaming the code:** State in `docs/HANDOFF.md` whether a miss came from application logic, prompt overflow, or stochastic variance.
+- **Inject rare bad inputs directly:** To test how the engine handles malformed model replies or network timeouts, inject them deterministically in offline mocks rather than rerunning until they happen by chance (`INV-004`).
+- **Verify the judge before trusting its verdict:** Evaluator modules (such as the fairness judge or DSPy critic) require known-answer controls first, including a deliberately bad case they must rank last (`INV-005`, `INV-007`). A judge that fails its controls cannot produce `[OBSERVED]` evidence.
+
+## Known Epistemic Pitfalls
+
+- **Unqualified Handoff Claims:** Writing that a feature works without running the corresponding suite in the current session. Mitigation: tag with `[UNTESTED]` unless directly observed.
+- **Tautological Tests:** Writing a test after code that never failed on defective code. Mitigation: verify negative proof on defect before trusting the test (`INV-007`).
+- **Dangling Invariant References:** Amending an invariant ID without updating decisions or architecture documents that reference it. Mitigation: run `python3 tools/check_docs.py` to trigger Ghana-pāṭha reciprocal checks.
+- **Chandas Exceedance:** Letting `docs/HANDOFF.md` grow beyond 80 lines. Mitigation: summarize current state and move expired logs to `docs/archive/`.
+

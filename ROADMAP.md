@@ -108,7 +108,7 @@ Goal: Integrate the expanded Manifold standards (Hermeneutic Circle, Held Tensio
 - [x] P12-02 Meta-Epistemic Invariants `INV-009` and `INV-010` in `docs/INVARIANTS.md`.
 - [x] P12-03 Held Tensions (`T-NNN`) framework and initial entries in `docs/DECISIONS.md` (D-038).
 - [x] P12-04 Architecture contracts in `docs/ARCHITECTURE.md` (System Topology, State/Caches matrix, Claims vs. Code friction registry, Failure Modes and Epistemic Mitigations).
-- [ ] P12-05 Verification Strategy expansion in `docs/TESTING.md` (Nyāya 5-step proof sequence, Change-to-Check matrix, Runs That Vary, and Known Pitfalls).
+- [x] P12-05 Verification Strategy expansion in `docs/TESTING.md` (Nyāya 5-step proof sequence, Change-to-Check matrix, Runs That Vary, and Known Pitfalls).
 - [ ] P12-06 Security and Zone Boundary defense in `docs/SECURITY.md`.
 - [ ] P12-07 Vyākaraṇa Linter parity in `tools/check_docs.py` (Invisible character scanner, `T-NNN` validation, Ghana-pāṭha reciprocity for completed tasks and invariant citations, Pramāṇa tags check, and automated prose Lexical Firewall).
 

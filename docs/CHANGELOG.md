@@ -5,6 +5,7 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 ## Unreleased
 
 ### Added
+- **Testing & Verification Parity (P12-05):** Added Nyāya 5-Step Verification Proof sequence (Pañca-Avayava), Change-to-Check matrix, nondeterministic suite guidelines (Runs That Vary), and Known Epistemic Pitfalls to `docs/TESTING.md`.
 - **Architecture Parity Contracts (P12-04):** Added Three-Speed System Topology diagram, State and Caches specification matrix, Failure Modes and Epistemic Mitigations table, and Claims vs. Code friction registry to `docs/ARCHITECTURE.md`.
 - **Held Tensions Framework (D-038, P12-03):** Added `## Held tensions` section to `docs/DECISIONS.md` tracking active design tensions (`T-001` energy conservation vs. partner responsiveness, `T-002` Sūtra conciseness vs. prompt context grounding, `T-003` model agnosticism vs. model-specific tuning) with explicit owners, costs, and review triggers.
 - **Meta-Epistemic Invariants INV-009 and INV-010 (P12-02):** Codified `INV-009` (Zero Silent Assumptions / Saṃśaya-Ccheda) and `INV-010` (Anti-Superimposition / Adhyāsa-Nirāsa) in `docs/INVARIANTS.md`, establishing foundational epistemic requirements for pre-execution inquiry and training prior auditing.
