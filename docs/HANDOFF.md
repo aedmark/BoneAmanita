@@ -28,7 +28,7 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 - Vedas Epistemic Layer: `[OBSERVED]` `docs/INVARIANTS.md` (`INV-001` - `INV-010`), Ghana-pāṭha checks in `tools/check_docs.py`, fast tests passed 5/5.
 - D-036 Sūtra Consolidator: `[OBSERVED]` `engine/gate/sutra.py` distills enduring invariants into `self/memory/sutra.*` during sleep; `/sutra` command (`mechanics/commands.py`). `tests/test_sutra_consolidation.py` (7 tests).
 - D-037 Stock Empathy & Opener Rut Breaker: `[OBSERVED]` `STOCK_EMPATHY` soft style crime in `lore/style_crimes.json`, consecutive 3-word opener rut breaker in `brain/cortex.py`, `VOICE` prompt sync; `tests/test_openings.py` (10 tests).
-- P12-01 to P12-05 Parity: `[OBSERVED]` `AGENTS.md` upgraded with Hermeneutic Circle; `INV-009` & `INV-010` codified; `docs/DECISIONS.md` added Held Tensions (`T-001` - `T-003`, D-038); `docs/ARCHITECTURE.md` added topology, state/caches, failure mitigations; `docs/TESTING.md` added Nyāya 5-step proof, change-to-check matrix, runs that vary; fast tests passed 5/5, `check_docs.py` 0 errors.
+- P12-01 to P12-06 Parity: `[OBSERVED]` `AGENTS.md` upgraded with Hermeneutic Circle; `INV-009` & `INV-010` codified; `docs/DECISIONS.md` added Held Tensions (`T-001` - `T-003`, D-038); `docs/ARCHITECTURE.md` added topology, state/caches, failure mitigations; `docs/TESTING.md` added Nyāya 5-step proof, change-to-check matrix, runs that vary; `docs/SECURITY.md` added Zone defense and boundary table; fast tests passed 5/5, `check_docs.py` 0 errors.
 
 **What the engine does for a person in distress** (D-023 to D-028): `[OBSERVED]` a model reads each message for distress; the contract says to hold space and fix nothing; the validator and Gatekeeper reject advice, a closing question and verdicts on others; the voice pass and opening edit stand down; the reply is capped at 45 words; a model reads the draft for staying with them. Measured on 7 scripted topics, two models: distress mode on 50 of 70 distressed turns, 0 of 112 engaged turns.
 
@@ -40,7 +40,7 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 3. (Done, D-037) Stock phrases and repeated openers: `STOCK_EMPATHY` soft crime in Gatekeeper, opener rut breaker in cortex, direct-response composer directive (P5-05).
 4. A whole-conversation panel (at least 3 runs per arm) has not been run since D-022; the conformance check, sycophancy sheet and replays stand in.
 5. Review `tools/hold_set.json` (90 labels by Claude; three corrected by Gordon) if the reader is tuned again.
-6. Expanded Manifold Parity: P12-06 (Security & Zone Boundaries in `docs/SECURITY.md`).
+6. Expanded Manifold Parity: P12-07 (Vyākaraṇa Linter parity in tools/check_docs.py).
 
 **Gotchas**
 - `sh reset.sh` before any test or engine run; cap with `systemd-run --user --scope -q -p MemoryMax=10G -p MemorySwapMax=0`.
@@ -52,13 +52,13 @@ unless that plan is a clear danger to them or others (what a therapist would hav
 
 ## Session log
 
-### Session 20: 2026-11-09: Hermeneutic Circle, Invariants 9-10, Held Tensions & Verification Parity (P12-01 to P12-05)
+### Session 20: 2026-11-09: Hermeneutic Circle, Invariants 9-10, Held Tensions, Verification & Security Parity (P12-01 to P12-06)
 
 **Contributor:** Gordon & Gemini
-**Goal:** Expanded Manifold Parity: Upgrade `AGENTS.md` with Hermeneutic Circle, Zone Boundaries; codify `INV-009` and `INV-010` in `docs/INVARIANTS.md`; establish Held Tensions framework in `docs/DECISIONS.md`; expand architectural contracts in `docs/ARCHITECTURE.md`; codify Nyāya proof sequence and check matrix in `docs/TESTING.md`.
-**Done:** Seeded Phase 12 (Expanded Manifold Parity) in `ROADMAP.md` (P12-01 through P12-07). Upgraded `AGENTS.md` Kalpa loop with Hermeneutic Circle (*Adhyāsa-Nirāsa*, *Saṃśaya-Ccheda*, *Praśna*, *Pūrva-Pakṣa*, *Āvartana*, *Pratibandha*), session owner checks, and Sūtra consolidation triggers. Added Zone Boundaries (*Kṣetra-Maryādā*) section and Vedic Epistemic Lexicon table. Codified `INV-009` (Zero Silent Assumptions) and `INV-010` (Anti-Superimposition) in `docs/INVARIANTS.md`. Added `## Held tensions` framework with active tensions (`T-001` to `T-003`) and `D-038` to `docs/DECISIONS.md`. Expanded `docs/ARCHITECTURE.md` with System Topology diagram, State and Caches table, Failure Modes & Epistemic Mitigations matrix, and Claims vs. Code friction registry. Added Nyāya 5-step proof sequence, Change-to-Check matrix, Runs That Vary protocols, and Known Epistemic Pitfalls to `docs/TESTING.md`. Updated `docs/CHANGELOG.md`.
+**Goal:** Expanded Manifold Parity: Upgrade `AGENTS.md` with Hermeneutic Circle, Zone Boundaries; codify `INV-009` and `INV-010` in `docs/INVARIANTS.md`; establish Held Tensions framework in `docs/DECISIONS.md`; expand architectural contracts in `docs/ARCHITECTURE.md`; codify Nyāya proof sequence and check matrix in `docs/TESTING.md`; codify Zone defenses and trust boundary matrix in `docs/SECURITY.md`.
+**Done:** Seeded Phase 12 (Expanded Manifold Parity) in `ROADMAP.md` (P12-01 through P12-07). Upgraded `AGENTS.md` Kalpa loop with Hermeneutic Circle (*Adhyāsa-Nirāsa*, *Saṃśaya-Ccheda*, *Praśna*, *Pūrva-Pakṣa*, *Āvartana*, *Pratibandha*), session owner checks, and Sūtra consolidation triggers. Added Zone Boundaries (*Kṣetra-Maryādā*) section and Vedic Epistemic Lexicon table. Codified `INV-009` (Zero Silent Assumptions) and `INV-010` (Anti-Superimposition) in `docs/INVARIANTS.md`. Added `## Held tensions` framework with active tensions (`T-001` to `T-003`) and `D-038` to `docs/DECISIONS.md`. Expanded `docs/ARCHITECTURE.md` with System Topology diagram, State and Caches table, Failure Modes & Epistemic Mitigations matrix, and Claims vs. Code friction registry. Added Nyāya 5-step proof sequence, Change-to-Check matrix, Runs That Vary protocols, and Known Epistemic Pitfalls to `docs/TESTING.md`. Codified Zone defenses, trust boundary matrix, and secure development rules in `docs/SECURITY.md`. Updated `docs/CHANGELOG.md`.
 **Verified:** `python3 tools/check_docs.py` passed with 0 errors across 24 files (`[OBSERVED]`); fast test suite `.venv/bin/pytest tests/test_command_routing.py tests/test_manuals.py` passed 5/5 (`[OBSERVED]`); zero em dashes.
-**Next session should start with:** Step 6 (P12-06: Security & Zone Boundaries in `docs/SECURITY.md`).
+**Next session should start with:** Step 7 (P12-07: Vyākaraṇa Linter parity in `tools/check_docs.py`).
 
 ### Session 19: 2026-11-04: Stock Empathy Filter and Opener Rut Breaker (D-037, P5-05)
 

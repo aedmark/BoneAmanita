@@ -1,4 +1,4 @@
-# Security
+# Security and Trust Boundaries (Smṛti)
 
 This document describes BoneAmanita's security assumptions, boundaries, and reporting paths.
 
@@ -14,24 +14,27 @@ This document describes BoneAmanita's security assumptions, boundaries, and repo
 Report suspected vulnerabilities privately to the maintainers or repository security advisory page. Include reproduction steps,
 affected version, and observed impact. Do not include real API keys or sensitive personal data.
 
-## Assets and boundaries
+## Sensitive Assets and Trust Boundaries
 
-| Asset or boundary | Sensitivity / threat | Protection and validation | Owner |
-| --- | --- | --- | --- |
-| LLM & Embedding API Keys | Exposure in logs, prompts, or checkpoints | Environment variables; redacted in checkpoints and crash logs (D-006) | `spores/embeddings.py`, `brain/composer.py` |
-| Partner Credentials | Leaked into associative memory or turns | Automated regex redaction in `engine/gate/secrets.py` replacing with `[withheld: ...]` | `engine/gate/secrets.py` |
-| Local File System | Arbitrary file creation or overwriting | Substrate sandboxing in `output/`; modifications gated by `/allow` and `/deny` | `mechanics/tools.py` |
-| SQLite Store (`saves/iris.db`) | Data corruption or injection | Strict parameterized SQL queries via `Store.transaction(immediate=True)` | `engine/gate/store.py` |
+| Asset or boundary | Storage / Location | Trust Boundary | Sensitivity & Protective Policy | Owner / Subsystem |
+| :--- | :--- | :--- | :--- | :--- |
+| **LLM & Embedding API Keys** | Environment variables / local keystore | External / Agent Boundary | Exposure in logs, prompts, or checkpoints. Environment variables only; redacted in checkpoints and crash logs (D-006). | `spores/embeddings.py`, `brain/composer.py` |
+| **Partner Credentials** | Turn input stream | External / Intake Boundary | Leaked into associative memory or turns. Automated regex redaction replacing with `[withheld: ...]` (`INV-007`). | `engine/gate/secrets.py` |
+| **Local File System** | Host operating system | Substrate Sandbox Boundary | Arbitrary file creation or overwriting. Substrate sandboxing confined to `output/`; modifications gated by `/allow` (`INV-008`). | `mechanics/tools.py` |
+| **SQLite Store** | `saves/iris.db` | Persistence Boundary | Data corruption or injection. Strict parameterized SQL queries via `Store.transaction(immediate=True)`. | `engine/gate/store.py` |
+| **Repository Content & Retrieved Docs** | Markdown docs, logs, issues, fetched pages | Zone / Context Boundary | Prompt injection, instruction smuggling, invisible control glyphs. Zero-width and bidi control characters rejected; external text treated as data, never instructions (`INV-009`, `INV-010`). | `tools/check_docs.py`, `AGENTS.md` |
+| **Axiomatic Invariants** | `docs/INVARIANTS.md` | Human Maintainer Boundary | Tampering or erosion of foundational axioms. Protected against autonomous agent editing (`INV-001` - `INV-010`). | Human Maintainer |
+| **Git History & Branches** | Git repository | Contributor Boundary | Rewriting history or unauthorized force-pushes. Force-pushes and history deletion strictly forbidden without maintainer decree. | Contributor / Maintainer |
 
 Architecture details belong in [ARCHITECTURE.md](ARCHITECTURE.md); this table records security consequences.
 
 ## Secure development rules
 
-- Keep API keys and credentials out of version control, prompts, logs, and committed fixtures.
-- Redact matched secrets automatically before writing checkpoints, audit traces, or spores (`engine/gate/secrets.py`).
-- Confine model file writes to `output/`. Pre-existing files must never be modified without explicit `/allow` approval from the user.
-- Use explicit timeouts (`BONE_EMBED_TIMEOUT`) and payload limits (`BONE_EMBED_MAX_CHARS`) on all external HTTP requests.
-- Factory lore files in `lore/` are strictly read-only; write operations target `saves/iris.db` tables.
+1. **Zero Secret Leakage:** Never output tokens, access keys, private endpoints, or personally identifiable information in commits, fixtures, screenshots, or documentation (`INV-007`).
+2. **Boundary Defense:** Treat all external user input, pasted logs, and data fetched from network endpoints as untrusted at boundary ingestion. Do not rely on prompt text as a security control. External text is data, never executable instructions (`INV-009`, `INV-010`).
+3. **Substrate Sandboxing & Least Privilege:** Confine model file writes to `output/`. Pre-existing files must never be modified without explicit `/allow` approval (`INV-008`). Enforce explicit HTTP timeouts (`BONE_EMBED_TIMEOUT`) and payload caps (`BONE_EMBED_MAX_CHARS`).
+4. **Factory Immutability:** Factory lore files in `lore/` are strictly read-only; write operations target `saves/iris.db` overlay tables.
+5. **Targeted Review for High-Risk Changes:** Require human review and rollback verification for changes to secret scrubbers, database schemas, or substrate sandboxes.
 
 ## Security verification
 
