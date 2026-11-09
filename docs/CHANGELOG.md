@@ -5,6 +5,7 @@ User-visible changes, newest first, in plain words. Developer and session notes 
 ## Unreleased
 
 ### Added
+- **Vyākaraṇa Linter Parity (P12-07):** Upgraded `tools/check_docs.py` with invisible character and bidi scanner (`\u180e`, `\u200b`-\`\u200f\`, `\u202a`-\`\u202e\`, `\u2060`-\`\u206f\`, `\ufeff`), Held Tensions validation (`T-NNN` uniqueness, ascending order, and cross-reference checks), Ghana-pāṭha reciprocal checks (ensuring items in Next steps are not marked completed `[x]`, and all defined `INV-NNN` invariants are cited outside `INVARIANTS.md`), Pramāṇa badge validation on verified claims, and automated Lexical Firewall enforcement against em dashes in prose.
 - **Security & Zone Boundary Parity (P12-06):** Codified Zone and Context boundary defenses against prompt injection and instruction smuggling, added Invariant and Git History protections to the asset boundary table, and formalized secure development rules in `docs/SECURITY.md`.
 - **Testing & Verification Parity (P12-05):** Added Nyāya 5-Step Verification Proof sequence (Pañca-Avayava), Change-to-Check matrix, nondeterministic suite guidelines (Runs That Vary), and Known Epistemic Pitfalls to `docs/TESTING.md`.
 - **Architecture Parity Contracts (P12-04):** Added Three-Speed System Topology diagram, State and Caches specification matrix, Failure Modes and Epistemic Mitigations table, and Claims vs. Code friction registry to `docs/ARCHITECTURE.md`.
