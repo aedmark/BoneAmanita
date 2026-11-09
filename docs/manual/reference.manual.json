@@ -31,6 +31,29 @@
       "description": "Interactive commands executed during a session via the terminal interface or headless runner.",
       "entries": [
         {
+          "id": "command-newbie-workflow",
+          "title": "Newcomer day-one workflow",
+          "summary": "The essential sequence of slash commands for a first-time user exploring the engine.",
+          "synopsis": "/status -> /checkin -> /mode -> /note",
+          "tags": ["commands", "newbie", "workflow", "quickstart"],
+          "what": "A guided sequence of four core slash commands that demonstrate the engine's vitals, space-holding boundaries, modes, and human feedback loop.",
+          "how": {
+            "lead": "Try these four commands in your first five minutes with BoneAmanita:",
+            "points": [
+              "`/status`: view real-time energy (ATP), cortisol, voltage, and what the engine estimates about your fatigue.",
+              "`/checkin 6`: experience a short, bounded 6-turn space-holding conversation with no unsolicited advice and a 45-word reply cap.",
+              "`/mode conversation`: switch from Adventure to Conversation mode to talk as candid peers without inventory or world rooms.",
+              "`/note good` or `/note off <why>`: record your verdict on the last exchange into notes/notes.jsonl (D-011 human evaluation)."
+            ]
+          },
+          "why": "Helps newcomers immediately experience the core differences between a generic sycophantic chatbot and BoneAmanita's embodied, bounded co-regulation.",
+          "evidence": [
+            {"label": "Project README", "target": "README.md"},
+            {"label": "Command router test", "target": "tests/test_command_routing.py"}
+          ],
+          "related": ["command-status", "command-checkin", "command-mode", "command-note"]
+        },
+        {
           "id": "command-status",
           "title": "status",
           "summary": "Displays system vitals, energy pools, memory backend status, and user model inferences.",
@@ -93,6 +116,28 @@
             {"label": "Memory command tests", "target": "tests/test_memory_command.py"}
           ],
           "related": ["command-status", "command-diag", "halcyon-database"]
+        },
+        {
+          "id": "command-sutra",
+          "title": "sutra",
+          "summary": "Inspects distilled invariant sūtras or manually triggers subconscious consolidation.",
+          "synopsis": "/sutra [run]",
+          "tags": ["commands", "memory", "sutra", "sleep"],
+          "what": "Displays the enduring invariant sūtras stored in self/memory/sutra.* or runs an immediate consolidation pass on episodic reflections (D-036).",
+          "how": {
+            "lead": "Execute from any active terminal session:",
+            "points": [
+              "`/sutra` lists all crystallized sūtra invariants and their syllable and word densities.",
+              "`/sutra run` manually triggers a sūtra consolidation cycle outside the sleep cycle."
+            ]
+          },
+          "why": "Provides complete visibility into how episodic memories and reflections are distilled during REM sleep into dense, minimal-syllable rules under Alpākṣara constraints.",
+          "evidence": [
+            {"label": "Sūtra consolidator", "target": "engine/gate/sutra.py"},
+            {"label": "Commands dispatcher", "target": "mechanics/commands.py"},
+            {"label": "Decision D-036", "target": "docs/DECISIONS.md"}
+          ],
+          "related": ["command-memory", "command-sleep-idle"]
         },
         {
           "id": "command-mode",

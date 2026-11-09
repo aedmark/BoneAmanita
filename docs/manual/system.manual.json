@@ -141,6 +141,27 @@
             {"label": "Observability ratchet test", "target": "tests/test_observability.py"}
           ],
           "related": ["turn-loop-orchestration"]
+        },
+        {
+          "id": "held-tensions-framework",
+          "title": "The held tensions framework",
+          "summary": "Formal tracking of active architectural tensions (T-NNN) that cannot be collapsed without compromise.",
+          "tags": ["philosophy", "architecture", "held tensions", "decisions"],
+          "what": "Maintains an explicit registry of held tensions (T-001 through T-003) in docs/DECISIONS.md with assigned owners, ongoing costs, and review triggers.",
+          "how": {
+            "lead": "Rather than pretending opposing design goals do not conflict, BoneAmanita holds them open explicitly:",
+            "points": [
+              "T-001 (Energy conservation vs. partner responsiveness): balancing strict ATP exhaustion against empathetic holding.",
+              "T-002 (Sūtra conciseness vs. prompt context grounding): balancing Alpākṣara minimal-syllable density against necessary prompt examples.",
+              "T-003 (Model agnosticism vs. model-specific tuning): maintaining zero model-specific branching while accommodating local model quirks."
+            ]
+          },
+          "why": "Decided in D-038: architectural compromises often hide unresolvable tensions behind muddy abstractions. Codifying held tensions acknowledges that both sides are necessary truths, preventing hasty erosion of foundational invariants.",
+          "evidence": [
+            {"label": "Decision record D-038", "target": "docs/DECISIONS.md"},
+            {"label": "System invariants", "target": "docs/INVARIANTS.md"}
+          ],
+          "related": ["prompt-engine-contract", "fail-loudly-discipline", "anti-performance-contract"]
         }
       ]
     },
@@ -266,6 +287,8 @@
             "lead": "Reply inspection follows a graduated intervention ladder:",
             "points": [
               "Scans for RLHF masks ('as an AI', 'helpful and harmless') and corporate clichés ('rich tapestry', 'delve', 'testament to').",
+              "Filters stock validation empathy clichés in CONVERSATION mode ('heavy', 'a lot', 'gut punch', 'jugular') via sentence salvage (D-037).",
+              "Breaks repeated opener ruts by catching consecutive identical 3-word openers and rewriting them into conversational questions (D-037).",
               "If violations occur and retry budget remains, the draft is rejected and the model is prompted again with a stumble tax.",
               "On the final allowed retry, soft violations are salvaged by excising offending sentences via `TheGatekeeper.salvage`.",
               "Only unparseable scaffold leaks or hard violations fall through to a canned pause message."
@@ -585,6 +608,7 @@
             "points": [
               "Extracts unpromoted working memories from the hippocampus.",
               "Generates associative reflections and dream synthesis using the background dreamer.",
+              "Distills enduring invariants into minimal-syllable sūtras (self/memory/sutra.*) via SutraConsolidator under Alpākṣara word constraints (D-036).",
               "High-scoring enduring memories (> 0.8 resonance) are fossilized into diamond anchors via `MycelialNetwork.forge_diamond`.",
               "Prunes low-salience memories to free working memory capacity."
             ]
