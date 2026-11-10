@@ -1,0 +1,141 @@
+{
+  "$schema": "./rag_corpus.schema.json",
+  "corpus_id": "boneamanita",
+  "title": "BoneAmanita Embodied AI Engine",
+  "description": "Complete source code, architectural invariants, somatic biology, cognitive cortex, turn orchestration, lore, and narrative history for the BoneAmanita embodied prompt engine.",
+  "target_system": "notebooklm",
+  "limits": {
+    "max_words_per_volume": 500000,
+    "max_chars_per_volume": 3500000,
+    "max_volumes": 50
+  },
+  "global_exclusions": [
+    "**/.git/**",
+    "**/.venv/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/saves/**",
+    "**/logs/**",
+    "**/scratch/**",
+    "**/output/**",
+    "**/tools/cache/**",
+    "**/test_telemetry_logs/**",
+    "**/*.log",
+    "**/*.db",
+    "**/MagicMock/**",
+    "**/*.egg-info/**"
+  ],
+  "volumes": [
+    {
+      "id": "01_architecture_and_epistemics",
+      "title": "Architecture, Philosophy & Epistemic Invariants",
+      "description": "Foundational architectural laws, Śruti invariants (INV-001 through INV-010), architectural decisions (D-001 through D-038), held tensions (T-001 through T-003), roadmap, security boundaries, and handoff state.",
+      "priority_files": [
+        "README.md",
+        "AGENTS.md",
+        "docs/INVARIANTS.md",
+        "docs/ARCHITECTURE.md",
+        "docs/DECISIONS.md",
+        "ROADMAP.md",
+        "docs/HANDOFF.md",
+        "docs/TESTING.md",
+        "docs/SECURITY.md",
+        "docs/CHANGELOG.md"
+      ],
+      "include": [
+        "README.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "ROADMAP.md",
+        "docs/*.md"
+      ],
+      "exclude": [
+        "docs/archive/**"
+      ]
+    },
+    {
+      "id": "02_biological_somatic_engine",
+      "title": "Biological & Somatic Engine",
+      "description": "Mitochondrial ATP budgeting, endocrine stress dynamics (cortisol), physical kinematics, narrative drag, word-cost observation, and turn pipeline biological/mechanical phases.",
+      "include": [
+        "body/**/*.py",
+        "physics/**/*.py",
+        "phases/**/*.py"
+      ]
+    },
+    {
+      "id": "03_cognitive_memory_archetypes",
+      "title": "Cognitive Cortex, Memory & Archetypes",
+      "description": "Cognitive prompt composer, cortex, prismatic self-claims, hippocampal working memory, mycelial network diamond anchors, Village council archetypal temperaments, and soul traits.",
+      "include": [
+        "brain/**/*.py",
+        "spores/**/*.py",
+        "archetypes/**/*.py",
+        "soul/**/*.py"
+      ]
+    },
+    {
+      "id": "04_turn_orchestration_and_gatekeeper",
+      "title": "Turn Loop Orchestration, Gatekeeper & Mechanics",
+      "description": "Turn cycle pipeline, Gatekeeper anti-sycophancy and style filter gates, distress space-holding contracts, crash recovery isolation barriers, slash commands, and hardware substrate tools.",
+      "priority_files": [
+        "main.py",
+        "engine/cycle.py",
+        "engine/checkin.py",
+        "engine/doctor.py",
+        "engine/receipts.py",
+        "engine/invariants.py",
+        "engine/turn_guard.py"
+      ],
+      "include": [
+        "main.py",
+        "engine/**/*.py",
+        "mechanics/**/*.py",
+        "machine/**/*.py",
+        "protocols/**/*.py",
+        "drivers/**/*.py"
+      ]
+    },
+    {
+      "id": "05_lore_prompts_and_manuals",
+      "title": "Factory Lore, System Prompts & Standalone Manuals",
+      "description": "Factory lore wordlists, style crime definitions, system prompts, self claims, and the complete 60-entry 3x System and Reference documentation manuals.",
+      "include": [
+        "lore/**/*.json",
+        "lore/**/*.yaml",
+        "docs/manual/*.manual.json"
+      ]
+    },
+    {
+      "id": "06_narrative_devlogs_and_history",
+      "title": "Narrative Devlogs, Bone Reports & Session History",
+      "description": "Narrative devlogs, bone report field studies, and archival session logs documenting empirical breakthroughs, blind panel human evaluations, and design lessons.",
+      "strip_html": true,
+      "include": [
+        "docs/devlog.html",
+        "docs/bonereport.html",
+        "docs/bonereport_0926.html",
+        "docs/archive/**/*.md"
+      ]
+    },
+    {
+      "id": "07_verification_and_test_contracts",
+      "title": "Verification Tools & Behavioral Test Contracts",
+      "description": "Verification tooling (documentation linters, manual builders, conformance scoring) and key behavioral test suites codifying contracts for distress, holding space, sutra consolidation, and risk watch.",
+      "include": [
+        "tools/*.py",
+        "tests/test_distress*.py",
+        "tests/test_architecture.py",
+        "tests/test_hold_reader.py",
+        "tests/test_sutra_consolidation.py",
+        "tests/test_risk_watch.py",
+        "tests/test_openings.py",
+        "tests/test_command_routing.py",
+        "tests/test_conformance.py"
+      ],
+      "exclude": [
+        "tools/export_rag_corpus.py"
+      ]
+    }
+  ]
+}

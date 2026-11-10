@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boneamanita.local/schemas/rag_corpus.schema.json",
+  "title": "RAG Corpus Export Schema",
+  "description": "Formal schema for declarative repository-to-RAG corpus bundling for high-context models and Google NotebookLM.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["corpus_id", "title", "volumes"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "corpus_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$",
+      "description": "Unique identifier for the corpus"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable title of the repository or corpus"
+    },
+    "description": {
+      "type": "string",
+      "description": "High-level description of what the repository contains"
+    },
+    "target_system": {
+      "type": "string",
+      "enum": ["notebooklm", "claude_projects", "generic_rag"],
+      "default": "notebooklm",
+      "description": "Target ingestion system and its constraints"
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_words_per_volume": {
+          "type": "integer",
+          "default": 500000,
+          "description": "Maximum word count per volume (NotebookLM cap is 500k words)"
+        },
+        "max_chars_per_volume": {
+          "type": "integer",
+          "default": 3500000,
+          "description": "Soft maximum character count per volume"
+        },
+        "max_volumes": {
+          "type": "integer",
+          "default": 50,
+          "description": "Maximum number of volumes (NotebookLM cap is 50 sources per notebook)"
+        }
+      }
+    },
+    "global_exclusions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Glob patterns to ignore across all volumes"
+    },
+    "volumes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/volume"
+      }
+    }
+  },
+  "$defs": {
+    "volume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "description", "include"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-z_-]+$",
+          "description": "File prefix and identifier for the volume (e.g. 01_architecture)"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display title for the volume"
+        },
+        "description": {
+          "type": "string",
+          "description": "Contextual prompt embedded at the head of the volume for the RAG model"
+        },
+        "include": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Glob patterns or file paths to include in this volume"
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Volume-specific glob patterns to exclude"
+        },
+        "priority_files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Files that should appear at the top of the volume before other matched files"
+        },
+        "strip_html": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to convert HTML files in this volume into clean Markdown"
+        }
+      }
+    }
+  }
+}
